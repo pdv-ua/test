@@ -1,0 +1,106 @@
+/* global appAC AC $App UB HR */
+exports.formDef = {
+  requiredFields: ['orderID', 'employeePositionID', 'orderID.description', 'positionID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 800,
+    height: 400
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 130 },
+      items: [
+        { attributeName: 'employeeNumberID', hidden: true },
+        { attributeName: 'positionID', hidden: true },
+        {
+          attributeName: 'employeePositionID',
+          fieldList: ['ID', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'dateFrom', 'dateTo', 'positionID'],
+          orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+          xtype: 'empPositionCombobox',
+          flex: 1,
+          addWorkPlace: true
+        },
+        {
+          layout: {
+            type: 'hbox',
+            align: 'middle'
+          },
+          defaults: { labelWidth: 130 },
+          items: [
+            {
+              attributeName: 'dictTrialPeriodID',
+              fieldLabel: UB.i18n('Строк'),
+              disableModifyEntity: !AC.entityUtils.verifyRightsMethod('hr_dictTrialPeriod', 'addnew'),
+              fieldList: ['name', 'months'],
+              flex: 1,
+              orderList: {
+                byMonths: {
+                  expression: '[months]'
+                }
+              }
+            },
+            {
+              attributeName: 'dateTrialEnd',
+              labelWidth: 275
+            }
+          ]
+        },
+        {
+          layout: {
+            type: 'hbox',
+            align: 'middle'
+          },
+          defaults: { labelWidth: 130 },
+          items: [
+            {
+              attributeName: 'dateFrom'
+            },
+            {
+              attributeName: 'dateTo',
+              labelWidth: 180
+            }
+          ]
+        },
+        {
+          layout: {
+            type: 'hbox',
+            align: 'middle'
+          },
+          items: [
+            {
+              attributeName: 'orderNumber',
+              labelWidth: 130,
+              width: 250
+            },
+            {
+              attributeName: 'orderDate',
+              labelWidth: 180
+            }
+          ]
+        },
+        {
+          attributeName: 'description',
+          labelWidth: 130,
+          xtype: 'ubtextfield',
+          flex: 1
+        },
+        {
+          fieldLabel: UB.i18n('Підстава'),
+          xtype: 'textfield',
+          name: 'orderDescription',
+          fieldStyle: 'text-decoration: none; color: #2f7c94;',
+          flex: 1,
+          hidden: true,
+          readOnly: true
+        }
+      ]
+    }
+  ]
+}

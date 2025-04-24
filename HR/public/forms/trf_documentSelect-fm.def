@@ -1,0 +1,120 @@
+// @isModal true
+/* global UB Ext $App appAC */
+
+exports.formDef = 'HR.trf_documentSelect'
+
+Ext.define('HR.trf_documentSelect', {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.trf_documentSelect',
+  width: 800,
+  height: 600,
+  layout: { type: 'border' },
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  isModal: true,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'center',
+        ubID: 'employeePosition',
+        margin: {
+          top: 10
+        },
+        // style: 'border-top: 1px solid #BFBFBF;',
+        layout: { type: 'vbox', align: 'stretch' },
+        autoScroll: true,
+        items: [
+          {
+            name: 'documentList',
+            xtype: 'ubdetailgrid',
+            autoScroll: true,
+            pageSize: 10000,
+            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+            flex: 1,
+            entityConfig: {
+              entity: 'trf_document',
+              method: 'select',
+              fieldList: [
+                { name: 'ID', visibility: false },
+                { name: 'dateFrom', format: 'd.m.Y', description: UB.i18n('Дата') },
+                { name: 'docNumber', description: UB.i18n('Номер') },
+                { name: 'name', description: UB.i18n('Назва') },
+                { name: 'type', description: UB.i18n('Тип') }
+              ],
+              whereList: {
+                byOrgID: {
+                  expression: '[orgID]',
+                  condition: 'equal',
+                  values: { orgID: appAC.globalOrganization() }
+                }
+              },
+              orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+            },
+            cmpInitConfig: {
+              onItemDblClick: function (grid, record) {
+                const ID = record.get('ID')
+                me.onSelect({ ID })
+                me.up('window').close()
+              }
+            }
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Вибрати'),
+            name: 'actionButton',
+            width: 150,
+            height: 30,
+            margin: '10 10 10 0',
+            cls: 'save-action',
+            handler: function (btn) {
+              if (me.onSelect) {
+                const selection = me.attr.grid.getSelectionModel().selected.items
+                if (!selection.length) {
+                  $App.dialogInfo(UB.i18n('Не вибрано документ'), UB.i18n('Увага'))
+                  return
+                }
+                const { ID } = selection[0].getData()
+                me.onSelect({ ID })
+                me.up('window').close()
+              }
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Відміна'),
+            width: 150,
+            height: 30,
+            cls: 'red-action',
+            margin: '10 10 10 0',
+            handler: function () {
+              me.up('window').close()
+            }
+          }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=documentList]'),
+        actionButton: me.down('[name=actionButton]')
+      }
+      if (me.actionText) {
+        me.attr.actionButton.setText(me.actionText)
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

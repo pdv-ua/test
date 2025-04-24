@@ -1,0 +1,261 @@
+/* global AC appAC appHR $App HR UB Ext */
+
+exports.formDef = {
+  requiredFields: ['orderID', 'empOrderType', 'organizationID', 'isGroup', 'organizationID.mi_data_id'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: []
+    }
+  ],
+  items: [{
+    xtype: 'tabpanel',
+    region: 'center',
+    items: [
+      {
+        title: UB.i18n('Загальне'),
+        ubID: 'tabMain',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            layout: {
+              type: 'hbox',
+              align: 'middle'
+            },
+            items: [
+              {
+                attributeName: 'empOrderAveragePayID',
+                hideEntityItemInContext: true,
+                displayField: 'description',
+                gridFieldList: ['description'],
+                fieldList: ['ID', 'description'],
+                flex: 2,
+                labelWidth: 130,
+                whereList: {
+                  empOrderType: {
+                    expression: '[empOrderType]',
+                    condition: 'in',
+                    value: ['TEMPAVGPAY', 'AVERAGEPAY']
+                  },
+                  orderState: {
+                    expression: '[orderState]',
+                    condition: 'in',
+                    value: ['POSTED', 'PROCESSED']
+                  }
+                }
+              }
+            ]
+          },
+          {
+            attributeName: 'dateFrom',
+            fieldLabel: UB.i18n('Дата закінчення оплати'),
+            labelWidth: 130,
+            allowBlank: false
+          },
+          {
+            layout: {
+              type: 'hbox',
+              align: 'middle'
+            },
+            items: [
+              {
+                attributeName: 'reason',
+                labelWidth: 130,
+                fieldLabel: UB.i18n('Причина'),
+                flex: 1,
+                rows: 3
+              },
+              {
+                xtype: 'button',
+                cls: 'list-icon',
+                name: 'reasonButton',
+                tooltip: UB.i18n('Вибрати'),
+                width: 35,
+                height: 35,
+                margin: '0 13 0 -45',
+                handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+              }
+            ]
+          },
+          {
+            xtype: 'tabpanel',
+            region: 'center',
+            layout: 'fit',
+            flex: 1,
+            items: [{
+              title: UB.i18n('Працівники'),
+              name: 'hr_empOrderEmployeeDet',
+              xtype: 'ubdetailgrid',
+              paraGrid: true,
+              autoScroll: true,
+              rowEditing: true,
+              notWriteChanges: true,
+              hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_empOrderEmployeeDet',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'empOrderDetID.employeePositionID.description',
+                    description: UB.i18n('Працівник'),
+                    visibility: true,
+                    simpleFilter: true,
+                    editor: {
+                      fieldList: ['ID', 'employeePositionID.description', 'employeePositionID.employeeID', 'employeePositionID', 'dateFrom', 'dateTo'],
+                      gridFieldList: ['employeePositionID.description', 'dateFrom', 'dateTo'],
+                      // hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                      hideEntityItemInContext: true,
+                      tpl: new Ext.XTemplate('<ul class="x-list-plain"><tpl for="."><li role="option" class="boundlist-{[xindex % 2 === 0 ? "even" : "odd"]}  ' +
+                        Ext.baseCSSPrefix + 'boundlist-item">' +
+                        ' <span>{[values[\'employeePositionID.description\']]}</span><span><small style="color:gray;">({[this.getOrderDate(values)]})</small></span></li></tpl></ul>', {
+                          getOrderDate: function (reco) {
+                            let result = ''
+                            if (reco.dateFrom) {
+                              result += AC.dateService.formatDate(reco.dateFrom) + ' - '
+                            }
+                            if (reco.dateTo && reco.dateTo.getFullYear() !== 9999) {
+                              result += AC.dateService.formatDate(reco.dateTo)
+                            }
+                            return result
+                          }
+                      }),
+                      displayTpl: `<tpl for=".">{[values[\'employeePositionID.description\']]}</tpl>`,
+                    },
+                    config: { width: 350 }
+                  },
+                  {
+                    name: 'dateFrom',
+                    config: { width: 150 },
+                    editor: {
+                      allowBlank: false
+                    }
+                  },
+                  {
+                    name: 'reason',
+                    config: { width: 250 },
+                    editor: {
+                      allowBlank: true
+                    }
+                  },
+                  {
+                    name: 'empOrderDateFrom',
+                    config: { width: 150 },
+                    editor: {
+                      readOnly: true
+                    }
+                  },
+                  {
+                    name: 'empOrderDateTo',
+                    config: { width: 150 },
+                    editor: {
+                      readOnly: true
+                    }
+                  },
+                  {
+                    name: 'empOrderDetID',
+                    visibility: false
+                  },
+                  {
+                    name: 'employeePositionID',
+                    visibility: false
+                  },
+                  {
+                    name: 'employeeID',
+                    visibility: false
+                  },
+                  {
+                    name: 'description',
+                    visibility: false
+                  }
+                ]
+              },
+              masterFields: ['ID', 'orderID'],
+              detailFields: ['paraID', 'orderID'],
+              onBeforeEdit: function (rowEditor, context) {
+                let editor = rowEditor.editor
+                let me = editor.up('form')
+                if (context.grid.isEditDisabled) {
+                  return false
+                }
+                me.setIsDirty(true)
+                let employeePositionCtrl = editor.query(`[name=empOrderDetID.employeePositionID.description]`)[0]
+                let empOrderDateFromCtrl = editor.query(`[name=empOrderDateFrom]`)[0]
+                let empOrderDateToCtrl = editor.query(`[name=empOrderDateTo]`)[0]
+                let dateFromCtrl = editor.query(`[name=dateFrom]`)[0]
+
+                if (!context.record.get('dateFrom')) {
+                  context.record.set('dateFrom', me.record.get('dateFrom'))
+                }
+                if (!context.record.get('reason')) {
+                  context.record.set('reason', me.record.get('reason'))
+                }
+
+                AC.viewUtils.setWhereListProperty(employeePositionCtrl, [
+                  ['orderID', 'equal', me.record.get('empOrderAveragePayID')],
+                  ['mi_unityEntity', 'in', ['hr_empOrderEmployeeDet', 'hr_empOrderTempavgpayDet']]
+                ], undefined, ['clearStore'])
+
+                employeePositionCtrl.on('change', ctrl => {
+                  context.record.set('employeeID', ctrl.getFieldValue('employeePositionID.employeeID'))
+                  context.record.set('employeePositionID', ctrl.getFieldValue('employeePositionID'))
+                  context.record.set('empOrderDetID', ctrl.getFieldValue('ID'))
+                  const empOrderDateFrom = ctrl.getFieldValue('dateFrom')
+                  const empOrderDateTo = ctrl.getFieldValue('dateTo')
+                  empOrderDateFromCtrl.setValue(empOrderDateFrom)
+                  dateFromCtrl.setMinValue(empOrderDateFrom)
+                  if (empOrderDateTo && empOrderDateTo.getFullYear() !== 9999) {
+                    empOrderDateToCtrl.setValue(empOrderDateTo)
+                    dateFromCtrl.setMaxValue(empOrderDateTo)
+                  } else {
+                    empOrderDateToCtrl.setValue()
+                  }
+                  context.record.set('description', ctrl.getValue())
+                })
+              },
+              cmpInitConfig: {
+                customInit: function () {
+                  let grid = this
+                  let oldOnDel = grid.onDel
+                  let newOnDel = function () {
+                    let me = grid.up('form')
+                    if (['POSTED', 'PROCESSED'].includes(me.record.get('orderState'))) {
+                      AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Неможливо видалити запис з проведеного наказу'))
+                      return
+                    }
+                    oldOnDel.call(grid)
+                    me.setIsDirty(true)
+                  }
+                  AC.gridUtils.replaceListener(grid, 'del', oldOnDel, newOnDel)
+                  let _doOnEdit = grid.doOnEdit
+                  AC.gridUtils.tuneGridColumns(grid, {})
+                  grid.doOnEdit = function () {
+                    grid.isEditMode = true
+                    _doOnEdit.call(grid)
+                  }
+                },
+                optimizeColumnWidth: function () {
+                  /!* do nothing for manual column width tunning *!/
+                }
+              }
+            }]
+          }
+        ]
+      }
+    ]
+  }]
+}

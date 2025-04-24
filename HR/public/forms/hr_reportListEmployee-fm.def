@@ -1,0 +1,116 @@
+/* global Ext $App HR AC appAC UB */
+exports.formDef = 'HR.reportListEmployee'
+
+Ext.define('HR.reportListEmployee', {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.reportListEmployee',
+  width: 800,
+  height: 400,
+  layout: { type: 'vbox', align: 'stretch' },
+  autoScroll: true,
+  flex: 1,
+  items: [
+    {
+      xtype: 'panel',
+      region: 'center',
+      name: 'reportPanel',
+      flex: 1,
+      items: []
+    }
+  ],
+  initComponent: function () {
+    const me = this
+    const control = Ext.create('Ext.Component', {
+      flex: 1,
+      margin: 0,
+      autoEl: {
+        tag: 'iframe'
+      }
+    })
+    const container = Ext.create('Ext.panel.Panel', {
+      layout: { type: 'vbox', align: 'stretch' },
+      flex: 1,
+      items: [
+        {
+          flex: 1,
+          autoScroll: true,
+          layout: { type: 'hbox', pack: 'center', align: 'stretch' },
+          bodyCls: 'ub-panel-gray',
+          items: [control]
+        }]
+    })
+    me.items = [container]
+    me.reportControl = control
+    me.on('afterrender', function () {
+      me.showDesktop()
+    })
+    me.callParent(arguments)
+  },
+  showDesktop: async function () {
+    const me = this
+    // const orgBusinessTypeID = AC.settings.get('hrOrgBusinessType', appAC.globalOrganization()) || null
+    // const orgBusinessType = await UB.Repository('cdn_orgbusinesstype').attrs('ID', 'code').selectById(orgBusinessTypeID) || {}
+
+    const iFrame = me.reportControl.getEl().dom
+    const iFrameDoc = iFrame.contentDocument
+    const style = [HR.controlService.getShortcutListStyle()]
+    let template = `<table style="border-collapse: collapse; width: 100%; word-break: break-all;" border="0px" cellspacing="0" cellpadding="3px"><tbody>
+      <tr><td style="font-size: 16px; height: 48px; font-weight: bold;">${UB.i18n('Звіти')}</td></tr>
+      <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportEmpCountPosByCategory'>${UB.i18n('Кількісний склад за категоріями посад')}</a></td></tr>`
+    if ($App.domainInfo.models.HRMED /* orgBusinessType.code === 'med' */) {
+      template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalEmpCounts'>${UB.i18n('Кількісний склад організації')}</a></td></tr>`
+    }
+    template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportAboutStaffing_person'>${UB.i18n('Про укомплектованість')}</a></td></tr>`
+    if ($App.domainInfo.models.HRMED /* orgBusinessType.code === 'med' */) {
+      template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportTariffing'>${UB.i18n('Тарифікація')}</a></td></tr>`
+    }
+    template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportTypicalOrgPlanByPay'>${UB.i18n('Штатний розпис з доплатами та надбавками')}</a></td></tr>`
+    if ($App.domainInfo.models.HRMED /* orgBusinessType.code === 'med' */) {
+      template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportTypicalOrgPlanByPayGroup'>${UB.i18n('Штатний розпис з доплатами та надбавками (по видам нарахувань)')}</a></td></tr>`
+    }
+    template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportForm1k'>${UB.i18n('Форма 1–к. Кількість, склад та переміщення працівників')}</a></td></tr>`
+    template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_empListUnusedVacationEmployee'>${UB.i18n('Невикористані відпустки')}</a></td></tr>`
+    template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgcountsByCateg'>${UB.i18n('Довідка про кількість штатних одиниць та ФЗП за категоріями персоналу')}</a></td></tr>`
+    template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportForm1k_v2'>${UB.i18n('Кількість та склад працівників')}</a></td></tr>`
+    if ($App.domainInfo.models.HRMED /* orgBusinessType.code === 'med' */) {
+      template += `<tr><td style="font-size: 16px; height: 48px; font-weight: bold;">${UB.i18n('Медичні кадри. Форма 17')}</td></tr>
+        <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalF17Doctors'>${UB.i18n('Лікарі')}</a></td></tr>
+        <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalF17PensionDoctors'>${UB.i18n('Лікарі пенсійного віку')}</a></td></tr>
+        <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalF17Nurses'>${UB.i18n('Середній медичний персонал')}</a></td></tr>
+        <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalF17PensionNurses'>${UB.i18n('Середній медичний персонал пенсійного віку')}</a></td></tr>
+        <tr><td style="font-size: 16px; height: 48px; font-weight: bold;">${UB.i18n('Звіт юридичної особи. Форма 20')}</td></tr>
+        <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalF20Staff'>${UB.i18n('Штати закладу на кінець звітного року')}</a></td></tr>
+        <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalF20NotMed'>${UB.i18n('Кількість фізичних осіб спеціалістів з вищою немедичною освітою')}</a></td></tr>
+      `
+    }
+    template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgpos'>${UB.i18n('Штатно-посадовий список')}</a></td></tr>`
+    template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_regReportEmployment'>${UB.i18n('ІНФОРМАЦІЯ про зайнятість та працевлаштування громадян, що мають додаткові гарантії, у сприянні працевлаштуванню')}</a></td></tr>`
+    template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_regReport10PI'>${UB.i18n('Форма № 10-ПОІ (річна)')}</a></td></tr>`
+    template += `<tr><td style="font-size: 16px; height: 48px; font-weight: bold;">${UB.i18n('Списки для контролю даних')}</td></tr>`
+    template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_empListControlAppointment'>${UB.i18n('Призначення')}</a></td></tr>`
+    if (AC.settings.get('hrFuncOrgType', appAC.globalOrganization()) === '2') {
+      template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_empListExtraRankAssignments'>${UB.i18n('Працівники, що мають 2 та більше активних записів щодо присвоєння рангу')}</a></td></tr>`
+    }
+    template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_empListControlEmployeePosition'>${UB.i18n('Працівники, що мають 2 та більше активних призначень')}</a></td></tr>`
+    if (AC.settings.get('hrVacFixMonth', appAC.globalOrganization())) {
+      template += `<tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_empReportOnFixedVacationDays'>${UB.i18n('Звіт за фіксованими днями відпустки')}</a></td></tr>`
+    }
+    template += `</tbody></table>`
+    iFrameDoc.body.innerHTML = template
+    iFrameDoc.head.innerHTML = `<style type="text/css">
+        ${style.join('\n')}
+      </style>`
+
+    const refs = iFrameDoc.getElementsByTagName('a')
+    for (let i = 0, L = refs.length; i < L; i++) {
+      refs[i].addEventListener('click', me.onReportClick, true)
+    }
+  },
+  onReportClick: (e) => {
+    e.preventDefault()
+    let shortcutCode = e.target.dataset.code
+    if (shortcutCode) {
+      $App.runShortcutCommand(shortcutCode)
+    }
+  }
+})

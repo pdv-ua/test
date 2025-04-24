@@ -1,0 +1,170 @@
+// @isModal true
+/* global Ext AC UB $App appAC appHR */
+
+exports.formDef = 'HR.empOrderUniList'
+
+Ext.define('HR.empOrderUniList', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empOrderUniList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        name: 'panel',
+        flex: 1,
+        layout: 'fit',
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            name: 'empOrderUniListGrid',
+            stateful: true,
+            stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_empOrderUniList_empOrderUniListGrid'),
+            autoScroll: true,
+            layout: 'fit',
+            flex: 1,
+            forceDataLoad: true,
+            disableAutoLoadStore: true,
+            cmdType: 'showList',
+            cmdData: {
+              params: [{
+                entity: 'hr_empOrderUni',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'orderNumber',
+                    description: UB.i18n('Номер')
+                  },
+                  {
+                    name: 'docDate',
+                    format: 'd.m.Y',
+                    description: UB.i18n('Дата'),
+                    tooltip: 'Дата наказу'
+                  },
+                  {
+                    name: 'employeeNumberID.description',
+                    description: UB.i18n('Працівник'),
+                    simpleFilter: true
+                  },
+                  {
+                    name: 'dateFrom',
+                    format: 'd.m.Y',
+                    config: {
+                      align: 'center'
+                    },
+                    description: UB.i18n('З'),
+                    tooltip: 'Дата початку'
+                  },
+                  {
+                    name: 'dateTo',
+                    format: 'd.m.Y',
+                    config: {
+                      align: 'center'
+                    },
+                    description: UB.i18n('По'),
+                    tooltip: 'Дата закінчення'
+                  },
+                  {
+                    name: 'dictTimeCostID.name',
+                    description: UB.i18n('Елемент обліку')
+                  },
+                  {
+                    name: 'periodID.description',
+                    description: UB.i18n('Період розрахунку')
+                  },
+                  {
+                    name: 'orderState',
+                    description: UB.i18n('Статус'),
+                    config: {
+                      align: 'center'
+                    },
+                    format: 'appHR.stateFormat'
+                  },
+                  {
+                    name: 'description',
+                    visibility: false
+                  }
+                ],
+                orderList: {
+                  orderBy: { expression: 'orderDate', order: 'desc' }
+                }
+              }]
+            },
+            cmpInitConfig: {
+              disableAutoLoadStore: true,
+              hideActions: ['showDetail'],
+              getRowClass: function (row) {
+                return row.get('orderState') === 'POSTED' ? 'ub-row-green' : 'ub-row-lightgrey'
+              },
+              afterInit: function () {
+                AC.gridUtils.setGlobalOrganization(this, 'organizationID')
+              }
+            }
+          }
+        ]
+      }
+    ]
+
+    me.getUserDeparment = function (onDate) {
+      const employeeNumberID = $App.connection.userData().employeeNumberID
+      return UB.Repository('hr_employeePositionS')
+        .attrs(['departmentID', 'depMiTreePath'])
+        .where('employeeNumberID', '=', employeeNumberID || null)
+        .where('dateFrom', '<=', onDate)
+        .where('dateTo', '>=', onDate)
+        .selectSingle()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=empOrderUniListGrid]')
+      }
+
+      const isFirstDepRole = AC.entityUtils.verifyRightsMethod('hr_empOrderUni', 'canViewFirstDep')
+      const isOneDepRole = AC.entityUtils.verifyRightsMethod('hr_empOrderUni', 'canViewOneDep')
+      const isAllDepRole = AC.entityUtils.verifyRightsMethod('hr_empOrderUni', 'canViewAllDep')
+
+      if (isAllDepRole) {
+        me.attr.grid.getStore().load()
+      } else if (isFirstDepRole || isOneDepRole) {
+        me.setLoading(true)
+        $App.connection.run({
+          entity: 'hr_empOrderUni',
+          method: 'getAllowedDepartments',
+          onDate: appAC.globalApplicationDate(),
+          orgID: appAC.globalOrganization(),
+          isFirstDep: isFirstDepRole,
+          employeeNumberID: $App.connection.userData().employeeNumberID
+        }).then((mParams) => {
+          if (mParams.departments) {
+            let departments = JSON.parse(mParams.departments)
+            if (!departments || !departments.length) departments = [0]
+            me.attr.grid.store.ubRequest.whereList = {
+              posDep: {
+                expression: '[employeePositionID.departmentID]',
+                condition: 'in',
+                value: departments
+              }
+            }
+            me.attr.grid.getStore().load()
+          }
+        }).finally(() => {
+          me.setLoading(false)
+        })
+      }
+    }, me)
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,288 @@
+/* global Ext UB $App */
+exports.formDef = 'HR.trf_dictAccrualDtList'
+Ext.define('HR.trf_dictAccrualDtList', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.trf_dictAccrualDtList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  actionId: {
+    save: 'save'
+  },
+  eventId: {
+    save: 'save'
+  },
+  hotKeys: {
+    save: {
+      key: Ext.EventObject.ENTER,
+      shift: false,
+      ctrl: true,
+      text: ' (Ctrl+Enter)'
+    }
+  },
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [],
+      ubID: 'mainToolbar',
+      enableOverflow: true
+    }]
+    me.items = [
+      {
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        layout: 'fit',
+        items: [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            flex: 1,
+            region: 'center',
+            autoScroll: true,
+            items: [
+              {
+                xtype: 'ubcombobox',
+                name: 'payElID',
+                fieldLabel: UB.i18n('Вид оплати'),
+                allowBlank: false,
+                enableKeyEvents: true,
+                ubRequest: {
+                  entity: 'hr_payEl',
+                  fieldList: ['ID', 'description', 'methodID.code'],
+                  orderList: { orderBy: { expression: 'name' } }
+                },
+                readOnly: true,
+                flex: 0
+              },
+              {
+                layout: { type: 'hbox' },
+                flex: 0,
+                items: [
+                  // {
+                  //   xtype: 'checkbox',
+                  //   fieldLabel: UB.i18n('Додавати автоматично'),
+                  //   hidden: false,
+                  //   width: 200,
+                  //   labelWidth: 160,
+                  //   name: 'isAutoAdd',
+                  //   defaultValue: 1,
+                  //   flex: 0
+                  // },
+                  // {
+                  //   xtype: 'checkbox',
+                  //   fieldLabel: UB.i18n('Заповнювати години автоматично'),
+                  //   hidden: false,
+                  //   width: 300,
+                  //   labelWidth: 240,
+                  //   name: 'isAutoHours',
+                  //   defaultValue: 1,
+                  //   flex: 0
+                  // }
+                ]
+              },
+              {
+                xtype: 'ubdetailgrid',
+                name: 'dictAccrualDtGrid',
+                autoScroll: true,
+                layout: 'fit',
+                flex: 1,
+                hideActions: me.fromSalary ? ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail']
+                  : ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail', 'edit'],
+                stateful: true,
+                cmdType: 'showList',
+                description: UB.i18n('Правила розрахунку trf_dictAccrualDt List'),
+                entity: 'trf_dictAccrualDt',
+                cmpInitConfig: {
+                  customActions: [
+                    {
+                      xtype: 'button',
+                      name: 'copyBtn',
+                      text: UB.i18n('Додати як'),
+                      iconCls: 'u-icon-copy',
+                      cls: 'add-new-action',
+                      disabled: true,
+                      handler: function (btn) {
+                        const grid = btn.up('grid')
+                        const record = grid.getSelectionModel().selected.items[0]
+                        me.copyRecord(record)
+                      }
+                    }
+                  ],
+                  onItemDblClick: function (grid, record) {
+                    const ubdetailgrid = grid.up('ubdetailgrid')
+                    $App.doCommand({
+                      cmdType: 'showForm',
+                      formCode: 'trf_dictAccrualDt',
+                      entity: 'trf_dictAccrualDt',
+                      isModal: true,
+                      instanceID: record.get('ID'),
+                      dictAccrualID: record.get('dictAccrualID'),
+                      sender: ubdetailgrid.getView(),
+                      store: ubdetailgrid.store
+                    })
+                  },
+                  afterInit: function () {
+                    const grid = this
+                    const methodIDCode = me.customParams['methodID.code']
+                    if (['1', '5', '6'].includes(methodIDCode)) {
+                      grid.columns.find(o => o.stateId === 'calcRuleID.code').hide()
+                    }
+                    if (['1', '5', '6'].includes(methodIDCode)) {
+                      grid.columns.find(o => o.stateId === 'rate').hide()
+                    }
+                    if (['1', '5', '6'].includes(methodIDCode)) {
+                      grid.columns.find(o => o.stateId === 'maxRate').hide()
+                    }
+                    if (['145', '147', '156'].includes(methodIDCode)) {
+                      // grid.columns.find(o => o.stateId === 'dictPupilID.name').hide()
+                    }
+                    if (['1', '4', '5', '6', '144', '152', '154', '155'].includes(methodIDCode)) {
+                      // grid.columns.find(o => o.stateId === 'dictPupilID.name').hide()
+                      // grid.columns.find(o => o.stateId === 'dictSubjectID.name').hide()
+                    }
+                    if (!['144', '152', '148', '4', '6', '154', '155'].includes(methodIDCode)) {
+                      grid.columns.find(o => o.stateId === 'isAutoAdd').hide()
+                    }
+                    if (!['148'].includes(methodIDCode)) {
+                      grid.columns.find(o => o.stateId === 'isAutoHours').hide()
+                    }
+                    if (['143'].includes(methodIDCode)) {
+                      grid.columns.find(o => o.stateId === 'calcRuleID.code').hide()
+                      grid.columns.find(o => o.stateId === 'maxRate').hide()
+                      // const col = grid.columns.find(o => o.stateId === 'rate')
+                      // if (col) {
+                      //   col.setText(UB.i18n('Коефіцієнт'))
+                      // }
+                    }
+                  }
+                },
+                cmdData: {
+                  params: [{
+                    entity: 'trf_dictAccrualDt',
+                    method: 'select',
+                    fieldList: [
+                      // { name: 'orgID', visibility: false },
+                      { name: 'dictAccrualID', visibility: false },
+                      { name: 'dateFromEmpty', description: UB.i18n('Початок'), format: 'd.m.Y' },
+                      { name: 'dateToEmpty', description: UB.i18n('Кінець'), format: 'd.m.Y' },
+                      { name: 'calcRuleID.code', description: UB.i18n('Правило розрахунку') },
+                      { name: 'rate', description: UB.i18n('Відсоток') },
+                      { name: 'sumCalc', description: UB.i18n('Сума') },
+                      { name: 'maxRate', width: 200, description: UB.i18n('Максимальна кількість ставок') },
+                      // { name: 'orgID.description', width: 200, description: UB.i18n('Організація') },
+                      // { name: 'dictPositionID.name', width: 200, description: UB.i18n('Посада') },
+                      // { name: 'dictQualificationID.name', width: 200, description: UB.i18n('Кваліфікація') },
+                      // { name: 'dictSubjectID.name', width: 200, description: UB.i18n('Предмет') },
+                      // { name: 'dictPupilID.name', width: 200, description: UB.i18n('Категорія учнів') },
+                      { name: 'isAutoAdd', description: UB.i18n('Додавати автоматично') },
+                      { name: 'isAutoHours', description: UB.i18n('Заповнювати години') },
+                      { name: 'comment', description: UB.i18n('Коментар') },
+                      { name: 'excludeOrg', visibility: false },
+                      { name: 'excludePosition', visibility: false },
+                      { name: 'excludeQualification', visibility: false },
+                      { name: 'excludeSubject', visibility: false },
+                      { name: 'excludePupil', visibility: false }
+                    ],
+                    whereList: {
+                      dictAccrualID: {
+                        expression: '[dictAccrualID]',
+                        condition: 'equal',
+                        value: me.customParams.dictAccrualID
+                      }
+                    }
+                  }]
+                },
+                listeners: {
+                  select: () => {
+                    const me = this
+                    me.down('[name=copyBtn]').setDisabled(false)
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+    me.copyRecord = function (record) {
+      const payElID = record.get('ID')
+      $App.connection.run({
+        entity: 'trf_dictAccrualDt',
+        method: 'copyRecord',
+        ID: payElID,
+        exectParams: record.getData()
+      }).then((mParams) => {
+        me.attr.grid.onRefresh()
+        $App.doCommand({
+          cmdType: 'showForm',
+          entity: 'trf_dictAccrualDt',
+          formCode: 'trf_dictAccrualDt',
+          instanceID: mParams.newID,
+          tabId: 'trf_dictAccrualDt_copyRecord' + Date.now(),
+          target: $App.getViewport().centralPanel,
+          sender: me.attr.grid.getView(),
+          cmpInitConfig: {
+            method: 'copyRecord',
+            sourceGrid: me.attr.grid
+          }
+        })
+      })
+    }
+    me.on('afterrender', () => {
+      const me = this
+      me.createToolbarButtons(me)
+      me.attr = {
+        saveAndClose: me.down('[name=saveAndClose]'),
+        payElID: me.down('[name=payElID]'),
+        // isAutoAdd: me.down('[name=isAutoAdd]'),
+        // isAutoHours: me.down('[name=isAutoHours]'),
+        grid: me.down('[name=dictAccrualDtGrid]')
+      }
+      me.attr.payElID.setValueById(me.customParams.payElID)
+      // me.attr.isAutoAdd.setValue(me.customParams.isAutoAdd)
+      // me.attr.isAutoHours.setValue(me.customParams.isAutoHours)
+      me.attr.saveAndClose.setDisabled(true)
+      // me.attr.isAutoAdd.on('change', (ctrl, value) => { me.attr.saveAndClose.setDisabled(false) })
+      // me.attr.isAutoHours.on('change', (ctrl, value) => { me.attr.saveAndClose.setDisabled(false) })
+    }, me)
+    me.callParent(arguments)
+  },
+  createToolbarButtons: function (me) {
+    let tb = me.down('toolbar')
+    tb.insert(tb.items.length - 2, {
+      xtype: 'button',
+      scale: 'medium',
+      name: 'saveAndClose',
+      iconCls: 'fas fa-share-square',
+      tooltip: UB.i18n('saveAndClose') + me.hotKeys[me.actionId.save].text,
+      cls: 'save-action',
+      handler: function () {
+        me.onButtonSave(me)
+      }
+    })
+  },
+  onButtonSave: function (me) {
+    // $App.connection.run({
+    //   entity: 'trf_dictAccrual',
+    //   method: 'updateRecord',
+    //   execParams: JSON.stringify({
+    //     ID: me.customParams.dictAccrualID,
+    //     isAutoAdd: me.attr.isAutoAdd.getValue(),
+    //     isAutoHours: me.attr.isAutoHours.getValue()
+    //   })
+    // }).then(() => {
+    //   if (me.customParams.onUpdate) {
+    //     me.customParams.onUpdate()
+    //   }
+    //   me.close()
+    // })
+  }
+})

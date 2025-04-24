@@ -1,0 +1,286 @@
+/* global Ext AC $App HR Blob appAC UB */
+exports.formDef = 'HR.repParamEmpInfo'
+
+Ext.define('HR.repParamEmpInfo', {
+  extend: 'Ext.form.Panel',
+  height: 190,
+  width: 700,
+  layout: 'border',
+  alias: 'widget.repParamEmpInfo',
+  isModal: true,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          HR.controlService.getRespEmpCombo({
+            labelWidth: 160,
+            allowBlank: false,
+            margin: '10 15 5 15',
+            defaultOrgBoss: true,
+            defaultRefSigner: me.defaultRefSigner
+          }),
+          HR.controlService.getRespEmpCombo({
+            labelWidth: 160,
+            allowBlank: true,
+            margin: '10 15 5 15',
+            defaultOrgBoss: true,
+            defaultRefSigner: me.defaultRefSigner,
+            skipAutoInput: true,
+            name: 'respEmp1'
+          }),
+          {
+            xtype: 'ubtextareafield',
+            labelWidth: 160,
+            fieldLabel: UB.i18n('Графік роботи'),
+            name: 'workSchedule',
+            listeners: {
+              render: function (ctrl) {
+                UB.Repository('hr_employeePositionS').attrs(['workScheduleID.scheduleDescription'])
+                  .where('employeeNumberID', '=', me.employeeNumberID)
+                  .where('dateFrom', '<=', me.onDate)
+                  .where('dateTo', '>=', me.onDate)
+                  .selectSingle({ 'workScheduleID.scheduleDescription': 'scheduleDescription' }).then(response => {
+                  if (response && response.scheduleDescription) {
+                    ctrl.setValue(response.scheduleDescription)
+                  }
+                })
+              }
+            }
+          },
+          {
+            name: 'orgTo',
+            xtype: 'ubtextareafield',
+            labelWidth: 160,
+            fieldLabel: UB.i18n('Організація, куди подається довідка (в знахідному відмінку)'),
+            listeners: {
+              render: function (ctrl) {
+                const orgToName = Ext.util.Cookies.get('hrRepParams_orgTo')
+                if (orgToName) {
+                  ctrl.setValue(orgToName)
+                }
+              }
+            }
+          },
+          {
+            name: 'executor',
+            xtype: 'checkboxfield',
+            labelWidth: 160,
+            fieldLabel: UB.i18n('Вивести Виконавця'),
+            value: false,
+            hidden: true
+          },
+          {
+            layout: { type: 'vbox', align: 'center' },
+            items: [
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'button',
+                    text: UB.i18n('Формувати'),
+                    iconCls: 'iconDoc',
+                    width: 120,
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      const me = btn.up('form')
+                      if (me.runReport()) {
+                        me.closeForm()
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    text: UB.i18n('Відмінити'),
+                    iconCls: 'fa fa-ban',
+                    width: 120,
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.closeForm()
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.runReport = () => {
+      const notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return false
+      }
+
+      if (me.reportCode === 'docx') {
+        me.formPrintDocument(me.reportViewCode)
+      } else {
+        const report = Ext.create('UBS.UBReport', {
+          code: me.reportCode,
+          type: 'html',
+          params: {
+            reportViewCode: me.reportViewCode,
+            employeeNumberID: me.employeeNumberID,
+            employeeID: me.employeeID,
+            respEmployeePositionID: me.attr.respEmp.getValue(),
+            respEmployeePosition1ID: me.attr.respEmp1.getValue(),
+            workSchedule: me.attr.workSchedule.getValue(),
+            orgToName: me.attr.orgTo.getValue(),
+            needExecutorCheck: me.attr.executor.getValue()
+          }
+        })
+        report.init().then(function () {
+          const config = {
+            cmdType: 'showForm',
+            formCode: 'ac_documentViewer',
+            caption: UB.i18n('Друкована форма'),
+            cmpInitConfig: { report: report },
+            tabId: 'printDocument_' + me.reportCode + '_' + me.reportIdx + '_' + me.employeeID,
+            description: me.reportDescription,
+            target: $App.getViewport().centralPanel
+          }
+          $App.doCommand(config)
+        })
+      }
+
+      return true
+    }
+
+    me.closeForm = () => {
+      Ext.util.Cookies.set('hrRepParams_orgTo', me.attr.orgTo.getValue())
+      me.up('window').close()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        respEmp: me.down('[name=respEmp]'),
+        respEmp1: me.down('[name=respEmp1]'),
+        workSchedule: me.down('[name=workSchedule]'),
+        orgTo: me.down('[name=orgTo]'),
+        executor: me.down('[name=executor]')
+      }
+      me.attr.workSchedule.hide()
+      const wnd = me.up('window')
+      switch (me.reportViewCode) {
+        case 'dovidkaZMiscyaRoboty3':
+          wnd.setTitle(UB.i18n(`Звіт 'Довідка з місця колишньої роботи'`))
+          me.attr.executor.setValue(true)
+          me.attr.executor.show()
+          me.setHeight(290)
+          me.attr.respEmp1.hide()
+          break
+        case 'dovidkaZMiscyaRoboty2':
+          wnd.setTitle(UB.i18n(`Звіт 'Довідка з місця роботи'`))
+          me.attr.executor.setValue(true)
+          me.attr.executor.show()
+          me.setHeight(290)
+          me.attr.workSchedule.show()
+          me.attr.respEmp1.hide()
+          break
+        case 'dovidkaZMiscyaRoboty':
+          wnd.setTitle(UB.i18n(`Звіт 'Довідка з місця роботи'`))
+          me.attr.executor.setValue(true)
+          me.attr.executor.show()
+          me.setHeight(290)
+          break
+        case 'dovidkaZMiscyaRobotyPregnVac':
+          wnd.setTitle(UB.i18n(`Звіт 'Довідка з місця роботи (декретна відпустка)'`))
+          me.attr.executor.setValue(true)
+          me.attr.executor.show()
+          me.setHeight(290)
+          break
+        case 'dovidkaZMiscyaRobotyMission':
+          wnd.setTitle(UB.i18n(`Звіт 'Довідка з місця роботи (відрядження)'`))
+          me.attr.executor.setValue(true)
+          me.attr.executor.show()
+          me.setHeight(290)
+          break
+        case 'povidomZminaOblikData':
+          wnd.setTitle(UB.i18n(`Повідомлення про зміну облікових даних`))
+          me.attr.executor.setValue(false)
+          me.attr.executor.hide()
+          me.height = 190
+          break
+        case 'biografDovidka':
+          wnd.setTitle(UB.i18n(`Бiографiчна довiдка`))
+          me.attr.executor.setValue(false)
+          me.attr.executor.hide()
+          me.height = 190
+          break
+      }
+      initComponentDone(me)
+    }, me)
+
+    me.validateParams = () => {
+      let res
+      const params = []
+      if ((!me.attr.respEmp.getValue() && !me.attr.respEmp.allowBlank)) {
+        params.push(AC.viewUtils.formatFieldLabel(`"${me.attr.respEmp.fieldLabel}"`))
+      }
+      if (params.length) {
+        res = {
+          msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+        }
+      }
+      return res
+    }
+
+    me.callParent(arguments)
+
+    me.formPrintDocument = (code) => {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_employee',
+        method: 'docPrintForm',
+        params: {
+          code: code,
+          type: 'docx',
+          instanceID: me.instanceID,
+          // onDate: appAC.globalApplicationDate(),
+          orgID: appAC.globalOrganization(),
+          tabNumID: me.employeeNumberID,
+          onDate: me.onDate,
+
+          employeeNumberID: me.employeeNumberID,
+          employeeID: me.employeeID,
+          respEmployeePositionID: me.attr.respEmp.getValue(),
+          respEmployeePosition1ID: me.attr.respEmp1.getValue(),
+          workSchedule: me.attr.workSchedule.getValue(),
+          orgToName: me.attr.orgTo.getValue()
+        }
+      }).then(function (result) {
+        me.setLoading(false)
+
+        if (result.docs) {
+          const docs = JSON.parse(result.docs)
+          _.forEach(docs, function (item) {
+            const fileContent = JSON.parse(item.fileContent)
+            const contentLength = fileContent.length
+            const pdfArray = new Uint8Array(new ArrayBuffer(contentLength))
+            const filename = item.fileName + '.docx'
+            for (let i = 0; i < contentLength; i++) {
+              pdfArray[i] = fileContent.charCodeAt(i)
+            }
+            const dBlob = new Blob([pdfArray], { type: 'application/msword' })
+            saveAs(dBlob, filename)
+          })
+        }
+      }).then(function () {
+        me.setLoading(false)
+      })
+    }
+  }
+})
+
+function initComponentDone (form) {
+  const signerAllowBlank = form.signerAllowBlank || false
+  form.attr.respEmp.setAllowBlank(signerAllowBlank)
+  form.attr.respEmp.setAllowBlank(true)
+}

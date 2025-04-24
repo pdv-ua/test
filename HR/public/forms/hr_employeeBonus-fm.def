@@ -1,0 +1,57 @@
+exports.formDef = {
+  requiredFields: ['employeeID', 'dictBonusID.name', 'dictBonusID.bonusTypeID.name', 'impSourceID', 'srcOrganizationName',
+    'srcOrganizationID', 'srcOrganizationID.name'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    { attributeName: 'employeeID', hidden: true },
+    { attributeName: 'dictBonusID' },
+    { attributeName: 'docIssuedDate' },
+    { attributeName: 'docNumber' },
+    { attributeName: 'docIssued' },
+    { attributeName: 'comment', fieldLabel: UB.i18n('Примітки') },
+    { attributeName: 'dictBonusID.bonusTypeID.name', fieldLabel: UB.i18n('Тип нагороди'), readOnly: true, allowBlank: true },
+    { attributeName: 'orderDate' },
+    { attributeName: 'orderNumber' },
+    {
+      xtype: 'ubcombobox',
+      gridFieldList: ['ID', 'name'],
+      name: 'srcOrganizationName',
+      fieldLabel: UB.i18n('Організація'),
+      ubRequest: {
+        entity: 'hr_organization',
+        fieldList: ['ID', 'name'],
+        whereList: {
+          isActive: {
+            expression: '[state]',
+            condition: 'equal',
+            value: 'ACTIVE'
+          }
+        }
+      },
+      isFormField: true,
+      displayField: 'name',
+      allowCustomText: true,
+      triggerCls: 'hr-list-trigger',
+      listeners: {
+        blur: ctrl => {
+          ctrl.setValue(ctrl.rawValue)
+          ctrl.up('form').record.set('srcOrganizationName', ctrl.rawValue)
+        },
+        select: ctrl => {
+          ctrl.setValue(ctrl.rawValue)
+          ctrl.up('form').record.set('srcOrganizationName', ctrl.rawValue)
+        }
+      }
+    }
+  ]
+}

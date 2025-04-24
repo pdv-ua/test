@@ -1,0 +1,453 @@
+{
+  "caption": "Наказ з персоналу. Всі деталі",
+  "description": "Наказ з персоналу. Всі деталі",
+  "descriptionAttribute": "orderID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "itemIdx",
+      "dataType": "Int",
+      "caption": "№",
+      "description": "№ за порядком",
+      "documentation": "№ за порядком"
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ",
+      "allowNull": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultView": false
+    },
+    {
+      "name": "orderStateEx",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT coalesce({self}.orderState, 'UNKNOWN'))"
+        }
+      ]
+    },
+    {
+      "name": "cancelOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Скасовано наказом",
+      "description": "Наказ, що скасував даний пункт",
+      "documentation": "Наказ, що скасував даний пункт"
+    },
+    {
+      "name": "cancelParaID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Скасовано пунктом",
+      "description": "Пункт, що скасував даний пункт",
+      "documentation": "Пункт, що скасував даний пункт"
+    },
+    {
+      "name": "paraID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Деталь групового наказу",
+      "description": "Деталь групового наказу",
+      "documentation": "Деталь групового наказ"
+    },
+    {
+      "name": "empOrderMissionDetID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderMissionDet",
+      "caption": "Заголовок групового наказу відрядження",
+      "description": "Заголовок групового наказу відрядження",
+      "documentation": "Заголовок групового наказу відрядження",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select {self}.paraID)"
+        }
+      ]
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ"
+    },
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада"
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація"
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Призначення",
+      "description": "Призначення",
+      "documentation": "Призначення"
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер"
+    },
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа"
+    },
+    {
+      "name": "firstName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Ім'я",
+      "description": "Ім'я",
+      "documentation": "Ім'я",
+      "defaultValue": ".."
+    },
+    {
+      "name": "lastName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Прізвище",
+      "description": "Прізвище",
+      "documentation": "Прізвище",
+      "defaultValue": ".."
+    },
+    {
+      "name": "middleName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "По батькові",
+      "description": "По батькові",
+      "documentation": "По батькові"
+    },
+    {
+      "name": "empNameCase",
+      "dataType": "String",
+      "size": 200,
+      "caption": "ПІБ для друку"
+    },
+    {
+      "name": "title",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада"
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Інформація",
+      "documentation": "Різна для різних параграфів, для показу в гріді",
+      "description": "Інформація"
+    },
+    {
+      "name": "descriptionExt",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Опис",
+      "documentation": "Опис",
+      "description": "Опис"
+    },
+    {
+      "name": "descriptionExtView",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Опис",
+      "documentation": "Опис",
+      "description": "Опис",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select coalesce({self}.descriptionExt, (select CONCAT(o.description, ' ', (select description from hr_employee where ID = {self}.employeeID)) from hr_empOrder o where ID = {self}.orderID )))"
+        }
+      ]
+    },
+    {
+      "name": "isExternal",
+      "dataType": "Boolean",
+      "caption": "Зовнішній",
+      "documentation": "Чи особа не являється працівником",
+      "description": "Зовнішній",
+      "defaultValue": "0"
+    },
+    {
+      "name": "changedValues",
+      "dataType": "Text",
+      "caption": "Дані змінені при проведенні",
+      "description": "Дані змінені при проведенні",
+      "documentation": "Дані змінені при проведенні"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "З дати",
+      "description": "З дати",
+      "documentation": "По дату"
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "По дату",
+      "description": "По дату",
+      "documentation": "По дату"
+    },
+    {
+      "name": "isGroup",
+      "dataType": "Boolean",
+      "caption": "Груповий",
+      "documentation": "Чи являється наказ груповим",
+      "description": "Чи являється наказ груповим",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_fundSource",
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування",
+      "documentation": "Джерело фінансування"
+    },
+    {
+      "name": "detailCount",
+      "dataType": "Int",
+      "caption": "Дочірніх",
+      "documentation": "Дочірніх",
+      "description": "Дочірніх",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select count(1) from hr_empOrderEmployeeDet ed where ed.paraID = {self}.ID and ed.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "employeeFullName",
+      "dataType": "String",
+      "size": 120,
+      "caption": "ПІБ",
+      "documentation": "ПІБ",
+      "description": "ПІБ",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select CONCAT(coalesce(emp.lastName, ''), ' ', coalesce(emp.firstName, ''), ' ', coalesce(emp.middleName, '')) from hr_employee emp where emp.id = {self}.employeeID)"
+        }
+      ]
+    },
+    {
+      "name": "employeeWithTitle",
+      "dataType": "String",
+      "size": 120,
+      "caption": "ПІБ",
+      "documentation": "ПІБ",
+      "description": "ПІБ",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select CONCAT(coalesce(emp.lastName, ''), ' ', coalesce(emp.firstName, ''), ' ', coalesce(emp.middleName, ''), ' ', coalesce({self}.title, '') ) from hr_employee emp where emp.id = {self}.employeeID)"
+        }
+      ]
+    },
+    {
+      "name": "vDateFrom",
+      "dataType": "Date",
+      "caption": "З дати",
+      "documentation": "З дати",
+      "description": "З дати",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select case when {self}.mi_unityEntity = 'hr_empOrderEmployeeDet' and {self}.empOrderType = 'MISSION' then (select dateFrom from hr_empOrderDet where ID = {self}.paraID) else {self}.dateFrom end)"
+        }
+      ]
+    },
+    {
+      "name": "vDateTo",
+      "dataType": "Date",
+      "caption": "По дату",
+      "documentation": "По дату",
+      "description": "По дату",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select case when {self}.mi_unityEntity = 'hr_empOrderEmployeeDet' and {self}.empOrderType = 'MISSION' then (select dateTo from hr_empOrderDet where ID = {self}.paraID) else {self}.dateTo end)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "dayCount",
+      "dataType": "Int",
+      "caption": "Днів",
+      "description": "Кількість днів",
+      "documentation": "Кількість днів",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select datediff(day,  {self}.dateFrom, {self}.dateTo) + 1)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT DATE_PART('day',  {self}.dateFrom - {self}.dateTo) + 1)"
+        }
+      ]
+    },
+    {
+      "name": "tabNumWithOrder",
+      "dataType": "String",
+      "size": 140,
+      "caption": "Табельний номер та опис наказу",
+      "documentation": "Табельний номер та опис наказу",
+      "description": "Табельний номер та опис наказу",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(CONCAT((select coalesce(en.tabNum, '') from hr_employeeNumber en where en.id = {self}.employeeNumberID),', ',(select coalesce(eo.description, '') from hr_empOrder eo where eo.id = {self}.orderID )))"
+        }
+      ]
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_EMPORDERDET_EMPNUM": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "dateFrom": {
+            "sort": "ASC"
+          },
+          "dateTo": {
+            "sort": "ASC"
+          },
+          "mi_deleteDate": {
+            "sort": "ASC"
+          },
+          "employeeNumberID": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_EMPORDERDET_EMP": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeeID": {
+            "sort": "ASC"
+          },
+          "mi_deleteDate": {
+            "sort": "ASC"
+          },
+          "dateFrom": {
+            "sort": "ASC"
+          },
+          "dateTo": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_EMPORDERDET_EMPPOS": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeePositionID": {
+            "sort": "ASC"
+          },
+          "mi_deleteDate": {
+            "sort": "ASC"
+          },
+          "dateFrom": {
+            "sort": "ASC"
+          },
+          "dateTo": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

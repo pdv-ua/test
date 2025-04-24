@@ -1,0 +1,333 @@
+{
+  "caption": "Графік роботи",
+  "description": "Графік роботи",
+  "descriptionAttribute": "name",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 32,
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код",
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "begins",
+      "dataType": "Enum",
+      "enumGroup": "HR_SCHEDULE_BEGINS",
+      "caption": "Тип",
+      "documentation": "Тип періоду",
+      "description": "Тип Періоду",
+      "allowNull": false,
+      "defaultValue": "MONTH"
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": true
+    },
+    {
+      "name": "isPayDayOff",
+      "dataType": "Boolean",
+      "caption": "У вихідний день",
+      "documentation": "У вихідний день",
+      "description": "У вихідний день",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "isPayHoliday",
+      "dataType": "Boolean",
+      "caption": "У святковий день",
+      "documentation": "У святковий день",
+      "description": "У святковий день",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "isNightHours",
+      "dataType": "Boolean",
+      "caption": "У нічні години",
+      "documentation": "У нічні годиниь",
+      "description": "У нічні години",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "isEveningHours",
+      "dataType": "Boolean",
+      "caption": "У вечірні години",
+      "documentation": "У вечірні годиниь",
+      "description": "У вечірні години",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "isOvertime",
+      "dataType": "Boolean",
+      "caption": "Понадурочно",
+      "documentation": "Понадурочно",
+      "description": "Понадурочно",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "isHoliday",
+      "dataType": "Boolean",
+      "caption": "Святкові дні",
+      "documentation": "Святкові дні",
+      "description": "Святкові дні",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isLastHoliday",
+      "dataType": "Boolean",
+      "caption": "Скорочення у передсвяткові дні",
+      "documentation": "Скорочення у передсвяткові дні",
+      "description": "Скорочення у передсвяткові дні",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isChangeDay",
+      "dataType": "Boolean",
+      "caption": "Переноси днів",
+      "documentation":  "Переноси днів",
+      "description":  "Переноси днів",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isCalendar",
+      "dataType": "Boolean",
+      "caption": "Використовувати календар",
+      "documentation": "Використовувати календар",
+      "description": "Використовувати календар",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isMtCount",
+      "dataType": "Boolean",
+      "caption": "Кількість ставок працівника",
+      "documentation": "Кількість ставок працівника",
+      "description": "Кількість ставок працівника",
+      "defaultValue": "1"
+    },
+    {
+      "name": "isSummarized",
+      "dataType": "Boolean",
+      "caption": "Підсумований облік робочого часу",
+      "documentation": "Підсумований облік робочого часу",
+      "description": "Підсумований облік робочого часу",
+      "defaultValue": "0"
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати переробітку",
+      "description": "Вид оплати переробітку"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 250,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(CONCAT({self}.code, ' ', {self}.name))"
+        }
+      ],
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис"
+    },
+    {
+      "name": "caption",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["name", "code"],
+        "compositeSeparator": ["", " [", "]"]
+      }
+    },
+    {
+      "name": "weekHours",
+      "dataType": "Currency",
+      "caption": "Тижнева норма годин",
+      "description": "Тижнева норма годин",
+      "documentation": "Тижнева норма годин",
+      "allowNull": true
+    },
+    {
+      "name": "weekDays",
+      "dataType": "Currency",
+      "caption": "Тижнева норма днів",
+      "description": "Тижнева норма днів",
+      "documentation": "Тижнева норма днів",
+      "allowNull": true
+    },
+    {
+      "name": "scheduleDescription",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Опис",
+      "description": "Опис"
+    },
+    {
+      "name": "shortName",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Скорочена назва",
+      "description": "Скорочена назва"
+    },
+    {
+      "name": "planScheduleID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_workSchedule",
+      "caption": "План визначати за графіком",
+      "description": "План визначати за графіком"
+    },
+    {
+      "name": "normScheduleID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_workSchedule",
+      "caption": "Норму визначати за графіком",
+      "description": "Норму визначати за графіком"
+    },
+    {
+      "name": "parentsWorkScheduleID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_workSchedule",
+      "caption": "Основний графік",
+      "description": "Основний графік"
+    },
+    {
+      "name": "periodSummarized",
+      "dataType": "Enum",
+      "enumGroup": "HR_PERIOD_TYPE",
+      "caption": "Період підсумованого обліку",
+      "description": "Період підсумованого обліку"
+    },
+    {
+      "name": "isDayAsPlan",
+      "dataType": "Boolean",
+      "caption": "Визначати робочі дні за планом",
+      "description": "Визначати робочі дні планом",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isOnlyForPositions",
+      "dataType": "Boolean",
+      "caption": "Тільки для посадових місць",
+      "description": "Тільки для посадових місць",
+      "defaultValue": "0"
+    },
+    {
+      "name": "maxMtCount",
+      "dataType": "Float",
+      "caption": "Максимальна кількість ставок",
+      "description": "Максимальна кількість ставок"
+    },
+    {
+      "name": "daysWork",
+      "dataType": "Int",
+      "caption": "Робочих днів",
+      "documentation": "Робочих днів",
+      "description": "Робочих днів",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT count(*) FROM hr_workScheduleDays WHERE workScheduleID = {self}.ID AND hoursWork > 0 AND mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

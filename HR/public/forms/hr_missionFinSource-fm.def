@@ -1,0 +1,40 @@
+exports.formDef = {
+  parentConfig: {
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  requiredFields: ['orderID', 'organizationID', 'paraID', 'organizationName'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    { attributeName: 'itemIdx' }, // № (№ за порядком),
+    {
+      xtype: 'ubcombobox',
+      gridFieldList: ['name', 'code'],
+      name: 'organizationName',
+      // attributeName: 'destOrganizationName',
+      fieldLabel: UB.i18n('Організація'),
+      ubRequest: {
+        // entity: 'cdn_organization',
+        entity: 'ac_contractor',
+        fieldList: ['ID', 'name']
+      },
+      isFormField: true,
+      displayField: 'name',
+      allowCustomText: true,
+      triggerCls: 'hr-list-trigger',
+      listeners: {
+        blur: ctrl => {
+          ctrl.setValue(ctrl.rawValue)
+          ctrl.up('form').record.set('organizationName', ctrl.rawValue)
+        },
+        select: ctrl => {
+          ctrl.setValue(ctrl.rawValue)
+          ctrl.up('form').record.set('organizationName', ctrl.rawValue)
+        }
+      }
+    },
+    { attributeName: 'dictMissionCostCategoryID' } // Категорія витрат (Категорія витрат),
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "caption": "Заміщення довготривалої відсутності",
+  "description": "Заміщення довготривалої відсутності",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeNumberReplID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник що заміщує",
+      "description": "Працівник що заміщує",
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberAbsID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Відсутній працівник",
+      "description": "Відсутній працівник",
+      "allowNull": false
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку заміщення",
+      "description": "Дата початку заміщення",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення заміщення",
+      "description": "Дата закінчення заміщення",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення заміщення",
+      "description": "Дата закінчення заміщення",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "createOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ початку заміщення",
+      "description": "Наказ початку заміщення"
+    },
+    {
+      "name": "createOrder",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Наказ початку заміщення текст",
+      "description": "Наказ початку заміщення текст"
+    },
+    {
+      "name": "changeOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ закінчення заміщення",
+      "description": "Наказ закінчення заміщення"
+    },
+    {
+      "name": "changeOrder",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Наказ закінчення заміщення текст",
+      "description": "Наказ закінчення заміщення текст"
+    },
+    {
+      "name": "createOrderCaption",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Наказ початку заміщення текст",
+      "description": "Наказ початку заміщення текст",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE WHEN {self}.createOrderID IS NOT NULL THEN (SELECT o.description FROM hr_order o WHERE o.ID = {self}.createOrderID) ELSE {self}.createOrder END)"
+        }
+      ]
+    },
+    {
+      "name": "changeOrderCaption",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Наказ закінчення заміщення",
+      "description": "Наказ закінчення заміщення",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE WHEN {self}.changeOrderID IS NOT NULL THEN (SELECT o.description FROM hr_order o WHERE o.ID = {self}.changeOrderID) ELSE {self}.changeOrder END)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

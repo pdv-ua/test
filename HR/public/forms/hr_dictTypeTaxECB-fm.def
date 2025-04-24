@@ -1,0 +1,74 @@
+exports.formDef = {
+  parentConfig: {
+    layout: {
+      type: 'border'
+    },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: {
+        type: 'vbox'
+      },
+      items: [
+        {
+          attributeName: 'code',
+          fieldLabel: UB.i18n('Код типу ставки'),
+          width: 400,
+          labelWidth: 200,
+          vtype: 'charset7'
+        },
+        {
+          attributeName: 'name',
+          xtype: 'ubtextareafield',
+          width: '100%',
+          labelWidth: 200,
+          vtype: 'charset3',
+          allowBlank: false
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      layout: { type: 'hbox' },
+      split: true,
+      items: [
+        {
+          name: 'payElList',
+          xtype: 'ubdetailgrid',
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          hideActions: [ 'audit', 'showDetail' ],
+          cmdType: 'showList',
+          description: UB.i18n('Відсоток для типу ставки'),
+          entity: 'hr_dictRateTaxECB',
+          cmdData: {
+            params: [{
+              entity: 'hr_dictRateTaxECB',
+              method: 'select',
+              fieldList: [
+                { name: 'dictTypeTaxECBID', visibility: false },
+                { name: 'dateFromEmpty' },
+                { name: 'rate', config: { align: 'center', flex: 1 } },
+                { name: 'dateToEmpty', visibility: false }
+              ]
+            }]
+          },
+          masterFields: ['ID'],
+          detailFields: ['dictTypeTaxECBID']
+        }
+      ]
+    }
+  ]
+}

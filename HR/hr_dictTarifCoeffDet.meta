@@ -1,0 +1,65 @@
+{
+  "caption": "Тарифні розряди, коефіцієнти (оклади)",
+  "description": "Тарифні розряди, коефіцієнти (оклади)",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "dictTarifCoeffID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTarifCoeff",
+      "caption": "Тарифний розряд",
+      "cascadeDelete": true,
+      "description": "Тарифний розряд",
+      "documentation": "Тарифний розряд"
+    },
+    {
+      "name": "accrualSum",
+      "dataType": "Currency",
+      "caption": "Сума окладу",
+      "documentation": "Сума окладу",
+      "description": "Сума окладу"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

@@ -1,0 +1,449 @@
+/* global Ext UB $App AC _ */
+
+exports.formDef = 'HR.payFundSelectWithPeriod'
+
+Ext.define('HR.payFundSelectWithPeriod', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+    const queryDelay = 500
+    let allGrid
+    let selGrid
+    let periodsGrid
+    const storeMain = Ext.create('Ext.data.Store', {
+      fields: [
+        { name: 'ID' },
+        { name: 'description' },
+        { name: 'dateFrom' },
+        { name: 'dateTo' },
+        { name: 'isChecked' },
+        { name: 'orderN' }
+      ],
+      data: []
+
+    })
+    function setFilter () {
+      storeMain.filter({
+        id: 'searchTask',
+        property: 'description',
+        condition: UB.core.UBCommand.condition.sqlecLike,
+        value: searchCtrl.getValue(),
+        anyMatch: true,
+        caseSensitive: false
+      })
+    }
+    function clearFilter () {
+      storeMain.filters.removeAtKey('searchTask')
+      storeMain.clearFilter()
+    }
+    const doQueryTask = new Ext.util.DelayedTask(function () {
+      const value = searchCtrl.getValue()
+      if (value === '') {
+        clearFilter()
+      } else {
+        setFilter()
+      }
+    }, me)
+    const searchCtrl = Ext.widget('textfield', {
+      labelWidth: 60,
+      fieldLabel: UB.i18n('filter')
+    })
+    searchCtrl.on('change', function () {
+      doQueryTask.delay(queryDelay)
+    })
+
+    const storeSel = Ext.create('Ext.data.ArrayStore', {
+      fields: [
+        { name: 'ID' },
+        { name: 'description' },
+        { name: 'dateFrom' },
+        { name: 'dateTo' },
+        { name: 'orderN' }
+      ],
+      data: []
+    })
+
+    const storePeriods = Ext.create('Ext.data.ArrayStore', {
+      fields: [
+        { name: 'idxNum' },
+        { name: 'dateFrom' },
+        { name: 'dateTo' }
+      ],
+      data: []
+    })
+    me.items = [
+      periodsGrid = Ext.widget('grid', {
+        xtype: 'grid',
+        stripeRows: true,
+        store: storePeriods,
+        autoScroll: true,
+        region: 'west',
+        split: true,
+        collapsible: true,
+        collapsed: false,
+        flex: 1,
+        title: UB.i18n('Періоди'),
+        columns: [
+          {
+            header: UB.i18n('Дата початку'),
+            dataIndex: 'dateFrom',
+            flex: 1,
+            xtype: 'datecolumn',
+            format: 'd.m.Y',
+            renderer: function (value, metadata) {
+              if (me.curDateFrom && me.curDateFrom.getTime() === value.getTime()) {
+                metadata.css += ` grd-bold`
+              }
+              return AC.dateService.formatDate(value)
+            }
+          }
+        ],
+        listeners: {
+          cellclick: function (grid, td, cellIndex, record) {
+            me.curDateFrom = record.get('dateFrom')
+            me.curDateTo = record.get('dateTo')
+            loadSelectedData(me, me.curDateFrom, me.allGrid.getStore())
+            grid.refreshView()
+          }
+        },
+        tbar: Ext.create('Ext.toolbar.Toolbar', {
+          height: 40,
+          items: [
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Додати'),
+              iconCls: 'u-icon-add',
+              cls: 'blue-action',
+              listeners: {
+                click: function () {
+                  $App.doCommand({
+                    cmdType: 'showForm',
+                    formCode: 'hr_selectAddPeriod',
+                    cmpInitConfig: {
+                      onSelect: function (dateFrom) {
+                        if (!dateFrom) return
+                        const storePeriods = me.periodsGrid.getStore()
+                        dateFrom = AC.dateService.shiftDate(dateFrom)
+                        const period = storePeriods.data.items.find(o => o.get('dateFrom') < dateFrom && dateFrom < o.get('dateTo'))
+                        me.curDateFrom = dateFrom
+                        me.curDateTo = period ? period.get('dateTo') : AC.dateService.maxDate()
+                        const dateTo = AC.dateService.addDays(me.curDateFrom, -1)
+                        storePeriods.add({ idxNum: 0, dateFrom: AC.dateService.shiftDate(me.curDateFrom), dateTo: AC.dateService.shiftDate(me.curDateTo) })
+                        storePeriods.sort('dateFrom', 'DESC')
+                        me.periodsGrid.getView().refreshView()
+                        me.resultData.forEach(row => {
+                          if (row.dateFrom < me.curDateFrom && me.curDateFrom < row.dateTo) {
+                            const newRow = _.clone(row)
+                            row.dateTo = dateTo
+                            newRow.dateFrom = me.curDateFrom
+                            newRow.ID = null
+                            me.resultData.push(newRow)
+                          }
+                        })
+                        loadSelectedData(me, me.curDateFrom, storeMain)
+                      }
+                    }
+                  })
+                }
+              }
+            }
+          ]
+        })
+      }),
+      allGrid = Ext.create('Ext.grid.Panel', {
+        xtype: 'grid',
+        store: storeMain,
+        viewConfig: {
+          markDirty: false
+        },
+        autoScroll: true,
+        flex: 2,
+        split: true,
+        region: 'center',
+        title: UB.i18n('Всі елементи'),
+        columnLines: true,
+        plugins: [Ext.create('Ext.grid.plugin.CellEditing', {
+          clicksToEdit: 1
+        })],
+        tbar: Ext.create('Ext.toolbar.Toolbar', {
+          height: 40,
+          items: [
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Відмітити всі'),
+              iconCls: 'u-icon-check',
+              cls: 'green-action',
+              listeners: {
+                click: function () {
+                  const store = allGrid.getStore()
+                  const storeSel = selGrid.getStore()
+                  Ext.suspendLayouts()
+                  allGrid.suspendEvents()
+                  store.suspendEvents()
+                  selGrid.suspendEvents()
+                  storeSel.suspendEvents()
+
+                  if (searchCtrl.getValue() !== '') {
+                    clearFilter()
+                  }
+                  allGrid.updatingRecords = true
+                  selGrid.updatingRecords = true
+
+                  allGrid.getStore().each(rec => {
+                    rec.beginEdit()
+                    if (!rec.get('isChecked')) {
+                      rec.set('isChecked', true)
+                      addRecord(me, rec, storeSel)
+                    }
+                    rec.endEdit(true)
+                  })
+                  allGrid.updatingRecords = false
+                  selGrid.updatingRecords = false
+                  allGrid.resumeEvents()
+                  store.resumeEvents()
+                  selGrid.resumeEvents()
+                  storeSel.resumeEvents()
+                  Ext.resumeLayouts(true)
+                  selGrid.getView().refreshView()
+                  allGrid.getView().refreshView()
+                }
+              }
+            },
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Виключити всі'),
+              iconCls: 'u-icon-close',
+              cls: 'red-action',
+              listeners: {
+                click: function () {
+                  const store = allGrid.getStore()
+                  const storeSel = selGrid.getStore()
+                  Ext.suspendLayouts()
+                  allGrid.suspendEvents()
+                  store.suspendEvents()
+                  selGrid.suspendEvents()
+                  storeSel.suspendEvents()
+                  if (searchCtrl.getValue() !== '') {
+                    clearFilter()
+                  }
+                  allGrid.updatingRecords = true
+                  selGrid.updatingRecords = true
+
+                  allGrid.getStore().each(rec => {
+                    rec.beginEdit()
+                    rec.set('isChecked', false)
+                    const selRec = storeSel.findRecord('ID', rec.get('ID'))
+                    if (selRec) {
+                      removeRecord(me, selRec, storeSel)
+                    }
+                    rec.endEdit(true)
+                  })
+                  allGrid.updatingRecords = false
+                  selGrid.updatingRecords = false
+                  /* store.groups.each(group => {
+                    setGroupChecked(me, group.records[0].get('groupCode'))
+                  }) */
+                  allGrid.resumeEvents()
+                  store.resumeEvents()
+                  selGrid.resumeEvents()
+                  storeSel.resumeEvents()
+                  Ext.resumeLayouts(true)
+                  selGrid.getView().refreshView()
+                  allGrid.getView().refreshView()
+                }
+              }
+            },
+            searchCtrl
+          ]
+
+        }),
+        columns: [
+          { xtype: 'checkcolumn', dataIndex: 'isChecked' },
+          {
+            header: UB.i18n('Нарахування на зарплату'),
+            dataIndex: 'description',
+            flex: 1
+          }
+        ]
+      }),
+      selGrid = Ext.widget('grid', {
+        xtype: 'grid',
+        stripeRows: true,
+        store: storeSel,
+        autoScroll: true,
+        region: 'east',
+        flex: 2,
+        split: true,
+        title: UB.i18n('Відібрані елементи'),
+        columns: [
+          {
+            header: UB.i18n('Нарахування на зарплату'),
+            dataIndex: 'description',
+            flex: 1
+          }
+        ],
+        tbar: Ext.create('Ext.toolbar.Toolbar', { height: 40 }),
+
+        listeners: {
+          itemdblclick: function (row, record) {
+            if (searchCtrl.getValue() !== '') {
+              clearFilter()
+            }
+            removeRecord(me, record, storeSel)
+            const rec = storeMain.findRecord('ID', record.get('ID'))
+            rec.set('isChecked', false)
+            if (searchCtrl.getValue() !== '') {
+              setFilter()
+            }
+          }
+        }
+      })
+    ]
+    me.tbar = [
+      {
+        xtype: 'button',
+        scale: 'medium',
+        iconCls: 'u-icon-save-and-close',
+        tooltip: UB.i18n('saveAndClose'),
+        cls: 'save-action',
+        handler: function () {
+          const result = {
+            add: [],
+            remove: [],
+            update: []
+          }
+          if (me.sourceData) {
+            me.resultData.forEach(row => {
+              if (!row.ID) {
+                result.add.push(row)
+              } else {
+                const sourceRow = me.sourceData.find(o => o.ID === row.ID)
+                if (sourceRow && (!me.withPeriod || AC.dateService.shiftDate(sourceRow.dateTo).getTime() !== AC.dateService.shiftDate(row.dateTo).getTime())) {
+                  result.update.push(row)
+                }
+              }
+            })
+            me.sourceData.forEach(row => {
+              const resultRow = me.resultData.find(o => o.ID === row.ID)
+              if (!resultRow) {
+                result.remove.push(row)
+              }
+            })
+          }
+          if (me.onSelectData) {
+            const wnd = me.up('window')
+            me.onSelectData(result, wnd)
+            if (!me.showAfterSave) wnd.close()
+          }
+        }
+      }
+    ]
+
+    me.allGrid = allGrid
+    me.selGrid = selGrid
+    me.periodsGrid = periodsGrid
+    me.curDateFrom = null
+    me.curDateTo = null
+    me.resultData = []
+    me.on('afterrender', function () {
+      if (!me.withPeriod) {
+        me.periodsGrid.setVisible(false)
+      }
+      loadData(me, storeMain, storePeriods)
+    })
+    me.callParent(arguments)
+  }
+})
+
+function removeRecord (me, record, store, delResult = true) {
+  store.remove(record)
+  // 'ID', 'payElBaseID', 'dateFrom', 'dateTo'
+  if (delResult) {
+    const idx = me.resultData.findIndex(o => o && o[me.sourceAttr] === record.get('ID') && (!me.withPeriod || AC.dateService.shiftDate(o.dateFrom).getTime() === me.curDateFrom.getTime()))
+    if (idx >= 0) {
+      me.resultData.splice(idx, 1)
+    }
+  }
+}
+
+function addRecord (me, record, store, addResult = true) {
+  // 'ID', 'payElBaseID', 'dateFrom', 'dateTo'
+  store.add(record)
+  if (addResult) {
+    me.resultData.push({
+      ID: null,
+      [me.sourceAttr]: record.get('ID'),
+      dateFrom: me.curDateFrom,
+      dateTo: me.curDateTo
+    })
+  }
+}
+
+function loadSelectedData (me, dateFrom, store) {
+  store.un('update', me.onStoreUpdate)
+  me.isLoadData = true
+  const allRecord = store.snapshot || store.data
+  const storeSel = me.selGrid.getStore()
+  me.selGrid.suspendEvents()
+  me.selGrid.updatingRecords = true
+  storeSel.removeAll()
+  allRecord.items.forEach(row => {
+    const sel = me.resultData.find(o => o[me.sourceAttr] === row.get('ID') && (AC.dateService.isValid(dateFrom) && AC.dateService.isValid(o.dateFrom) ? AC.dateService.shiftDate(o.dateFrom).getTime() === dateFrom.getTime() : true))
+    if (sel) {
+      row.set('isChecked', true)
+      storeSel.add(row)
+    } else {
+      row.set('isChecked', false)
+    }
+  })
+  me.selGrid.resumeEvents()
+  me.selGrid.getView().refreshView()
+  store.on('update', onStoreUpdate, me)
+  me.isLoadData = false
+}
+
+function loadData (me, store, storePeriods) {
+  UB.Repository('hr_payFund')
+    .attrs(['ID', 'description', 'dateFrom', 'dateTo'])
+    .orderBy('codeSort')
+    .selectAsObject().then(result => {
+      store.loadData(result)
+      if (me.sourceData) {
+        const periods = []
+        let idxNum = 1
+        storePeriods.removeAll()
+        me.sourceData.forEach(row => {
+          const dateFrom = AC.dateService.shiftDate(row.dateFrom)
+          if (!periods.find(o => o.dateFrom && o.dateFrom.getTime() === dateFrom.getTime())) {
+            periods.push({ idxNum: idxNum++, dateFrom: dateFrom, dateTo: AC.dateService.shiftDate(row.dateTo) })
+          }
+        })
+        storePeriods.loadData(periods)
+        storePeriods.sort('dateFrom', 'DESC')
+      }
+      me.sourceData.forEach(item => {
+        me.resultData.push(_.clone(item))
+      })
+      const dateFrom = storePeriods.data.length ? storePeriods.data.items[0].get('dateFrom') : null
+      me.curDateFrom = dateFrom
+      me.curDateTo = storePeriods.data.length ? storePeriods.data.items[0].get('dateTo') : null
+      loadSelectedData(me, dateFrom, store)
+      me.periodsGrid.getView().refreshView()
+    })
+}
+
+function onStoreUpdate (store, record) {
+  const me = this
+  const storeSel = me.selGrid.getStore()
+  if (record.get('isChecked')) {
+    addRecord(me, record, storeSel, !me.isLoadData)
+  } else {
+    const rec = storeSel.findRecord('ID', record.get('ID'))
+    if (rec) {
+      removeRecord(me, rec, storeSel, !me.isLoadData)
+    }
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "caption": "Протокол комісії з соціального страхування",
+  "description": "Протокол комісії з соціального страхування",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+  {
+    "name": "orderDate",
+    "dataType": "Date",
+    "caption": "від",
+    "description": "Дата документа",
+    "documentation": "Дата документа"
+  },
+  {
+    "name": "orderNumber",
+    "dataType": "String",
+    "size": 30,
+    "caption": "Номер",
+    "description": "Номер документа",
+    "documentation": "Номер документа"
+  },
+  {
+    "name": "orderState",
+    "dataType": "Enum",
+    "enumGroup": "HR_ORDER_STATE",
+    "caption": "Стан наказу",
+    "description": "Стан наказу",
+    "documentation": "Стан наказу",
+    "defaultValue": "PROJECT",
+    "defaultView": false,
+    "allowNull": false
+  },
+  {
+    "name": "organizationID",
+    "dataType": "Entity",
+    "associatedEntity": "hr_organization",
+    "associationAttr": "mi_data_id",
+    "caption": "Організація",
+    "description": "Організація",
+    "documentation": "Організація",
+    "allowNull": false
+  },
+  {
+    "name": "description",
+    "dataType": "String",
+    "size": 255,
+    "caption": "Опис",
+    "description": "Опис",
+    "documentation": "Опис",
+    "defaultView": false,
+    "customSettings": {
+      "compositeFields": ["orderNumber", "orderDate"],
+      "compositeSeparator": " від "
+    }
+  },
+  {
+    "name": "commissionHRID",
+    "dataType": "Entity",
+    "associatedEntity": "hr_dictCommission",
+    "caption": "Комісія",
+    "description": "Комісія",
+    "documentation": "Комісія"
+  },
+  {
+    "name": "empOrderType",
+    "dataType": "Enum",
+    "enumGroup": "HR_EMPORDRETYPE",
+    "caption": "Тип наказу",
+    "documentation": "Тип наказу",
+    "description": "Тип наказу"
+  },
+  {
+    "name": "periodCalcID",
+    "dataType": "Entity",
+    "associatedEntity": "hr_dictPeriod",
+    "caption": "Розрахунковий період",
+    "description": "Розрахунковий період",
+    "documentation": "Розрахунковий період"
+  },
+  {
+    "name": "periodID",
+    "dataType": "Entity",
+    "associatedEntity": "hr_dictPeriod",
+    "caption": "Звітній період",
+    "description": "Звітній період",
+    "documentation": "Звітній період"
+  },
+  {
+    "name": "allowPosting",
+    "dataType": "Boolean",
+    "caption": "Дозволено проведення",
+    "documentation": "Дозволено проведення",
+    "description": "Дозволено проведення",
+    "allowNull": false,
+    "defaultValue": "0"
+  },
+    {
+      "name": "docText",
+      "dataType": "Text",
+      "caption": "Збережений текст",
+      "description": "Збережений текст"
+    },
+    {
+      "name": "document",
+      "dataType": "Document",
+      "caption": "PDF образ",
+      "description": "PDF образ"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "rls": {
+      "func": "RLS.byOrganization"
+    }
+  }
+}

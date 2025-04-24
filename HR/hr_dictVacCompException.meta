@@ -1,0 +1,109 @@
+{
+  "caption": "Виключення при компенсації відпусток",
+  "description": "Виключення при компенсації відпусток",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація"
+    },
+    {
+      "name": "dictStaffCatID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStaffCat",
+      "caption": "Категорія персоналу",
+      "description": "Категорія персоналу",
+      "documentation": "Категорія персоналу",
+      "allowNull": false
+    },
+    {
+      "name": "monthCount",
+      "dataType": "Int",
+      "caption": "Кількість місяців, що відповідають року",
+      "description": "Кількість місяців, що відповідають року",
+      "documentation": "Кількість місяців, що відповідають року",
+      "defaultValue": "12",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії"
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії"
+    },
+    {
+      "name": "dateFromNotEmpty",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "COALESCE({self}.dateFrom, CONVERT(datetime, '01.01.2000', 104))"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "COALESCE({self}.dateFrom, make_timestamp(2000, 1, 1, 0, 0, 0))"
+        }
+      ]
+    },
+    {
+      "name": "dateToNotEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "COALESCE({self}.dateTo, '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "COALESCE({self}.dateTo, make_timestamp(9999, 12, 31, 0, 0, 0))"
+        }
+      ]
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_DICTVACCOMPEXCEPTION_DAT": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "orgID": { "sort": "ASC" },
+          "dictStaffCatID": { "sort": "ASC" },
+          "dateFrom": { "sort": "ASC" },
+          "dateTo": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

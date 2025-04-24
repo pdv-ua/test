@@ -1,0 +1,67 @@
+/* global appAC */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orgID'],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      defaults: { labelWidth: 160 }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [
+      { attributeName: 'orderN' },
+      { attributeName: 'signerName' },
+      {
+        attributeName: 'employeePositionID',
+        xtype: 'empPositionCombobox',
+        gridFieldList: ['description'],
+        fieldList: ['ID', 'description', 'departmentID', 'employeeNumberID', 'organizationID', 'positionID'],
+        whereList: {},
+        listeners: {}
+      },
+      {
+        attributeName: 'positionName'
+      },
+      {
+        attributeName: 'signerType',
+        hidden: true
+      },
+      {
+        attributeName: 'signerCode',
+        hidden: true,
+        allowBlank: false
+      },
+      {
+        attributeName: 'orgID',
+        hidden: true
+      },
+      {
+        attributeName: 'employeeNumberID',
+        hidden: true
+      },
+      {
+        attributeName: 'departmentID',
+        fieldList: ['ID', 'code', 'description', 'orgID', 'state'],
+        displayField: 'description',
+        gridFieldList: ['description'],
+        whereList: {
+          orgID: {
+            expression: '[orgID]',
+            condition: 'equal',
+            value: appAC.globalOrganization()
+          },
+          state: {
+            expression: '[state]',
+            condition: 'equal',
+            value: 'ACTIVE'
+          }
+        }
+      }
+    ]
+  }
+})()

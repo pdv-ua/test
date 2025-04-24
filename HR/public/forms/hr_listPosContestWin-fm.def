@@ -1,0 +1,296 @@
+/* global appAC Ext AC $App _ HR */
+
+exports.formDef = 'HR.listPosContestWin'
+
+Ext.define('HR.listPosContestWin', {
+  extend: 'Ext.form.Panel',
+  height: 600,
+  width: 1100,
+  layout: 'border',
+  alias: 'widget.listPosContestWin',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink',
+          'commandLink', 'showDetail', 'audit'],
+        cmdType: 'showList',
+        entity: 'hr_listPosContestDet',
+        customActions: [
+          {
+            text: UB.i18n('Створити проєкт наказу'),
+            xtype: 'button',
+            icon: $App.getImagePath('doc.png'),
+            handler: function (btn) {
+              const me = btn.up('form')
+              const grid = me.down('[xtype=ubdetailgrid]')
+              if (grid) {
+                grid.getStore().reload()
+              }
+              const reco = AC.gridUtils.getCurrentRecord(grid)
+              if (!reco) {
+                AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вибраний запис'))
+                return
+              }
+              me.createOrder(reco)
+            }
+          }
+        ],
+        cmdData: {
+          params: [{
+            entity: 'hr_listPosContestDet',
+            method: 'select',
+            fieldList: [
+              { name: 'employeeID.fullFIO', description: UB.i18n('Особа') },
+              { name: 'employeeID', visibility: false },
+              { name: 'listPosContestID.positionID', visibility: false },
+              { name: 'listPosContestID.paraID', visibility: false },
+              { name: 'listPosContestID.organizationID.mi_data_id', visibility: false },
+              { name: 'listPosContestID.paraID.departmentID', visibility: false },
+              { name: 'listPosContestID.positionID.description', description: UB.i18n('Посада') },
+              { name: 'listPosContestID.paraPosID.departmentID.description', description: UB.i18n('Підрозділ') },
+              { name: 'listPosContestID.paraPosID.departmentID', visibility: false },
+              { name: 'listPosContestID.dateClose', description: UB.i18n('Дата закриття вакансії') },
+              { name: 'listPosContestID.orderID.description', description: UB.i18n('Наказ') }
+            ],
+            whereList: {
+              winLevel: {
+                expression: '[winLevel]',
+                condition: '=',
+                value: 1
+              },
+              contestState: {
+                expression: '[listPosContestID.state]',
+                condition: '=',
+                value: 'AGREED'
+              },
+              orgDateFrom: {
+                expression: '[listPosContestID.organizationID.mi_dateFrom]',
+                condition: 'lessEqual',
+                value: appAC.globalApplicationDate()
+              },
+              orgDateTo: {
+                expression: '[listPosContestID.organizationID.mi_dateTo]',
+                condition: 'moreEqual',
+                value: appAC.globalApplicationDate()
+              },
+              orgState: {
+                expression: '[listPosContestID.organizationID.state]',
+                condition: '=',
+                value: 'ACTIVE'
+              },
+              posDateFrom: {
+                expression: '[listPosContestID.positionID.mi_dateFrom]',
+                condition: 'lessEqual',
+                value: appAC.globalApplicationDate()
+              },
+              posDateTo: {
+                expression: '[listPosContestID.positionID.mi_dateTo]',
+                condition: 'moreEqual',
+                value: appAC.globalApplicationDate()
+              },
+              posState: {
+                expression: '[listPosContestID.positionID.state]',
+                condition: '=',
+                value: 'ACTIVE'
+              },
+              orderIsNull: {
+                expression: '[paraID]',
+                condition: 'isNull'
+              },
+              orderPara: {
+                expression: '[paraID.mi_deleteDate]',
+                condition: 'notEqual',
+                value: AC.dateService.maxDate()
+              }
+            },
+            logicalPredicates: ['([winLevel] AND [contestState] AND [orgDateFrom] AND [orgDateTo] AND [orgState] AND [posDateFrom] AND [posDateTo] AND [posState] AND ([orderIsNull] OR [orderPara]))']
+          }]
+        },
+        listeners: {
+          render: (grid) => {
+            grid.menu.removeAll()
+            grid.menu.add([HR.employeeTabs.getEmpCardMenu(grid)])
+          }
+        },
+        cmpInitConfig: {
+          onItemDblClick: function () {
+            return false
+          },
+          afterInit: function () {
+            let grid = this
+            AC.gridUtils.setGlobalOrganization(grid, 'listPosContestID.organizationID.mi_data_id')
+            let actCol = Ext.create('Ext.grid.column.Column', {
+              xtype: 'actioncolumn',
+              text: UB.i18n('Дія'),
+              width: 50,
+              align: 'center',
+              filterable: false,
+              sortable: false,
+              disableExport: true,
+              renderer: function (value, meta, record) {
+                let id = Ext.id()
+                Ext.defer(function () {
+                  Ext.widget('button', {
+                    renderTo: Ext.query('#' + id)[0],
+                    tooltip: UB.i18n('Створити проєкт наказу'),
+                    scale: 'small',
+                    icon: $App.getImagePath('doc.png'),
+                    handler: function () {
+                      const form = grid.up('form')
+                      if (form) form.createOrder(record)
+                    }
+                  })
+                }, 50)
+                return Ext.String.format('<div id="{0}"></div>', id)
+              }
+            })
+            grid.headerCt.insert(0, actCol)
+            grid.columns.unshift(actCol)
+          }
+        }
+      }
+    ]
+  },
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+    me.showCreateForm = function (options) {
+      return new Promise((resolve, reject) => {
+        function showForm (config) {
+          const newConfig = _.merge({
+            cmdType: 'showForm',
+            entity: options.entityName
+          }, config)
+
+          if (options.showInModal) {
+            newConfig.isModal = true
+          } else {
+            newConfig.tabId = options.tabId
+            newConfig.target = $App.getViewport().centralPanel
+          }
+
+          $App.doCommand(newConfig)
+        }
+
+        const commandConfig = {
+          formCode: options.formCode,
+          initialFieldValues: options.initialFieldValues,
+          customParams: options.customParams,
+          sender: options.sender,
+          cmpInitConfig: {
+            initComponentStart () {
+              const me = this
+              if (options.onInit) {
+                options.onInit(me)
+              }
+              resolve(me)
+            }
+          }
+        }
+
+        showForm(commandConfig)
+      })
+    }
+
+    me.createOrderDetail = function () {
+      const formOrder = this
+      const record = formOrder.customParams.contestRecord || {}
+      formOrder.saveForm()
+        .then(function (result) {
+          if (result !== -1) {
+            formOrder.un('recordloaded', me.createOrderDetail)
+            $App.doCommand({
+              cmdType: 'showForm',
+              entity: 'hr_empOrderAppointDet',
+              sender: formOrder.query('[paraGrid=true]')[0],
+              isModal: true,
+              customParams: {
+                isGroup: false,
+                empOrderType: 'APPOINT',
+                listPosContestDetID: record.ID
+              },
+              cmpInitConfig: {
+                beforeRender: function () {
+                  const form = this
+                  form.on('formDataReady', function () {
+                    if (this.isNewInstance) {
+                      const ctrl = this.down('[name=positionID]')
+                      if (ctrl) this.onControlChanged(ctrl)
+                    }
+                  })
+                  form.on('afterSave', function () {
+                    $App.connection.run({
+                      entity: 'hr_listPosContestDet',
+                      method: 'update',
+                      __skipOptimisticLock: true,
+                      execParams: {
+                        ID: record.ID,
+                        paraID: this.instanceID
+                      }
+                    }).then(() => {
+                      const grid = me.down('[xtype=ubdetailgrid]')
+                      if (grid) {
+                        grid.getStore().reload()
+                      }
+                      return true
+                    })
+                  })
+                }
+              },
+              initialFieldValues: {
+                employeeID: record.employeeID,
+                positionID: record.positionID,
+                departmentID: record.departmentID,
+                listPosContestDetID: record.ID
+              }
+            })
+          }
+        })
+    }
+
+    me.createOrder = function (record) {
+      const me = this
+      $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Створити проєкт наказу?'))
+        .then(function (choice) {
+          if (choice) {
+            me.showCreateForm({
+              entityName: 'hr_empOrder',
+              initialFieldValues: {
+                empOrderType: 'APPOINT',
+                organizationID: record.get('listPosContestID.organizationID.mi_data_id'),
+                orderDate: AC.dateService.currentDate(),
+                entryDate: AC.dateService.currentDate()
+              },
+              customParams: {
+                empOrderType: 'APPOINT',
+                contestRecord: {
+                  ID: record.get('ID'),
+                  employeeID: record.get('employeeID'),
+                  positionID: record.get('listPosContestID.positionID'),
+                  departmentID: record.get('listPosContestID.paraPosID.departmentID')
+                }
+              },
+              // showInModal: true,
+              tabId: 'tmpContestWin1'
+            }).then(formOrder => {
+              formOrder.on('recordloaded', me.createOrderDetail)
+            })
+          }
+        })
+    }
+
+    me.callParent(arguments)
+  }
+})

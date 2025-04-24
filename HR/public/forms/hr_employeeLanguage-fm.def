@@ -1,0 +1,56 @@
+let margin = '5 10'
+let hMargin = '0 5'
+let padding = '0 10'
+let labelWidth = 100
+let layout = { type: 'vbox', align: 'stretch' }
+let hLayout = { type: 'hbox', align: 'middle' }
+
+exports.formDef = {
+  requiredFields: ['dictLanguageID.name', 'dictLanguageLevelID.level', 'employeeDocID.docNumber',
+    'employeeDocID.docSeries', 'employeeDocID.docIssued', 'employeeDocID.docIssuedDate', 'impSourceID' ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout,
+      margin: hMargin,
+      padding,
+      defaults: { margin, labelWidth },
+      items: [
+        { attributeName: 'employeeID', hidden: true },
+        { attributeName: 'dictLanguageID' },
+        { attributeName: 'dictLanguageLevelID' }
+      ]
+    },
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Документ-підстава'),
+      layout,
+      margin: hMargin,
+      fieldDefaults: { margin, labelWidth },
+      items: [
+        {
+          attributeName: 'employeeDocID',
+          fieldList: ['ID', 'docSeries', 'docNumber', 'docIssued', 'docIssuedDate', 'employeeID', 'description'],
+          gridFieldList: ['description', 'docIssued'],
+          displayField: 'description'
+        },
+        {
+          layout: hLayout,
+          items: [
+            { attributeName: 'docNumber', description: UB.i18n('Номер довідки'), recordField: 'docNumber' },
+            { attributeName: 'docSeries', description: UB.i18n('Серія довідки'), recordField: 'docSeries' }
+          ]
+        },
+        { attributeName: 'docIssuer', description: UB.i18n('Ким видана'), recordField: 'docIssued' },
+        { attributeName: 'dateIssue', description: UB.i18n('Дата видачі'), recordField: 'docIssuedDate' }
+      ]
+    }
+  ]
+}

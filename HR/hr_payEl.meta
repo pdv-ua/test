@@ -1,0 +1,740 @@
+{
+  "caption": "Вид оплати",
+  "description": "Вид оплати",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 32,
+      "caption": "Код",
+      "description": "Код",
+      "allowNull": false
+    },
+    {
+      "name": "codeSort",
+      "dataType": "Float",
+      "caption": "Код",
+      "description": "Код"
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Назва",
+      "description": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "genName",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Родовий",
+      "description": "Родовий відмінок",
+      "allowNull": true
+    },
+    {
+      "name": "orName",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Орудний",
+      "description": "Орудний відмінок",
+      "allowNull": true
+    },
+    {
+      "name": "printName",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Знахідний",
+      "description": "Знахідний відмінок",
+      "allowNull": true
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Опис",
+      "description": "Опис",
+      "customSettings": {
+        "compositeFields": ["code", "name"],
+        "compositeSeparator": " "
+      }
+    },
+    {
+      "name": "caption",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Опис",
+      "description": "Опис",
+      "customSettings": {
+        "compositeFields": ["name", "code"],
+        "compositeSeparator": ["", " [", "]"]
+      }
+    },
+    {
+      "name": "methodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_method",
+      "caption": "Метод розрахунку",
+      "description": "Метод розрахунку",
+      "allowNull": false
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Коментар",
+      "description": "Коментар"
+    },
+    {
+      "name": "shortPrintName",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Скорочена назва для друку",
+      "description": "Скорочена назва для друку"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "allowNull": false,
+      "defaultView": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "roundUpTo",
+      "dataType": "Enum",
+      "enumGroup": "HR_ROUND",
+      "caption": "Округлювати суму",
+      "description": "Округлювати суму",
+      "defaultValue": "1"
+    },
+    {
+      "name": "roundAvgUpTo",
+      "dataType": "Enum",
+      "enumGroup": "HR_ROUND",
+      "caption": "Округлювати середній до",
+      "description": "Округлювати середній до",
+      "defaultValue": "1"
+    },
+    {
+      "name": "isAutoCalc",
+      "dataType": "Boolean",
+      "caption": "Розраховувати автоматично",
+      "description": "Розраховувати автоматично",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isRecalculate",
+      "dataType": "Boolean",
+      "caption": "Перераховувати",
+      "description": "Перераховувати",
+      "defaultValue": "0"
+    },
+    {
+      "name": "calcProportion",
+      "dataType": "Enum",
+      "enumGroup": "HR_PROPORTION",
+      "caption": "Нараховується по",
+      "description": "Нараховується по"
+    },
+    {
+      "name": "calcTimeProportion",
+      "dataType": "Enum",
+      "enumGroup": "HR_TIME_PROPORTION",
+      "caption": "Розраховується від",
+      "description": "Розраховується від"
+    },
+    {
+      "name": "calcSumType",
+      "dataType": "Enum",
+      "enumGroup": "HR_CALCSUM_TYPE",
+      "caption": "Розраховується від",
+      "description": "Розраховується від"
+    },
+    {
+      "name": "calcAvgType",
+      "dataType": "Enum",
+      "enumGroup": "HR_CALCAVG_TYPE",
+      "caption": "Сума для розрахунку",
+      "description": "Сума для розрахунку"
+    },
+    {
+      "name": "calcIndAvgType",
+      "dataType": "Enum",
+      "enumGroup": "HR_CALC_INDAVG_TYPE",
+      "caption": "Розраховувати за",
+      "description": "Розраховувати за"
+    },
+    {
+      "name": "calcPlanType",
+      "dataType": "Enum",
+      "enumGroup": "HR_CALC_PLAN_TYPE",
+      "caption": "Розраховувати від",
+      "description": "Розраховувати від"
+    },
+    {
+      "name": "periodType",
+      "dataType": "Enum",
+      "enumGroup": "HR_ACCPERIOD_TYPE",
+      "caption": "Сума для розрахунку визначається по",
+      "description": "Сума для розрахунку визначається по"
+    },
+    {
+      "name": "surchargeExperience",
+      "dataType": "Enum",
+      "enumGroup": "HR_SURCHARGE_EXPERIENCE",
+      "caption": "Підвищення надбавки при зміні стажу виконується",
+      "description": "Підвищення надбавки при зміні стажу виконується",
+      "defaultValue": "1"
+    },
+    {
+      "name": "dictExperienceID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictExperience",
+      "caption": "Вид стажу",
+      "description": "Вид стажу"
+    },
+    {
+      "name": "calcMounth",
+      "dataType": "Int",
+      "caption": "Кількість місяців для розрахунку середнього заробітку",
+      "description": "Кількість місяців для розрахунку середнього заробітку"
+    },
+    {
+      "name": "roundAverage",
+      "dataType": "Boolean",
+      "caption": "Округлювати середній заробіток",
+      "description": "Округлювати середній заробіток",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dictTimeCostID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTimeCost",
+      "caption": "Елемент обліку робочого часу",
+      "description": "Елемент обліку робочого часу"
+    },
+    {
+      "name": "dictTimeCostWorkID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTimeCost",
+      "caption": "Елемент обліку робочого часу (робочий час)",
+      "description": "Елемент обліку робочого часу (робочий час)",
+      "allowNull": true
+    },
+    {
+      "name": "dictTimeCostAvgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTimeCost",
+      "caption": "Елемент обліку робочого часу (за середнім)",
+      "description": "Елемент обліку робочого часу (за середнім)",
+      "allowNull": true
+    },
+    {
+      "name": "estimated",
+      "dataType": "Enum",
+      "enumGroup": "HR_ESTIMATED",
+      "caption": "Робочій час оцінюється за",
+      "description": "Робочій час оцінюється за",
+      "defaultValue": "HOUR"
+    },
+    {
+      "name": "alimonyLessPayment",
+      "dataType": "Float",
+      "caption": "Сума не більше відсотку від доходу",
+      "description": "Сума не більше відсотку від доходу",
+      "defaultValue": "0"
+    },
+    {
+      "name": "typePrepayment",
+      "dataType": "Enum",
+      "enumGroup": "HR_TYPEPREPAYMENT",
+      "caption": "Розрахунок суми авансу",
+      "description": "Розрахунок суми авансу",
+      "defaultValue": "1"
+    },
+    {
+      "name": "percPrepayment",
+      "dataType": "Int",
+      "caption": "Відсоток авансу",
+      "description": "Відсоток авансу"
+    },
+    {
+      "name": "paymentIfNotLess",
+      "dataType": "Float",
+      "caption": "Виплачувати, якщо не меньше",
+      "description": "Виплачувати, якщо не меньше"
+    },
+    {
+      "name": "prepaymentDay",
+      "dataType": "Int",
+      "caption": "День виплати авансу",
+      "description": "День виплати авансу"
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_fundSource",
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування"
+    },
+    {
+      "name": "dictProgClassID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictProgClass",
+      "caption": "КПК",
+      "description": "Код програмної класифікації"
+    },
+    {
+      "name": "dictProjectID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictProject",
+      "caption": "Проєкт",
+      "description": "Проєкт"
+    },
+    {
+      "name": "entryOperationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_entryOperation",
+      "caption": "Бухгалтерська проводка",
+      "description": "Бухгалтерська проводка"
+    },
+    {
+      "name": "includeSecondJobs",
+      "dataType": "Boolean",
+      "caption": "Включати заробіток внутрішнього сумісництва",
+      "description": "Включати заробіток внутрішнього сумісництва",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isMtCount",
+      "dataType": "Boolean",
+      "caption": "Враховувати кількість ставок",
+      "description": "Враховувати кількість ставок",
+      "defaultValue": "1"
+    },
+    {
+      "name": "ignoreInCalcPay",
+      "dataType": "Boolean",
+      "caption": "Не враховувати у нараховано/утримано/виплачено",
+      "description": "Не враховувати у нараховано/утримано/виплачено",
+      "defaultValue": "0"
+    },
+    {
+      "name": "calcAlgorithm",
+      "dataType": "Enum",
+      "enumGroup": "HR_CALCALGORITHM",
+      "caption": "Алгоритм розрахунку",
+      "description": "Алгоритм розрахунку",
+      "defaultValue": "1"
+    },
+    {
+      "name": "repaymentOnly",
+      "dataType": "Boolean",
+      "caption": "Лише погашення заборгованості",
+      "description": "Лише погашення заборгованості",
+      "defaultValue": "0"
+    },
+    {
+      "name": "shortDay",
+      "dataType": "Boolean",
+      "caption": "Доплачувати за скорочення дня",
+      "description": "Доплачувати за скорочення дня",
+      "defaultValue": "1"
+    },
+    {
+      "name": "shortWeek",
+      "dataType": "Boolean",
+      "caption": "Доплачувати за скорочення тижня",
+      "description": "Доплачувати за скорочення тижня",
+      "defaultValue": "0"
+    },
+    {
+      "name": "onlyPlanTrip",
+      "dataType": "Boolean",
+      "caption": "Враховувати тільки відрядження за плановим заробітком",
+      "description": "Враховувати тільки відрядження за плановим заробітком",
+      "defaultValue": "0"
+    },
+    {
+      "name": "accrueFuturePeriod",
+      "dataType": "Enum",
+      "enumGroup": "HR_ACCRUE_FUTURE_PERIOD",
+      "caption": "Нарахування за майбутні облікові періоди проводити",
+      "description": "Нарахування за майбутні облікові періоди проводити"
+    },
+    {
+      "name": "calcEarnings",
+      "dataType": "Enum",
+      "enumGroup": "HR_CALC_EARNINGS_TYPE",
+      "caption": "Розрахунок від заробітку",
+      "description": "Розрахунок від заробітку"
+    },
+    {
+      "name": "excludePartTimeEmp",
+      "dataType": "Boolean",
+      "caption": "Виключити працівників на неповній ставці",
+      "description": "Виключити працівників на неповній ставці",
+      "defaultValue": "0"
+    },
+    {
+      "name": "hiredThisMonth",
+      "dataType": "Boolean",
+      "caption": "Виключити прийнятих на роботу в поточном місяці",
+      "description": "Виключити прийнятих на роботу в поточном місяці",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dictTarifCoeffID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTarifCoeff",
+      "caption": "Тарифний розряд",
+      "description": "Тарифний розряд",
+      "documentation": "Тарифний розряд"
+    },
+    {
+      "name": "accrualRate",
+      "dataType": "Float",
+      "caption": "Відсоток оплати",
+      "description": "Відсоток оплати",
+      "documentation": "Відсоток оплати"
+    },
+    {
+      "name": "excludeFundSource",
+      "dataType": "Boolean",
+      "caption": "Виключення",
+      "description": "Виключення джерел фінансування",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isParentEmployeeNumber",
+      "dataType": "Boolean",
+      "caption": "Враховувати попередній особовий рахунок",
+      "description": "Враховувати попередній особовий рахунокя",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isTimeSheet",
+      "dataType": "Boolean",
+      "caption": "Нормувати за табелем",
+      "description": "Нормувати за табелем",
+      "defaultValue": "1"
+    },
+    {
+      "name": "isLastEmployeeNumber",
+      "dataType": "Boolean",
+      "caption": "Нараховувати у останньому особовому рахунку",
+      "description": "Нараховувати у останньому особовому рахунку",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isIndividualRate",
+      "dataType": "Boolean",
+      "caption": "Додатковий відсоток/сума у ОР",
+      "description": "Додатковий відсоток/сума у ОР",
+      "defaultValue": "0"
+    },
+    {
+      "name": "notLimitPayments",
+      "dataType": "Boolean",
+      "caption": "Не обмежувати кількість виплат за рік",
+      "description": "Не обмежувати кількість виплат за рік",
+      "defaultValue": "0"
+    },
+    {
+      "name": "includeInCalcAvg",
+      "dataType": "Enum",
+      "enumGroup": "HR_INCLUDE_IN_CALC_AVG",
+      "caption": "Включати у розрахунок середнього",
+      "description": "Включати у розрахунок середнього"
+    },
+    {
+      "name": "isPayInHolidays",
+      "dataType": "Boolean",
+      "caption": "Сплачувати у святкові дні",
+      "description": "Сплачувати у святкові дні",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isCalcReservePart",
+      "dataType": "Boolean",
+      "caption": "Нараховувати резерв в повному обсязі у неповністю відпрацьовані місяця",
+      "description": "Нараховувати резерв в повному обсязі у неповністю відпрацьовані місяця",
+      "defaultValue": "0"
+    },
+    {
+      "name": "notUseBenefits",
+      "dataType": "Boolean",
+      "caption": "Не враховувати пільгу для майбутніх періодов",
+      "description": "Не враховувати пільгу для майбутніх періодов",
+      "defaultValue": "0"
+    },
+    {
+      "name": "typeCalcTime",
+      "dataType": "Enum",
+      "enumGroup": "HR_TYPEPAYBASE",
+      "caption": "У першому та останньому місяці розраховувати",
+      "description": "У першому та останньому місяці розраховувати",
+      "defaultValue": "TYPEWORK"
+    },
+    {
+      "name": "useDictTech",
+      "dataType": "Boolean",
+      "caption": "Облік продукції та списання матеріалів за технологічними картами",
+      "description": "Облік продукції та списання матеріалів за технологічними картами",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isNormMinSum",
+      "dataType": "Boolean",
+      "caption": "Нормувати мінімальну суму на відпрацьований час",
+      "description": "Нормувати мінімальну суму на відпрацьований час",
+      "defaultValue": "1"
+    },
+    {
+      "name": "useKPI",
+      "dataType": "Boolean",
+      "caption": "Розмір нарахування визначається за KPI",
+      "description": "Розмір нарахування визначається за KPI",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isLimitTimeSheet",
+      "dataType": "Boolean",
+      "caption": "Нормувати обмеження за табелем",
+      "description": "Нормувати обмеження за табелем"
+    },
+    {
+      "name": "sumPayMore",
+      "dataType": "Currency",
+      "caption": "Сума до виплати більша суми доплати",
+      "description": "Сума до виплати більша суми доплати"
+    },
+    {
+      "name": "isCorrectPlan",
+      "dataType": "Boolean",
+      "caption": "Коригувати плановий заробіток при неповному робочому дні",
+      "description": "Коригувати плановий заробіток при неповному робочому дні"
+    },
+    {
+      "name": "periodSummarized",
+      "dataType": "Enum",
+      "enumGroup": "HR_PERIOD_TYPE",
+      "caption": "Період підсумованого обліку",
+      "description": "Період підсумованого обліку",
+      "defaultValue": "MONTH"
+    },
+    {
+      "name": "notReqReport",
+      "dataType": "Boolean",
+      "caption": "Не потребує звіту до виконавчої служби",
+      "description": "Не потребує звіту до виконавчої служби"
+    },
+    {
+      "name": "excludeMonthFreeDays",
+      "dataType": "Boolean",
+      "caption": "Виключати місяці, в яких крім елементів обліку зі списку Виключення робочого часу є тільки вихідні дні",
+      "description": "Виключати місяці, в яких крім елементів обліку зі списку Виключення робочого часу є тільки вихідні дні",
+      "defaultValue": "0"
+    },
+    {
+      "name": "notCloseOnChangeEmpPos",
+      "dataType": "Boolean",
+      "caption": "Не закривати при зміні призначення",
+      "description": "Не закривати при зміні призначення",
+      "defaultValue": "0"
+    },
+    {
+      "name": "baseSumIsAverage",
+      "dataType": "Boolean",
+      "caption": "Сума для розрахунку є середньомісячною",
+      "description": "Сума для розрахунку є середньомісячною",
+      "defaultValue": "1"
+    },
+    {
+      "name": "isPayDismAll",
+      "dataType": "Boolean",
+      "caption": "Нараховувати у місяці звільнення та пізніше за попередні періоди",
+      "description": "Нараховувати у місяці звільнення та пізніше за попередні періоди",
+      "defaultValue": "1"
+    },
+    {
+      "name": "isPayDismSalPeriod",
+      "dataType": "Boolean",
+      "caption": "Нараховувати за місяць звільнення",
+      "description": "Нараховувати за місяць звільнення",
+      "defaultValue": "1"
+    },
+    {
+      "name": "isPayDismCalcPeriod",
+      "dataType": "Boolean",
+      "caption": "Нараховувати тільки у місяці звільнення",
+      "description": "Нараховувати тільки у місяці звільнення",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isPayDismOnlyPeriod",
+      "dataType": "Boolean",
+      "caption": "Нараховувати тільки за місяць звільнення",
+      "description": "Нараховувати тільки за місяць звільнення",
+      "defaultValue": "0"
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати",
+      "description": "Вид оплати"
+    },
+    {
+      "name": "rightRate",
+      "dataType": "Enum",
+      "enumGroup": "HR_RIGHT_RATE",
+      "caption": "Правило визначення відсотка",
+      "description": "Правило визначення відсотка"
+    },
+    {
+      "name": "calcMounthRate",
+      "dataType": "Int",
+      "caption": "Кількість місяців для розрахунку відсотка",
+      "description": "Кількість місяців для розрахунку відсотка"
+    },
+    {
+      "name": "maxMtCount",
+      "dataType": "Float",
+      "caption": "Максимальна кількість ставок, що враховується",
+      "description": "Максимальна кількість ставок, що враховується"
+    },
+    {
+      "name": "dayAccumCondition",
+      "dataType": "Enum",
+      "enumGroup": "HR_DAYACCUM_CONDITION",
+      "caption": "Урахування днів",
+      "description": "Урахування днів"
+    },
+    {
+      "name": "planSumByFact",
+      "dataType": "Boolean",
+      "caption": "Плановий заробіток визначати за фактом",
+      "description": "Плановий заробіток визначати за фактом",
+      "defaultValue": "0"
+    },
+    {
+      "name": "payDownTime",
+      "dataType": "Boolean",
+      "caption": "Оплата внутрізмінного простою",
+      "description": "Оплата внутрізмінного простою",
+      "defaultValue": "0"
+    },
+    {
+      "name": "useTimeSheetBy",
+      "dataType": "Enum",
+      "enumGroup": "HR_USETIMESHEETBY",
+      "caption": "Для розрахунку використовувати",
+      "description": "Для розрахунку використовувати",
+      "defaultValue": "NORMA"
+    },
+    {
+      "name": "usePartialFirstMonth",
+      "dataType": "Boolean",
+      "caption": "Включати неповний перший місяць роботи у розрахунок середнього",
+      "description": "Включати неповний перший місяць роботи у розрахунок середнього",
+      "defaultValue": "0"
+    },
+    {
+      "name": "normTimeBy",
+      "dataType": "Enum",
+      "enumGroup": "HR_SHIFT_RATETYPE",
+      "caption": "Норму часу розраховувати від",
+      "description": "Норму часу розраховувати від",
+      "documentation": "Норму часу розраховувати від"
+    },
+    {
+      "name": "roundDays",
+      "dataType": "Int",
+      "caption": "Округлювати дні до знаків після коми",
+      "description": "Округлювати дні до знаків після коми",
+      "defaultValue": "2"
+    },
+    {
+      "name": "payOverNorm",
+      "dataType": "Boolean",
+      "caption": "Сплачувати переробіток за місяць",
+      "description": "Сплачувати переробіток за місяць",
+      "defaultValue": "0"
+    },
+    {
+      "name": "calcByDayEarnPermAcc",
+      "dataType": "Boolean",
+      "caption": "Розрахунок за денним заробітком постійним нарахуванням",
+      "description": "Розрахунок за денним заробітком постійним нарахуванням",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dayEarningType",
+      "dataType": "Enum",
+      "enumGroup": "HR_DAY_EARN_TYPE",
+      "caption": "Денний заробіток визначати за",
+      "description": "Денний заробіток визначати за"
+    },
+    {
+      "name": "calcEachPeriod",
+      "dataType": "Boolean",
+      "caption": "Кожен період розраховувати окремо",
+      "description": "Кожен період розраховувати окремо",
+      "defaultValue": "0"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

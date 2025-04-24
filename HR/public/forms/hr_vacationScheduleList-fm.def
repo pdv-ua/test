@@ -1,0 +1,402 @@
+/* global _ Ext UB $App AC HR appAC */
+exports.formDef = 'HR.vacationScheduleList'
+
+Ext.define('HR.vacationScheduleList', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.vacationschedulelist',
+  layout: { type: 'border' },
+  width: 1100,
+  height: 600,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        name: 'paramPanel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'hbox' },
+            collapsed: false,
+            items: [
+              {
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getDepCombo({ labelWidth: 110, width: 400, filterByGlobalOrg: true, displayField: 'description' }),
+                      {
+                        xtype: 'checkboxfield',
+                        labelWidth: 200,
+                        name: 'subDepartment',
+                        fieldLabel: UB.i18n('з підлеглими підрозділами'),
+                        checked: false,
+                        readOnly: true
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'vacKindID',
+                        fieldLabel: UB.i18n('Вид відпустки'),
+                        labelWidth: 110,
+                        width: 400,
+                        ubRequest: {
+                          entity: 'hr_dictVacationKind',
+                          fieldList: ['ID', 'name', 'code']
+                        },
+                        listeners: {
+                          render: ctrl => {
+                            ctrl.store.on('load', () => {
+                              if (!ctrl.store.isLoaded) {
+                                const storeItems = ctrl.store.data.items
+                                const selItem = _.find(storeItems, { data: { code: 'dYear' } })
+                                if (selItem) {
+                                  ctrl.setValue(selItem.data.ID)
+                                }
+                                ctrl.store.isLoaded = true
+                              }
+                            })
+                            ctrl.store.load()
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'catChiefs',
+                        fieldLabel: UB.i18n(`Категорія 'Керівники'`),
+                        labelWidth: 200,
+                        checked: true
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'catOthers',
+                        fieldLabel: UB.i18n(`'Інші'`),
+                        labelWidth: 70,
+                        checked: true
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'numberfield',
+                    name: 'year',
+                    fieldLabel: UB.i18n('Рік'),
+                    allowBlank: false,
+                    minValue: 2000,
+                    maxValue: 9999,
+                    vtype: 'numberValidator',
+                    value: appAC.globalApplicationDate().getFullYear(),
+                    labelWidth: 110,
+                    width: 200,
+                    listeners: {
+                      change: function (ctrl, newValue) {
+                        me.setBaseWhereFilter(me)
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'button',
+                tooltip: UB.i18n('Шукати'),
+                iconCls: 'fas fa-search',
+                width: 30,
+                cls: 'green-action',
+                margin: '20 0 5 15',
+                handler: function (btn) {
+                  let me = btn.up('[name=paramPanel]').ownerCt
+                  me.refreshData(me)
+                }
+              }
+              /* UBHR-4556 - звіт перенесено в меню "Облік робочого часу \ Звіти" */
+              /* {
+                xtype: 'button',
+                tooltip: UB.i18n('Витяг'),
+                iconCls: 'fas fa-print',
+                cls: 'blue-action',
+                text: UB.i18n('Витяг'),
+                margin: '20 0 5 15',
+                handler: function (btn) {
+                  let me = btn.up('[name=paramPanel]').ownerCt
+                  me.showReport(me)
+                }
+              } */
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'vacationSchedule',
+        region: 'center',
+        autoScroll: true,
+        flex: 1,
+        hideActions: ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        entityConfig: {
+          entity: 'hr_vacationSchedule',
+          method: 'select',
+          fieldList: [
+            { name: 'employeePositionID.depName', description: UB.i18n('Підрозділ'), simpleFilter: true },
+            { name: 'employeePositionID.posName', description: UB.i18n('Посада'), simpleFilter: true },
+            { name: 'tabNum', description: UB.i18n('Таб. №') },
+            { name: 'personDescription', description: UB.i18n('ПІБ') },
+            { name: 'dictVacationKindID.name', description: UB.i18n('Вид відпустки') },
+            { name: 'dateFrom', format: 'd.m.Y', description: UB.i18n('Початок відпуски'), config: { align: 'center', width: 100 } },
+            { name: 'dateTo', format: 'd.m.Y', description: UB.i18n('Закінчення відпуски'), config: { align: 'center', width: 100 } },
+            { name: 'dayCount', config: { align: 'center' } },
+            { name: 'orderID.description', description: UB.i18n('Наказ'), simpleFilter: true },
+            { name: 'employeePositionID.posCatName', description: UB.i18n('Категорія посади'), simpleFilter: true },
+            { name: 'state', description: UB.i18n('Стан') },
+            { name: 'organizationID', visibility: false },
+            { name: 'employeePositionID', visibility: false },
+            { name: 'employeeNumberID', visibility: false },
+            { name: 'dictVacationKindID', visibility: false },
+            { name: 'comment', visibility: false },
+            { name: 'year', visibility: false }
+          ],
+          whereList: {
+            organizationID: {
+              expression: '[organizationID]',
+              condition: 'equal',
+              values: { value: appAC.globalOrganization() }
+            }
+          }
+        },
+        cmpInitConfig: {
+          getRowClass: function (row) {
+            let state = row.get('state')
+            return state === 'APPROVED' ? 'ub-row-green' : (state === 'CORRECTION' ? 'ub-row-blue' : 'ub-row-yellow')
+          },
+          selModel: {
+            selectionMode: 'MULTI',
+            showHeaderCheckbox: true,
+            checkOnly: false,
+            selType: 'checkboxmodel'
+          },
+          customInit: function () {
+            const grid = this
+
+            grid.on('select', (selectionModel, selectedItem) => {
+              if (AC.settings.get('hrCreateOrderVacFromVacSheet', appAC.globalOrganization()) && selectedItem.data.state !== 'APPROVED') {
+                selectionModel.deselect(selectedItem.index, false)
+              }
+            }, me)
+
+            let oldOnDel = grid.onDel
+            let newOnDel = function () {
+              let reco = AC.gridUtils.getCurrentRecord(grid)
+              if (reco.get('state') !== 'NEW') {
+                $App.dialogInfo(UB.i18n('Неможливо видалити проведену планову відпустку'), UB.i18n('Увага'))
+                return
+              }
+              oldOnDel.call(grid)
+            }
+            AC.gridUtils.replaceListener(grid, 'del', oldOnDel, newOnDel)
+          },
+          customActions: [
+            {
+              cls: 'fill-action',
+              itemId: 'addOrderMenu',
+              iconCls: 'fa fa-pencil-square-o',
+              text: UB.i18n('Створити наказ про надання відпустки'),
+              actionId: 'addOrderMenu',
+              handler: function (btn) {
+                let grid = btn.up('[name=vacationSchedule]')
+                let reco = AC.gridUtils.getCurrentRecord(grid)
+                if (!reco) {
+                  $App.dialogInfo(UB.i18n('Не вибрано запис'), UB.i18n('Увага'))
+                  return
+                }
+                const selModel = grid.getSelectionModel()
+                let selIds = []
+                selModel.selected.each(record => {
+                  selIds.push(record.get('ID'))
+                })
+                $App.connection.run({
+                  entity: 'hr_empOrderVacationDet',
+                  method: 'createOrder',
+                  IDs: selIds,
+                  particle: 'Scheduled'
+                }).then(mParams => {
+                  const empDism = mParams.empDism ? JSON.parse(mParams.empDism) : []
+                  const promise = empDism.length
+                    ? $App.dialogInfo(UB.i18n('У працівників {0} не знайдено призначення на початок відпустки. Пункти наказа за цими працівниками не будуть створені', empDism.join(', ')))
+                    : Promise.resolve(true)
+                  promise.then(() => {
+                    if (mParams.orderID) {
+                      $App.doCommand({
+                        cmdType: 'showForm',
+                        entity: 'hr_empOrder',
+                        sender: grid,
+                        instanceID: mParams.orderID,
+                        customParams: {
+                          isGroup: false,
+                          empOrderType: 'VACATION',
+                          repName: 'hr_empOrderVacationScheduled'
+                        }
+                      })
+                    }
+                  })
+                })
+              }
+            }
+          ]
+        }
+      }
+    ]
+
+    me.getBaseWhereFilter = (me) => {
+      const res = [
+        ['organizationID', '=', appAC.globalOrganization()]
+      ]
+      const year = me.attr.year.getValue()
+      const globalDate = appAC.globalApplicationDate()
+      if (year) {
+        res.push(['year', 'equal', year])
+      } else {
+        let yearDateFrom = AC.dateService.firstDayOfYear(globalDate)
+        let yearDateTo = AC.dateService.lastDayOfYear(globalDate)
+        res.push(['dateFrom', 'lessEqual', yearDateTo])
+        res.push(['dateTo', 'moreEqual', yearDateFrom])
+      }
+      return res
+    }
+
+    me.setBaseWhereFilter = (me) => {
+      const grid = me.attr.grid
+      const whereArray = me.getBaseWhereFilter(me)
+      AC.viewUtils.setWhereListProperty(grid, whereArray)
+    }
+
+    me.refreshData = (me) => {
+      const grid = me.attr.grid
+      const ubRequest = grid.store.ubRequest
+      let whereArray = me.getBaseWhereFilter(me)
+
+      const departmentCombo = me.down('[name=departmentID]')
+      const subDepartmentCheck = me.down('[name=subDepartment]')
+      let depID = departmentCombo.getValue()
+      let subDepartment = subDepartmentCheck.getValue()
+      let depRec = depID && AC.gridUtils.getCurrentRecord(departmentCombo)
+      let depTreePath = depRec && depRec.get('mi_treePath')
+      const catChiefs = me.down('[name=catChiefs]')
+      const catOthers = me.down('[name=catOthers]')
+      let isCatChiefs = catChiefs.getValue()
+      let isCatOthers = catOthers.getValue()
+      if ((isCatChiefs || isCatOthers) && !(isCatChiefs && isCatOthers)) {
+        if (isCatChiefs) {
+          whereArray.push(['employeePositionID.posCatCode', 'equal', '1'])
+        } else {
+          whereArray.push(['employeePositionID.posCatCode', 'notEqual', '1'])
+        }
+      } else {
+        delete ubRequest.whereList['employeePositionID.posCatCode']
+      }
+      const vacKindIDCombo = me.down('[name=vacKindID]')
+      let vacKindID = vacKindIDCombo.getValue()
+      let promise = Promise.resolve([])
+      if (depID && subDepartment) {
+        let onDate = appAC.globalApplicationDate()
+        promise = UB.Repository('hr_department')
+          .attrs(['mi_data_id'])
+          .where('orgID', '=', appAC.globalOrganization())
+          .where('state', '=', 'ACTIVE')
+          .where('mi_dateFrom', '<=', onDate)
+          .where('mi_dateTo', '>=', onDate)
+          .where('mi_treePath', 'startsWith', depTreePath)
+          .misc({ __mip_recordhistory_all: true })
+          .groupBy('mi_data_id')
+          .selectAsObject()
+      }
+      promise.then(departments => {
+        if (departments.length) {
+          whereArray.push(['employeePositionID.departmentID', 'in', departments.map(o => o.mi_data_id)])
+        } else if (depID) {
+          whereArray.push(['employeePositionID.departmentID', '=', depID])
+        } else {
+          delete ubRequest.whereList['employeePositionID.departmentID']
+        }
+        if (vacKindID) {
+          whereArray.push(['dictVacationKindID', '=', vacKindID])
+        } else {
+          delete ubRequest.whereList['dictVacationKindID']
+        }
+        AC.viewUtils.setWhereListProperty(grid, whereArray, undefined, ['clearStore'])
+        AC.gridUtils.clearSelections(grid)
+      })
+    }
+
+    me.globalOrganizationChange = () => {
+      const departmentCombo = me.down('[name=departmentID]')
+      AC.viewUtils.setWhereListProperty(departmentCombo, [
+        ['orgID', '=', appAC.globalOrganization()]
+      ], undefined, ['clearStore', 'clearValue'])
+      me.refreshData(this)
+    }
+
+    me.enableActions = () => {
+      let gridItemCount = me.attr.grid.store.getCount()
+      AC.gridUtils.enableCustomAction(me.attr.grid, 'copyRecord', gridItemCount)
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      const grid = me.down('[name=vacationSchedule]')
+      me.attr = {
+        grid: grid,
+        year: me.down('[name=year]'),
+        departmentID: me.down('[name=departmentID]'),
+        subDepartment: me.down('[name=subDepartment]')
+      }
+      me.attr.year.setValue(AC.dateService.currentDate().getFullYear())
+      me.setBaseWhereFilter(me)
+      grid.store.on('load', () => {
+        me.enableActions()
+      })
+
+      me.attr.departmentID.on('change', (ctrl, value) => {
+        me.attr.subDepartment.setReadOnly(!value)
+        if (!value) {
+          me.attr.subDepartment.setValue(false)
+        }
+      })
+    }, me)
+
+    me.callParent(arguments)
+
+    me.showReport = () => {
+      let reportCode = 'hr_reportVacationExtract'
+      $App.doCommand({
+        cmdType: 'showReport',
+        caption: UB.i18n('Друкована форма'),
+        tabId: 'printDocument' + reportCode + Date.now(),
+        target: $App.getViewport().centralPanel,
+        cmdData: {
+          reportCode: reportCode,
+          reportParams: { },
+          reportOptions: {
+            allowExportToExcel: false,
+            isModal: false
+          }
+        }
+      })
+    }
+  }
+})

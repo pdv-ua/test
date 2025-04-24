@@ -1,0 +1,67 @@
+/* global HR */
+exports.formDef = {
+  requiredFields: ['dictDegreeID.name', 'dictBranchScienceID.name', 'dictSpecialtyID.name', 'impSourceID', 'educationOrgID',
+    'educationName'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' },
+    defaults: { labelWidth: 150 }
+  },
+  items: [
+    { attributeName: 'employeeID', hidden: true },
+    {
+      layout: { type: 'hbox' },
+      items: [
+        {
+          attributeName: 'dictDegreeID',
+          fieldList: ['code', 'name', 'description', 'shortName'],
+          displayField: 'description',
+          labelWidth: 150,
+          flex: 3
+        },
+        {
+          attributeName: 'degreeName',
+          readOnly: true,
+          fieldLabel: '',
+          flex: 1
+        }
+      ]
+    },
+    {
+      attributeName: 'dictBranchScienceID',
+      fieldList: ['code', 'name', 'description', 'shortName'],
+      displayField: 'description',
+      whereList: {
+        isActive: {
+          expression: '[isActive]',
+          condition: '=',
+          value: 1
+        }
+      }
+    },
+    {
+      attributeName: 'dictSpecialtyID',
+      fieldList: ['code', 'name', 'description'],
+      displayField: 'description',
+      whereList: {
+        isActive: {
+          expression: '[isActive]',
+          condition: '=',
+          value: 1
+        }
+      }
+    },
+    HR.controlService.getEduOrgCombo({
+      allowBlank: true,
+      fieldID: 'educationOrgID',
+      fieldName: 'educationName'
+    }),
+    { attributeName: 'docNumber' },
+    { attributeName: 'docDate' },
+    { attributeName: 'comment' }
+  ]
+}

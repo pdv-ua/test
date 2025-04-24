@@ -1,0 +1,122 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['employeeAccrualID'],
+  size: {
+    width: 700,
+    height: 600
+  },
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'employeeNumberID', hidden: true },
+            { attributeName: 'orderNumber', width: 320 },
+            { attributeName: 'orderDate' }
+          ]
+        },
+        {
+          attributeName: 'reasonRegReport'
+        },
+        {
+          attributeName: 'payElID',
+          fieldList: ['ID', 'description', 'codeSort', 'isAutoCalc'],
+          whereList: {
+            code: {
+              expression: '[methodID.code]',
+              condition: 'equal',
+              values: { val: '3' }
+            }
+          },
+          orderList: { orderBy: { expression: 'codeSort' } }
+        },
+        {
+          layout: { type: 'vbox' },
+          items: [
+            { attributeName: 'dateFrom', allowBlank: false },
+            { attributeName: 'dateTo' },
+            { attributeName: 'paySum', decimalPrecision: 2, minValue: 0, enableKeyEvents: true, width: 320 },
+            { attributeName: 'paySumMonth', decimalPrecision: 2, minValue: 0, enableKeyEvents: true, width: 320 },
+            { attributeName: 'remindSum', decimalPrecision: 2, enableKeyEvents: true, width: 320 }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'acGrid',
+      name: 'accrual',
+      region: 'center',
+      autoScroll: true,
+      hideActions: [],
+      flex: 1,
+      storeType: 'local',
+      disablePaging: true,
+      showToolBar: false,
+      cellEditing: true,
+      pageSize: 10000,
+      hidePagingBar: true,
+      summary: { paySum: 'sum' },
+      summaryDataOnClient: true,
+      getRowClass: function (record) {
+        if (record.get('sourceID')) {
+          return 'grd-color-blue'
+        }
+      },
+      fields: [
+        { name: 'sourceID' },
+        { name: 'dateFrom' },
+        {
+          name: 'periodCalcID.name',
+          columnConfig: {
+            text: UB.i18n('Розрахунковий період'),
+            flex: 1
+          }
+        },
+        {
+          name: 'periodSalaryID.name',
+          columnConfig: {
+            text: UB.i18n('Обліковий період'),
+            flex: 1
+          }
+        },
+        {
+          name: 'paySum',
+          columnConfig: {
+            text: UB.i18n('Сума'),
+            sortable: false,
+            flex: 1,
+            align: 'right',
+            floatFormat: 2
+          }
+        }
+      ]
+    },
+    {
+      layout: { type: 'vbox' },
+      region: 'south',
+      autoScroll: true,
+      split: true,
+      items: [
+        {
+          xtype: 'numberfield',
+          name: 'remindSumNext',
+          width: 320,
+          fieldLabel: UB.i18n('Залишок на кінець періоду'),
+          readOnly: true
+        }
+      ]
+    }
+  ]
+}

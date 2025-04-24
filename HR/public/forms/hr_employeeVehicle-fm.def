@@ -1,0 +1,49 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['employeeID', 'vehicleID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    { attributeName: 'vehicleID', hidden: true },
+    {
+      layout: {
+        type: 'hbox'
+      },
+      name: 'strVehiclePanel',
+      items: [
+        {
+          labelWidth: 150,
+          attributeName: 'strVehicle',
+          fieldLabel: UB.i18n('Транспортний засіб'),
+          flex: 1,
+          margins: '0 10 0 0'
+        },
+        {
+          xtype: 'button',
+          cls: 'list-icon',
+          name: 'vehicleButton',
+          tooltip: UB.i18n('Вибрати'),
+          width: 35,
+          height: 35,
+          margin: '0 10 0 -53',
+          handler: btn => {
+            btn.up('form').getField('strVehicle').selectHandler(btn)
+          }
+        }
+      ]
+    },
+    { attributeName: 'ownershipVehicle', labelWidth: 150 },
+    { attributeName: 'dateFrom', labelWidth: 150 },
+    { attributeName: 'dateTo', labelWidth: 150 },
+    { attributeName: 'dateToEmpty', hidden: true }
+  ]
+}

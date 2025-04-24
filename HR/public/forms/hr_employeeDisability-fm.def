@@ -1,0 +1,81 @@
+let margin = '5 10'
+let hMargin = '0 5'
+let padding = '0 10'
+let labelWidth = 160
+let layout = { type: 'vbox', align: 'stretch' }
+let hLayout = { type: 'hbox', align: 'middle' }
+
+exports.formDef = {
+  requiredFields: ['employeeDocID.docNumber',
+    'employeeDocID.docSeries', 'employeeDocID.docIssued', 'employeeDocID.docIssuedDate', 'disabilityID.name'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout,
+      margin: hMargin,
+      padding,
+      defaults: { margin, labelWidth },
+      items: [
+        { attributeName: 'employeeID', hidden: true },
+        {
+          layout: hLayout,
+          items: [
+            { attributeName: 'disabilityGroup', description: UB.i18n('Група інвалідності'), margin: 0, labelWidth },
+            { attributeName: 'dateFromEmpty', description: UB.i18n('Дата початку'), labelWidth: 100 },
+            { attributeName: 'dateToEmpty', description: UB.i18n('Дата закінчення'), labelWidth: 100 }
+          ]
+        },
+        { attributeName: 'disabilityID', description: UB.i18n('Вид інвалідності') }
+      ]
+    },
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Документ-підстава'),
+      layout,
+      margin: hMargin,
+      fieldDefaults: { margin, labelWidth },
+      items: [
+        {
+          attributeName: 'employeeDocID',
+          fieldList: ['ID', 'docSeries', 'docNumber', 'docIssued', 'docIssuedDate', 'employeeID', 'description'],
+          gridFieldList: ['description', 'docIssued'],
+          displayField: 'description'
+        },
+        {
+          layout: hLayout,
+          items: [
+            { attributeName: 'docNumber', description: UB.i18n('Номер довідки'), recordField: 'docNumber' },
+            { attributeName: 'docSeries', description: UB.i18n('Серія довідки'), recordField: 'docSeries', labelWidth: 110 }
+          ]
+        },
+        { attributeName: 'docIssuer', description: UB.i18n('Ким видана'), recordField: 'docIssued' },
+        { attributeName: 'dateIssue', description: UB.i18n('Дата видачі'), recordField: 'docIssuedDate', labelWidth }
+      ]
+    },
+    {
+      layout,
+      margin: hMargin,
+      padding,
+      defaults: { margin, labelWidth },
+      items: [
+        { attributeName: 'workReference', description: UB.i18n('Трудові рекомендації') },
+        { attributeName: 'programDescription', description: UB.i18n('Індивідуальна програма реабілітації особи з інвалідністю (ІПР)') },
+        {
+          layout: hLayout,
+          items: [
+            { attributeName: 'programNumber', description: UB.i18n('Номер ІПР'), margin: 0, labelWidth },
+            { attributeName: 'programDate', description: UB.i18n('Дата видачі ІПР') }
+          ]
+        },
+        { attributeName: 'programIssuer', description: UB.i18n('Ким видана ІПР') }
+      ]
+    }
+  ]
+}

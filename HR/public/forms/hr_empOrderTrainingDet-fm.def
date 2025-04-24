@@ -1,0 +1,322 @@
+/* global AC HR UB */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'organizationID', 'empOrderType', 'isGroup', 'destOrganizationName', 'cityName', 'dictTrainingTopicName',
+      'destOrganizationID', 'cityID', 'dictTrainingTopicID', 'isPrintAddon'],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'vbox',
+        align: 'stretch',
+        autoScroll: true
+      },
+      autoScroll: true
+    },
+    size: {
+      width: 1100,
+      height: 720
+    },
+    autoScroll: true,
+    items: [
+      {
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        autoScroll: true,
+        items: [
+          {
+            attributeName: 'isInsideCountry',
+            labelWidth: 115
+          },
+          {
+            attributeName: 'countryID',
+            labelWidth: 60,
+            flex: 1,
+            disabledIf: (ctrl, me) => me.getField('isInsideCountry').getValue(),
+            requiredIf: (ctrl, me) => !me.getField('isInsideCountry').getValue()
+          },
+          {
+            attributeName: 'isPrintAddon',
+            disabled: true,
+            labelWidth: 120
+          }
+        ]
+      },
+      {
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        items: [
+          {
+            attributeName: 'dateFrom',
+            labelWidth: 115,
+            listeners: {
+              focus: ctrl => {
+                ctrl._oldValue = ctrl.getRawValue()
+              },
+              blur: ctrl => {
+                ctrl.up('form').calcPeriod(ctrl)
+              }
+            }
+          },
+          {
+            attributeName: 'dayCount',
+            labelWidth: 60,
+            maxWidth: 160,
+            minWidth: 160,
+            width: 160,
+            listeners: {
+              focus: ctrl => {
+                ctrl._oldValue = ctrl.getRawValue()
+              },
+              blur: ctrl => {
+                ctrl.up('form').calcPeriod(ctrl)
+              }
+            }
+          },
+          {
+            attributeName: 'dateTo',
+            labelWidth: 60,
+            listeners: {
+              focus: ctrl => {
+                ctrl._oldValue = ctrl.getRawValue()
+              },
+              blur: ctrl => {
+                ctrl.up('form').calcPeriod(ctrl)
+              }
+            }
+          }
+        ]
+      },
+      {
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        items: [
+          HR.controlService.getEduOrgCombo({
+            fieldID: 'destOrganizationID',
+            fieldName: 'destOrganizationName',
+            labelWidth: 115,
+            width: 635
+          }),
+          {
+            xtype: 'ubcombobox',
+            flex: 1,
+            gridFieldList: ['description', 'code'],
+            name: 'cityName',
+            allowBlank: true,
+            fieldLabel: UB.i18n('Нас. пункт'),
+            ubRequest: {
+              entity: 'cdn_city',
+              fieldList: ['ID', 'description'],
+              whereList: {
+                description: {
+                  expression: '[description]',
+                  condition: 'notIsNull'
+                }
+              }
+            },
+            isFormField: true,
+            valueField: 'description',
+            displayField: 'description',
+            allowCustomText: true,
+            triggerCls: 'hr-list-trigger',
+            listeners: {
+              change: ctrl => {
+                let me = ctrl.up('form')
+                if (!ctrl.rawValue) {
+                  me.record.set('cityName', null)
+                }
+                me.record.set('cityID', null)
+              },
+              select: ctrl => {
+                const form = ctrl.up('form')
+                const ctrlReco = AC.gridUtils.getCurrentRecord(ctrl)
+                ctrlReco && form.record.set('cityID', ctrlReco.get('ID'))
+                ctrl.setValue(ctrl.rawValue)
+                form.record.set('cityName', ctrl.rawValue)
+              },
+              blur: ctrl => {
+                ctrl.setValue(ctrl.rawValue)
+                ctrl.up('form').record.set(ctrl.name, ctrl.rawValue)
+              }
+            }
+          }
+        ]
+      },
+      { attributeName: 'address', xtype: 'ubtextfield', labelWidth: 115 },
+      AC.viewUtils.getCollapsibleFieldSet(
+        UB.i18n('<span>Інформація про навчання</span><br>'),
+        {
+          expandTitle: UB.i18n('Інформація про навчання'),
+          title: UB.i18n('Інформація про навчання'),
+          layout: { type: 'vbox', align: 'stretch' },
+          ubID: 'educationFieldSet',
+          hidden: true,
+          collapsed: false,
+          margin: '5 10 10 10',
+          padding: '0 0 5 0',
+          defaults: { labelWidth: 200 },
+          items: [
+            { attributeName: 'isFromCatalog' },
+            {
+              attributeName: 'dictProfCompDevelopFormID',
+              fieldLabel: UB.i18n('Вид професійного навчання'),
+              whereList: {
+                isActive: {
+                  expression: '[isActive]',
+                  condition: 'equal',
+                  value: 1
+                }
+              }
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'groupCategory', labelWidth: 200, width: 350, hidden: true },
+                { attributeName: 'dictProfCompetencyID', labelWidth: 310, flex: 1, hidden: true }
+              ]
+            },
+            HR.controlService.getIDNameCombo({
+              fieldID: 'dictTrainingTopicID',
+              fieldName: 'dictTrainingTopicName',
+              fieldLabel: UB.i18n('Тематика'),
+              margin: '5 15 10 15',
+              maxLength: 200,
+              ubRequest: {
+                entity: 'hr_dictTrainingTopic',
+                fieldList: ['ID', 'name'],
+                orderList: { orderBy: { 'expression': 'name', 'order': 'asc' } }
+              }
+            })
+          ]
+        }
+      ),
+      AC.viewUtils.getCollapsibleFieldSet(
+        UB.i18n('<span>Підготовка</span><br>'),
+        {
+          expandTitle: UB.i18n('Підготовка'),
+          xtype: 'fieldset',
+          title: UB.i18n('Підготовка'),
+          ubID: 'trainingFieldSet',
+          layout: { type: 'vbox', align: 'stretch' },
+          margin: '5 10 10 10',
+          padding: '0 0 5 0',
+          collapsed: false,
+          defaults: { labelWidth: 180 },
+          hidden: true,
+          items: [
+            {
+              attributeName: 'dictSpecialityID',
+              allowBlank: true,
+              whereList: {
+                specialityType: {
+                  expression: '[specialityType]',
+                  condition: '=',
+                  value: '2' // за фахом
+                }
+              }
+            },
+            { attributeName: 'lectureCycle', allowBlank: true },
+            { attributeName: 'dictTrainingKindID', allowBlank: true, fieldList: ['ID', 'description', 'trainingLevel', 'dictStaffCatID.name'] },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  attributeName: 'dictTrainingKindID.trainingLevel',
+                  fieldLabel: UB.i18n('Рівень підготовки'),
+                  readOnly: true,
+                  labelWidth: 180,
+                  width: 480
+                },
+                {
+                  attributeName: 'dictTrainingKindID.dictStaffCatID.name',
+                  fieldLabel: UB.i18n('Категорія персоналу'),
+                  readOnly: true,
+                  allowBlank: true,
+                  labelWidth: 190,
+                  flex: 1,
+                  margin: '5 15 5 0'
+                }
+              ]
+            },
+            { attributeName: 'trainingDirection' }
+          ]
+        }
+      ),
+      AC.viewUtils.getCollapsibleFieldSet(
+        UB.i18n('<span>Оплата</span><br>'),
+        {
+          expandTitle: UB.i18n('Оплата'),
+          layout: { type: 'vbox', align: 'stretch' },
+          collapsed: true,
+          margin: '5 10 10 10',
+          padding: '0 0 5 0',
+          items: [
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'isContinueWork', labelWidth: 200 },
+                {
+                  attributeName: 'dictTimeCostID',
+                  fieldList: ['ID', 'code', 'name', 'nameSmall'],
+                  displayField: 'nameSmall',
+                  valueField: 'ID',
+                  fieldLabel: UB.i18n('Елемент обліку робочого часу'),
+                  labelWidth: 250,
+                  flex: 1
+                }
+              ]
+            },
+            { attributeName: 'payElID', flex: 1, labelWidth: 120 }
+          ]
+        }
+      ),
+      {
+        layout: {
+          type: 'hbox',
+          align: 'top'
+        },
+        name: 'reasonDocPanel',
+        items: [{
+          attributeName: 'reason',
+          fieldLabel: UB.i18n('Підстава (до пункту наказу)'),
+          flex: 1,
+          labelWidth: 130
+        },
+        {
+          xtype: 'button',
+          cls: 'list-icon',
+          name: 'reasonButton',
+          tooltip: UB.i18n('Вибрати'),
+          width: 35,
+          height: 35,
+          margin: '0 2 0 -45',
+          handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+        }
+        ]
+      },
+      {
+        layout: 'fit',
+        name: 'detailpanel',
+        xtype: 'panel',
+        items: [
+          HR.orderManager.getEmployeeParaGrid('hr_empOrderTrainingDet', {
+            title: UB.i18n('Працівники'),
+            flex: 1,
+            hidden: false,
+            listeners: {
+              changeData: function (grid, action) {
+                let me = grid.up('form')
+                me.setIsDirty(true)
+              }
+            }
+          })
+        ]
+      }
+    ]
+  }
+})()

@@ -1,0 +1,89 @@
+{
+  "caption": "KPI працівника",
+  "description": "KPI працівника",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "KPI",
+      "dataType": "Float",
+      "caption": "KPI",
+      "description": "KPI",
+      "documentation": "KPI"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

@@ -1,0 +1,158 @@
+/* global HR */
+exports.formDef = {
+  size: {
+    width: 1100,
+    height: 700
+  },
+  requiredFields: ['organizationID', 'srcOrganizationID', 'srcOrganizationName', 'srcOrganizationID.name', 'impSourceID',
+    'educationOrgID', 'educationName', 'orderID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' },
+    defaults: { labelWidth: 200 }
+  },
+  items: [
+    { attributeName: 'employeeID', hidden: true },
+    {
+      layout: { type: 'hbox' },
+      items: [
+        { attributeName: 'isInsideCountry', labelWidth: 200, width: 220 },
+        {
+          attributeName: 'countryID',
+          labelWidth: 60,
+          flex: 1,
+          disabledIf: (ctrl, me) => me.attr.isInsideCountry.getValue(),
+          requiredIf: (ctrl, me) => !me.attr.isInsideCountry.getValue()
+        }
+      ]
+    },
+    HR.controlService.getEduOrgCombo({ fieldID: 'educationOrgID', fieldName: 'educationName' }),
+    {
+      layout: { type: 'hbox' },
+      items: [
+        { attributeName: 'dateFrom', labelWidth: 200, width: 320 },
+        { attributeName: 'dateTo', labelWidth: 120, width: 240, margin: '5 15 5 0' }
+      ]
+    },
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Підготовка'),
+      layout: { type: 'vbox', align: 'stretch' },
+      margin: '0 15 10 10',
+      defaults: { labelWidth: 180 },
+      items: [
+        {
+          attributeName: 'dictSpecialityID',
+          allowBlank: false,
+          whereList: {
+            specialityType: {
+              expression: '[specialityType]',
+              condition: '=',
+              value: '2' // за фахом
+            }
+          }
+        },
+        { attributeName: 'lectureCycle', allowBlank: false },
+        { attributeName: 'dictTrainingKindID', allowBlank: false, fieldList: ['ID', 'description', 'trainingLevel', 'dictStaffCatID.name'] },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'dictTrainingKindID.trainingLevel',
+              fieldLabel: UB.i18n('Рівень підготовки'),
+              readOnly: true,
+              labelWidth: 180,
+              width: 480
+            },
+            {
+              attributeName: 'dictTrainingKindID.dictStaffCatID.name',
+              fieldLabel: UB.i18n('Категорія персоналу'),
+              readOnly: true,
+              allowBlank: true,
+              labelWidth: 190,
+              flex: 1,
+              margin: '5 15 5 0'
+            }
+          ]
+        },
+        { attributeName: 'trainingDirection' }
+      ]
+    },
+    { attributeName: 'comment' },
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Документ'),
+      layout: { type: 'vbox', align: 'stretch' },
+      margin: '0 15 10 10',
+      defaults: { labelWidth: 180 },
+      items: [
+        { attributeName: 'docType' },
+        { attributeName: 'dictDocKindID', recordField: 'dictDocKindID', hidden: true },
+        {
+          attributeName: 'employeeDocID',
+          fieldList: ['ID', 'dictDocKindID', 'docSeries', 'docNumber', 'docIssued', 'docIssuedDate', 'employeeID', 'description'],
+          gridFieldList: ['description', 'docIssued'],
+          displayField: 'description',
+          labelWidth: 180
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'docNumber', labelWidth: 180, width: 300, recordField: 'docNumber' },
+            { attributeName: 'docSeries', labelWidth: 105, width: 225, recordField: 'docSeries' },
+            { attributeName: 'docDate', labelWidth: 100, width: 220, recordField: 'docIssuedDate' }
+          ]
+        },
+        { attributeName: 'docIssuer', recordField: 'docIssued', margin: '5 15 5 15' }
+      ]
+    },
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Наказ'),
+      layout: { type: 'vbox', align: 'stretch' },
+      margin: '0 15 10 10',
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'orderNumber', labelWidth: 180, width: 300 },
+            { attributeName: 'orderDate', labelWidth: 105, width: 225 }
+          ]
+        },
+        {
+          xtype: 'ubcombobox',
+          gridFieldList: ['ID', 'name'],
+          name: 'srcOrganizationName',
+          fieldLabel: UB.i18n('Організація'),
+          labelWidth: 180,
+          margin: '5 15 10 15',
+          ubRequest: {
+            entity: 'hr_organization',
+            fieldList: ['ID', 'name'],
+            whereList: {
+              isActive: {
+                expression: '[state]',
+                condition: 'equal',
+                value: 'ACTIVE'
+              }
+            }
+          },
+          isFormField: true,
+          displayField: 'name',
+          allowCustomText: true,
+          triggerCls: 'hr-list-trigger',
+          listeners: {
+            blur: ctrl => {
+              ctrl.setValue(ctrl.rawValue)
+              ctrl.up('form').record.set('srcOrganizationName', ctrl.rawValue)
+            },
+            select: ctrl => {
+              ctrl.setValue(ctrl.rawValue)
+              ctrl.up('form').record.set('srcOrganizationName', ctrl.rawValue)
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

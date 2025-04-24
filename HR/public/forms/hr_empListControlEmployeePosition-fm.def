@@ -1,0 +1,301 @@
+/* global Ext $App AC HR UB appAC */
+exports.formDef = 'HR.hr_empListControlEmployeePosition'
+
+Ext.define('HR.hr_empListControlEmployeePosition', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.hr_empListControlEmployeePosition',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'hbox' },
+            collapsed: false,
+            items: [
+              {
+                layout: { type: 'vbox' },
+                xtype: 'panel',
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getOrgCombo({
+                        labelWidth: 160,
+                        width: 700,
+                        flex: 1,
+                        ubRequest: {
+                          entity: 'hr_organization',
+                          fieldList: ['mi_data_id', 'description', 'mi_treePath'],
+                          whereList: {
+                            state: {
+                              expression: '[state]',
+                              condition: '=',
+                              values: {
+                                state: 'ACTIVE'
+                              }
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'description' } },
+                          __mip_ondate: appAC.globalApplicationDate()
+                        },
+                        listeners: {
+                          change: function (ctrl) {
+                            const form = ctrl.up('form')
+                            HR.controlService.onChangeIncludeChildOrgs(form)
+                          }
+                        }
+                      }),
+                      HR.controlService.getIncludeChildOrgs({
+                        listeners: {
+                          change: function (ctrl, value) {
+                            const form = ctrl.up('form')
+                            HR.controlService.onChangeIncludeChildOrgs(form)
+                          }
+                        }
+                      })
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getDepCombo({
+                        labelWidth: 160,
+                        width: 700,
+                        displayField: 'description',
+                        flex: 1,
+                        listeners: {
+                          change: function (ctrl, value) {
+                            const form = ctrl.up('form')
+                            form.down('[name=includeChildDepts]').setReadOnly(!value)
+                            if (!value) {
+                              form.down('[name=includeChildDepts]').setValue()
+                            }
+                          }
+                        }
+                      }),
+                      HR.controlService.getIncludeChildDepts()
+                    ]
+                  },
+                  {
+                    xtype: 'panel',
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        labelWidth: 160,
+                        name: 'dateTo',
+                        fieldLabel: UB.i18n('Станом на'),
+                        allowBlank: false
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                margin: '60 0 0 0',
+                items: [
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Шукати'),
+                    iconCls: 'fas fa-search',
+                    width: 30,
+                    cls: 'green-action',
+                    margin: '5 5 0 15',
+                    handler: async function (btn) {
+                      if (!me.attr.dateTo.getValue() || !me.attr.organizationID.getValue()) {
+                        $App.dialogError(UB.i18n('Не задані параметри пошуку!'), UB.i18n('Помилка'))
+                      } else {
+                        const dateTo = me.attr.dateTo.getValue()
+                        const organizationID = me.attr.organizationID.getValue()
+                        const departmentID = me.attr.departmentID.getValue()
+                        const mParams = {
+                          dateTo,
+                          organizationID,
+                          departmentID
+                        }
+
+                        const result = await $App.connection.run({
+                          entity: 'hr_report',
+                          method: 'getListEmployeePositionSearch',
+                          resultData: '',
+                          params: mParams
+                        })
+
+                        const resoultQuerry = JSON.parse(result.params.resultData)
+
+                        me.attr.accrual.setLocalStoreData(resoultQuerry)
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Очистити'),
+                    iconCls: 'fas fa-eraser',
+                    width: 30,
+                    cls: 'fill-action',
+                    margin: '5 0 0 0',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.clearSearch()
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'acGrid',
+        name: 'accrual',
+        region: 'center',
+        autoScroll: true,
+        hideActions: ['addNew', 'edit', 'del', 'addNewByCurrent'],
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        exportExcel: true,
+        flex: 1,
+        storeType: 'local',
+        disablePaging: true,
+        showToolBar: true,
+        onItemDoubleClick: function (row, record) {
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'hr_employee',
+            entity: 'hr_employee',
+            tabId: 'hr_employee' + '-' + record.get('employeeID'),
+            target: $App.getViewport().centralPanel,
+            instanceID: record.get('employeeID')
+          })
+        },
+        customPopupMenuItems: [
+          {
+            text: UB.i18n('Відкрити картку працівника'),
+            ubID: 'itemShowRl',
+            handler: function (context) {
+              const grid = context.up('').grid
+              const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+              $App.doCommand({
+                cmdType: 'showForm',
+                formCode: 'hr_employee',
+                entity: 'hr_employee',
+                tabId: 'hr_employee' + '-' + record.get('employeeID'),
+                target: $App.getViewport().centralPanel,
+                instanceID: record.get('employeeID')
+              })
+            }
+          }
+        ],
+        pageSize: 10000,
+        hidePagingBar: true,
+        fields: [
+          {
+            name: 'ID',
+            columnConfig: {
+              text: UB.i18n('Ідентифікатор запису призначення'),
+              flex: 1
+            }
+          },
+          {
+            name: 'fullFIO',
+            columnConfig: {
+              text: UB.i18n('ПІБ особи'),
+              flex: 1
+            }
+          },
+          {
+            name: 'tabNum',
+            columnConfig: {
+              text: UB.i18n('Табельний номер'),
+              flex: 1
+            }
+          },
+          {
+            name: 'positionIDName',
+            columnConfig: {
+              text: 'Назва посади',
+              flex: 1
+            }
+          },
+          {
+            name: 'departmentIDName',
+            columnConfig: {
+              text: 'Підрозділ',
+              flex: 1
+            }
+          },
+          {
+            name: 'organizationIDName',
+            columnConfig: {
+              text: 'Організація',
+              flex: 1
+            }
+          },
+          {
+            name: 'employeeID',
+            columnConfig: {
+              text: 'employeeID',
+              flex: 1,
+              hidden: true
+            }
+          }
+        ]
+      }
+    ]
+
+    me.clearData = function () {
+      const epmGrid = me.down('[name=employeeNumberListGrid]')
+      if (epmGrid && epmGrid.store && epmGrid.store.data) {
+        epmGrid.store.data.items = []
+        epmGrid.view.refresh()
+      }
+    }
+
+    me.setDefaultParams = () => {
+      const me = this
+      me.attr.dateTo.setValue(appAC.globalApplicationDate())
+    }
+
+    me.clearSearch = () => {
+      me.setDefaultParams(false)
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        accrual: me.down('[name=accrual]'),
+        dateTo: me.down('[name=dateTo]'),
+        organizationID: me.down('[name=organizationID]'),
+        includeChildOrgs: me.down('[name=includeChildOrgs]'),
+        departmentID: me.down('[name=departmentID]'),
+        includeChildDepts: me.down('[name=includeChildDepts]')
+      }
+      me.setDefaultParams(true)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

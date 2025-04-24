@@ -1,0 +1,121 @@
+/* global UB Ext */
+
+exports.formDef = {
+  requiredFields: ['typeFile', 'orgID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  isModal: true,
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        { attributeName: 'name' },
+        { attributeName: 'shortName' },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'nameFile' },
+            { attributeName: 'isActive' }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      hidden: true,
+      region: 'center',
+      items: [
+        {
+          name: 'fieldGrid',
+          title: UB.i18n('Список полів'),
+          xtype: 'ubdetailgrid',
+          region: 'center',
+          autoScroll: true,
+          flex: 2,
+          rowEditing: true,
+          sortableColumns: false,
+          masterFields: ['ID'],
+          detailFields: ['exportMethodID'],
+          onBeforeEdit: function (editor, context) {
+            const me = context.grid.up('form')
+            me.beforeGridEdit(me)
+          },
+          onValidateEdit: function (editor, context) {
+            const me = context.grid.up('form')
+            return !!((me.attr[`fieldGrid.exportFieldsID.description`].field.getValue() || me.attr[`fieldGrid.fixValue`].field.getValue()) && me.attr[`fieldGrid.name`].field.getValue())
+          },
+          entityConfig: {
+            entity: 'hr_exportMethodFields',
+            method: 'select',
+            fieldList: [
+              {
+                name: 'listParamID', visibility: false
+              },
+              {
+                name: 'listParam1ID', visibility: false
+              },
+              {
+                name: 'name',
+                description: UB.i18n('Назва поля'),
+                config: { width: 300 },
+                editor: {
+                  xtype: 'textfield',
+                  allowBlank: true
+                }
+              },
+              {
+                name: 'exportFieldsID.description',
+                description: UB.i18n('Значення, що розраховується'),
+                config: { width: 300 },
+                editor: {
+                  fieldList: ['ID', 'description', 'type'],
+                  hideEntityItemInContext: true,
+                  whereList: {
+                    type: {
+                      expression: '[type]',
+                      condition: '=',
+                      value: 'fileWFM'
+                    }
+                  }
+                }
+              },
+              {
+                name: 'fixValue',
+                config: { width: 300 },
+                editor: {
+                  xtype: 'textfield'
+                }
+              }
+            ]
+          }
+        },
+        {
+          title: UB.i18n('Налаштування'),
+          layout: { type: 'border' },
+          items: [
+            {
+              xtype: 'paramsControl',
+              payElEntryType: null,
+              region: 'center',
+              orgAttrName: 'orgID',
+              readOnly: true
+            }
+          ]
+        }
+
+      ]
+    }
+  ]
+}

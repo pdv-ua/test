@@ -1,0 +1,365 @@
+/* global UB Ext AC _ appAC appHR saveAs Blob moment */
+exports.formDef = 'HR.detFormForRLAndSal'
+
+Ext.define('HR.detFormForRLAndSal', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  autoScroll: true,
+  alias: 'widget.detFormForRLAndSal',
+  layout: { type: 'vbox', align: 'stretch' },
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'fieldset',
+        margin: '5 15 5 15',
+        title: UB.i18n(`Підготовка системи для роботи без міграції`),
+        defaults: {
+          labelWidth: 250
+        },
+        layout: { type: 'vbox',  },
+        items: [
+          {
+            layout: {type: 'hbox'},
+            items: [
+              {
+                xtype: 'label',
+                name: 'periodlable',
+                width: 200,
+                text: UB.i18n('Поточний період:')
+              },
+              {
+                xtype: 'label',
+                name: 'currentPeriod',
+                width: 200
+              }
+            ]
+          },
+          {
+            xtype: 'combo',
+            labelWidth: 180,
+            editable: false,
+            name: 'encoding',
+            fieldLabel: UB.i18n('Тип кодування файлів'),
+            allowBlank: false,
+            width: 300,
+            store: Ext.create('Ext.data.Store', { fields: ['text', 'value'],
+              data: [
+                { text: 'win1251', value: 'win1251' },
+                { text: 'utf8', value: 'utf8' }
+              ]
+            })
+          },
+          {
+            layout: {type: 'hbox'},
+            items: [
+              {
+                xtype: 'button',
+                scale: 'small',
+                icon: $App.getImagePath('download.png'),
+                tooltip: UB.i18n('Вибрати ключ для запуску очищення'),
+                text: UB.i18n('Вибрати ключ для запуску очищення'),
+                handler: function () {
+                  me.fileLoad()
+                }
+              },
+              {
+                xtype: 'label',
+                name: 'downloadResult',
+                margin: '7 0 0 30'
+              }
+            ]
+          },
+          {
+            xtype: 'label',
+            name: 'fileName'
+          },
+          {
+            xtype: 'label',
+            name: 'warn1'
+          },
+          {
+            xtype: 'checkbox',
+            flex: 4,
+            boxLabel: 'Очистити табель',
+            name: 'cleanTimesheet'
+          },
+          {
+            xtype: 'checkbox',
+            flex: 4,
+            boxLabel: 'Відновити табель',
+            name: 'renewTimesheet'
+          },
+          {
+            xtype: 'label',
+            name: 'warn2'
+          },
+          {
+            xtype: 'textfield',
+            name: 'orgEDRPOU',
+            hidden: true
+          },
+          {
+            xtype: 'datefield',
+            name: 'periodDate',
+            hidden: true
+          },
+          {
+            xtype: 'button',
+            name: 'cleanBtn',
+            text: UB.i18n('Очистити'),
+            width: 100,
+            height: 30,
+            margin: '10 10 20 200',
+            handler: function () {
+              me.clean()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.clean = () => {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_importCustom',
+        method: 'deletePeriodCalcData',
+        cleanTimesheet: me.attr.cleanTimesheet.getValue(),
+        renewTimesheet: me.attr.renewTimesheet.getValue(),
+        periodDateFrom: me.attr.periodDate.getValue(),
+        currentPeriodID: me.currentPeriodID,
+        orgID: appAC.globalOrganization()
+      }).then(response => {
+        me.setLoading(false)
+        $App.dialogInfo(UB.i18n('Операція успішно виконана'))
+
+        UB.Repository('tim_timeSheet')
+            .attrs(['ID'])
+            .where('employeeNumberID.orgID', '=', appAC.globalOrganization())
+            .where('mi_deleteDate', '=', '2010-10-10')
+            .misc({ __allowSelectSafeDeleted: true })
+            .selectSingle().then(resp => {
+              me.isExistDeleted = !!resp
+              me.attr.cleanTimesheet.setValue(false)
+              me.attr.renewTimesheet.setDisabled(!me.isExistDeleted)
+              me.attr.renewTimesheet.setValue(false)
+            })
+      }, (err) => {
+        me.setLoading(false)
+        if (err.config && err.config.timeout) {
+          $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+        } else {
+          throw err
+        }
+      })
+
+    }
+
+    me.fileLoad = () => {
+      if (!me.attr.encoding.getValue()) {
+        $App.dialogInfo(UB.i18n('Оберіть кодування файлу для завантаження'))
+        return
+      }
+      Ext.create('UB.view.UploadFileAjax', {
+        scope: this,
+        listeners: {
+          afterrender: function (cmp) {
+            this.fieldFile.fileInputEl.set({
+              accept: '.csv'
+            })
+          }
+        },
+        upLoad: function (btn) {
+          me.setLoading(true)
+          me.attr.orgEDRPOU.setValue()
+          me.attr.periodDate.setValue()
+          me.attr.downloadResult.setText('')
+          me.attr.warn1.setText('')
+          me.attr.warn2.setText('')
+          me.attr.cleanBtn.setDisabled(true)
+          me.attr.cleanTimesheet.setDisabled(true)
+          me.attr.cleanTimesheet.setValue(false)
+          me.attr.renewTimesheet.setDisabled(true)
+          me.attr.renewTimesheet.setValue(false)
+          me.attr.fileName.setText()
+
+          const dialogWindow = btn.up('window')
+          const inputDom = this.fieldFile.fileInputEl.dom
+          if (inputDom.files.length === 0) {
+            return
+          }
+          const file = inputDom.files[0]
+          if (file.name.indexOf('.csv', file.name.length - 4) === -1) {
+            $App.dialogInfo(UB.i18n('Невірний формат файлу, для завантаження використовується формат csv'))
+            me.setLoading(false)
+            return
+          }
+          btn.disable()
+          me.attr.fileName.setText(`Завантажено файл: ${file.name}`)
+          UB.connection.post('loadImportDataEx', file, {
+            params: {
+              entityName: '',
+              encoding: me.attr.encoding.getValue(),
+              fileName: file.name
+            },
+            headers: { 'Content-Type': 'application/octet-stream' }
+          }).then(response => {
+            me.setLoading(false)
+            let data = response.data && response.data[0] && response.data[0][0] ? response.data[0][0] : null
+            if (data.indexOf('#') < 0) {
+              me.attr.warn1.setText('Увага! Файл-ключ не коректний! Формат файлу не відповідає вимогам.')
+              me.attr.downloadResult.setText('Не коректний!')
+              me.attr.warn1.getEl().setStyle({'color': '#ff0000'})
+              return
+            }
+            data = data.split('#')
+            let orgEDRPOU
+            let periodDate
+            if (data && data.length === 2) {
+              orgEDRPOU = data[0]
+              data[1] = data[1].split('.')
+              periodDate = new Date(`20${data[1][1]}-${data[1][0]}-01`)
+              if (isNaN(periodDate)) {
+                me.attr.warn1.setText('Увага! Вказана дата не відповідає формату!')
+                me.attr.downloadResult.setText('Не коректний!')
+                me.attr.warn1.getEl().setStyle({'color': '#ff0000'})
+                return
+              }
+              return UB.Repository('hr_organization')
+                  .attrs(['ID', 'name', 'EDRPOUCode', 'mi_data_id', 'mi_dateFrom', 'mi_dateTo'])
+                  .where('EDRPOUCode', '=', orgEDRPOU)
+                  .where('state', '=', 'ACTIVE')
+                  .where('mi_deleteDate', '>=', '#maxdate')
+                  .selectSingle().then(org => {
+                    if (!org) {
+                      me.attr.warn1.setText('Увага! Файл-ключ не коректний! Організації з вказаним кодом ЕДРПОУ не існує!')
+                      me.attr.downloadResult.setText('Не коректний!')
+                      me.attr.warn1.getEl().setStyle({'color': '#ff0000'})
+                      return
+                    } else if (org && org.mi_data_id !== appAC.globalOrganization()) {
+                      me.attr.warn1.setText('Увага! Файл-ключ не коректний! Код ЕДРПОУ належить інший організації!')
+                      me.attr.downloadResult.setText('Не коректний!')
+                      me.attr.warn1.getEl().setStyle({'color': '#ff0000'})
+                      return
+                    } else {
+                      if (!periodDate) {
+                        me.attr.warn1.setText('Увага! Файл-ключ не коректний! Вказана дата не відповідає формату!')
+                        me.attr.downloadResult.setText('Не коректний!')
+                        me.attr.warn1.getEl().setStyle({'color': '#ff0000'})
+                        return
+                      } else {
+                        appHR.getCurrentPeriod(appAC.globalOrganization()).then(curPeriod => {
+                          if (periodDate < curPeriod.dateFrom) {
+                            me.attr.warn1.setText('Увага! Файл-ключ не коректний! Цей файл дозволяв очистити дані для попереднього розрахункового періоду!')
+                            me.attr.downloadResult.setText('Не коректний!')
+                            me.attr.warn1.getEl().setStyle({'color': '#ff0000'})
+                            return
+                          } else if (periodDate > curPeriod.dateFrom) {
+                            me.attr.warn1.setText('Увага! Файл-ключ не коректний! Потрібно закрити періоди до першого періоду, з якого буде почата робота!')
+                            me.attr.downloadResult.setText('Не коректний!')
+                            me.attr.warn1.getEl().setStyle({'color': '#ff0000'})
+                            return
+                          } else {
+                            me.attr.downloadResult.setText('Коректний!')
+                            me.attr.orgEDRPOU.setValue(orgEDRPOU)
+                            me.attr.periodDate.setValue(periodDate)
+                            me.attr.cleanBtn.setDisabled(false)
+                            me.attr.cleanTimesheet.setDisabled(false)
+                            me.attr.renewTimesheet.setDisabled(!me.isExistDeleted)
+
+                            me.attr.warn1.setText(`Увага! Будуть видалені всі дані нарахувань за розрахункові періоди по ${me.prevPeriodName} включно!`)
+                            me.attr.warn1.getEl().setStyle({'color': '#0000ff'})
+                            if (!me.isExistDeleted) {
+                              me.attr.warn2.setText(`Увага! Дані табеля за періоди до "${me.prevPeriodName}" включно збережуться!`)
+                            } else {
+                              me.attr.warn2.setText(`Увага! Дані табеля за періоди до "${me.prevPeriodName}" залишаться видаленими!`)
+                            }
+
+                          }
+                        })
+                      }
+                    }
+
+                  }
+              )
+            }
+            }, (err) => {
+            me.setLoading(false)
+            if (err.config && err.config.timeout) {
+              $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+            } else {
+              throw err
+            }
+          }).finally(() => {
+            me.setLoading(false)
+          })
+          dialogWindow.close()
+        }
+      })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        currentPeriod: me.down('[name=currentPeriod]'),
+        downloadResult: me.down('[name=downloadResult]'),
+        warn1: me.down('[name=warn1]'),
+        cleanTimesheet: me.down('[name=cleanTimesheet]'),
+        renewTimesheet: me.down('[name=renewTimesheet]'),
+        warn2: me.down('[name=warn2]'),
+        fileName: me.down('[name=fileName]'),
+        periodDate: me.down('[name=periodDate]'),
+        orgEDRPOU: me.down('[name=orgEDRPOU]'),
+        cleanBtn: me.down('[name=cleanBtn]'),
+        encoding: me.down('[name=encoding]')
+      }
+      me.attr.encoding.setValue('utf8')
+      appHR.getCurrentPeriod(appAC.globalOrganization()).then(curPeriod => {
+        if (curPeriod && curPeriod.name) me.attr.currentPeriod.setText(curPeriod.name)
+        me.currentPeriodID = curPeriod.ID
+        appHR.getPeriodByID(curPeriod.priorPeriodID).then(res => {
+          me.prevPeriodName = res.name
+        })
+      })
+
+      UB.Repository('tim_timeSheet')
+          .attrs(['ID'])
+          .where('employeeNumberID.orgID', '=', appAC.globalOrganization())
+          .where('mi_deleteDate', '=', '2010-10-10')
+          .misc({ __allowSelectSafeDeleted: true })
+          .selectSingle().then(resp => {
+            if (resp) {
+              me.isExistDeleted = true
+            }
+      })
+      me.attr.cleanTimesheet.on('change', (ctrl, value) => {
+       if (value) {
+         me.attr.renewTimesheet.setValue(false)
+         me.attr.warn2.setText(`Увага! Дані табеля за періоди до "${me.prevPeriodName}" включно будуть видалені!`)
+         me.attr.warn2.getEl().setStyle({'color': '#0000ff'})
+       } else if (!value && me.attr.renewTimesheet.getValue()) {
+         me.attr.warn2.setText(`Увага! Дані табеля за періоди до "${me.prevPeriodName}", що були видалені при попередньому запуску функції будуть відновлені!`)
+         me.attr.warn2.getEl().setStyle({'color': '#0000ff'})
+       } else {
+         me.attr.warn2.setText(`Увага! Дані табеля за періоди до "${me.prevPeriodName}" включно збережуться!`)
+         me.attr.warn2.getEl().setStyle({'color': '#000000'})
+
+       }
+      })
+      me.attr.renewTimesheet.on('change', (ctrl, value) => {
+        if (value) {
+          me.attr.cleanTimesheet.setValue(false)
+        }
+      })
+      me.attr.warn1.setText('Увага! Для запуску очищення виберіть файл-ключ!')
+      me.attr.cleanTimesheet.setDisabled(true)
+      me.attr.renewTimesheet.setDisabled(true)
+      me.attr.cleanBtn.setDisabled(true)
+
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

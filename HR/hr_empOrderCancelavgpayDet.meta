@@ -1,0 +1,159 @@
+{
+  "caption": "Наказ про закінчення оплати по середньому. Деталь",
+  "description": "Наказ про закінчення оплати по середньому. Деталь",
+  "descriptionAttribute": "orderID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "itemIdx",
+      "dataType": "Int",
+      "caption": "№",
+      "description": "№ за порядком",
+      "documentation": "№ за порядком"
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ",
+      "description": "Наказ про переміщення",
+      "documentation": "Наказ про переміщення",
+      "allowNull": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultView": false
+    },
+    {
+      "name": "cancelOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Скасовано наказом",
+      "description": "Наказ, що скасував даний пункт",
+      "documentation": "Наказ, що скасував даний пункт"
+    },
+    {
+      "name": "cancelParaID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Скасовано пунктом",
+      "description": "Пункт, що скасував даний пункт",
+      "documentation": "Пункт, що скасував даний пункт"
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "reason",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Підстава",
+      "description": "Підстава",
+      "documentation": "Підстава",
+      "allowNull": true
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false,
+      "defaultValue": "CANCELAVGPAY"
+    },
+    {
+      "name": "empOrderAveragePayID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ про оплату по середньому",
+      "description": "Наказ про оплату по середньому",
+      "documentation": "Наказ про оплату по середньому",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата закінчення оплати",
+      "description": "Дата закінчення оплати",
+      "documentation": "Дата закінчення оплати"
+    },
+    {
+      "name": "changedValues",
+      "dataType": "Text",
+      "caption": "Дані змінені при проведенні",
+      "description": "Дані змінені при проведенні",
+      "documentation": "Дані змінені при проведенні"
+    },
+    {
+      "name": "isGroup",
+      "dataType": "Boolean",
+      "caption": "Груповий",
+      "documentation": "Чи являється наказ груповим",
+      "description": "Чи являється наказ груповим",
+      "allowNull": false,
+      "defaultValue": "1"
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_EMPORDERCANC_ORDERDAT": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "orderID": { "sort": "ASC" },
+          "empOrderType": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_EMPORDERCANC_ORGDAT": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "organizationID": { "sort": "ASC" },
+          "empOrderType": { "sort": "ASC" },
+          "mi_deleteDate": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "unity": {
+      "entity": "hr_empOrderDet",
+      "attributeList": [
+        "organizationID",
+        "empOrderType",
+        "orderID",
+        "orderState",
+        "cancelOrderID",
+        "cancelParaID",
+        "changedValues",
+        "dateFrom",
+        "itemIdx",
+        "isGroup"
+      ],
+      "defaults": {
+        "isExternal": "0"
+      },
+      "mapping": {
+        "title": "title"
+      }
+    }
+  }
+}

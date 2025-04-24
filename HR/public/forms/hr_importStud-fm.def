@@ -1,0 +1,362 @@
+/* global Ext UB localStorage $App AC appAC */
+exports.formDef = 'HR.importStud'
+
+// noinspection JSAnnotator
+Ext.define(exports.formDef, {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.importStud',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  align: 'stretch',
+  autoScroll: true,
+  isModal: true,
+  mainPanel: [{
+    xtype: 'panel',
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    region: 'north',
+    autoScroll: true,
+    split: true,
+    items: [
+      {
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        padding: '8px 8px 8px 8px',
+        items: [
+          {
+            xtype: 'button',
+            width: 180,
+            cls: 'fill-action',
+            margin: '10 10 10 0',
+            text: UB.i18n('Завантажити файл'),
+            iconCls: 'fas fa-cloud-upload-alt',
+            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+            handler: ctrl => {
+              const me = ctrl.up('form')
+              uploadCsvHandler(me)
+            }
+          },
+          {
+            xtype: 'button',
+            width: 160,
+            cls: 'fill-action',
+            margin: '10 10 10 0',
+            text: UB.i18n('Імпортувати'),
+            iconCls: 'fas fa-file-import',
+            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+            handler: ctrl => {
+              const me = ctrl.up('form')
+              doImport(me)
+            }
+          },
+          {
+            xtype: 'button',
+            width: 160,
+            cls: 'fill-action',
+            margin: '10 10 10 0',
+            text: UB.i18n('Перегляд помилок'),
+            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+            handler: () => {
+              $App.doCommand({
+                entity: 'hr_importLog',
+                cmdType: 'showList',
+                description: UB.i18n('Зауваження'),
+                isModal: true,
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew', 'itemSelect'],
+                cmdData: {
+                  params: [{
+                    entity: 'hr_importLog',
+                    method: 'select',
+                    fieldList: ['description'],
+                    whereList: {
+                      orgID: {
+                        expression: '[orgID]',
+                        condition: 'equal',
+                        value: appAC.globalOrganization()
+                      },
+                      entityName: {
+                        expression: '[entityName]',
+                        condition: 'equal',
+                        value: 'hr_importStud'
+                      }
+                    }
+                  }]
+                }
+              })
+            }
+          },
+          {
+            xtype: 'combo',
+            labelWidth: 150,
+            width: 250,
+            editable: false,
+            name: 'encoding',
+            fieldLabel: UB.i18n('Кодова сторінка'),
+            allowBlank: false,
+            store: Ext.create('Ext.data.Store', {
+              fields: ['text', 'value'],
+              data: [{
+                text: 'win1251',
+                value: 'win1251'
+              },
+              {
+                text: 'utf8',
+                value: 'utf8'
+              }
+              ]
+            })
+          }
+        ]
+      },
+      {
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        padding: '8px 8px 8px 8px',
+        items: [
+          {
+            xtype: 'ubcombobox',
+            labelWidth: 130,
+            valueField: 'ID',
+            displayField: 'name',
+            fieldLabel: UB.i18n('Графік роботи'),
+            name: 'workScheduleID',
+            allowBlank: false,
+            flex: 1,
+            ubRequest: {
+              entity: 'hr_workSchedule',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['code', 'name', 'ID'],
+              whereList: {
+                organizationID: {
+                  expression: '[organizationID]',
+                  condition: 'equal',
+                  value: appAC.globalOrganization()
+                },
+                orgIsNull: {
+                  expression: '[organizationID]',
+                  condition: 'isNull'
+                }
+              },
+              logicalPredicates: ['[organizationID] OR [orgIsNull]']
+            },
+            listeners: {
+              select: ctrl => {
+                localStorage.setItem('impStudWorkScheduleID', ctrl.getValue() || null)
+              }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            labelWidth: 130,
+            valueField: 'ID',
+            displayField: 'description',
+            fieldLabel: UB.i18n('Система оплати'),
+            name: 'payElID',
+            allowBlank: false,
+            flex: 1,
+            ubRequest: {
+              entity: 'hr_payEl',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['description', 'name', 'ID'],
+              whereList: {
+                isSalary: {
+                  expression: '[methodID.methodGroupID.code]',
+                  condition: 'equal',
+                  value: 1
+                }
+              }
+            },
+            listeners: {
+              select: ctrl => {
+                localStorage.setItem('impStudWorkPayElID', ctrl.getValue() || null)
+              }
+            }
+          }
+        ]
+      },
+      {
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        padding: '8px 8px 8px 8px',
+        items: [
+          {
+            xtype: 'checkbox',
+            name: 'isDeleteExisting',
+            value: false,
+            labelWidth: 600,
+            fieldLabel: UB.i18n('Видалити усі існуючі призначення у поточному розрахунковому періоді перед імпортом')
+          }
+        ]
+      }
+    ]
+  },
+  {
+    xtype: 'panel',
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    region: 'center',
+    name: 'details',
+    autoScroll: true,
+    split: true,
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        name: 'dataGrid',
+        autoScroll: true,
+        hideActions: ['addNew', 'addNewByCurrent'],
+        flex: 1,
+        forceLoad: true,
+        enableColumnHide: false,
+        hideMenuAllActions: true,
+        readOnly: true,
+        entityConfig: {
+          entity: 'hr_importStud',
+          method: 'select',
+          fieldList: [
+            { name: 'taxCode', description: UB.i18n('РНОКПП'), flex: 1 },
+            { name: 'studentNumber', description: UB.i18n('Номер студентського квитка'), flex: 1 },
+            { name: 'lastName', description: UB.i18n('Прізвище'), flex: 1 },
+            { name: 'firstName', description: UB.i18n('Ім\'я'), flex: 1 },
+            { name: 'middleName', description: UB.i18n('По батькові'), flex: 1 },
+            { name: 'birthDate', description: UB.i18n('Дата народження'), dateFormat: 'd.m.Y', flex: 1 },
+            { name: 'dateFrom', description: UB.i18n('Дата початку нарахування'), dateFormat: 'd.m.Y', flex: 1 },
+            { name: 'dateTo', description: UB.i18n('Дата кінця нарахування'), dateFormat: 'd.m.Y', flex: 1 },
+            { name: 'accrualSum', description: UB.i18n('Сума стипендії'), flex: 1 }
+          ]
+        },
+        onItemDblClick: () => {},
+        onItemContextMenu: () => {}
+      }
+    ]
+  }
+  ],
+  initComponent: function () {
+    const me = this
+    me.items = me.mainPanel
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        dataGrid: me.down('[name=dataGrid]'),
+        workScheduleID: me.down('[name=workScheduleID]'),
+        payElID: me.down('[name=payElID]'),
+        isDeleteExisting: me.down('[name=isDeleteExisting]'),
+        encoding: me.down('[name=encoding]')
+      }
+      me.attr.encoding.setValue('utf8')
+      const workScheduleID = localStorage.getItem('impStudWorkScheduleID')
+      workScheduleID && me.attr.workScheduleID.setValueById(workScheduleID)
+
+      const payElID = localStorage.getItem('impStudWorkPayElID')
+      payElID && me.attr.payElID.setValueById(payElID)
+
+      AC.gridUtils.setGlobalOrganization(me.attr.dataGrid, 'orgID')
+    }, me)
+
+    me.callParent(arguments)
+  }
+})
+
+function uploadCsvHandler (me) {
+  const encoding = me.attr.encoding.getValue()
+  if (!encoding) {
+    $App.dialogInfo(UB.i18n('Оберіть кодування файлу для завантаження'))
+    return
+  }
+  Ext.create('UB.view.UploadFileAjax', {
+    scope: this,
+    listeners: {
+      afterrender: function (cmp) {
+        this.fieldFile.fileInputEl.set({
+          accept: '.csv' // or w/e type
+        })
+      }
+    },
+    upLoad: function (btn) {
+      me.setLoading(true)
+      const dialogWindow = btn.up('window')
+      const inputDom = this.fieldFile.fileInputEl.dom
+      if (inputDom.files.length === 0) {
+        return
+      }
+      const file = inputDom.files[0]
+      if (file.name.toLowerCase().indexOf('.csv', file.name.length - 4) === -1) {
+        $App.dialogInfo(UB.i18n('Невірний формат файлу, для завантаження використовується формат csv'))
+        me.setLoading(false)
+        return
+      }
+
+      UB.connection.post('loadImportStudData', file, {
+        params: {
+          entityName: 'hr_importStud',
+          orgID: appAC.globalOrganization(),
+          encoding: me.attr.encoding.getValue(),
+          fileName: file.name
+        },
+        headers: { 'Content-Type': 'application/octet-stream' }
+      }).then(response => {
+        me.setLoading(false)
+        me.attr.dataGrid.onRefresh()
+        let data = response.data || {}
+        AC.viewUtils.showToast(UB.i18n('Завантажено записів: {0}', data.recordCount || 0))
+      }, (err) => {
+        me.setLoading(false)
+        if (err.config && err.config.timeout) {
+          $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+        } else {
+          throw err
+        }
+      }).finally(() => {
+        me.setLoading(false)
+      })
+      dialogWindow.close()
+    }
+  })
+}
+
+function doImport (me) {
+  const workScheduleID = me.attr.workScheduleID.getValue()
+  if (!workScheduleID) {
+    $App.dialogInfo(UB.i18n('Оберіть графік роботи'))
+    return
+  }
+  const payElID = me.attr.payElID.getValue()
+  if (!payElID) {
+    $App.dialogInfo(UB.i18n('Оберіть систему оплати'))
+    return
+  }
+  me.setLoading(true)
+  $App.connection.run({
+    entity: 'hr_importStud',
+    method: 'doImport',
+    execParams: {
+      orgID: appAC.globalOrganization(),
+      workScheduleID,
+      payElID,
+      isDeleteExisting: me.attr.isDeleteExisting.getValue()
+    }
+  }).then(mParams => {
+    me.setLoading(false)
+    if (mParams.result) {
+      const result = JSON.parse(mParams.result)
+      $App.dialogInfo(UB.i18n('Імпорт завершено. Помилок: {0}', result.errCount || 0), UB.i18n('Увага'))
+    }
+    me.attr.dataGrid.onRefresh()
+  }).catch(e => {
+    me.setLoading(false)
+    if (e.message) {
+      $App.dialogError(e.message, UB.i18n('Помилка'))
+    }
+  })
+}

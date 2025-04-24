@@ -1,0 +1,87 @@
+{
+  "caption": "Обов'язкові платежі",
+  "description": "Обов'язкові платежі",
+  "descriptionAttribute": "name",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Найменування",
+      "description": "Найменування",
+      "documentation": "Найменування",
+      "allowNull": false
+    },
+    {
+      "name": "type",
+      "dataType": "Enum",
+      "enumGroup": "HR_PAY_OBLIGATORY_TYPE",
+      "caption": "Тип платежу",
+      "description": "Тип платежу",
+      "documentation": "Тип платежу"
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_organization",
+      "caption": "Платник",
+      "description": "Платник",
+      "documentation": "Платник",
+      "allowNull": false
+    },
+    {
+      "name": "orgName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Платник",
+      "description": "Платник",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select org.name from ac_organization org where {self}.organizationID = org.ID)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select org.name from ac_organization org where {self}.organizationID = org.ID)"
+        }
+      ]
+    },
+    {
+      "name": "orgAccountID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_orgAccount",
+      "caption": "Р/р платника",
+      "description": "Р/р платника",
+      "documentation": "Р/р платника",
+      "allowNull": false
+    },
+    {
+      "name": "contractorID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_contractor",
+      "caption": "Отримувач",
+      "description": "Отримувач",
+      "documentation": "Отримувач",
+      "allowNull": false
+    },
+    {
+      "name": "contrAccountID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_contrAccount",
+      "caption": "Р/р отримувача",
+      "description": "Р/р отримувача",
+      "documentation": "Р/р отримувача",
+      "allowNull": false
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

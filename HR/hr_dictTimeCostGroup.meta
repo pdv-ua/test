@@ -1,0 +1,113 @@
+{
+  "caption": "Входимість елементів обліку робочого часу в групу",
+  "documentation": "Входимість елементів обліку робочого часу в групу",
+  "descriptionAttribute": "dateFrom",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "dictTimeGroupID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTimeGroup",
+      "caption": "Група",
+      "description": "Група",
+      "documentation": "Група",
+      "allowNull": false
+    },
+    {
+      "name": "dictTimeCostID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTimeCost",
+      "caption": "Елемент обліку робочого часу",
+      "description": "Елемент обліку робочого часу",
+      "documentation": "Елемент обліку робочого часу",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    }
+  ],
+  "dbExtensions": {
+    "UIDX_HR_DICTTIMECOSTGROUP_TC12": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "dictTimeCostID": {
+            "sort": "ASC"
+          },
+          "dictTimeGroupID": {
+            "sort": "ASC"
+          },
+          "mi_deleteDate": {
+            "sort": "ASC"
+          },
+          "dateFrom": {
+            "sort": "ASC"
+          },
+          "dateTo": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": true
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

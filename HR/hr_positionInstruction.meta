@@ -1,0 +1,310 @@
+{
+  "caption": "Посадова інструкція",
+  "description": "Посадова інструкція",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада",
+      "allowNull": false
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 290,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["approvalDate","employeePositionID"],
+        "compositeSeparator": " "
+      }
+    },
+    {
+      "name": "approvalDate",
+      "dataType": "Date",
+      "caption": "Дата затвердження",
+      "description": "Дата затвердження",
+      "documentation": "Дата затвердження",
+      "allowNull": true
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Затвердив",
+      "description": "Затвердив",
+      "documentation": "Затвердив",
+      "allowNull": true
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": true
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": true
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "state",
+      "dataType": "Enum",
+      "enumGroup": "HR_STATE_VALID",
+      "caption": "Стан",
+      "documentation": "Стан",
+      "description": "Стан",
+      "allowNull": false,
+      "defaultValue": "VALID"
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Коментар",
+      "allowNull": true
+    },
+    {
+      "name": "purposePost",
+      "dataType": "String",
+      "size": 1500,
+      "caption": "Мета посади",
+      "allowNull": true
+    },
+    {
+      "name": "powers",
+      "dataType": "Text",
+      "size": 2500,
+      "caption": "Повноваження",
+      "allowNull": true
+    },
+    {
+      "name": "requirements",
+      "dataType": "Text",
+      "size": 2500,
+      "caption": "Вимоги до компетентності",
+      "allowNull": true
+    },
+    {
+      "name": "workingConditions",
+      "dataType": "Text",
+      "size": 2500,
+      "caption": "Умови роботи",
+      "allowNull": true
+    },
+    {
+      "name": "namePosition",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Найменування посади",
+      "allowNull": true
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Найменування структурного підрозділу",
+      "description": "Найменування структурного підрозділу",
+      "documentation": "Найменування структурного підрозділу",
+      "allowNull": true
+    },
+    {
+      "name": "indepStructUnitID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Найменування самостійного структурного підрозділу",
+      "description": "Найменування самостійного структурного підрозділу",
+      "documentation": "Найменування самостійного структурного підрозділу",
+      "allowNull": true
+    },
+    {
+      "name": "supervisorPosID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Посада безпосереднього керівника",
+      "description": "Посада безпосереднього керівника",
+      "documentation": "Посада безпосереднього керівника",
+      "allowNull": true
+    },
+    {
+      "name": "headIndStrUnitPosID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Посада керівника самостійного структурного підрозділу",
+      "description": "Посада керівника самостійного структурного підрозділу",
+      "documentation": "Посада керівника самостійного структурного підрозділу",
+      "allowNull": true
+    },
+    {
+      "name": "coordActUnitPosID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Посада особи, яка здійснює координацію діяльності підрозділу",
+      "description": "Посада особи, яка здійснює координацію діяльності підрозділу",
+      "documentation": "Посада особи, яка здійснює координацію діяльності підрозділу",
+      "allowNull": true
+    },
+    {
+      "name": "quantityFactEmpl",
+      "dataType": "Int",
+      "caption": "Кількість підпорядкованих працівників згідно зі штатним розписом",
+      "documentation": "Кількість підпорядкованих працівників згідно зі штатним розписом",
+      "description": "Кількість підпорядкованих працівників згідно зі штатним розписом",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select sum(p.quantity) from hr_position p where p.parentUnitID = (select TOP 1 p2.parentUnitID from hr_position p2 where p2.ID={self}.positionID) and p.state = 'ACTIVE' and p.mi_dateFrom <= GETDATE() and p.mi_dateTo >= GETDATE() and p.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select sum(p.quantity) from hr_position p where p.parentUnitID = (select p2.parentUnitID from hr_position p2 where p2.ID={self}.positionID LIMIT 1) and p.state = 'ACTIVE' and p.mi_dateFrom <= CURRENT_DATE and p.mi_dateTo >= CURRENT_DATE and p.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultValue": "PROJECT",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false,
+      "defaultValue": "POSITIONINSTRUCTION"
+    },
+    {
+      "name": "docText",
+      "dataType": "Text",
+      "caption": "Збережений текст",
+      "documentation": "Збережений текст",
+      "description": "Збережений текст"
+    },
+    {
+      "name": "document",
+      "dataType": "Document",
+      "caption": "PDF образ",
+      "documentation": "PDF образ",
+      "description": "PDF образ"
+    },
+    {
+      "name": "reportSettings",
+      "dataType": "Text",
+      "caption": "Налаштування звіту",
+      "documentation": "Налаштування звіту",
+      "description": "Налаштування звіту"
+    },
+    {
+      "name": "showSigners",
+      "dataType": "Boolean",
+      "caption": "Підписанти",
+      "description": "Підписанти",
+      "documentation": "Підписанти",
+      "allowNull": false,
+      "defaultValue": "1"
+    },{
+      "name": "docLastChangeDate",
+      "dataType": "DateTime",
+      "caption": "docLastChangeDate",
+      "documentation": "Last change date of document",
+      "description": "docLastChangeDate",
+      "allowNull": true
+    },
+    {
+      "name": "fieldLastChangeDate",
+      "dataType": "DateTime",
+      "caption": "fieldLastChangeDate",
+      "documentation": "Last change date doc field",
+      "description": "fieldLastChangeDate",
+      "allowNull": true
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "rls": {
+      "func": "RLS.byOrganization"
+    }
+  }
+}

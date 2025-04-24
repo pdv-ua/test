@@ -1,0 +1,91 @@
+// @isModal true
+
+/* global Ext appAC $App UB */
+exports.formDef = 'HR.commissionList'
+
+Ext.define(exports.formDef, {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.commissionList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [{
+      name: 'posVac',
+      xtype: 'ubdetailgrid',
+      autoScroll: true,
+      layout: 'fit',
+      flex: 1,
+      hideActions: ['addNewByCurrent', 'del', 'audit', 'newVersion', 'history', 'showPreview', 'itemLink',
+        'commandLink', 'showDetail'],
+      stateful: true,
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_dictCommissionList_posVac'),
+      cmdType: 'showList',
+      description: UB.i18n('Комісії'),
+      entity: 'hr_dictCommission',
+      cmdData: {
+        params: [{
+          entity: 'hr_dictCommission',
+          method: 'select',
+          fieldList: [
+            { name: 'name', description: UB.i18n('Назва комісії') },
+            { name: 'orderDate', description: UB.i18n('Дата наказу') },
+            { name: 'orderNum', description: UB.i18n('Номер наказу') }
+          ],
+          whereList: {
+            organizationID: {
+              expression: '[organizationID]',
+              condition: 'equal',
+              value: appAC.globalOrganization()
+            }
+          },
+          __mip_recordhistory_all: true
+        }]
+      },
+      cmpInitConfig: {
+        customInit: function () {},
+        onDeterminateForm: function (grid) {
+          return {
+            entityName: 'hr_dictCommission',
+            formCode: 'hr_dictCommission'
+          }
+        }
+      }
+    }]
+  },
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+    me.changeGlobal = function () {
+      const store = me.down('ubdetailgrid').getStore()
+      store.ubRequest.whereList = {
+        organizationID: {
+          expression: '[organizationID]',
+          condition: 'equal',
+          value: appAC.globalOrganization()
+        }
+      }
+      store.load()
+    }
+    me.on('afterrender', () => {
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+    me.callParent(arguments)
+  }
+})

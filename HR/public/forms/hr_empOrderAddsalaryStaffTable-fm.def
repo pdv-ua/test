@@ -1,0 +1,161 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+/* global UB $App Ext appAC AC _ */
+
+exports.formDef = 'HR.addSalaryChangesFromStaffTable'
+
+Ext.define(exports.formDef, {
+  ident: 'addSalaryChangesFromStaffTable',
+  extend: 'Ext.form.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  isModal: true,
+  listeners: {
+    render: function () {
+      let me = this
+      let win = me.window
+      if (win) {
+        if (!win.height) {
+          win.height = 350
+        }
+        if (!win.width) {
+          win.width = 800
+        }
+        win.center()
+      }
+    }
+  },
+  bbar: {
+    layout: {
+      pack: 'end'
+    },
+    items: [
+      {
+        xtype: 'button',
+        text: UB.i18n('Відмінити'),
+        width: 100,
+        height: 30,
+        margin: '10 10 20 0',
+        handler: function (btn) {
+          btn.up('window').close()
+        }
+      },
+      {
+        xtype: 'button',
+        text: UB.i18n('Вибрати'),
+        width: 100,
+        height: 30,
+        margin: '10 10 20 0',
+        handler: function (btn) {
+          const me = this.up('[ident=addSalaryChangesFromStaffTable]')
+          if (me.onSelect) {
+            me.onSelect({
+              staffTableID: me.attr.staffTableID.getValue(),
+              datePosCheck: me.attr.datePosCheck.getValue(),
+              posAccrualCheck: me.attr.posAccrualCheck.getValue()
+            })
+          }
+          btn.up('window').close()
+        }
+      }
+    ]
+  },
+  items: [
+    {
+      xtype: 'ubcombobox',
+      name: 'staffTableID',
+      fieldLabel: UB.i18n('Штатний розпис'),
+      displayField: 'description',
+      fieldList: ['ID', 'description', 'entryDate'],
+      margin: '30 15 10 15',
+      labelWidth: 200,
+      ubRequest: {
+        entity: 'hr_staffTable',
+        method: UB.core.UBCommand.methodName.SELECT,
+        fieldList: ['ID', 'description', 'entryDate']
+      },
+      listeners: {
+        change: (ctrl, value) => {
+          if (value) {
+            const me = ctrl.up('form')
+            const entryDate = ctrl.getFieldValue('entryDate')
+            me.attr.datePosCheck.setValue(AC.dateService.addDays(entryDate, -1))
+          }
+        }
+      }
+    },
+    {
+      layout: { type: 'hbox' },
+      items: [
+        {
+          xtype: 'combobox',
+          name: 'posAccrualCheck',
+          labelWidth: 200,
+          flex: 1,
+          fieldLabel: UB.i18n('Відповідність окладів'),
+          valueField: 'code',
+          displayField: 'name',
+          defaultValue: 'ALL',
+          store: Ext.create('Ext.data.Store', {
+            fields: [
+              { name: 'name' },
+              { name: 'code' }
+            ],
+            data: [
+              { name: UB.i18n('без обмежень'), code: 'ALL' },
+              { name: UB.i18n('відповідає посаді'), code: 'CORRESPOND' },
+              { name: UB.i18n('не відповідає посаді'), code: 'NOT_CORRESPOND' }
+            ]
+          }),
+          listeners: {
+            change: (ctrl, value) => {
+              const me = ctrl.up('form')
+              me.attr.datePosCheck.setDisabled(value === 'ALL')
+            }
+          }
+        },
+        {
+          xtype: 'ubdatefield',
+          labelWidth: 130,
+          name: 'datePosCheck',
+          fieldLabel: UB.i18n('На дату')
+        }
+      ]
+    }
+  ],
+  initComponent: function () {
+    let me = this
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        staffTableID: me.down('[name=staffTableID]'),
+        posAccrualCheck: me.down('[name=posAccrualCheck]'),
+        datePosCheck: me.down('[name=datePosCheck]')
+      }
+      const store = me.attr.staffTableID.getStore()
+      store.ubRequest.whereList = {
+        orderState: {
+          expression: '[orderState]',
+          condition: '=',
+          value: 'POSTED'
+        },
+        orgID: {
+          expression: '[orgID]',
+          condition: '=',
+          value: me.organizationID || appAC.globalOrganization()
+        },
+        entryDate: {
+          expression: '[entryDate]',
+          value: me.entryDate || appAC.globalApplicationDate(),
+          condition: '<='
+        }
+      }
+      me.attr.staffTableID.setValueById(me.staffTableID)
+      me.attr.posAccrualCheck.setValue('ALL')
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

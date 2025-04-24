@@ -1,0 +1,103 @@
+/* global AC, _, $App UB */
+exports.formDef = {
+  parentConfig: {
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  position: {
+    x: 100,
+    y: 100
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        { attributeName: 'organizationID', hidden: true },
+        { attributeName: 'name' },
+        { attributeName: 'orderDate' },
+        { attributeName: 'orderNum' }
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      name: 'dictCommissionDetail',
+      flex: 1,
+      rowEditing: true,
+      autoScroll: true,
+      lineNumberColumn: 'lineNum',
+      masterFields: ['ID'],
+      detailFields: ['commissionID'],
+      entityConfig: {
+        entity: 'hr_dictCommissionDt',
+        method: 'select',
+        fieldList: [
+          {
+            name: 'lineNum',
+            description: '№',
+            config: { width: 7, minWidthChar: 7, maxWidthChar: 7 },
+            editor: { minValue: 0, maxValue: 99999, allowExponential: false }
+          },
+          {
+            name: 'employeePositionID.description',
+            description: UB.i18n('ПІБ'),
+            editor: {
+              fieldList: ['ID', 'description', 'organizationID', 'dateFrom', 'dateTo']
+            }
+          },
+          {
+            name: 'memberType',
+            description: UB.i18n('Тип участника')
+          }
+        ]
+      },
+      onBeforeEdit: function (editor, context) {
+        const form = context.grid.up('form')
+        let filter = []
+        if (form.getField('organizationID').getValue()) {
+          filter.push(['organizationID', '=', form.getField('organizationID').getValue()])
+        }
+        if (form.getField('orderDate').getValue()) {
+          const orderDate = form.getField('orderDate').getValue()
+          filter.push(['dateFrom', '<=', orderDate])
+          filter.push(['dateTo', '>=', orderDate])
+        }
+        if (filter.length) {
+          AC.viewUtils.setWhereListProperty(editor.editor.form.findField('employeePositionID.description'),
+            filter,
+            null,
+            ['clearWhereList']
+          )
+        }
+      },
+      onValidateEdit: function (editor, context) {
+        const empFieldName = 'employeePositionID.description'
+        const memberFieldName = 'memberType'
+        const data = context.grid.getData()
+        const empCtrl = editor.editor.form.findField(empFieldName)
+        const chiefCtrl = editor.editor.form.findField(memberFieldName)
+        const empName = empCtrl.getValue()
+        const chiefValue = chiefCtrl.getValue()
+        if (chiefValue === '1' && _.filter(data, { [memberFieldName]: '1' }).length >
+          (context.record.get(memberFieldName) === '1' ? 1 : 0)) {
+          const errorMessage = UB.i18n(`Позначка 'Голова' може бути встановлена тільки на одному елементі`)
+          chiefCtrl.markInvalid(errorMessage)
+          $App.dialogInfo(errorMessage)
+          return false
+        }
+        if (_.filter(data, { [empFieldName]: empName }).length >
+          (context.record.get(empFieldName) !== empName ? 0 : 1)) {
+          const errorMessage = UB.i18n(`Значення "{0}" вже існує`, empName)
+          empCtrl.markInvalid(errorMessage)
+          $App.dialogInfo(errorMessage)
+          return false
+        }
+        context.grid.enableAction('del')
+        return true
+      }
+    }
+  ]
+
+}

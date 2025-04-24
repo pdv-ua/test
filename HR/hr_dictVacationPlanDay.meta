@@ -1,0 +1,115 @@
+{
+  "caption": "Дні відпустки за видами відпустки та типами посад",
+  "description": "Дні відпустки за видами відпустки та типами посад",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "dictVacationKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictVacationKind",
+      "caption": "Вид відпустки",
+      "description": "Вид відпустки",
+      "documentation": "Вид відпустки",
+      "allowNull": false
+    },
+    {
+      "name": "positionType",
+      "dataType": "Enum",
+      "enumGroup": "HR_POSITION_TYPE",
+      "caption": "Тип посади",
+      "documentation": "Тип посади",
+      "description": "Тип посади"
+    },
+    {
+      "name": "dayCount",
+      "dataType": "Int",
+      "caption": "Кількість днів за замовченням",
+      "description": "Кількість днів за замовченням",
+      "documentation": "Кількість днів за замовченням"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null when 2099 then null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null when 2099 then null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "positionTypeNotEmpty",
+      "dataType": "Enum",
+      "enumGroup": "HR_POSITION_TYPE",
+      "caption": "Тип посади",
+      "documentation": "Тип посади",
+      "description": "Тип посади",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "COALESCE({self}.positionType,'0')"
+        }
+      ]
+    },
+    {
+      "name": "dictStaffCatID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStaffCat",
+      "caption": "Категорія персоналу",
+      "description": "Категорія персоналу",
+      "documentation": "Категорія персоналу",
+      "allowNull": true
+    },
+    {
+      "name": "dictStaffSubCatID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStaffSubCat",
+      "caption": "Підкатегорія персоналу",
+      "description": "Підкатегорія персоналу",
+      "documentation": "Підкатегорія персоналу",
+      "allowNull": true
+    },
+    {
+      "name": "dictGovernmTypeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictGovernmType",
+      "caption": "Тип організації",
+      "description": "Тип організації",
+      "documentation": "Тип організації",
+      "allowNull": true
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

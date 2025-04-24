@@ -1,0 +1,114 @@
+/* global UB Ext */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['valueID', 'valueEnum', 'valueName', 'attrName'],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [{
+      attributeName: 'entityID',
+      fieldList: ['description', 'name'],
+      listeners: {
+        change: ctrl => {
+          ctrl.up('form').loadAttrList({
+            ctrl: ctrl,
+            isClear: true
+          })
+        }
+      }
+
+    }, // Сутність (Сутність),
+    {
+      xtype: 'combo',
+      name: 'attrs',
+      editable: true,
+      valueField: 'value',
+      displayField: 'text',
+      fieldLabel: UB.i18n('Атрибут'),
+      allowBlank: false,
+      typeAhead: false,
+      queryMode: 'local',
+      forceSelection: true,
+      triggerAction: 'all',
+      mode: 'local',
+      anyMatch: true,
+      store: {
+        fields: ['text', 'value', 'caption'],
+        data: []
+      },
+      doQuery: function (queryString, forceAll) {
+        this.expand()
+        this.store.clearFilter(!forceAll)
+        if (!forceAll) {
+          this.store.filter(this.displayField, new RegExp(Ext.String.escapeRegex(queryString), 'i'))
+        }
+      },
+      listeners: {
+        change: ctrl => {
+          let me = ctrl.up('form')
+          me.record.set('attrName', ctrl.getValue())
+          me.attrValueChanged(ctrl)
+        }
+
+      }
+    },
+    {
+      attributeName: 'srcValue'
+    }, // Значення з файлу (Значення з файлу),
+
+    {
+      xtype: 'ubcombobox',
+      name: 'valueID',
+      fieldLabel: UB.i18n('Значення (довідник)'),
+      hidden: true,
+      displayField: 'name',
+      ubRequest: {
+        entity: 'hr_organization',
+        method: UB.core.UBCommand.methodName.SELECT,
+        fieldList: ['name', 'ID']
+      },
+      listeners: {
+        select: function (ctrl) {
+          let me = ctrl.up('form')
+          me.record.set('valueID', ctrl.getValue())
+          me.record.set('valueName', ctrl.getFieldValue(ctrl.displayField))
+        }
+      }
+    },
+    {
+      xtype: 'ubcombobox',
+      name: 'valueEnum',
+      fieldLabel: UB.i18n('Значення (перелік)'),
+      hideEntityItemInContext: true,
+      valueField: 'code',
+      displayField: 'name',
+      hidden: true,
+      ubRequest: {
+        entity: 'ubm_enum',
+        method: UB.core.UBCommand.methodName.SELECT,
+        fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+        valueField: 'code'
+      },
+      listeners: {
+        change: ctrl => {
+          let me = ctrl.up('form')
+          me.record.set('valueEnum', ctrl.getValue())
+          me.record.set('valueName', ctrl.getFieldValue('name'))
+        }
+      }
+    },
+
+    {
+      attributeName: 'valueName',
+      hidden: true
+    } // Значення (Значення)
+    ]
+  }
+})()

@@ -1,0 +1,483 @@
+/* global Ext appAC appHR $App AC _ UB */
+
+exports.formDef = 'HR.dictPeriodList'
+
+Ext.define('HR.dictPeriodList', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.dictPeriodList',
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        ubID: 'mainToolbar',
+        enableOverflow: true,
+        items: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Оновити'),
+            scale: 'medium',
+            iconCls: 'u-icon-refresh',
+            handler: function () {
+              me.refreshData()
+            }
+          },
+          {
+            iconCls: 'fas fa-calculator',
+            cls: 'green-action',
+            scale: 'medium',
+            text: UB.i18n('Розрахувати'),
+            tooltip: UB.i18n('Розрахувати'),
+            disabled: !AC.entityUtils.verifyRightsMethod('hr_dictPeriod', 'calcPeriodData'),
+            handler: function () {
+              appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+                $App.dialogYesNo('Попередження', UB.i18n(`Запустити перерозрахунок {0}?`, response.name))
+                  .then(res => {
+                    if (res) {
+                      UB.Repository('hr_organization')
+                        .attrs(['mi_data_id'])
+                        .where('state', '=', 'ACTIVE')
+                        .where('mi_treePath', 'like', `%${appAC.globalOrganization()}%`)
+                        .where('mi_data_id', 'notEqual', appAC.globalOrganization())
+                        .groupBy('mi_data_id')
+                        .limit(1)
+                        .selectAsObject().then(orgIDs => {
+                          if (orgIDs.length) {
+                            $App.dialogYesNo('Попередження', UB.i18n(`Запустити разом з підпорядкованими організаціями?`))
+                              .then(allOrg => {
+                                me.calcPeriodData(false, allOrg)
+                              })
+                          } else {
+                            me.calcPeriodData(false)
+                          }
+                        })
+                    }
+                  })
+              })
+            }
+          },
+          /* {
+            iconCls: 'fas fa-calculator',
+            cls: 'green-action',
+            scale: 'medium',
+            text: UB.i18n('Розрахувати баланс'),
+            tooltip: UB.i18n('Розрахувати баланс'),
+            disabled: !AC.entityUtils.verifyRightsMethod('hr_dictPeriod', 'calcPeriodData'),
+            handler: function () {
+              $App.connection.run({
+                entity: 'hr_paySummary',
+                method: 'calcPeriodOrgBalance',
+                orgID: appAC.globalOrganization()
+              })
+            }
+          }, */
+          {
+            iconCls: 'fas fa-lock',
+            cls: 'red-action',
+            scale: 'medium',
+            text: UB.i18n('Закрити період'),
+            tooltip: UB.i18n('Закрити період'),
+            disabled: !AC.entityUtils.verifyRightsMethod('hr_dictPeriod', 'closePeriod'),
+            handler: function () {
+              appHR.getCurrentPeriod(appAC.globalOrganization()).then(currentPeriod => {
+                $App.dialogYesNo('Попередження', UB.i18n(`Закрити період {0}?`, currentPeriod.name))
+                  .then(res => {
+                    if (res) {
+                      me.closePeriod(currentPeriod)
+                    }
+                  })
+              })
+            }
+          }
+        ]
+      }
+    ]
+
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        layout: { type: 'vbox' },
+        items: [
+          {
+            xtype: 'textfield',
+            name: 'periodName',
+            readOnly: true,
+            labelWidth: 180,
+            width: 350,
+            fieldLabel: UB.i18n('Поточний період')
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'textfield',
+                name: 'orderRegCount',
+                readOnly: true,
+                labelWidth: 180,
+                width: 350,
+                fieldLabel: UB.i18n('Документів нарахування')
+              },
+              {
+                xtype: 'textfield',
+                name: 'orderRegCountNotPost',
+                readOnly: true,
+                labelWidth: 180,
+                width: 350,
+                fieldLabel: UB.i18n('з них не проведено')
+              }
+            ]
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'textfield',
+                name: 'payRollCount',
+                readOnly: true,
+                labelWidth: 180,
+                width: 350,
+                fieldLabel: UB.i18n('Платіжних відомостей')
+              },
+              {
+                xtype: 'textfield',
+                name: 'payRollCountNotPost',
+                readOnly: true,
+                labelWidth: 180,
+                width: 350,
+                fieldLabel: UB.i18n('з них не проведено')
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        flex: 1,
+        name: 'gridDictPeriod',
+        region: 'center',
+        hideActions: ['addNew', 'addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail', 'del'],
+        stateful: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_dictPeriodList_gridDictPeriod'),
+        cmdType: 'showList',
+        entity: 'hr_dictPeriod',
+        cmdData: {
+          params: [{
+            entity: 'hr_dictPeriod',
+            method: 'select',
+            fieldList: [
+              { name: 'dateFrom', description: UB.i18n('Період'), config: { flex: 1 } },
+              { name: 'description', visibility: false },
+              {
+                name: 'isCurrent',
+                description: UB.i18n('Стан'),
+                config: { align: 'center', flex: 1 },
+                format: (value, metaData, record, i, n, s) => {
+                  return (value ? `${UB.i18n('Поточний')}${(s.isRawData ? record[s.dataFieldsMap.isBlock] : record.get('isBlock')) ? UB.i18n(', Заблокований') : ''}`
+                    : `${(s.isRawData ? record[s.dataFieldsMap.isClosed] : record.get('isClosed')) ? UB.i18n('Закритий') : ''}${(s.isRawData ? record[s.dataFieldsMap.isBlock] : record.get('isBlock')) ? UB.i18n(', Заблокований') : ''}`)
+                }
+              },
+              { name: 'employees', config: { flex: 1 } },
+              { name: 'accruedSum', config: { flex: 1 } },
+              { name: 'deductedSum', config: { flex: 1 } },
+              { name: 'paidSum', config: { flex: 1 } },
+              { name: 'debtOrgSum', config: { flex: 1 } },
+              { name: 'debtEmployeeSum', config: { flex: 1 } },
+              { name: 'fundSum', config: { flex: 1 } },
+              { name: 'isClosed', visibility: false },
+              { name: 'isBlock', visibility: false }
+            ],
+            whereList: {
+              orgID: {
+                expression: '[orgID]',
+                condition: 'equal',
+                value: appAC.globalOrganization()
+              },
+              currentPlusMonth: {
+                expression: '[currentPlusMonth]',
+                condition: 'equal',
+                value: 1
+              }
+            },
+            orderList: { dateTo: { expression: 'dateTo', order: 'DESC' } }
+          }]
+        },
+        cmpInitConfig: {
+          afterInit: function () {
+            AC.gridUtils.tuneGridColumns(this, {
+              dateFrom: {
+                renderer: function (value) {
+                  return value ? AC.dateService.formatDate(AC.dateService.shiftDate(value), 'yyyy mmmm') : ''
+                }
+              },
+              employees: {
+                renderer: function (value) {
+                  return value === 0 ? '' : value
+                }
+              },
+              accruedSum: {
+                renderer: function (value) {
+                  return _.isNumber(value) && value !== 0 ? Ext.util.Format.currency(value, '', 2) : ''
+                }
+              },
+              deductedSum: {
+                renderer: function (value) {
+                  return _.isNumber(value) && value !== 0 ? Ext.util.Format.currency(value, '', 2) : ''
+                }
+              },
+              paidSum: {
+                renderer: function (value) {
+                  return _.isNumber(value) && value !== 0 ? Ext.util.Format.currency(value, '', 2) : ''
+                }
+              },
+              debtOrgSum: {
+                renderer: function (value) {
+                  return _.isNumber(value) && value !== 0 ? Ext.util.Format.currency(value, '', 2) : ''
+                }
+              },
+              debtEmployeeSum: {
+                renderer: function (value) {
+                  return _.isNumber(value) && value !== 0 ? Ext.util.Format.currency(value, '', 2) : ''
+                }
+              },
+              fundSum: {
+                renderer: function (value) {
+                  return _.isNumber(value) && value !== 0 ? Ext.util.Format.currency(value, '', 2) : ''
+                }
+              }
+            })
+          },
+          getRowClass: function (row) {
+            return row.get('isCurrent') === true ? 'grd-bold' : ''
+          }
+
+        }
+      }
+    ]
+
+    me.calcPeriodData = (calcBalance, withSubOrg = false) => {
+      $App.connection.run({
+        entity: 'hr_paySummary',
+        method: 'setPackCalc',
+        hidden: true,
+        orgID: appAC.globalOrganization(),
+        withSubOrg,
+        calcBalance
+      }).then(response => {
+        $App.dialogInfo(UB.i18n('Запущений процес перерахунку по всім працівникам організації'))
+      })
+    }
+
+    me.closePeriod = (period, withoutFundSource = false) => {
+      if (AC.settings.get('hrLinkToBuh', appAC.globalOrganization())) {
+        me.setLoading(true)
+        $App.connection.run({
+          entity: 'hr_paySummary',
+          method: 'doPosting',
+          closePeriod: true,
+          orgID: appAC.globalOrganization(),
+          periodID: period.ID,
+          withoutFundSource: !!withoutFundSource
+        }).then(response => {
+          me.setLoading(false)
+          if (response.message !== '') {
+            $App.dialogYesNo('Попередження', UB.i18n(`Проведення проводок не виконано. Причина:</br> {0}</br> Передати без джерел фінансування?`, response.message))
+            // UB.i18n('Передати без джерел фінансування')
+            // $App.dialogYesNo('Попередження', UB.i18n(`Проведення проводок не виконано. Причина:</br> {0}</br> Продовжити закриття розрахункового періоду?`, response.message))
+              .then(resp => {
+                if (resp) {
+                  me.closePeriod(period, true)
+                } else {
+                  $App.dialogYesNo('Попередження', UB.i18n(`Продовжити закриття розрахункового періоду?`))
+                    .then(resp => {
+                      if (resp) {
+                        me.runClosePeriod(period)
+                      }
+                    })
+                }
+              })
+          } else {
+            me.runClosePeriod(period)
+          }
+        }, function (err) {
+          me.setLoading(false)
+          $App.dialogYesNo('Попередження', UB.i18n(`Проведення проводок не виконано. Причина:</br>{0}</br> Продовжити закриття розрахункового періоду?`, err.message))
+            .then(resp => {
+              if (resp) {
+                me.runClosePeriod(period)
+              }
+            })
+        })
+      } else {
+        me.runClosePeriod(period)
+      }
+    }
+
+    me.runClosePeriod = (period) => {
+      me.setLoading(UB.i18n('Зачекайте. Іде закриття періода'))
+      $App.connection.run({
+        entity: 'hr_dictPeriod',
+        method: 'closePeriod',
+        orgID: appAC.globalOrganization(),
+        period
+      }).then(() => {
+        me.loadCurrentPeriodData()
+        me.attr.grid.store.load()
+        me.setLoading(false)
+      }, (err) => {
+        me.setLoading(false)
+        throw err
+      })
+    }
+
+    /* me.openPeriod = () => {
+      if (AC.settings.get('hrLinkToBuh', appAC.globalOrganization())) {
+        me.setLoading(true)
+        $App.connection.run({
+          entity: 'hr_paySummary',
+          method: 'doCancelPosting',
+          openPeriod: true,
+          orgID: appAC.globalOrganization()
+        }).then(response => {
+          me.setLoading(false)
+          if (response.message !== '') {
+            $App.dialogInfo(UB.i18n(`Відклик проводок не виконано. Причина: </br> {0}</br>. Відкриття розрахункового періоду неможливе. Виконайте розблокування проводок у Бухгалтерському обліку і повторіть відкриття розрахункового періоду зарплати`, response.message))
+          } else {
+            me.runOpenPeriod()
+          }
+        }, function (err) {
+          me.setLoading(false)
+          $App.dialogInfo(UB.i18n(`Відклик проводок не виконано. Причина: </br> {0}</br>. Відкриття розрахункового періоду неможливе. Виконайте розблокування проводок у Бухгалтерському обліку і повторіть відкриття розрахункового періоду зарплати`, err.message))
+        })
+      } else {
+        me.runOpenPeriod()
+      }
+    }
+    me.runOpenPeriod = () => {
+      me.setLoading(UB.i18n('Зачекайте. Іде відкриття періода'))
+      $App.connection.run({
+        entity: 'hr_dictPeriod',
+        method: 'openPeriod',
+        orgID: appAC.globalOrganization()
+      }).then(() => {
+        me.loadCurrentPeriodData()
+        me.attr.grid.store.load()
+        me.setLoading(false)
+      }, (err) => {
+        me.setLoading(false)
+        throw err
+      })
+    }
+  */
+    me.refreshData = () => {
+      const globalOrganization = appAC.globalOrganization()
+      if (!me.attr.grid.store.ubRequest.whereList) {
+        me.attr.grid.store.ubRequest.whereList = {}
+      }
+      me.attr.grid.store.ubRequest.whereList.orgID = {
+        expression: '[orgID]',
+        condition: 'equal',
+        values: { value: globalOrganization }
+      }
+      me.loadCurrentPeriodData()
+      me.attr.grid.store.load()
+    }
+
+    me.loadCurrentPeriodData = () => {
+      $App.connection.run({
+        entity: 'hr_dictPeriod',
+        method: 'getCurrentPeriodData',
+        orgID: appAC.globalOrganization()
+      }).then(response => {
+        me.attr.periodName.setValue(response.periodName)
+        me.attr.orderRegCount.setValue(response.orderRegCount)
+        me.attr.orderRegCountNotPost.setValue(response.orderRegCountNotPost)
+        me.attr.payRollCount.setValue(response.payRollCount)
+        me.attr.payRollCountNotPost.setValue(response.payRollCountNotPost)
+        me.currentPeriod = response
+      })
+    }
+
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.refreshData)
+    }, me)
+    me.on('afterrender', () => {
+      const me = this
+      $App.on('ac:app:organizationChanged', me.refreshData)
+      me.attr = {
+        grid: me.down('[name=gridDictPeriod]'),
+        periodName: me.down('[name=periodName]'),
+        orderRegCount: me.down('[name=orderRegCount]'),
+        orderRegCountNotPost: me.down('[name=orderRegCountNotPost]'),
+        payRollCount: me.down('[name=payRollCount]'),
+        payRollCountNotPost: me.down('[name=payRollCountNotPost]')
+      }
+      me.loadCurrentPeriodData()
+
+      me.keyMap = new Ext.util.KeyMap({
+        target: me.getEl(),
+        binding: [
+          {
+            key: Ext.EventObject.B,
+            ctrl: true,
+            shift: false,
+            fn: function (keyCode, e) {
+              e.stopEvent()
+              $App.dialogYesNo('Попередження', UB.i18n(`Запустити перерахунок баланса по організації?`))
+                .then(res => {
+                  if (res) {
+                    me.setLoading(true)
+                    $App.connection.run({
+                      entity: 'hr_paySummary',
+                      method: 'calcPeriodOrgBalance',
+                      orgID: appAC.globalOrganization()
+                    }).then(() => {
+                      me.loadCurrentPeriodData()
+                      me.attr.grid.store.load()
+                      me.setLoading(false)
+                    }, (err) => {
+                      me.setLoading(false)
+                      throw err
+                    })
+                  }
+                })
+            }
+          },
+          {
+            key: Ext.EventObject.R,
+            ctrl: true,
+            shift: false,
+            fn: function (keyCode, e) {
+              e.stopEvent()
+              $App.dialogYesNo('Попередження', UB.i18n(`Запустити перерахунок організації?`))
+                .then(res => {
+                  if (res) {
+                    me.setLoading(true)
+                    $App.connection.run({
+                      entity: 'hr_paySummary',
+                      method: 'calcPeriodOrg',
+                      orgID: appAC.globalOrganization()
+                    }).then(() => {
+                      me.loadCurrentPeriodData()
+                      me.attr.grid.store.load()
+                      me.setLoading(false)
+                    }, (err) => {
+                      me.setLoading(false)
+                      throw err
+                    })
+                  }
+                })
+            }
+          }
+        ]
+      })
+    })
+
+    me.callParent(arguments)
+  }
+})

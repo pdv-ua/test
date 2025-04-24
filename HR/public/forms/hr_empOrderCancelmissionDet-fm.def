@@ -1,0 +1,122 @@
+/* global UB Ext */
+exports.formDef = {
+  requiredFields: ['orderID', 'empOrderType', 'organizationID', 'lastName', 'firstName', 'middleName', 'employeeID', 'positionID'],
+  parentConfig: {
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'addIntComb'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          defaults: { labelWidth: 160 },
+          items: [
+            {
+              attributeName: 'employeePositionID',
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              gridFieldList: ['description'],
+              fieldLabel: UB.i18n('Працівник'),
+              fieldList: ['ID', 'description', 'employeeID.firstName', 'employeeID.lastName', 'employeeID.middleName',
+                'employeeID', 'employeeNumberID', 'departmentID', 'positionID',
+                'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'
+              ],
+              xtype: 'empPositionCombobox',
+              addWorkPlace: true,
+              required: true
+            },
+            { attributeName: 'missionOrderID', hidden: true },
+            {
+              attributeName: 'missionOrderDetID',
+              labelWidth: 160,
+              fieldList: ['ID', 'orderDetDescription', 'description', 'orderState', 'orderID', 'dateFrom', 'dateTo', 'dayCount',
+                'purpose', 'cityName', 'isHolidayPay', 'destOrganizationName'],
+              initContextMenu: function () {
+                const me = this
+                let menuItems = []
+                menuItems.push({
+                  text: UB.i18n('clearSelection'),
+                  iconCls: 'fa fa-eraser',
+                  itemID: 'clearValue',
+                  hidden: me.disableClearSelection,
+                  handler: me.clearValue,
+                  disabled: me.disabled || me.readOnly,
+                  scope: me
+                })
+                me.contextMenu = Ext.create('Ext.menu.Menu', { items: menuItems })
+                me.clearValueButton = me.contextMenu.items.getAt(0)
+              }
+            },
+            {
+              layout: {
+                type: 'hbox'
+              },
+              items: [
+                {
+                  name: 'missionOrderDescription',
+                  fieldLabel: UB.i18n('Опис'),
+                  xtype: 'textarea',
+                  flex: 1,
+                  height: 60,
+                  labelWidth: 160,
+                  readOnly: true
+                }
+              ]
+            },
+            {
+              layout: {
+                type: 'hbox'
+              },
+              flex: 1,
+              name: 'reasonDocPanel',
+              items: [
+                {
+                  labelWidth: 160,
+                  fieldLabel: UB.i18n('Підстава (до пункту наказу)'),
+                  attributeName: 'reason',
+                  margins: '5 10 0 0',
+                  flex: 1
+                },
+                {
+                  xtype: 'button',
+                  cls: 'list-icon',
+                  name: 'reasonButton',
+                  tooltip: UB.i18n('Вибрати'),
+                  width: 35,
+                  height: 35,
+                  margin: '5 10 0 -53',
+                  handler: btn => {
+                    btn.up('form').getField('reason').selectHandler(btn)
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

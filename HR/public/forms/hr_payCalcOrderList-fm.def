@@ -1,0 +1,322 @@
+// @isModal true
+/* global appAC appHR UB Ext AC _ */
+
+exports.formDef = 'HR.payCalcOrderList'
+
+Ext.define('HR.payCalcOrderList', {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.payCalcOrderList',
+  width: 1100,
+  height: 600,
+  layout: { type: 'border' },
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  isModal: true,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'ubfieldset',
+            border: true,
+            layout: { type: 'hbox' },
+            margin: '10 10 0 10',
+            items: [
+              {
+                xtype: 'ubcombobox',
+                name: 'periodID',
+                fieldLabel: UB.i18n('Період'),
+                displayField: 'description',
+                valueField: 'ID',
+                pageSize: 50,
+                allowBlank: false,
+                hideEntityItemInContext: true,
+                labelWidth: 70,
+                flex: 1,
+                ubRequest: {
+                  entity: 'hr_dictPeriod',
+                  fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+                  orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                },
+                listeners: {
+                  expand: appHR.periodExpand,
+                  change: () => {
+                    this.filterOrderRegistryList()
+                  }
+                }
+              },
+              {
+                xtype: 'ubcombobox',
+                name: 'orderType',
+                fieldLabel: UB.i18n('Тип'),
+                labelWidth: 50,
+                flex: 1,
+                hideEntityItemInContext: true,
+                enumGroupFilter: 'HR_ACCRDOC_TYPE',
+                valueField: 'code',
+                displayField: 'name',
+                ubRequest: {
+                  entity: 'ubm_enum',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                  whereList: {
+                    eGroup: {
+                      expression: '[eGroup]',
+                      condition: 'equal',
+                      values: { 'eGroup': 'HR_ACCRDOC_TYPE' }
+                    }
+                  }
+                },
+                listeners: {
+                  change: () => {
+                    this.filterOrderRegistryList()
+                  }
+                }
+              },
+              {
+                xtype: 'checkboxfield',
+                name: 'isPayOut',
+                fieldLabel: UB.i18n('З вибраними в інших відомостях'),
+                labelWidth: 230,
+                flex: 1,
+                listeners: {
+                  change: () => {
+                    this.filterOrderRegistryList()
+                  }
+                }
+              }
+            ]
+          },
+          {
+            xtype: 'ubdetailgrid',
+            region: 'center',
+            flex: 1,
+            name: 'orderRegistryList',
+            autoScroll: true,
+            disableSearchBar: true,
+            forceDataLoad: true,
+            disableAutoLoadStore: true,
+            hideActions: ['addNew', 'addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+            stateful: true,
+            stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_payCalcOrderList_orderRegistryList'),
+            disableMenuItemDetails: true,
+            margin: '5, 10, 0, 10',
+            cmdType: 'showList',
+            entityName: 'hr_orderRegistry',
+            description: UB.i18n('Документи нарахування'),
+            cmdData: {
+              params: [{
+                entity: 'hr_orderRegistry',
+                method: 'search',
+                fieldList: [
+                  { name: 'ID', visibility: false },
+                  { name: 'orderState', description: UB.i18n('Статус'), tooltip: UB.i18n('Статус документу'), config: { width: 70 } },
+                  { name: 'orderType', visibility: false },
+                  { name: 'periodID', visibility: false },
+                  { name: 'orderNumber', description: UB.i18n('Номер'), tooltip: UB.i18n('Номер документу') },
+                  { name: 'description', description: UB.i18n('Назва'), tooltip: UB.i18n('Назва документу'), config: { flex: 1 } },
+                  { name: 'lineCount', visibility: false },
+                  { name: 'paySum', description: UB.i18n('Сума'), format: '0.00', config: { align: 'right', flex: 0.3 } },
+                  { name: 'orderStatePayRoll', visibility: false }
+                ]
+              }]
+            },
+            cmpInitConfig: {
+              disableAutoLoadStore: true,
+              hideActions: ['showDetail', 'addNew', 'refresh', 'edit', 'del', 'addNewByCurrent'],
+              selModel: {
+                selectionMode: 'MULTI',
+                showHeaderCheckbox: false,
+                checkOnly: true,
+                selType: 'checkboxmodel'
+              },
+              getRowClass: function (record) {
+                return record.get('orderStatePayRoll') ? record.get('orderStatePayRoll') === 'POSTED' ? 'ub-row-red' : 'ub-row-green' : 'ub-row-lightgrey'
+              },
+              onItemDblClick: function () {
+                return false
+              },
+              customInit: function () {
+              },
+              afterInit: function () {
+                const me = this
+                function setFilters (me) {
+                  const req = me.store.ubRequest
+                  req.orgID = appAC.globalOrganization()
+                  if (!req.whereList) {
+                    req.whereList = {}
+                  }
+                  if (this.isPosted) {
+                    req.whereList.isPosted = {
+                      expression: '[orderState]',
+                      condition: '=',
+                      value: 'POSTED'
+                    }
+                  }
+                  // me.store.reload()
+                }
+                setFilters(me)
+              },
+              customActions: [
+                {
+                  text: UB.i18n('Відмітити всі'),
+                  iconCls: 'u-icon-check',
+                  cls: 'green-action',
+                  handler: function (btn) {
+                    const grid = btn.up('ubdetailgrid')
+                    const sm = grid.getSelectionModel()
+                    sm.selectAll(true)
+                    me.calcTotalSum()
+                  }
+                },
+                {
+                  text: UB.i18n('Виключити всі'),
+                  iconCls: 'u-icon-close',
+                  cls: 'red-action',
+                  handler: function (btn) {
+                    const grid = btn.up('ubdetailgrid')
+                    const sm = grid.getSelectionModel()
+                    sm.deselectAll(true)
+                    me.calcTotalSum()
+                  }
+                },
+                {
+                  text: UB.i18n('Зберегти та закрити'),
+                  iconCls: 'u-icon-save-and-close',
+                  cls: 'save-action',
+                  handler: function (btn) {
+                    const grid = btn.up('ubdetailgrid')
+                    if (me.onSelect) {
+                      const data = []
+                      const selModel = grid.getSelectionModel()
+                      selModel.selected.each(record => {
+                        data.push(record.getData())
+                      })
+                      me.onSelect(data)
+                    }
+                    me.up('window').close()
+                  }
+                }
+              ],
+              listeners: {
+                selectionchange: () => {
+                  this.calcTotalSum()
+                }
+              }
+            }
+          },
+          {
+            xtype: 'ubfieldset',
+            border: true,
+            region: 'south',
+            layout: { type: 'vbox', align: 'right' },
+            margin: '10 10 10 10',
+            items: [
+              {
+                xtype: 'textfield',
+                fieldLabel: UB.i18n('Вибрано документів на суму'),
+                labelWidth: 200,
+                name: 'totalSum',
+                readOnly: true,
+                value: '0.00',
+                fieldStyle: 'text-align: right;'
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.calcTotalSum = () => {
+      let isTotalSum = 0
+      const selModel = this.attr.grid.getSelectionModel()
+      selModel.selected.each(record => {
+        isTotalSum += record.getData().paySum ? record.getData().paySum : 0
+      })
+      this.attr.totalSum.setValue(isTotalSum.toFixed(2))
+    }
+
+    me.filterOrderRegistryList = async () => {
+      const req = this.attr.grid.store.ubRequest
+      req.orgID = appAC.globalOrganization()
+      req.whereList.periodID = {
+        expression: '[periodID]',
+        condition: '=',
+        value: this.attr.periodID.getValue() ? this.attr.periodID.getValue() : 0
+      }
+      if (this.attr.orderType.getFieldValue('code')) {
+        req.whereList.orderType = {
+          expression: '[orderType]',
+          condition: '=',
+          value: this.attr.orderType.getFieldValue('code')
+        }
+      } else {
+        delete req.whereList.orderType
+      }
+      if (!this.attr.isPayOut.getValue()) {
+        const isRollReg = []
+        await UB.Repository('hr_RollReg')
+          .attrs(['orderRegistryID', 'orderRegistryID.orderState'])
+          .where('orderRegistryID.periodID', '=', this.attr.periodID.getValue())
+          .where('payRollID', '<>', this.payRollID)
+          .selectAsObject({ 'orderState': 'orderRegistryID.orderState' })
+          .then(data => {
+            data.forEach(item => {
+              isRollReg.push(item.orderRegistryID)
+            })
+          })
+        if (isRollReg.length) {
+          req.whereList.isPayOut = {
+            expression: '[ID]',
+            condition: 'notIn',
+            value: isRollReg
+          }
+        }
+      } else {
+        delete req.whereList.isPayOut
+      }
+      if (this.isPosted) {
+        req.whereList.isPosted = {
+          expression: '[orderState]',
+          condition: '=',
+          value: 'POSTED'
+        }
+      } else {
+        delete req.whereList.isPosted
+      }
+      this.attr.grid.store.load()
+      this.attr.grid.getSelectionModel().deselectAll()
+      this.calcTotalSum()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        periodID: me.down('[name=periodID]'),
+        orderType: me.down('[name=orderType]'),
+        isPayOut: me.down('[name=isPayOut]'),
+        grid: me.down('[name=orderRegistryList]'),
+        totalSum: me.down('[name=totalSum]')
+      }
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: me.orgID })
+      if (me.defaultValues) {
+        _.forEach(me.attr, attr => {
+          if (me.defaultValues[attr.name]) {
+            attr[attr.setValueById ? 'setValueById' : 'setValue'](attr.xtype === 'ubdatefield' ? new Date(me.defaultValues[attr.name]) : me.defaultValues[attr.name])
+          }
+        })
+      }
+      if (me.readOnlyAttr) {
+        me.readOnlyAttr.forEach(attrName => {
+          me.attr[attrName].setReadOnly(true)
+        })
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,49 @@
+exports.formDef = {
+  requiredFields: ['orgID', 'listParamID', 'valuesID'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      // attributeName: 'valuesID',
+      xtype: 'ubcombobox',
+      fieldLabel: UB.i18n('Елемент обліку'),
+      displayField: 'nameSmall',
+      valueField: 'ID',
+      itemId: 'dictTimeCostID',
+      allowBlank: false,
+      ubRequest: {
+        entity: 'hr_dictTimeCost',
+        method: UB.core.UBCommand.methodName.SELECT,
+        fieldList: ['ID', 'name', 'nameShort', 'nameSmall']
+      },
+      listeners: {
+        change: function (fld) {
+          const form = fld.up('form')
+          const val = fld.getValue()
+          const rec = val && AC.gridUtils.getCurrentRecord(fld).data || {}
+
+          form.record.set('valuesID', val)
+          form.queryById('name').setValue(rec['name'])
+          form.queryById('nameShort').setValue(rec['nameShort'])
+        }
+      },
+      width: 500
+    },
+    {
+      xtype: 'textfield',
+      fieldLabel: UB.i18n('Повна назва'),
+      itemId: 'name',
+      readOnly: true,
+      width: 500
+    },
+    {
+      xtype: 'textfield',
+      fieldLabel: UB.i18n('Позначення в табелі'),
+      itemId: 'nameShort',
+      readOnly: true,
+      width: 500
+    }
+  ]
+}

@@ -1,0 +1,583 @@
+{
+  "caption": "Планування штатного розпису",
+  "description": "Планування штатного розпису",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер",
+      "description": "Номер",
+      "documentation": "Номер",
+      "allowNull": false
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "На дату",
+      "description": "На дату",
+      "documentation": "На дату",
+      "allowNull": false
+    },
+    {
+      "name": "entryDate",
+      "dataType": "Date",
+      "caption": "Дата вступу в дію",
+      "description": "Дата вступу в дію",
+      "documentation": "Дата вступу в дію",
+      "allowNull": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultValue": "PROJECT",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва"
+    },
+    {
+      "name": "textOrder",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис"
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Коментар",
+      "description": "Коментар",
+      "documentation": "Коментар"
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Field",
+          "expression": "orgID"
+        }
+      ]
+    },
+    {
+      "name": "orgName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Організація",
+      "description": "Організація",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 org.name from hr_organization org where org.mi_data_id = {self}.orgID and org.state = 'ACTIVE' and org.mi_dateFrom <= {self}.orderDate and org.mi_dateTo >= {self}.orderDate and org.mi_deleteDate >= '9999-12-31' order by org.mi_dateFrom desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select org.name from hr_organization org where org.mi_data_id = {self}.orgID and org.state = 'ACTIVE' and org.mi_dateFrom <= {self}.orderDate and org.mi_dateTo >= {self}.orderDate and org.mi_deleteDate >= '9999-12-31' order by org.mi_dateFrom desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "entryOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ вступу в дію",
+      "description": "Наказ вступу в дію",
+      "documentation": "Наказ вступу в дію"
+    },
+    {
+      "name": "withChild",
+      "dataType": "Boolean",
+      "caption": "Із підлеглими",
+      "documentation": "Із підлеглими",
+      "description": "Із підлеглими",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["docType", "changeListNumber", "name", "orderNumber"],
+        "compositeSeparator": ["", " № ", " ", " "]
+      }
+    },
+    {
+      "name": "notes",
+      "dataType": "String",
+      "size": 128,
+      "caption": "Примітки",
+      "description": "Примітки",
+      "documentation": "Примітки"
+    },
+    {
+      "name": "docText",
+      "dataType": "Text",
+      "caption": "Збережений текст",
+      "documentation": "Збережений текст",
+      "description": "Збережений текст",
+      "allowNull": true
+    },
+    {
+      "name": "document",
+      "dataType": "Document",
+      "caption": "PDF образ",
+      "documentation": "PDF образ",
+      "description": "PDF образ",
+      "allowNull": true
+    },
+    {
+      "name": "reportSettings",
+      "dataType": "Text",
+      "caption": "Налаштування звіту",
+      "documentation": "Налаштування звіту",
+      "description": "Налаштування звіту",
+      "allowNull": true
+    },
+    {
+      "name": "respEmployeeNumID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Відповідальний",
+      "description": "Відповідальний",
+      "documentation": "Відповідальний",
+      "allowNull": true
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false,
+      "defaultValue": "STAFFTABLE"
+    },
+    {
+      "name": "docType",
+      "dataType": "Enum",
+      "enumGroup": "HR_STUFFDOC_TYPE",
+      "caption": "Вид документа",
+      "documentation": "Вид документа",
+      "description": "Вид документа",
+      "allowNull": false,
+      "defaultValue": "NEW"
+    },
+    {
+      "name": "staffTabOrgStructID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffTableOrgStructure",
+      "caption": "Cтруктура",
+      "description": "Cтруктура",
+      "documentation": "Cтруктура",
+      "allowNull": true
+    },
+    {
+      "name": "staffTableID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffTable",
+      "caption": "Штатний розпис",
+      "description": "Штатний розпис",
+      "documentation": "Штатний розпис",
+      "allowNull": true
+    },
+    {
+      "name": "changeListNumber",
+      "dataType": "Int",
+      "caption": "Номер переліку змін",
+      "description": "Номер переліку змін",
+      "documentation": "Номер переліку змін",
+      "allowNull": true
+    },
+    {
+      "name": "groupJobsPrint",
+      "dataType": "Boolean",
+      "caption": "Групувати посади (друк.)",
+      "documentation": "Групувати посади (друк.)",
+      "description": "Групувати посади (друк.)",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "printNotMajorChanges",
+      "dataType": "Boolean",
+      "caption": "Відображати неосновні зміни (друк.)",
+      "documentation": "Відображати неосновні зміни (друк.)",
+      "description": "Відображати неосновні зміни (друк.)",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "printSignerInfo",
+      "dataType": "Boolean",
+      "caption": "Виводити підписантів",
+      "documentation": "Виводити підписантів",
+      "description": "Виводити підписантів",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "dictReasonAccrualID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictReasonAccrual",
+      "caption": "Підстава змін окладів",
+      "description": "Підстава змін окладів",
+      "documentation": "Підстава змін окладів"
+    },
+    {
+      "name": "orgStructureID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffTableOrgStructure",
+      "caption": "Підключені зміни структури",
+      "description": "Підключені зміни структури",
+      "documentation": "Підключені зміни структури"
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ"
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_fundSource",
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування",
+      "documentation": "Джерело фінансування"
+    },
+    {
+      "name": "salaryChangesApplied",
+      "dataType": "Boolean",
+      "caption": "Масова зміна окладів застосована",
+      "documentation": "Масова зміна окладів застосована",
+      "description": "Масова зміна окладів застосована",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "accrualChangesApplied",
+      "dataType": "Boolean",
+      "caption": "Масова зміна нарахувань застосована",
+      "documentation": "Масова зміна нарахувань застосована",
+      "description": "Масова зміна нарахувань застосована",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "posChangesApplied",
+      "dataType": "Boolean",
+      "caption": "Масова зміна посад застосована",
+      "documentation": "Масова зміна посад застосована",
+      "description": "Масова зміна посад застосована",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "respPositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Підписант 1 (посада)",
+      "description": "Підписант 1 (посада)",
+      "documentation": "Підписант 1 (посада)"
+    },
+    {
+      "name": "respEmployeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Підписав",
+      "description": "Підписав",
+      "documentation": "Підписав"
+    },
+    {
+      "name": "respPosition2ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Підписант 2 (посада)",
+      "description": "Підписант 2 (посада)",
+      "documentation": "Підписант 2 (посада)"
+    },
+    {
+      "name": "respEmployeePosition2ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Підписав",
+      "description": "Підписав",
+      "documentation": "Підписав"
+    },
+    {
+      "name": "respPosition3ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Затвердив 1 (посада)",
+      "description": "Затвердив 1 (посада)",
+      "documentation": "Затвердив 1 (посада)"
+    },
+    {
+      "name": "respEmployeePosition3ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Підписав",
+      "description": "Підписав",
+      "documentation": "Підписав"
+    },
+    {
+      "name": "respPosition4ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Затвердив 2 (посада)",
+      "description": "Затвердив (посада)",
+      "documentation": "Затвердив (посада)"
+    },
+    {
+      "name": "respEmployeePosition4ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Підписав",
+      "description": "Підписав",
+      "documentation": "Підписав"
+    },
+    {
+      "name": "respPosition5ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Погодив (посада)",
+      "description": "Погодив (посада)",
+      "documentation": "Погодив (посада)"
+    },
+    {
+      "name": "respEmployeePosition5ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Підписав",
+      "description": "Підписав",
+      "documentation": "Підписав"
+    },
+    {
+      "name": "docInfo",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Затверджено документом",
+      "description": "Затверджено документом",
+      "documentation": "Затверджено документом"
+    },
+    {
+      "name": "byFundSource",
+      "dataType": "Boolean",
+      "caption": "Розділення по джерелам фінансування (друк)",
+      "documentation": "Розділення по джерелам фінансування (друк)",
+      "description": "Розділення по джерелам фінансування (друк)",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "accrualChangeKind",
+      "dataType": "Enum",
+      "enumGroup": "HR_ACCRUAL_CHANGE_KIND",
+      "caption": "Встановлювати оклади",
+      "description": "Встановлювати оклади",
+      "documentation": "Встановлювати оклади",
+      "defaultView": false,
+      "defaultValue": "ACTUAL"
+    },
+    {
+      "name": "massPosChangeParam",
+      "dataType": "Json",
+      "caption": "Конфігурація змін параметрів посад",
+      "description": "Конфігурація змін параметрів посад",
+      "documentation": "Конфігурація змін параметрів посад"
+    },
+    {
+      "name": "entryOrderEntryDate",
+      "dataType": "Date",
+      "caption": "Дата наказа вступу в дію",
+      "description": "Дата наказа вступу в дію",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "COALESCE((select top 1 eo.entryDate from hr_empOrder eo where eo.ID = {self}.entryOrderID), (select top 1 eo.entryDate from hr_empOrder eo where eo.staffTableID = {self}.ID and eo.mi_deleteDate >= '9999-12-31'))"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "COALESCE((select eo.entryDate from hr_empOrder eo where eo.ID = {self}.entryOrderID LIMIT 1), (select eo.entryDate from hr_empOrder eo where eo.staffTableID = {self}.ID and eo.mi_deleteDate >= '9999-12-31' LIMIT 1))"
+        }
+      ]
+    },
+    {
+      "name": "entryOrderDescription",
+      "dataType": "String",
+      "size": 128,
+      "caption": "Наказ вступу в дію",
+      "description": "Наказ вступу в дію",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "COALESCE((select top 1 eo.description from hr_empOrder eo where eo.ID = {self}.entryOrderID), (select top 1 eo.description from hr_empOrder eo where eo.staffTableID = {self}.ID and eo.mi_deleteDate >= '9999-12-31'))"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "COALESCE((select eo.description from hr_empOrder eo where eo.ID = {self}.entryOrderID LIMIT 1), (select eo.description from hr_empOrder eo where eo.staffTableID = {self}.ID and eo.mi_deleteDate >= '9999-12-31' LIMIT 1))"
+        }
+      ]
+    },
+    {
+      "name": "respPosDescription",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Посада",
+      "description": "Посада",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pos.description from hr_position pos where pos.mi_data_id = {self}.respPositionID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pos.description from hr_position pos where pos.mi_data_id = {self}.respPositionID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "respPos2Description",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Посада",
+      "description": "Посада",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pos.description from hr_position pos where pos.mi_data_id = {self}.respPosition2ID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pos.description from hr_position pos where pos.mi_data_id = {self}.respPosition2ID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "respPos3Description",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Посада",
+      "description": "Посада",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pos.description from hr_position pos where pos.mi_data_id = {self}.respPosition3ID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pos.description from hr_position pos where pos.mi_data_id = {self}.respPosition3ID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "respPos4Description",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Посада",
+      "description": "Посада",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pos.description from hr_position pos where pos.mi_data_id = {self}.respPosition4ID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pos.description from hr_position pos where pos.mi_data_id = {self}.respPosition4ID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "respPos5Description",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Посада",
+      "description": "Посада",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pos.description from hr_position pos where pos.mi_data_id = {self}.respPosition5ID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pos.description from hr_position pos where pos.mi_data_id = {self}.respPosition5ID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "rls": {
+      "func": "RLS.byOrg"
+    }
+  }
+}

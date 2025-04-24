@@ -1,0 +1,364 @@
+{
+  "caption": "Всі накази",
+  "description": "Всі накази",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація"
+    },
+    {
+      "name": "masterOrganizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Головна організація",
+      "description": "Головна організація",
+      "documentation": "Головна організація"
+    },
+    {
+      "name": "mOrganizationName",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Видано в",
+      "documentation": "Головна организація",
+      "description": "Головна организація",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select(select description from hr_organization org  where org.mi_data_id = {self}.masterOrganizationID and org.state = 'ACTIVE' and {self}.entryDate between org.mi_dateFrom and org.mi_dateTo and mi_deleteDate >= '9999-12-31'))"
+        }
+      ]
+    },
+    {
+      "name": "organizationName",
+      "dataType": "String",
+      "size": 400,
+      "caption": "По організації",
+      "documentation": "Організація",
+      "description": "Організація",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select(select description from hr_organization org  where org.mi_data_id = {self}.organizationID and org.state = 'ACTIVE' and {self}.entryDate between org.mi_dateFrom and org.mi_dateTo and mi_deleteDate >= '9999-12-31'))"
+        }
+      ]
+    },
+
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 70,
+      "caption": "Номер наказу",
+      "description": "Номер наказу",
+      "documentation": "Номер наказу"
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу",
+      "description": "Дата наказу",
+      "documentation": "Дата наказу"
+    },
+    {
+      "name": "entryDate",
+      "dataType": "Date",
+      "caption": "Дата вступу в дію",
+      "description": "Дата вступу в дію",
+      "documentation": "Дата вступу в дію"
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultValue": "PROJECT",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "state",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Стан наказу",
+      "documentation": "Стан наказу",
+      "description": "Стан наказу",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Field",
+          "expression": "orderState"
+        }
+      ]
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Опис",
+      "description": "Опис наказу",
+      "documentation": "Опис наказу"
+    },
+    {
+      "name": "orderClass",
+      "dataType": "Entity",
+      "associatedEntity": "hr_orderClass",
+      "caption": "Клас документу",
+      "description": "Клас документу"
+    },
+    {
+      "name": "periodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Звітній період",
+      "description": "Звітній період",
+      "documentation": "Звітній період"
+    },
+    {
+      "name": "periodCalcID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Розрахунковий період",
+      "description": "Розрахунковий період",
+      "documentation": "Розрахунковий період"
+    },
+    {
+      "name": "changeOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ, що змінив запис",
+      "documentation": "Наказ, що змінив запис",
+      "description": "Наказ, що змінив запис"
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу"
+    },
+    {
+      "name": "respEmployeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Підписав",
+      "description": "Підписав",
+      "documentation": "Підписав"
+    },
+    {
+      "name": "respEmployeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Підписав",
+      "description": "Підписав",
+      "documentation": "Підписав",
+      "allowNull": true
+    },
+    {
+      "name": "respEmployeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Підписав",
+      "description": "Підписав",
+      "documentation": "Підписав"
+    },
+    {
+      "name": "respEmployeeNumID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Відповідальний",
+      "description": "Відповідальний",
+      "documentation": "Відповідальний",
+      "allowNull": true
+    },
+    {
+      "name": "oldOrderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Попередній стан наказу",
+      "description": "Попередній стан наказу",
+      "documentation": "Попередній стан наказу"
+    },
+    {
+      "name": "documentPath",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "PDF образ",
+      "documentation": "PDF образ",
+      "description": "PDF образ"
+    },
+    {
+      "name": "document",
+      "dataType": "Document",
+      "caption": "PDF образ",
+      "documentation": "PDF образ",
+      "description": "PDF образ",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select case [empOrderType] when 'EXTRACT' then (select document from hr_empOrderExtract where id = [ID]) else  [documentPath] end)"
+        }
+      ]
+    },
+    {
+      "name": "empOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Field",
+          "expression": "ID"
+        }
+      ]
+    },
+    {
+      "name": "orderNumberFullView",
+      "dataType": "String",
+      "size": 40,
+      "caption": "Номер з індексом",
+      "description": "Номер з індексом",
+      "documentation": "Номер з індексом",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT COALESCE(MAX(eo.orderNumberFull), CASE WHEN MAX(di.code) IS NOT NULL THEN CONCAT({self}.orderNumber, '-', MAX(di.code)) ELSE {self}.orderNumber END) from hr_empOrder eo LEFT JOIN hr_dictEmpOrderIndex di ON di.ID = eo.dictEmpOrderIndexID WHERE eo.ID = {self}.ID)"
+        }
+      ]
+    },
+    {
+      "name": "staffTableID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffTable",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Field",
+          "expression": "ID"
+        }
+      ]
+    },
+    {
+      "name": "orderRegistryState",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Стан документа нарахування",
+      "description": "Стан документа нарахування",
+      "documentation": "Стан документа нарахування",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(SELECT TOP 1 orderState FROM hr_orderRegistry WHERE empOrderID={self}.ID AND mi_deleteDate>='9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT orderState FROM hr_orderRegistry WHERE empOrderID={self}.ID AND mi_deleteDate>='9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "hasPosted",
+      "dataType": "Int",
+      "caption": "Ознака наявності дочірніх документів в статусі POSTED",
+      "description": "Ознака наявності дочірніх документів в статусі POSTED",
+      "documentation": "Ознака наявності дочірніх документів в статусі POSTED",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(SELECT TOP 1 1 FROM hr_orderRegistryDt det INNER JOIN hr_order ON hr_order.ID=det.orderID WHERE det.empOrderID={self}.ID AND det.mi_deleteDate>='9999-12-31' AND hr_order.orderState='POSTED')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT 1 FROM hr_orderRegistryDt det INNER JOIN hr_order ON hr_order.ID=det.orderID WHERE det.empOrderID={self}.ID AND det.mi_deleteDate>='9999-12-31' AND hr_order.orderState='POSTED' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "allowPosting",
+      "dataType": "Boolean",
+      "caption": "Дозволено проведення",
+      "documentation": "Дозволено проведення",
+      "description": "Дозволено проведення",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 1024,
+      "caption": "Коментар",
+      "description": "Коментар",
+      "documentation": "Коментар",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT comment FROM hr_empOrder where ID={self}.ID)"
+        }
+      ]
+    }
+  ],
+  "dbExtensions": {
+    "IDX_ORD_ORDER_orderDate": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "orderDate": { "sort": "DESC" }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_ORD_ORDER_empOrderType": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "organizationID": { "sort": "ASC" },
+          "empOrderType": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_ORD_ORDER_ORGSTATE": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "organizationID": { "sort": "ASC" },
+          "orderState": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": false,
+      "safeDelete": true
+    },
+    "audit": {
+      "enabled": false
+    }
+  }
+}

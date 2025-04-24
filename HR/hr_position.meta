@@ -1,0 +1,1185 @@
+{
+  "caption": "Посада",
+  "description": "Посада",
+  "descriptionAttribute": "name",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 50,
+      "caption": "Код професії",
+      "description": "Код професії",
+      "documentation": "Код професії"
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "nameAddition",
+      "dataType": "String",
+      "size": 250,
+      "caption": "Доповнення до назви",
+      "description": "Доповнення до назви",
+      "documentation": "Доповнення до назви",
+      "allowNull": true
+    },
+    {
+      "name": "nameAdditionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictNameAddition",
+      "caption": "Доповнення до назви",
+      "description": "Доповнення до назви",
+      "documentation": "Доповнення до назви",
+      "allowNull": true
+    },
+    {
+      "name": "fullName",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва",
+      "description": "Повна назва",
+      "documentation": "Повна назва",
+      "allowNull": false
+    },
+    {
+      "name": "dictPositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPosition",
+      "caption": "Довідник посад",
+      "description": "Довідник посад",
+      "documentation": "Довідник посад"
+    },
+    {
+      "name": "mi_data_id",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "caption": "mi_data_id",
+      "allowNull": false
+    },
+    {
+      "name": "mi_treePath",
+      "dataType": "String",
+      "size": 450,
+      "caption": "mi_treePath",
+      "allowNull": false
+    },
+    {
+      "name": "mi_dateFrom",
+      "dataType": "DateTime",
+      "caption": "mi_dateFrom",
+      "allowNull": false
+    },
+    {
+      "name": "mi_dateTo",
+      "dataType": "DateTime",
+      "caption": "mi_dateTo",
+      "allowNull": false
+    },
+    {
+      "name": "parentUnitID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffUnit",
+      "associationAttr": "mi_data_id",
+      "caption": "Підпорядкування",
+      "description": "Підпорядкування",
+      "documentation": "Підпорядкування",
+      "allowNull": false
+    },
+    {
+      "name": "parentTreeDepID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Підпорядкування",
+      "description": "Підпорядкування (для пошуку посад)",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 d.mi_data_id from hr_department d WHERE {self}.mi_treePath like '%/' + CAST(d.mi_data_id as varchar) + '/%' and d.state = 'ACTIVE' and d.mi_data_id <> {self}.mi_data_id and GETDATE() between d.mi_dateFrom and d.mi_dateTo and d.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select d.mi_data_id from hr_department d WHERE {self}.mi_treePath like '%/' || CAST(d.mi_data_id as varchar) || '/%' and d.state = 'ACTIVE' and d.mi_data_id <> {self}.mi_data_id and CURRENT_DATE between d.mi_dateFrom and d.mi_dateTo and d.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ],
+      "customSettings": {
+        "noEntityDetails": true
+      }
+    },
+    {
+      "name": "parentTreeDepName",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Підпорядкування (назва)",
+      "description": "Підпорядкування (для пошуку посад)",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 d.caption from hr_department d WHERE {self}.mi_treePath like '%/' + CAST(d.mi_data_id as varchar) + '/%' and d.state = 'ACTIVE' and d.mi_data_id <> {self}.mi_data_id and GETDATE() between d.mi_dateFrom and d.mi_dateTo and d.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select d.caption from hr_department d WHERE {self}.mi_treePath like '%/' || CAST(d.mi_data_id as varchar) || '/%' and d.state = 'ACTIVE' and d.mi_data_id <> {self}.mi_data_id and CURRENT_DATE between d.mi_dateFrom and d.mi_dateTo and d.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "selfStructDepName",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Підпорядкування (назва)",
+      "description": "Підпорядкування (для пошуку посад)",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 d.name from hr_department d WHERE {self}.mi_treePath like '%/' + CAST(d.mi_data_id as varchar) + '/%' and d.state = 'ACTIVE' and d.mi_data_id <> {self}.mi_data_id and GETDATE() between d.mi_dateFrom and d.mi_dateTo and d.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select d.name from hr_department d WHERE {self}.mi_treePath like '%/' || CAST(d.mi_data_id as varchar) || '/%' and d.state = 'ACTIVE' and d.mi_data_id <> {self}.mi_data_id and CURRENT_DATE between d.mi_dateFrom and d.mi_dateTo and d.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "departmentName",
+      "dataType": "String",
+      "size": 800,
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select TOP 1 name from hr_department dep where mi_data_id = {self}.parentUnitID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select name from hr_department dep where mi_data_id = {self}.parentUnitID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "linkToSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffUnit",
+      "caption": "Джерело створення",
+      "description": "Джерело створення",
+      "documentation": "Джерело створення"
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ",
+      "allowNull": false,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select TOP 1 mi_data_id from hr_staffUnit where mi_data_id = {self}.parentUnitID and mi_unityEntity = 'hr_department')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select mi_data_id from hr_staffUnit where mi_data_id = {self}.parentUnitID and mi_unityEntity = 'hr_department' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "depName",
+      "dataType": "String",
+      "size": 800,
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select TOP 1 name from hr_staffUnit dep where mi_data_id = {self}.parentUnitID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select name from hr_staffUnit dep where mi_data_id = {self}.parentUnitID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "parentUnitDepName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Підпорядкування підрозділу",
+      "description": "Підпорядкування підрозділу",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "select TOP 1 d2.name from hr_department d2 where d2.mi_data_id = (select TOP 1 d.parentUnitID from hr_department d where d.mi_data_id = {self}.parentUnitID and d.state = 'ACTIVE' ORDER BY d.mi_dateTo DESC) and d2.state = 'ACTIVE' ORDER BY d2.mi_dateTo DESC"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "select d2.name from hr_department d2 where d2.mi_data_id = (select d.parentUnitID from hr_department d where d.mi_data_id = {self}.parentUnitID and d.state = 'ACTIVE' ORDER BY d.mi_dateTo DESC LIMIT 1) and d2.state = 'ACTIVE' ORDER BY d2.mi_dateTo DESC LIMIT 1"
+        }
+      ]
+    },
+    {
+      "name": "depDescription",
+      "dataType": "String",
+      "size": 800,
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select TOP 1 description from hr_department dep where mi_data_id = {self}.parentUnitID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select description from hr_department dep where mi_data_id = {self}.parentUnitID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "documentation": "Організаційна одиниця",
+      "allowNull": false
+    },
+    {
+      "name": "orgName",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Організація",
+      "description": "Організація",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 org.name from hr_organization org where org.mi_data_id = {self}.orgID and org.state = 'ACTIVE' AND org.mi_deleteDate >= '9999-12-31' order by org.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select org.name from hr_organization org where org.mi_data_id = {self}.orgID and org.state = 'ACTIVE' AND org.mi_deleteDate >= '9999-12-31' order by org.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "state",
+      "dataType": "Enum",
+      "enumGroup": "HR_STATE",
+      "caption": "Стан",
+      "documentation": "Стан",
+      "description": "Стан",
+      "allowNull": false,
+      "defaultValue": "NEW"
+    },
+    {
+      "name": "positionCategory",
+      "dataType": "Enum",
+      "enumGroup": "HR_POSITION_CATEGORY",
+      "caption": "Категорія посади",
+      "documentation": "Категорія посади",
+      "description": "Категорія посади"
+    },
+    {
+      "name": "dictWagePayID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictWagePay",
+      "caption": "Тип посади держслужбовця",
+      "description": "Тип посади держслужбовця",
+      "documentation": "Тип посади держслужбовця"
+    },
+    {
+      "name": "psCategory",
+      "dataType": "Enum",
+      "enumGroup": "HR_POSITION_PSCATEGORY",
+      "caption": "Категорія посади держслужбовця",
+      "documentation": "Категорія посади держслужбовця",
+      "description": "Категорія посади держслужбовця"
+    },
+    {
+      "name": "personalType",
+      "dataType": "Enum",
+      "enumGroup": "HR_PERSONAL_TYPE",
+      "caption": "Тип персоналу",
+      "documentation": "Тип персоналу",
+      "description": "Тип персоналу"
+    },
+    {
+      "name": "positionType",
+      "dataType": "Enum",
+      "enumGroup": "HR_POSITION_TYPE",
+      "caption": "Тип посади",
+      "documentation": "Тип посади",
+      "description": "Тип посади",
+      "defaultValue": "1"
+    },
+    {
+      "name": "dictStaffCatID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStaffCat",
+      "caption": "Категорія персоналу",
+      "description": "Категорія персоналу",
+      "documentation": "Категорія персоналу"
+    },
+    {
+      "name": "dictStaffSubCatID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStaffSubCat",
+      "caption": "Підкатегорія персоналу",
+      "description": "Підкатегорія персоналу",
+      "documentation": "Підкатегорія персоналу"
+    },
+    {
+      "name": "quantity",
+      "dataType": "Currency",
+      "caption": "Кількість посад",
+      "documentation": "Кількість посад",
+      "description": "Кількість посад",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dictProfessionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictProfession",
+      "caption": "Державний класифікатор професій",
+      "description": "Державний класифікатор професій",
+      "documentation": "Державний класифікатор професій"
+    },
+    {
+      "name": "dictStatePayID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStatePay",
+      "caption": "Група оплати праці держслужбовців",
+      "description": "Група оплати праці держслужбовців",
+      "documentation": "Група оплати праці держслужбовців"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["name"],
+        "compositeSeparator": ""
+      }
+    },
+    {
+      "name": "caption",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["name", "code"],
+        "compositeSeparator": ["", " [", "]"]
+      }
+    },
+    {
+      "name": "priorID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "caption": "Вузол попередній",
+      "description": "Вузол попередній",
+      "documentation":"Вузол попередній",
+      "defaultView": true
+    },
+    {
+      "name": "nextID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "caption": "Вузол наступний",
+      "description": "Вузол наступний",
+      "documentation": "Вузол наступний",
+      "defaultView": false
+    },
+    {
+      "name": "separationID",
+      "dataType": "BigInt",
+      "caption": "Розділений вузол",
+      "description": "Розділений вузол",
+      "documentation": "Розділений вузол",
+      "defaultView": false
+    },
+    {
+      "name": "staffOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Підстава внесення змін",
+      "description": "Підстава внесення змін",
+      "documentation": "Підстава внесення змін",
+      "allowNull": false
+    },
+    {
+      "name": "changeStaffOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Змінено наказом",
+      "description": "Змінено наказом",
+      "documentation": "Змінено наказом"
+    },
+    {
+      "name": "entryOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ вступу в дію",
+      "description": "Наказ вступу в дію",
+      "documentation": "Наказ вступу в дію"
+    },
+    {
+      "name": "idxNum",
+      "dataType": "Int",
+      "caption": "Номер за порядком",
+      "description": "Номер за порядком",
+      "documentation": "Номер за порядком"
+    },
+    {
+      "name": "nameNom",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Називний (хто, що)",
+      "description": "Назва в називному відмінку",
+      "documentation": "Назва в називному відмінку"
+    },
+    {
+      "name": "nameGen",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Родовий (кого, чого)",
+      "description": "Назва в род. відмінку",
+      "documentation": "Назва в род. відмінку"
+    },
+    {
+      "name": "nameDat",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Давальний (кому, чому)",
+      "description": "Назва в дав. відмінку",
+      "documentation": "Назва в дав. відмінку"
+    },
+    {
+      "name": "nameAcc",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Знахідний (кого, що)",
+      "description": "Назва в знах. відмінку",
+      "documentation": "Назва в знах. відмінку"
+    },
+    {
+      "name": "nameOr",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва, Орудний (ким, чим)",
+      "description": "Назва в оруд. відмінку",
+      "documentation": "Назва в оруд. відмінку"
+    },
+    {
+      "name": "nameLoc",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Місцевий (на кому, на чому)",
+      "description": "Назва в місц. відмінку",
+      "documentation": "Назва в місц. відмінку"
+    },
+    {
+      "name": "nameVoc",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Кличний",
+      "description": "Назва. Кличний",
+      "documentation": "Назва. Кличний"
+    },
+    {
+      "name": "nameEng",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. (англ.)",
+      "description": "Назва. (англ.)",
+      "documentation": "Назва. (англ.)"
+    },
+    {
+      "name": "fullNameNom",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Називний (хто, що)",
+      "description": "Повна назва в род. відмінку",
+      "documentation": "Повна назва в род. відмінку"
+    },
+    {
+      "name": "fullNameGen",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Родовий (кого, чого)",
+      "description": "Повна назва в род. відмінку",
+      "documentation": "Повна назва в род. відмінку"
+    },
+    {
+      "name": "fullNameDat",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Давальний (кому, чому)",
+      "description": "Повна назва в дав. відмінку",
+      "documentation": "Повна назва в дав. відмінку"
+    },
+    {
+      "name": "fullNameAcc",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Знахідний (кого, що)",
+      "description": "Повна назва в знах. відмінку",
+      "documentation": "Повна назва в знах. відмінку"
+    },
+    {
+      "name": "fullNameOr",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Орудний (ким, чим)",
+      "description": "Повна назва в оруд. відмінку",
+      "documentation": "Повна назва в оруд. відмінку"
+    },
+    {
+      "name": "fullNameLoc",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Місцевий (на кому, на чому)",
+      "description": "Повна назва в місц. відмінку",
+      "documentation": "Повна назва в місц. відмінку"
+    },
+    {
+      "name": "fullNameVoc",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Кличний",
+      "description": "Повна назва. Кличний",
+      "documentation": "Повна назва. Кличний"
+    },
+    {
+      "name": "fullNameEng",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. (анг.)",
+      "description": "Повна назва. (анг.)",
+      "documentation": "Повна назва. (анг.)"
+    },
+    {
+      "name": "nameNomF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Називний (хто, що)",
+      "description": "Назва в називному відмінку",
+      "documentation": "Назва в називному відмінку"
+    },
+    {
+      "name": "nameGenF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Родовий (кого, чого)",
+      "description": "Назва в род. відмінку",
+      "documentation": "Назва в род. відмінку"
+    },
+    {
+      "name": "nameDatF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Давальний (кому, чому)",
+      "description": "Назва в дав. відмінку",
+      "documentation": "Назва в дав. відмінку"
+    },
+    {
+      "name": "nameAccF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Знахідний (кого, що)",
+      "description": "Назва в знах. відмінку",
+      "documentation": "Назва в знах. відмінку"
+    },
+    {
+      "name": "nameOrF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва, Орудний (ким, чим)",
+      "description": "Назва в оруд. відмінку",
+      "documentation": "Назва в оруд. відмінку"
+    },
+    {
+      "name": "nameLocF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Місцевий (на кому, на чому)",
+      "description": "Назва в місц. відмінку",
+      "documentation": "Назва в місц. відмінку"
+    },
+    {
+      "name": "nameVocF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Кличний",
+      "description": "Назва. Кличний",
+      "documentation": "Назва. Кличний"
+    },
+    {
+      "name": "nameEngF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. (англ.)",
+      "description": "Назва. (англ.)",
+      "documentation": "Назва. (англ.)"
+    },
+    {
+      "name": "fullNameNomF",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Називний (хто, що)",
+      "description": "Повна назва в род. відмінку",
+      "documentation": "Повна назва в род. відмінку"
+    },
+    {
+      "name": "fullNameGenF",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Родовий (кого, чого)",
+      "description": "Повна назва в род. відмінку",
+      "documentation": "Повна назва в род. відмінку"
+    },
+    {
+      "name": "fullNameDatF",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Давальний (кому, чому)",
+      "description": "Повна назва в дав. відмінку",
+      "documentation": "Повна назва в дав. відмінку"
+    },
+    {
+      "name": "fullNameAccF",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Знахідний (кого, що)",
+      "description": "Повна назва в знах. відмінку",
+      "documentation": "Повна назва в знах. відмінку"
+    },
+    {
+      "name": "fullNameOrF",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Орудний (ким, чим)",
+      "description": "Повна назва в оруд. відмінку",
+      "documentation": "Повна назва в оруд. відмінку"
+    },
+    {
+      "name": "fullNameLocF",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Місцевий (на кому, на чому)",
+      "description": "Повна назва в місц. відмінку",
+      "documentation": "Повна назва в місц. відмінку"
+    },
+    {
+      "name": "fullNameVocF",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Кличний",
+      "description": "Повна назва. Кличний",
+      "documentation": "Повна назва. Кличний"
+    },
+    {
+      "name": "fullNameEngF",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. (анг.)",
+      "description": "Повна назва. (анг.)",
+      "documentation": "Повна назва. (анг.)"
+    },
+    {
+      "name": "accrualSum",
+      "dataType": "Currency",
+      "caption": "Оклад",
+      "documentation": "Оклад",
+      "description": "Оклад"
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати",
+      "description": "Вид оплати",
+      "documentation": "Вид оплати"
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_fundSource",
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування",
+      "documentation": "Джерело фінансування"
+    },
+    {
+      "name": "workScheduleID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_workSchedule",
+      "caption": "Графік роботи",
+      "description": "Графік роботи",
+      "documentation": "Графік роботи"
+    },
+    {
+      "name": "liquidate",
+      "dataType": "Boolean",
+      "caption": "Ліквідувати",
+      "description": "Ліквідувати",
+      "documentation": "Ліквідувати",
+      "defaultValue": "0",
+      "defaultView": false
+    },
+    {
+      "name": "isOrgBoss",
+      "dataType": "Boolean",
+      "caption": "Керівник організації",
+      "description": "Керівник організації",
+      "documentation": "Керівник організації",
+      "defaultValue": "0",
+      "defaultView": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.mi_dateTo) WHEN 9999 THEN null ELSE {self}.mi_dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.mi_dateTo) WHEN 9999 THEN null ELSE {self}.mi_dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "positionTypeNotNull",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Тип посади",
+      "documentation": "Тип посади",
+      "description": "Тип посади",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "COALESCE([positionType],'0')"
+        }
+      ]
+    },
+    {
+      "name": "vacancyRate",
+      "dataType": "Float",
+      "caption": "Кількість вакансій",
+      "documentation": "Кількість вакансій",
+      "description": "Кількість вакансій",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(SELECT COALESCE({self}.quantity, 0) - COALESCE(sum(ep.mtCount), 0) from hr_employeePosition ep where ep.positionID = {self}.mi_data_id and ep.isActive = 1 and ep.dateFrom <= GETDATE() and ep.dateTo >= GETDATE() and ep.mi_deleteDate >= '9999-12-31' AND NOT EXISTS (SELECT 1  FROM hr_empLongTermAbsc absc WHERE absc.employeeNumberID=ep.employeeNumberID AND absc.dateFrom<=GETDATE() AND absc.dateTo>=GETDATE() AND absc.mi_deleteDate >= '9999-12-31'))"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT COALESCE({self}.quantity, 0) - COALESCE(sum(ep.mtCount), 0) from hr_employeePosition ep where ep.positionID = {self}.mi_data_id and ep.isActive = 1 and ep.dateFrom <= CURRENT_DATE and ep.dateTo >= CURRENT_DATE and ep.mi_deleteDate >= '9999-12-31' AND NOT EXISTS (SELECT 1  FROM hr_empLongTermAbsc absc WHERE absc.employeeNumberID=ep.employeeNumberID AND absc.dateFrom<=CURRENT_DATE AND absc.dateTo>=CURRENT_DATE AND absc.mi_deleteDate >= '9999-12-31'))"
+        }
+      ]
+    },
+    {
+      "name": "impID",
+      "dataType": "Bigint",
+      "caption": "Зовнішній ID при імпорті",
+      "description": "Зовнішній ID при імпорті",
+      "documentation": "Зовнішній ID при імпорті"
+    },
+    {
+      "name": "impSourceID",
+      "dataType": "Bigint",
+      "caption": "Код джерела",
+      "description": "Код джерела даних імпорту",
+      "documentation": "Код джерела даних імпорту"
+    },
+    {
+      "name": "reformer",
+      "dataType": "Boolean",
+      "caption": "Фахівці з питань реформ",
+      "description": "Фахівці з питань реформ",
+      "documentation": "Фахівці з питань реформ",
+      "allowNull": true,
+      "defaultValue": "0"
+    },
+    {
+      "name": "dictSpecialtyID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_specialty",
+      "caption": "Спеціальність",
+      "description": "Спеціальність",
+      "documentation": "Спеціальність"
+    },
+    {
+      "name": "dictEmpCategoryID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictEmpCategory",
+      "caption": "Кваліфікаційна категорія",
+      "description": "Кваліфікаційна категорія",
+      "documentation": "Кваліфікаційна категорія"
+    },
+    {
+      "name": "dictTarifCoeffID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTarifCoeff",
+      "caption": "Тарифний розряд",
+      "description": "Тарифний розряд",
+      "documentation": "Тарифний розряд"
+    },
+    {
+      "name": "treePath",
+      "dataType": "String",
+      "size": 400,
+      "caption": "treePath",
+      "documentation": "treePath",
+      "description": "treePath"
+    },
+    {
+      "name": "mi_maxDateTo",
+      "dataType": "DateTime",
+      "caption": "mi_maxDateTo",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT MAX(p.mi_dateTo) FROM hr_position p WHERE p.mi_data_id = {self}.mi_data_id and p.state='ACTIVE' and p.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "mi_minDateFrom",
+      "dataType": "DateTime",
+      "caption": "mi_minDateFrom",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT MIN(p.mi_dateFrom) FROM hr_position p WHERE p.mi_data_id = {self}.mi_data_id and p.state='ACTIVE' and p.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "posDepName",
+      "dataType": "String",
+      "size": 800,
+      "caption": "Посада та підрозділ",
+      "description": "Посада та підрозділ",
+      "documentation": "Посада та підрозділ",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "CONCAT([name], ', ', [depName])"
+        }
+      ]
+    },
+    {
+      "name": "isSecondaryChanges",
+      "dataType": "Int",
+      "caption": "Другорядні зміни",
+      "description": "Признак false, если у Посад были изменены К-во ставок либо Оклад, иначе true"
+    },
+    {
+      "name": "dictPositionKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPositionKind",
+      "caption": "Вид посади",
+      "description": "Вид посади",
+      "documentation": "Вид посади"
+    },
+    {
+      "name": "dictPositionGroupID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPositionGroup",
+      "caption": "Група посади",
+      "description": "Група посади",
+      "documentation": "Група посади"
+    },
+    {
+      "name": "fundSourceName",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування",
+      "documentation": "Джерело фінансування",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(SELECT TOP 1 CONCAT(fs.description, CASE WHEN df.description IS NULL THEN '' ELSE CONCAT(' ', '(', df.description, ')') END) FROM ac_fundSource fs LEFT JOIN ac_dictFundSource df ON fs.ID = df.fundSourceID AND df.organizationID={self}.orgID AND df.mi_deleteDate>='9999-12-31' WHERE fs.ID = {self}.dictFundSourceID)"
+      },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT CONCAT(fs.description, CASE WHEN df.description IS NULL THEN '' ELSE CONCAT(' ', '(', df.description, ')') END) FROM ac_fundSource fs LEFT JOIN ac_dictFundSource df ON fs.ID = df.fundSourceID AND df.organizationID={self}.orgID AND df.mi_deleteDate>='9999-12-31' WHERE fs.ID = {self}.dictFundSourceID LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "fundSourcePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_positionFundSource",
+      "associationAttr": "positionID",
+      "caption": "Джерела фінансування для посади",
+      "description": "Джерела фінансування для посади",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Field",
+          "expression": "ID"
+        }
+      ],
+      "defaultView": false
+    },
+    {
+      "name": "positionFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_positionFundSource",
+      "associationAttr": "positionID",
+      "caption": "Джерела фінансування для посади",
+      "description": "Джерела фінансування для посади",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "null"
+        }
+      ]
+    },
+    {
+      "name": "paymentType",
+      "dataType": "Enum",
+      "enumGroup": "HR_PAYMENT_TYPE",
+      "caption": "Тип оплати",
+      "documentation": "Тип оплати",
+      "description": "Тип оплати",
+      "allowNull": false,
+      "defaultValue": "ACCRUAL"
+    },
+    {
+      "name": "dictSalarySchemeLevelID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictSalarySchemeLevel",
+      "caption": "Група (рівень) за схемою посадових окладів",
+      "description": "Група (рівень) за схемою посадових окладів",
+      "documentation": "Група (рівень) за схемою посадових окладів"
+    },
+    {
+      "name": "dictCostTypeID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictCostType",
+      "caption": "Місце виникнення виробничих витрат",
+      "description": "Місце виникнення виробничих витрат",
+      "documentation": "Місце виникнення виробничих витрат"
+    },
+    {
+      "name": "dictMilitaryRankID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictMilitaryRank",
+      "caption": "Військове звання",
+      "description": "Військове звання",
+      "documentation": "Військове звання"
+    },
+    {
+      "name": "dictMilitarySpecialityID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictMilitarySpeciality",
+      "caption": "Військово-облікова спеціальність",
+      "description": "Військово-облікова спеціальність",
+      "documentation": "Військово-облікова спеціальність"
+    },
+    {
+      "name": "addDescrPosition",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Додаткова інформація",
+      "description": "Додаткова інформація",
+      "documentation": "Додаткова інформація"
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Примітка",
+      "description": "Примітка"
+    },
+    {
+      "name": "fundBasePay",
+      "dataType": "Currency",
+      "caption": "Фонд основної заробітної плати",
+      "documentation": "Фонд основної заробітної плати",
+      "description": "Фонд основної заробітної плати"
+    },
+    {
+      "name": "fundAddPay",
+      "dataType": "Currency",
+      "caption": "Фонд додаткової заробітної плати",
+      "documentation": "Фонд додаткової заробітної плати",
+      "description": "Фонд додаткової заробітної плати"
+    },
+    {
+      "name": "fundOtherPay",
+      "dataType": "Currency",
+      "caption": "Інші заохочувальні та компенсаційні виплати",
+      "documentation": "Інші заохочувальні та компенсаційні виплати",
+      "description": "Інші заохочувальні та компенсаційні виплати"
+    },
+    {
+      "name": "fundTotal",
+      "dataType": "Currency",
+      "caption": "Сума доплат та надбавок",
+      "documentation": "Сума доплат та надбавок",
+      "description": "Сума доплат та надбавок"
+    },
+    {
+      "name": "dictAcademStatusID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictAcademStatus",
+      "caption": "Вчене звання",
+      "description": "Вчене звання",
+      "documentation": "Вчене звання"
+    },
+    {
+      "name": "dictDegreeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictDegree",
+      "caption": "Науковий ступінь",
+      "description": "Науковий ступінь",
+      "documentation": "Науковий ступінь"
+    }
+  ],
+  "dbExtensions": {
+    "UIDX_HR_POSITION_HIST": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "mi_dateFrom": { "sort": "ASC" },
+          "mi_data_id": { "sort": "ASC" },
+          "mi_deleteDate": { "sort": "ASC" },
+          "staffOrderID": { "sort": "ASC" }
+        },
+        "isUnique": true
+      }
+    },
+    "IDX_HR_POSITION_DATES": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "mi_dateFrom": { "sort": "ASC" },
+          "mi_dateTo": { "sort": "ASC" },
+          "state": { "sort": "ASC" },
+          "orgID": { "sort": "ASC" },
+          "mi_deleteDate": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_POSITION_MIDATAID": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "mi_data_id": { "sort": "ASC" },
+          "mi_dateFrom": { "sort": "ASC" },
+          "mi_dateTo": { "sort": "ASC" },
+          "state": { "sort": "ASC" },
+          "mi_deleteDate": { "sort": "ASC" },
+          "positionType": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_POSITION_ORGDATAID": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "mi_data_id": { "sort": "ASC" },
+          "orgID": { "sort": "ASC" },
+          "state": { "sort": "ASC" },
+          "mi_dateFrom": { "sort": "ASC" },
+          "mi_dateTo": { "sort": "ASC" },
+          "mi_deleteDate": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "dataHistory": {},
+    "unity": {
+      "entity": "hr_staffUnit",
+      "attributeList": ["orgID", "code", "name", "fullName", "state", "description", "staffOrderID",
+        "changeStaffOrderID", "entryOrderID", "mi_dateFrom", "mi_dateTo", "mi_treePath", "parentUnitID",
+        "mi_data_id", "idxNum", "quantity", "accrualSum", "liquidate", "treePath", "linkToSourceID", "isSecondaryChanges"]
+    }
+  }
+}

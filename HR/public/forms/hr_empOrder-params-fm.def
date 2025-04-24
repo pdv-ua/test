@@ -1,0 +1,222 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+/* global UB Ext AC $App  */
+exports.formDef = 'HR.paramsSelect'
+
+Ext.define(exports.formDef, {
+  ident: 'paramsSelect',
+  extend: 'Ext.panel.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  width: 800,
+  height: 400,
+  isModal: true,
+  listeners: {
+    render: function () {
+      let me = this
+      let win = me.window
+      if (win) {
+        if (!win.height) {
+          win.height = 300
+        }
+        if (!win.width) {
+          win.width = 200
+        }
+        win.center()
+        if (me.customParams.onRender) {
+          me.customParams.onRender(me)
+        }
+      }
+      me.sender.orderForm.filterDepartment({
+        ctrl: me.down('[name=departmentID]')
+      })
+      me.up('window').on('close', () => {
+        let onClose = me.customParams.onClose
+        if (onClose) {
+          onClose(me)
+        }
+      })
+      // me.down('[bbar]').getEl().setStyle('border-width', 1)
+    }
+  },
+  bbar: {
+    layout: {
+      pack: 'center'
+    },
+    style: 'border-style: solid',
+    border: 2,
+    items: [
+      {
+        xtype: 'button',
+        text: 'Ok',
+        width: '150',
+        minWidth: '150',
+        height: 30,
+        iconCls: 'u-icon-check',
+        cls: 'green-action',
+        event: 'generate',
+        handler: function (btn) {
+          let me = this.up('[ident=paramsSelect]')
+          let onAccept = me.onAccept || me.customParams.onAccept
+          if (onAccept) {
+            let result = {}
+            me.query('[resultName]').forEach(item => {
+              let fields = item.resultName.split('.')
+              result[fields[0]] = item.getValue()
+              if (fields[1] && item.getFieldValue) {
+                result[item.resultName] = item.getFieldValue(fields[1])
+              }
+            })
+
+            // let dep = me.down('[name=departmentID]')
+            onAccept(me, result /* {
+              departmentID: dep.getValue(),
+              positionType: me.down('[name=positionType]').getValue(),
+              positionCategory: me.down('[name=positionCategory]').getValue(),
+              'departmentID.mi_data_id': dep.getFieldValue('mi_data_id'),
+              'departmentID.mi_treePath': dep.getFieldValue('mi_treePath'),
+              isDeleteExisting: me.down('[name=isDeleteExisting]').checked
+            } */)
+          } else {
+            me.fillData()
+          }
+        }
+      },
+      {
+        xtype: 'button',
+        text: UB.i18n('cancel'),
+        width: '150',
+        minWidth: '150',
+        height: 30,
+        iconCls: 'u-icon-close',
+        cls: 'red-action',
+        event: 'reject',
+        handler: function () {
+          let
+            parentWindow = this.up('window')
+          parentWindow.close()
+        }
+      }
+    ]
+  },
+
+  items: [{
+    xtype: 'ubcombobox',
+    name: 'departmentID',
+    fieldLabel: UB.i18n('Підрозділ'),
+    displayField: 'description',
+    resultName: 'departmentID.mi_data_id',
+    valueField: 'ID',
+    ubRequest: {
+      entity: 'hr_department',
+      method: UB.core.UBCommand.methodName.SELECT,
+      fieldList: ['ID', 'description', 'mi_data_id', 'mi_treePath']
+    }
+  },
+  {
+    xtype: 'ubcombobox',
+    name: 'positionType',
+    resultName: 'positionType',
+    fieldLabel: UB.i18n('Тип'),
+    displayField: 'name',
+    valueField: 'code',
+    ubRequest: {
+      entity: 'ubm_enum',
+      method: UB.core.UBCommand.methodName.SELECT,
+      fieldList: ['ID', 'name', 'code', 'eGroup'],
+      whereList: {
+        enumGroupFilter: {
+          expression: '[eGroup]',
+          condition: 'equal',
+          values: {
+            val: 'HR_POSITION_TYPE'
+          }
+        }
+      }
+    }
+  },
+  {
+    xtype: 'ubcombobox',
+    name: 'positionCategory',
+    resultName: 'positionCategory',
+    fieldLabel: UB.i18n('Категорія'),
+    displayField: 'name',
+    valueField: 'code',
+    ubRequest: {
+      entity: 'ubm_enum',
+      method: UB.core.UBCommand.methodName.SELECT,
+      fieldList: ['ID', 'name', 'code', 'eGroup'],
+      whereList: {
+        enumGroupFilter: {
+          expression: '[eGroup]',
+          condition: 'equal',
+          values: {
+            val: 'HR_POSITION_CATEGORY'
+          }
+        }
+      }
+    }
+  },
+  {
+    xtype: 'numberfield',
+    resultName: 'accrualValue',
+    name: 'accrualValue',
+    hidden: true,
+    fieldLabel: UB.i18n('Розмір надбавки')
+  },
+  {
+    xtype: 'datefield',
+    resultName: 'dateFrom',
+    name: 'dateFrom',
+    hidden: true,
+    fieldLabel: UB.i18n('Дата початку дії')
+  },
+  {
+    xtype: 'datefield',
+    resultName: 'dateTo',
+    name: 'dateTo',
+    hidden: true,
+    fieldLabel: UB.i18n('Дата закінчення дії')
+  },
+  {
+    xtype: 'checkbox',
+    hidden: true,
+    name: 'isDeleteExisting',
+    resultName: 'isDeleteExisting',
+    fieldLabel: UB.i18n('Видалити завантажені')
+  }
+  ],
+  fillData: function () {
+    let me = this
+    let departmentID = me.down('[name=departmentID]')
+    me.setLoading(UB.i18n('Зачекайте...'))
+    let rec = AC.gridUtils.getCurrentRecord(departmentID)
+
+    $App.connection.run({
+      method: 'fillData',
+      entity: 'hr_empOrderChgsalaryDet',
+      ID: me.sender.instanceID,
+      'departmentID.mi_data_id': rec ? rec.get('mi_data_id') : null,
+      departmentID: rec ? rec.get('ID') : null,
+      positionCategory: me.down('[name=positionCategory]').getValue() || null,
+      positionType: me.down('[name=positionType]').getValue() || null
+    }).then(mParams => {
+      AC.viewUtils.showToast(mParams.total ? UB.i18n(`Завантажено посад: {0}`, mParams.total) : 'Нічого не завантажено')
+      me.setLoading(false)
+      let parentWindow = me.up('window')
+      parentWindow.close()
+    }).finally(() => {
+      me.setLoading(false)
+    })
+  },
+  getControl: function (name) {
+    let result = this.down(`[resultName=${name}]`)
+    return result || this.down(`[name=${name}]`)
+  },
+  initComponent: function () {
+    let me = this
+    me.callParent(arguments)
+  }
+})

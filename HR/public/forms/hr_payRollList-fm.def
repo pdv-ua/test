@@ -1,0 +1,238 @@
+/* global Ext AC appAC appHR $App UB */
+
+exports.formDef = 'HR.payRollList'
+
+Ext.define('HR.payRollList', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.payRollList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        layout: 'fit',
+        flex: 1,
+        forceDataLoad: true,
+        disableAutoLoadStore: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        cmdType: 'showList',
+        entity: 'hr_payRoll',
+        cmdData: {
+          params: [{
+            entity: 'hr_payRoll',
+            method: 'search',
+            fieldList: [
+              { name: 'orderNumber', config: { flex: 0.5 } },
+              { name: 'orderDate', description: UB.i18n('Дата'), config: { align: 'center', flex: 0.7 } },
+              { name: 'description', description: UB.i18n('Haзва'), config: { flex: 1 } },
+              { name: 'paymentMethod', config: { flex: 0.5 } },
+              { name: 'totalAmount', description: UB.i18n('Рядків'), config: { flex: 0.4 } },
+              { name: 'totalPaySum', description: UB.i18n('Сума'), config: { flex: 0.7 } },
+              { name: 'payElName', description: UB.i18n('Вид оплати'), config: { flex: 1 } },
+              {
+                name: 'orderState',
+                description: UB.i18n('Стан'),
+                config: { align: 'center', flex: 0.5 }
+              },
+              { name: 'periodSalaryName', description: UB.i18n('Обліковий період'), simpleFilter: true },
+              { name: 'periodCalcName', description: UB.i18n('Розрахунковий період'), simpleFilter: true },
+              { name: 'periodEntryName', description: UB.i18n('Розрахунковий період проведення відомості'), simpleFilter: true },
+              { name: 'orderType', visibility: false },
+              { name: 'organizationID', visibility: false }
+            ],
+            orderList: { docDate: { expression: 'docDate', order: 'DESC' } }
+          }]
+        },
+        cmpInitConfig: {
+          getRowClass: function (row) {
+            return row.get('orderState') === 'POSTED' ? 'ub-row-green' : 'ub-row-lightgrey'
+          },
+          customInit: function () {
+          },
+          afterInit: function () {
+            const grid = this
+
+            AC.gridUtils.tuneGridColumns(this, {
+              totalPaySum: {
+                renderer: function (value) {
+                  return _.isNumber(value) && value !== 0 ? Ext.util.Format.currency(value, '', 2) : ''
+                }
+              }
+            })
+
+            function setFilters (grid) {
+              const globalOrganization = appAC.globalOrganization()
+              let req = grid.store.ubRequest
+              req.whereList = {
+                organizationID: {
+                  expression: '[organizationID]',
+                  condition: 'equal',
+                  value: globalOrganization
+                }
+              }
+
+              if (grid.up('payRollList').attr.periodID.getValue()) {
+                req.whereList.periodID = {
+                  expression: '[periodCalcID]',
+                  condition: 'equal',
+                  value: grid.up('payRollList').attr.periodID.getValue()
+                }
+              } else {
+                delete req.whereList.periodID
+              }
+              grid.store.load()
+            }
+            const dictPeriodFilter = Ext.create('Ext.panel.Panel',
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'label',
+                    text: UB.i18n('Період:'),
+                    cls: 'x-form-item-label',
+                    margin: '8 0 0 15',
+                    width: 80
+                  },
+                  {
+                    xtype: 'button',
+                    text: '<',
+                    margin: '2 0 0 0',
+                    tooltip: UB.i18n('Попередній період'),
+                    width: 30,
+                    handler: () => {
+                      const priorID = grid.up('payRollList').attr.periodID.getFieldValue('priorPeriodID')
+                      if (priorID) {
+                        grid.up('payRollList').attr.periodID.setValueById(priorID)
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'periodID',
+                    fieldLabel: '',
+                    labelWidth: 130,
+                    margin: '2 0 0 5',
+                    pageSize: 50,
+                    width: 300,
+                    hideEntityItemInContext: true,
+                    selectOnFocus: true,
+                    ubRequest: {
+                      entity: 'hr_dictPeriod',
+                      fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'isCurrent', 'isClosed',
+                        'priorPeriodID', 'nextPeriodID', 'priorPeriodID.isCurrent', 'nextPeriodID.isCurrent'],
+                      orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                    },
+                    listeners: {
+                      expand: appHR.periodExpand,
+                      change: function (ctrl, value) {
+                        setFilters(grid)
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    text: '>',
+                    margin: '2 15 0 0',
+                    tooltip: UB.i18n('Наступний період'),
+                    width: 30,
+                    handler: () => {
+                      const nextID = grid.up('payRollList').attr.periodID.getFieldValue('nextPeriodID')
+                      if (nextID) {
+                        grid.up('payRollList').attr.periodID.setValueById(nextID)
+                      }
+                    }
+                  }
+                ]
+              }
+            )
+            grid.down('toolbar').insert(3, dictPeriodFilter)
+          },
+          onDeterminateForm: function (grid) {
+            const currentRowGrid = grid.store.count() ? grid.getSelectionModel().getSelection()[0] : null
+            return {
+              formCode: currentRowGrid.get('orderType')
+            }
+          },
+          customActions: [
+            {
+              text: UB.i18n('Додати'),
+              iconCls: 'u-icon-add',
+              scale: 'medium',
+              cls: 'add-new-action',
+              disabled: !AC.entityUtils.verifyRightsMethod('hr_payRoll', 'addnew'),
+              handler: function (btn) {
+                const grid = btn.up('[entityName=hr_payRoll]')
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: 'hr_payRollSelect',
+                  sender: grid.getView(),
+                  store: grid.store,
+                  cmpInitConfig: {
+                    defaultValues: {
+                      periodID: grid.up('payRollList').attr.periodID.getValue(),
+                      periodCalc: grid.up('payRollList').attr.periodID.getFieldValue('dateFrom')
+                    }
+                  }
+                })
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+
+    me.globalOrganizationChange = () => {
+      const globalOrganization = appAC.globalOrganization()
+      if (!me.attr.grid.store.ubRequest.whereList) {
+        me.attr.grid.store.ubRequest.whereList = {}
+      }
+      me.attr.periodID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization }, [])
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        me.attr.periodID.setValueById(response.ID)
+        me.currentPeriod = response
+      })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[entityName=hr_payRoll]'),
+        periodID: me.down('[name=periodID]')
+      }
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: appAC.globalOrganization() })
+      appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+        me.attr.periodID.setValueById(response.ID)
+        me.currentPeriod = response
+      })
+      me.attr.grid.store.on('load', () => {
+        appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+          if (response.ID !== me.currentPeriod.ID && me.currentPeriod.ID === me.attr.periodID.getValue()) {
+            me.attr.periodID.setValueById(response.ID)
+            me.currentPeriod = response
+          }
+        })
+      })
+    })
+    me.callParent(arguments)
+  }
+})

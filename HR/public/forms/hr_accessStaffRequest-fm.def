@@ -1,0 +1,96 @@
+exports.formDef = {
+  requiredFields: ['organizationID', 'userID', 'employeeID'],
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [{
+      orderId: 4,
+      actionId: 'actionSendId'
+    }, {
+      orderId: 5,
+      actionId: 'actionAcceptId'
+    }, {
+      orderId: 6,
+      actionId: 'actionRejectId'
+    }]
+  }],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  defaults: { labelWidth: 120 },
+  items: [
+    {
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+      items: [
+        {
+          attributeName: 'docNum',
+          width: 250,
+          labelWidth: 135,
+          readOnly: true,
+          allowBlank: true
+        },
+        {
+          attributeName: 'docDate',
+          width: 250,
+          readOnly: true
+        },
+        {
+          attributeName: 'requestState',
+          width: 300,
+          readOnly: true
+        }
+      ]
+    },
+    {
+      layout: {
+        type: 'hbox'
+      },
+      items: [
+        {
+          attributeName: 'taxCode',
+          labelWidth: 135,
+          width: 250,
+          listeners: {
+            blur: function (ctrl) {
+              const me = ctrl.up('form')
+              me.onChangeTaxCode(me, ctrl)
+            }
+          }
+        }
+      ]
+    },
+    { attributeName: 'lastName', labelWidth: 135 },
+    { attributeName: 'firstName', labelWidth: 135 },
+    { attributeName: 'middleName', labelWidth: 135 },
+    { attributeName: 'birthDate', width: 250, labelWidth: 135 },
+    {
+      attributeName: 'organizationOwnerID',
+      labelWidth: 135,
+      xtype: 'ubcombobox',
+      displayField: 'name',
+      valueField: 'mi_data_id',
+      fieldList: ['mi_data_id', 'name'],
+      disableContextMenu: true
+    },
+    {
+      attributeName: 'reason',
+      labelWidth: 135
+    },
+    {
+      attributeName: 'comment',
+      labelWidth: 135
+    },
+    {
+      attributeName: 'userID',
+      labelWidth: 135,
+      readOnly: true,
+      disableContextMenu: true
+    }
+  ]
+}

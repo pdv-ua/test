@@ -1,0 +1,104 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['orderID', 'empOrderType', 'organizationID', 'lastName', 'firstName', 'middleName', 'employeeID',
+    'positionID'],
+  parentConfig: {
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'addIntComb'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          defaults: { labelWidth: 175 },
+          items: [
+            {
+              attributeName: 'employeePositionID',
+              margins: '15 0 0 0',
+              gridFieldList: ['description'],
+              fieldList: ['ID', 'description'],
+              xtype: 'empPositionCombobox',
+              addWorkPlace: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+            },
+            {
+              attributeName: 'orderDetEmployeeID',
+              margins: '15 0 0 0',
+              fieldList: ['employeeWithTitle', 'positionID', 'employeeID', 'employeeNumberID',
+                'positionID.description', 'firstName', 'lastName', 'middleName'],
+              displayField: ['employeeWithTitle'],
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+            },
+            { attributeName: 'vehicleID', hidden: true },
+            {
+              layout: {
+                type: 'hbox'
+              },
+              name: 'strVehiclePanel',
+              items: [
+                {
+                  margins: '5 10 0 0',
+                  labelWidth: 175,
+                  attributeName: 'strVehicle',
+                  fieldLabel: UB.i18n('Транспортний засіб'),
+                  flex: 1
+                },
+                {
+                  xtype: 'button',
+                  cls: 'list-icon',
+                  name: 'vehicleButton',
+                  tooltip: UB.i18n('Вибрати'),
+                  width: 35,
+                  height: 35,
+                  margin: '5 10 0 -53',
+                  handler: btn => {
+                    btn.up('form').getField('strVehicle').selectHandler(btn)
+                  }
+                }
+              ]
+            },
+            {
+              attributeName: 'givingType',
+              margins: '5 0 0 0'
+            },
+            {
+              layout: {
+                type: 'hbox'
+              },
+              margins: '5 0 0 0',
+              flex: 1,
+              items: [
+                { attributeName: 'dateFrom', fieldLabel: UB.i18n('Терміном з'), labelWidth: 175 },
+                { attributeName: 'dateTo', fieldLabel: UB.i18n(' по '), labelWidth: 30 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

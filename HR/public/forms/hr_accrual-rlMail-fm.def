@@ -1,0 +1,287 @@
+/* global AC Ext UB _ $App appAC appHR */
+
+exports.formDef = 'HR.RlMail'
+Ext.define('HR.RlMail',
+  {
+    extend: 'Ext.form.Panel',
+    width: 1100,
+    height: 600,
+    layout: { type: 'vbox', align: 'stretch' },
+    alias: 'widget.RlMail',
+    initComponent: function () {
+      const me = this
+      me.items = [
+        {
+          region: 'north',
+          autoScroll: true,
+          split: true,
+          layout: { type: 'hbox' },
+          items: [
+            {
+              xtype: 'label',
+              text: UB.i18n('Період:'),
+              cls: 'x-form-item-label',
+              margin: '8 0 0 15',
+              width: 105
+            },
+            {
+              xtype: 'button',
+              text: '<',
+              margin: '2 0 0 0',
+              tooltip: UB.i18n('Попередній період'),
+              width: 30,
+              handler: () => {
+                const priorID = me.attr.periodID.getFieldValue('priorPeriodID')
+                if (priorID) {
+                  me.attr.periodID.setValueById(priorID)
+                }
+              }
+            },
+            {
+              xtype: 'ubcombobox',
+              allowBlank: false,
+              name: 'periodID',
+              fieldLabel: '',
+              labelWidth: 130,
+              margin: '2 0 0 5',
+              pageSize: 50,
+              width: 300,
+              hideEntityItemInContext: true,
+              disableContextMenu: true,
+              selectOnFocus: true,
+              ubRequest: {
+                entity: 'hr_dictPeriod',
+                fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'priorPeriodID', 'nextPeriodID', 'name'],
+                orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+              },
+              listeners: {
+                beforeQuerySend: function () {
+                  this.store.ubRequest.whereList = {
+                    orgID: {
+                      expression: '[orgID]',
+                      condition: 'equal',
+                      value: appAC.globalOrganization()
+                    }
+                  }
+                  if (!this.whereListIsSet) this.whereListIsSet = true
+                  else this.store.reload()
+                },
+                change: function (ctrl, value) {
+                  me.refreshReceiverList(value)
+                },
+                expand: appHR.periodExpand
+              }
+            },
+            {
+              xtype: 'button',
+              text: '>',
+              margin: '2 15 0 0',
+              tooltip: UB.i18n('Наступний період'),
+              width: 30,
+              handler: () => {
+                const nextID = me.attr.periodID.getFieldValue('nextPeriodID')
+                if (nextID) {
+                  me.attr.periodID.setValueById(nextID)
+                }
+              }
+            }
+          ]
+        },
+        {
+          xtype: 'acGrid',
+          name: 'employeeNumberList',
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          cellEditing: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          enableMultifilter: true,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          stripeRows: true,
+          ignoreAttr: ['posName', 'depName'],
+          hideActions: ['del', 'addNewByCurrent', 'addNew'],
+          checkColumn: {},
+          viewConfig: {
+            markDirty: false
+          },
+          customPopupMenuItems: [
+            {
+              text: UB.i18n('Розрахунковий лист'),
+              iconCls: 'el-icon-tickets',
+              ubID: 'itemShowRl',
+              handler: function (context) {
+                const grid = context.up('').grid
+                const me = grid.up('form')
+                const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                if (record.get('employeeNumberID') && me.attr.periodID.getValue()) {
+                  appHR.showRl(record.get('employeeNumberID'), me.attr.periodID.getValue())
+                }
+              }
+            }
+          ],
+          fields: [
+            { name: 'employeeNumberID' },
+            { name: 'employeeID' },
+            { name: 'tabNum',
+              columnConfig: {
+                text: UB.i18n('Таб. №'),
+                filterBy: 'string',
+                editor: {
+                  readOnly: true
+                },
+                width: 80
+              }
+            },
+            { name: 'shortFIO',
+              columnConfig: {
+                text: UB.i18n('ПІБ'),
+                filterBy: 'string',
+                editor: {
+                  readOnly: true
+                },
+                flex: 1
+              }
+            },
+            { name: 'email',
+              columnConfig: {
+                text: UB.i18n('email'),
+                filterBy: 'string',
+                flex: 1,
+                editor: {
+                  dataType: 'string',
+                  maxLength: 256,
+                  readOnly: true
+                }
+              }
+            },
+            { name: 'posName',
+              columnConfig: {
+                text: UB.i18n('Штатна посада'),
+                filterBy: 'string',
+                editor: {
+                  readOnly: true
+                },
+                flex: 1
+              }
+            },
+            { name: 'depName',
+              columnConfig: {
+                text: UB.i18n('Підрозділ'),
+                filterBy: 'string',
+                editor: {
+                  readOnly: true
+                },
+                flex: 1
+              }
+            },
+            { name: 'selfStructDepName',
+              columnConfig: {
+                text: UB.i18n('Самостійний структурний підрозділ'),
+                filterBy: 'string',
+                editor: {
+                  readOnly: true
+                },
+                flex: 1
+              }
+            }
+          ],
+          getRowClass: function (record) {}
+        },
+        {
+          xtype: 'panel',
+          layout: { type: 'hbox', pack: 'end' },
+          region: 'south',
+          items: [
+            {
+              xtype: 'button',
+              text: UB.i18n('Відправити'),
+              width: 100,
+              height: 30,
+              margin: '10 10 20 0',
+              handler: function () {
+                if (me.attr.grid.getCheckedRow().length) {
+                  me.setLoading(true)
+                  $App.connection.run({
+                    entity: 'hr_rl',
+                    method: 'sendReportOnEmail',
+                    params: {
+                      reportSendList: JSON.stringify(me.attr.grid.getCheckedRow().map(o => o.getData())),
+                      periodID: me.attr.periodID.getValue(),
+                      orgID: appAC.globalOrganization()
+                    }
+                  }).then((resultData) => {
+                    me.setLoading(false)
+                    if (resultData.params.sendedList) {
+                      $App.dialogInfo(`Розрахункові листи відправлено`)
+                    }
+                  }, (err) => {
+                    me.setLoading(false)
+                    throw err
+                  })
+                }
+              }
+            }
+          ]
+        }
+      ]
+
+      me.refreshReceiverList = async (periodID) => {
+        me.attr.grid.getStore().removeAll()
+        if (!me.attr.periodID.getValue()) return
+        me.setLoading(true)
+        let data = await $App.connection.run({
+          entity: 'hr_rl',
+          method: 'selectEmployeeMailList',
+          orgID: appAC.globalOrganization(),
+          periodID: me.attr.periodID.getValue()
+        })
+
+        if (data && data.result) {
+          data = JSON.parse(data.result)
+          let emailList = await UB.Repository('hr_employeeContact')
+            .attrs(['ID', 'employeeID', 'value'])
+            .where('employeeID', 'in', data.map(o => o.employeeID))
+            .where('contactTypeID.code', '=', 'email')
+            .selectAsObject()
+          me.attr.grid.getStore().loadData(data.map(row => {
+            let emailData = emailList.find(email => email.employeeID === row.employeeID)
+            row.email = emailData ? emailData.value : null
+            return row
+          }))
+        }
+        me.setLoading(false)
+      }
+      me.on('afterrender', () => {
+        const me = this
+        me.attr = {
+          periodID: me.down('[name=periodID]'),
+          grid: me.down('[name=employeeNumberList]')
+        }
+        appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+          me.attr.periodID.setValueById(response.priorPeriodID)
+        })
+        me.attr.grid.on('changeChecked', (treeRole, record) => {
+          if (record) {
+            if (!record.get('email')) {
+              record.set('isChecked', false)
+            }
+          } else {
+            const allRecords = me.attr.grid.getStore().snapshot || me.attr.grid.getStore().data
+            if (allRecords.length) {
+              allRecords.each(rec => {
+                if (!rec.get('email')) {
+                  rec.set('isChecked', false)
+                }
+              })
+            }
+          }
+        })
+      }, me)
+
+      me.callParent(arguments)
+    }
+  }
+)

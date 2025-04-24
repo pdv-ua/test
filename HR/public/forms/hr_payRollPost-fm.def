@@ -1,0 +1,277 @@
+/* global appHR UB */
+exports.formDef = {
+  requiredFields: ['orderState', 'description', 'organizationID', 'orderType', 'periodCalcID', 'paymentMethod',
+    'totalAmount', 'totalPaySum', 'payElID.code', 'applyRetention', 'payElID.methodID.code'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'printAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          defaults: { labelWidth: 100 },
+          items: [
+            {
+              attributeName: 'periodSalaryID',
+              fieldLabel: UB.i18n('За період'),
+              fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+              pageSize: 50,
+              readOnly: true,
+              skipSetReadOnly: true,
+              listeners: {
+                expand: appHR.periodExpand
+              }
+            },
+            {
+              attributeName: 'payElID',
+              allowBlank: false,
+              hideEntityItemInContext: true,
+              fieldList: ['ID', 'description', 'methodID.methodGroupID.code', 'code', 'methodID.code'],
+              readOnly: true,
+              skipSetReadOnly: true
+            }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          defaults: { labelWidth: 100 },
+          items: [
+            {
+              attributeName: 'departmentID',
+              fieldList: ['mi_data_id', 'name', 'orgID'],
+              valueField: 'mi_data_id',
+              displayField: 'name',
+              __mip_recordhistory_all: false,
+              whereList: {
+                state: {
+                  expression: '[state]',
+                  condition: '=',
+                  values: {
+                    state: 'ACTIVE'
+                  }
+                }
+              }
+            },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 100 },
+              items: [
+                {
+                  attributeName: 'orderNumber',
+                  fieldLabel: UB.i18n('Номер'),
+                  width: 250
+                },
+                {
+                  attributeName: 'orderDate',
+                  fieldLabel: UB.i18n('Дата')
+                }
+              ]
+            },
+            {
+              attributeName: 'description'
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('До виплати'),
+          layout: 'fit',
+          items: [
+            {
+              xtype: 'acGrid',
+              name: 'payRollDt',
+              stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_payRollPost_payRollDt'),
+              region: 'center',
+              flex: 1,
+              autoScroll: true,
+              cellEditing: true,
+              notWriteChanges: true,
+              storeType: 'local',
+              showToolBar: true,
+              disablePaging: true,
+              loadMaskMessage: UB.i18n('Завантаження даних...'),
+              summary: { paySum: 'sum' },
+              summaryDataOnClient: true,
+              ignoreAttr: ['posName', 'depName'],
+              hideActions: ['addNew', 'addNewByCurrent'],
+              ignoreAttrNewByCurrent: ['posName', 'depName', 'employeeNumberID.description', 'employeeNumberID'],
+              includeCustomReadOnly: ['calcBtn', 'addBtn', 'fillBtn'],
+              onBeforeEdit: (control, context) => {
+                const me = context.grid.up('form')
+                me.setIsDirty(true)
+                me.beforeGridEdit(me, 'payRollDt', context)
+              },
+              edit: (control, context) => {
+                const me = context.grid.up('form')
+                me.onGridEdit(me, 'payRollDt', context, control)
+              },
+              customToolBarActions: [
+                {
+                  xtype: 'button',
+                  name: 'fillBtn',
+                  tooltip: UB.i18n('Заповнити'),
+                  iconCls: 'fas fa-angle-double-down',
+                  cls: 'fill-action',
+                  handler: function (btn) {
+                    const me = btn.up('form')
+                    me.setEmployeeList(me)
+                  }
+                },
+                {
+                  xtype: 'button',
+                  name: 'addBtn',
+                  iconCls: 'fas fa-plus',
+                  cls: 'add-new-action',
+                  scale: 'medium',
+                  tooltip: UB.i18n('Додати'),
+                  handler: function (btn) {
+                    const me = btn.up('form')
+                    me.setEmployeeNumbers(me)
+                  }
+                },
+                {
+                  xtype: 'button',
+                  name: 'remarkBtn',
+                  tooltip: UB.i18n('Зауваження (До виплати = 0)'),
+                  iconCls: 'fas fa-ban',
+                  cls: 'red-action',
+                  scale: 'medium',
+                  handler: function (btn) {
+                    const me = btn.up('form')
+                    me.viewReason = !me.viewReason
+                    btn.addCls(me.viewReason ? 'add-new-action' : 'red-action')
+                    btn.removeCls(!me.viewReason ? 'add-new-action' : 'red-action')
+                    btn.setTooltip(me.viewReason ? UB.i18n('Зауваження (До виплати > 0)') : UB.i18n('Зауваження (До виплати = 0)'))
+                    me.viewMark(me)
+                  }
+                },
+                {
+                  xtype: 'button',
+                  name: 'calcBtn',
+                  tooltip: UB.i18n('Розрахувати'),
+                  iconCls: 'fas fa-calculator',
+                  cls: 'fill-action',
+                  handler: function (btn) {
+                    const me = btn.up('form')
+                    me.calc(me)
+                  }
+                }
+              ],
+              fields: [
+                { name: 'ID' },
+                { name: 'payRollID' },
+                { name: 'periodCalcID' },
+                { name: 'periodCalc' },
+                { name: 'periodSalaryID' },
+                { name: 'periodSalary' },
+                { name: 'dateFrom' },
+                { name: 'dateTo' },
+                { name: 'flagsFix' },
+                { name: 'payRetentionID' },
+                { name: 'employeePayOutID' },
+                { name: 'payOutID' },
+                { name: 'reason' },
+                { name: 'mask' },
+                { name: 'baseSum' },
+                { name: 'taxSum' },
+                { name: 'rate' },
+                { name: 'source' },
+                { name: 'sourceID' },
+                { name: 'incomingDebtSum' },
+                { name: 'repaymentDebtSum' },
+                { name: 'calculatedSum' },
+                { name: 'repaymentSum' },
+                { name: 'accrualDt' },
+                { name: 'paymentDt' },
+                {
+                  name: 'employeeNumberID.description',
+                  columnConfig: {
+                    text: UB.i18n('Працівник'),
+                    flex: 1
+                  }
+                },
+                { name: 'employeeNumberID' },
+                {
+                  name: 'paySum',
+                  columnConfig: {
+                    text: UB.i18n('До виплати'),
+                    width: 150,
+                    floatFormat: 2,
+                    align: 'right',
+                    editor: {
+                      dataType: 'Currency',
+                      decimalPrecision: 2,
+                      minValue: 0,
+                      flagsFix: 2
+                    }
+                  }
+                },
+                {
+                  name: 'payRetentionID.contractorID.description',
+                  columnConfig: {
+                    text: UB.i18n('Отримувач'),
+                    width: 300
+                  }
+                },
+                {
+                  name: 'posName',
+                  columnConfig: {
+                    text: UB.i18n('Посада'),
+                    width: 220
+                  }
+                },
+                {
+                  name: 'depName',
+                  columnConfig: {
+                    text: UB.i18n('Підрозділ'),
+                    width: 220
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

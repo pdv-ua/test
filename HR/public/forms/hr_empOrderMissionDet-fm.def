@@ -1,0 +1,548 @@
+/* global AC HR UB */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'organizationID', 'empOrderType', 'employeeNumberID', 'firstName', 'lastName', 'middleName',
+      'isGroup', 'destOrganizationName', 'cityName', 'destOrganizationID', 'cityID', 'yearInfo', 'dictTrainingTopicID',
+      'dictTrainingTopicName', 'dictMissionPurposeID', 'purpose', 'dictMissionPhraseID', 'phrase', 'isPrintAddon'
+    ],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      autoScroll: true
+    },
+    autoScroll: true,
+    defaults: {
+      layout: 'fit'
+    },
+    size: {
+      width: 1100,
+      height: 700
+    },
+    items: [{
+      attributeName: 'employeePositionID',
+      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+      gridFieldList: ['description'],
+      hidden: true,
+      requiredIf: (ctrl, me) => !me.record.get('isGroup'),
+      showIf: (ctrl, me) => !me.record.get('isGroup'),
+      fieldLabel: UB.i18n('Працівник'),
+      fieldList: ['ID', 'description', 'employeeID.firstName', 'employeeID.lastName', 'employeeID.middleName', 'employeeID',
+        'employeeNumberID', 'departmentID', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'
+      ],
+      xtype: 'empPositionCombobox',
+      addWorkPlace: true,
+      listeners: {
+        select: ctrl => {
+          let reco = AC.gridUtils.getCurrentRecord(ctrl)
+          let me = ctrl.up('form')
+          if (reco) {
+            me.record.set('firstName', reco.get('employeeID.firstName'))
+            me.record.set('lastName', reco.get('employeeID.lastName'))
+            me.record.set('middleName', reco.get('employeeID.middleName'))
+          } else {
+            me.record.set('firstName', null)
+            me.record.set('lastName', null)
+            me.record.set('middleName', null)
+          }
+        }
+      }
+    },
+    {
+      xtype: 'label',
+      name: 'yearInfo',
+      cls: 'field-label-red',
+      margin: '10 0 5 135',
+      hidden: true
+    },
+    {
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+      items: [{
+        attributeName: 'isInsideCountry'
+      },
+      {
+        attributeName: 'countryID',
+        labelWidth: 60,
+        flex: 1,
+        disabledIf: (ctrl, me) => me.record.get('isInsideCountry'),
+        requiredIf: (ctrl, me) => !me.record.get('isInsideCountry')
+      },
+      {
+        attributeName: 'isPrintAddon',
+        disabled: true,
+        labelWidth: 120
+      }
+      ]
+    },
+    {
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+      items: [{
+        attributeName: 'dateFrom',
+        listeners: {
+          focus: ctrl => {
+            ctrl._oldValue = ctrl.getRawValue()
+          },
+          blur: ctrl => {
+            ctrl.up('form').calcPeriod(ctrl)
+          }
+        }
+      },
+      {
+        attributeName: 'dateTo',
+        labelWidth: 70,
+        listeners: {
+          focus: ctrl => {
+            ctrl._oldValue = ctrl.getRawValue()
+          },
+          blur: ctrl => {
+            ctrl.up('form').calcPeriod(ctrl)
+          }
+        }
+      },
+      {
+        attributeName: 'dayCount',
+        labelWidth: 60,
+        width: 140,
+        minValue: 0,
+        listeners: {
+          focus: ctrl => {
+            ctrl._oldValue = ctrl.getRawValue()
+          },
+          blur: ctrl => {
+            ctrl.up('form').calcPeriod(ctrl)
+          }
+        }
+      }
+      ]
+    },
+    {
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+      items: [{
+        xtype: 'ubcombobox',
+        flex: 3,
+        gridFieldList: ['name', 'code'],
+        name: 'destOrganizationName',
+        fieldLabel: UB.i18n('Організація'),
+        ubRequest: {
+          entity: 'ac_contractor',
+          fieldList: ['ID', 'name']
+        },
+        idField: 'destOrganizationID',
+        isFormField: true,
+        displayField: 'name',
+        maxLength: 300,
+        allowCustomText: true,
+        triggerCls: 'hr-list-trigger',
+        listeners: {
+          change: ctrl => {
+            let me = ctrl.up('form')
+            me.record.set(ctrl.name, !ctrl.rawValue ? null : ctrl.rawValue)
+          },
+          blur: ctrl => {
+            ctrl.setValue(ctrl.rawValue)
+            ctrl.up('form').record.set('destOrganizationName', ctrl.rawValue)
+          },
+          focus: ctrl => {
+            ctrl.inputEl.dom.setAttribute('maxlength', 300)
+          },
+          select: ctrl => {
+            let me = ctrl.up('form')
+            ctrl.setValue(ctrl.rawValue)
+            me.record.set('destOrganizationName', ctrl.rawValue)
+            me.record.set('destOrganizationID', null)
+          }
+        }
+      },
+      {
+        xtype: 'ubcombobox',
+        flex: 2,
+        gridFieldList: ['description', 'code'],
+        name: 'cityName',
+        idField: 'cityID',
+        allowBlank: false,
+        fieldLabel: UB.i18n('Нас. пункт'),
+        ubRequest: {
+          entity: 'cdn_city',
+          fieldList: ['description'],
+          whereList: {
+            description: {
+              expression: '[description]',
+              condition: 'notIsNull'
+            }
+          }
+        },
+        isFormField: true,
+        displayField: 'description',
+        allowCustomText: true,
+        triggerCls: 'hr-list-trigger',
+        listeners: {
+          change: ctrl => {
+            let me = ctrl.up('form')
+            me.record.set(ctrl.name, !ctrl.rawValue ? null : ctrl.rawValue)
+          },
+          blur: ctrl => {
+            ctrl.setValue(ctrl.rawValue)
+            ctrl.up('form').record.set(ctrl.name, ctrl.rawValue)
+          },
+          select: ctrl => {
+            ctrl.setValue(ctrl.rawValue)
+            ctrl.up('form').record.set('cityID', null)
+          }
+        }
+      }
+      ]
+    },
+    HR.controlService.getIDNameCombo({
+      fieldID: 'dictMissionPurposeID',
+      fieldName: 'purpose',
+      maxLength: 800,
+      fieldLabel: UB.i18n('З метою'),
+      margin: '5 15 0 15',
+      ubRequest: {
+        entity: 'hr_dictMissionPurpose',
+        fieldList: ['ID', 'name'],
+        orderList: {
+          orderBy: {
+            'expression': 'name',
+            'order': 'asc'
+          }
+        }
+      }
+    }),
+    AC.viewUtils.getCollapsibleFieldSet(
+      UB.i18n('<span>Інформація про навчання</span><br>'),
+      {
+        expandTitle: UB.i18n('Інформація про навчання'),
+        name: 'trainigInfo',
+        hidden: true,
+        collapsed: false,
+        ubID: 'educationFieldSet',
+        title: UB.i18n('Інформація про навчання'),
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        margin: '5 10 10 10',
+        padding: '0 0 5 0',
+        defaults: {
+          labelWidth: 140
+        },
+        items: [{
+          attributeName: 'isFromCatalog'
+        },
+        {
+          attributeName: 'dictProfCompDevelopFormID',
+          fieldLabel: UB.i18n('Вид професійного навчання'),
+          whereList: {
+            isActive: {
+              expression: '[isActive]',
+              condition: 'equal',
+              value: 1
+            }
+          }
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'groupCategory', labelWidth: 140, width: 300, hidden: true },
+            { attributeName: 'dictProfCompetencyID', labelWidth: 310, flex: 1, hidden: true }
+          ]
+        },
+        HR.controlService.getIDNameCombo({
+          fieldID: 'dictTrainingTopicID',
+          fieldName: 'dictTrainingTopicName',
+          fieldLabel: UB.i18n('Тематика'),
+          margin: '5 15 10 15',
+          ubRequest: {
+            entity: 'hr_dictTrainingTopic',
+            fieldList: ['ID', 'name'],
+            orderList: {
+              orderBy: {
+                'expression': 'name',
+                'order': 'asc'
+              }
+            }
+          }
+        }),
+        { attributeName: 'dictSpecialtyID' }
+        ]
+      }
+    ),
+    AC.viewUtils.getCollapsibleFieldSet(
+      UB.i18n('<span>Підготовка</span><br>'),
+      {
+        expandTitle: UB.i18n('Підготовка'),
+        title: UB.i18n('Підготовка'),
+        ubID: 'trainingFieldSet',
+        layout: { type: 'vbox', align: 'stretch' },
+        margin: '5 10 10 10',
+        padding: '0 0 5 0',
+        collapsed: false,
+        defaults: { labelWidth: 180 },
+        hidden: true,
+        items: [
+          {
+            attributeName: 'dictSpecialityID',
+            allowBlank: true,
+            whereList: {
+              specialityType: {
+                expression: '[specialityType]',
+                condition: '=',
+                value: '2' // за фахом
+              }
+            }
+          },
+          { attributeName: 'lectureCycle', allowBlank: true },
+          { attributeName: 'dictTrainingKindID', allowBlank: true, fieldList: ['ID', 'description', 'trainingLevel', 'dictStaffCatID.name'] },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                attributeName: 'dictTrainingKindID.trainingLevel',
+                fieldLabel: UB.i18n('Рівень підготовки'),
+                readOnly: true,
+                labelWidth: 180,
+                width: 480
+              },
+              {
+                attributeName: 'dictTrainingKindID.dictStaffCatID.name',
+                fieldLabel: UB.i18n('Категорія персоналу'),
+                readOnly: true,
+                allowBlank: true,
+                labelWidth: 190,
+                flex: 1,
+                margin: '5 15 5 0'
+              }
+            ]
+          },
+          { attributeName: 'trainingDirection' }
+        ]
+      }
+    ),
+    {
+      layout: {
+        type: 'hbox',
+        align: 'top'
+      },
+      name: 'reasonDocPanel',
+      hidden: true,
+      items: [{
+        fieldLabel: UB.i18n('Підстава (до пункту наказу)'),
+        attributeName: 'reason',
+        flex: 1
+      },
+      {
+        xtype: 'button',
+        cls: 'list-icon',
+        name: 'reasonButton',
+        tooltip: UB.i18n('Вибрати'),
+        width: 35,
+        height: 35,
+        margin: '0 2 0 -45',
+        handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+      }
+      ]
+    },
+    {
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+      items: [
+        {
+          attributeName: 'isHolidayPay',
+          labelWidth: 150,
+          width: 170
+        },
+        {
+          attributeName: 'isNeedReport',
+          labelWidth: 90,
+          width: 110
+        },
+        HR.controlService.getIDNameCombo({
+          fieldID: 'dictMissionPhraseID',
+          fieldName: 'phrase',
+          displayField: 'phrase',
+          fieldLabel: UB.i18n('Вимоги до звіту'),
+          margin: '5 15 10 15',
+          maxLength: 1000,
+          labelWidth: 120,
+          flex: 1,
+          ubRequest: {
+            entity: 'hr_dictMissionPhrase',
+            fieldList: ['ID', 'phrase'],
+            orderList: {
+              orderBy: {
+                'expression': 'phrase',
+                'order': 'asc'
+              }
+            }
+          }
+        })
+      ]
+    },
+    /*
+    AC.viewUtils.getCollapsibleFieldSet(
+      UB.i18n('<span>Оплата</span><br>'),
+      {
+        expandTitle: UB.i18n('Оплата'),
+        layout: { type: 'vbox', align: 'stretch' },
+        collapsed: true,
+        margin: '5 10 10 10',
+        padding: '0 0 5 0',
+        items: [
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                attributeName: 'dictTimeCostID',
+                fieldList: ['ID', 'code', 'name', 'nameSmall'],
+                displayField: 'nameSmall',
+                valueField: 'ID',
+                fieldLabel: UB.i18n('Елемент обліку робочого часу'),
+                labelWidth: 250,
+                flex: 1
+              }
+            ]
+          },
+          { attributeName: 'payElID', flex: 1, labelWidth: 120 }
+        ]
+      }
+    ),
+    */
+    {
+      xtype: 'label',
+      name: 'missionWarnings',
+      cls: 'field-label-red',
+      margin: '5 15 5 17'
+    },
+    {
+      flex: 1,
+      name: 'detailpanel',
+      xtype: 'tabpanel',
+      // hidden: true,
+      items: [{
+        title: UB.i18n('Працівники'),
+        // showIf: (ctrl, me) => me.record.get('isGroup'),
+        // hidden: true
+        layout: 'fit',
+        items: [
+          HR.orderManager.getEmployeeParaGrid('hr_empOrderMissionDet', {
+            flex: 1,
+            ubID: 'employee',
+            hidden: true
+          }),
+          HR.orderManager.getActingParaGrid('hr_empOrderMissionDet', {
+            flex: 1,
+            ubID: 'acting',
+            rowEditing: true,
+            hidden: true,
+            hrTypePayElActing: true
+          })
+        ]
+      },
+      {
+        title: UB.i18n('Фінансування відрядження'),
+        items: [{
+          xtype: 'ubdetailgrid',
+          autoScroll: true,
+          hideActions: ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail', 'edit'],
+          flex: 1,
+          rowEditing: true,
+          entityConfig: {
+            entity: 'hr_missionFinSource',
+            cmdType: 'showList',
+            method: 'select',
+            fieldList: [{
+              name: 'dictMissionCostCategoryID.name',
+              description: UB.i18n('Категорія витрат'),
+              config: {
+                width: 400
+              }
+            },
+            {
+              name: 'organizationName',
+              visibility: false,
+              editor: {
+
+              }
+            },
+            {
+              name: 'organizationID.name',
+              config: {
+                width: 400,
+                text: UB.i18n('Організація')
+              },
+              editor: {
+                // readOnly: true,
+                xtype: 'ubcombobox',
+                gridFieldList: ['name', 'code'],
+                ubRequest: {
+                  // entity: 'cdn_organization',
+                  entity: 'ac_contractor',
+                  fieldList: ['ID', 'name']
+                },
+                isFormField: true,
+                displayField: 'name',
+                allowCustomText: true,
+                maxLength: 300,
+                disableLimitSearchLength: true,
+                triggerCls: 'hr-list-trigger'
+              },
+              renderer: function (record) {
+                return record.get('organizationName')
+              }
+            }
+            ]
+          },
+          onBeforeEdit: function (rowEditor, context) {
+            // context.grid.optimizeColumnWidth(true)
+            let editor = rowEditor.editor
+            // let form = context.grid.up('form')
+            let organizationID = editor.query(`[name=organizationID.name]`)[0]
+            setTimeout(function () {
+              organizationID.setRawValue(context.record.get('organizationName'))
+            }, 100)
+
+            organizationID.on('blur', ctrl => {
+              context.record.set('organizationName', ctrl.getRawValue())
+            })
+          },
+          onValidateEdit: function (rowEditor, context) {
+            let editor = rowEditor.editor
+            // let form = context.grid.up('form')
+            let organizationID = editor.query(`[name=organizationID.name]`)[0]
+            context.record.set('organizationName', organizationID.getRawValue())
+          },
+          masterFields: ['ID', 'orderID'],
+          detailFields: ['paraID', 'orderID'],
+          cmpInitConfig: {
+            customInit: function () {
+              AC.gridUtils.tuneGridColumns(this, {
+                'organizationID.name': {
+                  title: UB.i18n('Організація'),
+                  renderer: function (value, meta, record) {
+                    return record.get('organizationName')
+                  }
+                }
+              })
+            }
+          }
+        }]
+      }
+      ]
+    }
+    ]
+  }
+})()

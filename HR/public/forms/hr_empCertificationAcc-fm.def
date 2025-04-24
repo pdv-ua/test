@@ -1,0 +1,248 @@
+// @isModal true
+
+/* global HR */
+exports.formDef = {
+  requiredFields: ['orderAuthor', 'orderAuthorID', 'employeeID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [{
+    xtype: 'fieldset',
+    title: UB.i18n('Атестація/Кваліфікація'),
+    margin: '0 17 5 10',
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    defaults: {
+      labelWidth: 120
+    },
+    flex: 1,
+    items: [{
+      attributeName: 'employeeID',
+      hidden: true,
+      labelWidth: 140
+    },
+    {
+      attributeName: 'dictEmpCategoryID',
+      labelWidth: 140,
+      allowBlank: false
+    },
+    {
+      attributeName: 'typeCertification',
+      labelWidth: 140
+    },
+    {
+      attributeName: 'dictSpecialtyID',
+      whereList: {
+        specialityType: {
+          expression: '[specialityType]',
+          condition: 'equal',
+          value: '2'
+        }
+      },
+      labelWidth: 140
+    },
+    // HR.controlService.getEduOrgCombo({ fieldID: 'educationOrgID', fieldName: 'educationName' }),
+    {
+      layout: {
+        type: 'hbox'
+      },
+      items: [{
+        attributeName: 'certificationDate',
+        labelWidth: 140,
+        width: 260
+      },
+      {
+        attributeName: 'validityDate',
+        labelWidth: 210,
+        width: 330,
+        recordField: 'dateTo'
+      }
+      ]
+    },
+    {
+      attributeName: 'comment',
+      labelWidth: 140,
+      xtype: 'textfield'
+    }
+    ]
+  },
+  {
+    xtype: 'fieldset',
+    title: UB.i18n('Документ про атестацію'),
+    margin: '0 17 5 10',
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    defaults: {
+      labelWidth: 100
+    },
+    items: [{
+      attributeName: 'employeeDocID',
+      fieldList: ['ID', 'dictDocKindID', 'docSeries', 'docNumber', 'docIssued', 'docIssuedDate', 'employeeID', 'description'],
+      gridFieldList: ['description', 'docIssued'],
+      displayField: 'description'
+    },
+    {
+      attributeName: 'dictDocKindID',
+      description: UB.i18n('Вид документа'),
+      recordField: 'dictDocKindID'
+    },
+    {
+      layout: {
+        type: 'hbox'
+      },
+      items: [{
+        attributeName: 'docNumber',
+        description: UB.i18n('Номер'),
+        labelWidth: 100,
+        width: 220,
+        recordField: 'docNumber'
+      },
+      {
+        attributeName: 'docSeries',
+        description: UB.i18n('Серія'),
+        labelWidth: 60,
+        width: 180,
+        recordField: 'docSeries'
+      },
+      {
+        attributeName: 'dateIssue',
+        description: UB.i18n('Дата видачі'),
+        labelWidth: 100,
+        width: 220,
+        recordField: 'docIssuedDate'
+      }
+      ]
+    },
+    {
+      attributeName: 'docIssuer',
+      description: UB.i18n('Ким видана'),
+      recordField: 'docIssued',
+      margin: '5 15 5 15'
+    }
+    ]
+  },
+  {
+    xtype: 'fieldset',
+    title: UB.i18n('Наказ'),
+    margin: '0 17 5 10',
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    defaults: {
+      labelWidth: 100
+    },
+    items: [{
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+      items: [{
+        attributeName: 'orderNumber'
+      },
+      {
+        attributeName: 'orderDate'
+      }
+      ]
+    },
+    HR.controlService.getEduOrgCombo({
+      fieldLabel: UB.i18n('Видавник наказу'),
+      fieldID: 'orderAuthorID',
+      fieldName: 'orderAuthor',
+      whereList: {},
+      allowBlank: true
+    })
+    ]
+
+  }
+
+  ]
+}
+
+/* global AC HR _ */
+exports.formCode = {
+  initComponentDone,
+  initUBComponent,
+  initComponentStart,
+  doFormDataReady,
+  controlChanged
+}
+
+function initComponentDone () {
+  const me = this
+  AC.viewUtils.setAttr(me)
+  HR.orderManager.createShowImportAction(me)
+}
+
+function initUBComponent () {
+  const me = this
+  me.sender = me.sender || me.gridSender
+  HR.orderManager.setNextRecordMaker(me, [{
+    employeeID: value => me.record.get('employeeID')
+  }], 4)
+}
+
+function initComponentStart () {
+  const me = this
+
+  me.on('formDataReady', doFormDataReady, me)
+  me.on('controlChanged', controlChanged, me)
+}
+
+function doFormDataReady () {
+  const me = this
+  if (me.isNewInstance && me.defaultValues) {
+    _.forEach(me.defaultValues, (value, name) => {
+      me.record.set(name, value)
+    })
+  }
+
+  AC.viewUtils.setWhereListProperty(me.attr.employeeDocID, [
+    ['employeeID', '=', me.record.get('employeeID')]
+  ], null, [])
+
+  AC.viewUtils.setWhereListProperty(me.attr.dictSpecialtyID, [
+    ['specialityType', '=', '1', 'type1'],
+    ['specialityType', 'isNull', undefined, 'typeNull']
+  ], ['([type1] OR [typeNull])'], [])
+
+  if (me.record.get('employeeDocID')) {
+    ['dictDocKindID', 'docNumber', 'docSeries', 'docIssuer', 'dateIssue'].forEach(attrName => {
+      if (me.record.get(`employeeDocID.${me.attr[attrName].recordField}`)) {
+        me.attr[attrName].setReadOnly(true)
+      }
+    })
+  }
+  const grid = AC.gridUtils.getSenderGrid(me)
+  if (grid && grid.readOnly) {
+    AC.viewUtils.setFormReadOnly(me, true, [], true)
+    me.actions['fDelete'].hide()
+    me.setActionDisabled('fDelete', true)
+    me.down('docAttachment').setReadOnly(true)
+  }
+}
+
+function controlChanged (field, value) {
+  const me = this
+  if (me.formDataReady) {
+    switch (field.name) {
+      case 'employeeDocID':
+        ['dictDocKindID', 'docNumber', 'docSeries', 'docIssuer', 'dateIssue'].forEach(attrName => {
+          const attrValue = attrName === 'dateIssue'
+            ? AC.dateService.shiftDate(field.getFieldValue(me.attr[attrName].recordField))
+            : field.getFieldValue(me.attr[attrName].recordField)
+          me.attr[attrName][me.attr[attrName].setValueById ? 'setValueById' : 'setValue'](attrValue)
+          me.attr[attrName].setReadOnly(!!value && !!attrValue)
+        })
+        break
+    }
+  }
+}

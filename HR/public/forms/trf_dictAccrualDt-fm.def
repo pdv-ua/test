@@ -1,0 +1,498 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: [],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    // layout: { type: 'vbox', align: 'stretch' }
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  // isModal: true,
+  size: {
+    width: 900,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      // split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 130 },
+      items: [
+        { attributeName: 'dictAccrualID', hidden: true },
+        { attributeName: 'dateFromEmpty', fieldLabel: 'Початок', labelWidth: 150, width: 300 },
+        { attributeName: 'dateToEmpty', fieldLabel: 'Кiнець', labelWidth: 150, width: 300 },
+        {
+          attributeName: 'calcRuleID',
+          labelWidth: 150,
+          width: 840
+        },
+        { attributeName: 'rate', allowBlank: false, width: 300, labelWidth: 150 },
+        { attributeName: 'sumCalc', allowBlank: false, width: 300, labelWidth: 150 },
+        {
+          attributeName: 'maxRate',
+          width: 300,
+          labelWidth: 150
+        },
+        // {
+        //   attributeName: 'orgID',
+        //   disableContextMenu: true,
+        //   fieldList: ['ID', 'description'],
+        //   displayField: 'description',
+        //   width: 500,
+        //   labelWidth: 150,
+        //   orderList: {
+        //     orderBy: {
+        //       expression: '[description]'
+        //     }
+        //   }
+        // },
+        // {
+        //   attributeName: 'dictPositionID',
+        //   fieldList: ['ID', 'name'],
+        //   displayField: 'name',
+        //   width: 500,
+        //   labelWidth: 150,
+        //   orderList: {
+        //     orderBy: {
+        //       expression: '[name]'
+        //     }
+        //   }
+        // },
+        // {
+        //   attributeName: 'dictQualificationID',
+        //   fieldList: ['ID', 'name'],
+        //   displayField: 'name',
+        //   width: 500,
+        //   labelWidth: 150,
+        //   orderList: {
+        //     orderBy: {
+        //       expression: '[name]'
+        //     }
+        //   }
+        // },
+        // {
+        //   attributeName: 'dictSubjectID',
+        //   disableContextMenu: true,
+        //   fieldList: ['ID', 'description'],
+        //   displayField: 'description',
+        //   width: 500,
+        //   labelWidth: 150,
+        //   orderList: {
+        //     orderBy: {
+        //       expression: '[description]',
+        //       order: 'desc'
+        //     }
+        //   }
+        // },
+        // {
+        //   attributeName: 'dictPupilID',
+        //   disableContextMenu: true,
+        //   fieldList: ['ID', 'code', 'name'],
+        //   displayField: 'name',
+        //   width: 500,
+        //   labelWidth: 150,
+        //   orderList: {
+        //     orderBy: {
+        //       expression: '[code]'
+        //     }
+        //   }
+        // },
+        {
+          attributeName: 'isAutoAdd',
+          xtype: 'checkbox',
+          fieldLabel: UB.i18n('Додавати автоматично'),
+          hidden: false,
+          width: 200,
+          labelWidth: 160
+        },
+        {
+          attributeName: 'isAutoHours',
+          xtype: 'checkbox',
+          fieldLabel: UB.i18n('Заповнювати години автоматично'),
+          hidden: false,
+          width: 200,
+          labelWidth: 160
+        },
+        { attributeName: 'comment', flex: 1, labelWidth: 150 }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      margin: '8',
+      items: [
+        {
+          title: UB.i18n('Організації'),
+          layout: { type: 'border' },
+          items: [
+            {
+              margin: '8 0 0 0',
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludeOrg'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'organization',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'trf_dictAccrualCond',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'orgID.description',
+                    description: UB.i18n('Організація'),
+                    simpleFilter: true
+                  }
+                ],
+                whereList: {
+                  orgID: {
+                    expression: '[orgID.state]',
+                    condition: 'equal',
+                    value: 'ACTIVE'
+                  },
+                  conditionType: {
+                    expression: '[conditionType]',
+                    condition: 'equal',
+                    value: '1'
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['dictAccrualDtID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    scale: 'medium',
+                    cls: 'fill-action',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeGridValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeGridValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeGridValue(form, grid.ownerCt)
+                },
+                onDeterminateForm: function () {
+                  return {
+                    cmpInitConfig: {
+                      defaultValues: { conditionType: '1' }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Посади'),
+          layout: { type: 'border' },
+          items: [
+            {
+              margin: '8 0 0 0',
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludePosition'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'position',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'trf_dictAccrualCond',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'dictPositionID.description',
+                    description: UB.i18n('Посада'),
+                    simpleFilter: true
+                  }
+                ],
+                whereList: {
+                  conditionType: {
+                    expression: '[conditionType]',
+                    condition: 'equal',
+                    values: { 'conditionType': '3' }
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['dictAccrualDtID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    scale: 'medium',
+                    cls: 'fill-action',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeGridValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeGridValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeGridValue(form, grid.ownerCt)
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Кваліфікаційні категорії'),
+          layout: { type: 'border' },
+          items: [
+            {
+              margin: '8 0 0 0',
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludeQualification'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'qualification',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'trf_dictAccrualCond',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'dictQualificationID.description',
+                    description: UB.i18n('Кваліфікаційна категорія'),
+                    simpleFilter: true
+                  }
+                ],
+                whereList: {
+                  conditionType: {
+                    expression: '[conditionType]',
+                    condition: 'equal',
+                    values: { 'conditionType': '8' }
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['dictAccrualDtID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    scale: 'medium',
+                    cls: 'fill-action',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeGridValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeGridValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeGridValue(form, grid.ownerCt)
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Предмети'),
+          layout: { type: 'border' },
+          items: [
+            {
+              margin: '8 0 0 0',
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludeSubject'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'subject',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'trf_dictAccrualCond',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'dictSubjectID.description',
+                    description: UB.i18n('Предмет'),
+                    simpleFilter: true
+                  }
+                ],
+                whereList: {
+                  conditionType: {
+                    expression: '[conditionType]',
+                    condition: 'equal',
+                    values: { 'conditionType': '9' }
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['dictAccrualDtID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    scale: 'medium',
+                    cls: 'fill-action',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeGridValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeGridValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeGridValue(form, grid.ownerCt)
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Категорії учнів'),
+          layout: { type: 'border' },
+          items: [
+            {
+              margin: '8 0 0 0',
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludePupil'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'pupil',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'trf_dictAccrualCond',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'dictPupilID.description',
+                    description: UB.i18n('Категорія учнів'),
+                    simpleFilter: true
+                  }
+                ],
+                whereList: {
+                  conditionType: {
+                    expression: '[conditionType]',
+                    condition: 'equal',
+                    values: { 'conditionType': '10' }
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['dictAccrualDtID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    scale: 'medium',
+                    cls: 'fill-action',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeGridValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeGridValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeGridValue(form, grid.ownerCt)
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

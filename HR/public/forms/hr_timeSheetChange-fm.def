@@ -1,0 +1,332 @@
+/* global AC UB */
+
+exports.formDef = {
+  requiredFields: ['orderState', 'description', 'organizationID', 'hasPosted', 'hasProject'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'north',
+      split: true,
+      autoScroll: true,
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              layout: { type: 'vbox' },
+              width: 370,
+              items: [
+                {
+                  attributeName: 'periodID',
+                  hidden: true
+                },
+                {
+                  attributeName: 'dateFrom',
+                  labelWidth: 160
+                },
+                {
+                  attributeName: 'orderNumber',
+                  labelWidth: 160,
+                  readOnly: true,
+                  allowBlank: true
+                }
+
+              ]
+            },
+            {
+              layout: { type: 'vbox' },
+              width: 350,
+              items: [
+                {
+                  attributeName: 'dateToEmpty'
+                },
+                { attributeName: 'orderDate' }
+              ]
+            }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'typeSheetChange',
+              width: 600,
+              labelWidth: 160
+            }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'method',
+              width: 600,
+              labelWidth: 160
+            }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'hoursMinus',
+              width: 600,
+              labelWidth: 160,
+              decimalPrecision: 2,
+              hidden: true
+            }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'comment',
+              width: 600,
+              labelWidth: 160
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      width: '100%',
+      items: [
+        {
+          xtype: 'acGrid',
+          name: 'timeSheetChangeDay',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_timeSheetChange_timeSheetChangeDay'),
+          title: UB.i18n('Розклад роботи'),
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          cellEditing: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: false,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          hideActions: ['addNew', 'del', 'addNewByCurrent'],
+          summary: { paySum: 'sum' },
+          summaryDataOnClient: true,
+          ignoreAttr: ['posName', 'depName'],
+          onBeforeEdit: function (ctrl, context) {
+            const me = context.grid.up('form')
+            switch (context.field) {
+              case 'hoursWork':
+                context.column.field.setMinValue(0)
+                break
+              case 'numDay':
+                if (context.value > 1) return false
+                break
+            }
+
+            me.setIsDirty(true)
+          },
+          edit: function (control, context) {
+            if (!context.record.get('hoursWork')) {
+              context.record.set('hoursWork', 0)
+            }
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null
+            }
+            if (context.field === 'numDay') {
+              const me = context.grid.up('form')
+              if (context.value) {
+                me.fillTimeCostDay()
+              } else {
+                const newRecord = {
+                  numDay: 0,
+                  'dictTimeCostID.nameSmall': context.record.get('dictTimeCostID.nameSmall'),
+                  dictTimeCostID: context.record.get('dictTimeCostID'),
+                  hoursWork: context.record.get('hoursWork')
+                }
+                me.clearTimeCostDay(newRecord)
+              }
+            }
+            return true
+          },
+          fields: [
+            { name: 'ID' },
+            { name: 'mi_modifyDate' },
+            {
+              name: 'numDay',
+              width: 150,
+              columnConfig: {
+                text: UB.i18n('Номер дня'),
+                editor: {
+                  dataType: 'Int',
+                  minValue: 0
+                }
+              }
+            },
+            {
+              name: 'dictTimeCostID.nameSmall',
+              columnConfig: {
+                text: UB.i18n('Витрата робочого часу'),
+                flex: 1,
+                editor: {
+                  dataType: 'Entity',
+                  xtype: 'accombobox',
+                  associatedEntity: 'hr_dictTimeCost',
+                  disableClearSelection: true,
+                  hideEntityItemInContext: true,
+                  disableContextMenu: true,
+                  storeAttributeValueField: 'dictTimeCostID',
+                  allowBlank: false,
+                  fieldList: ['ID', 'nameSmall', 'timeCostType'],
+                  whereList: {
+                    timeCostType: {
+                      expression: '[timeCostType]',
+                      condition: '!=',
+                      value: 'OTHER'
+                    }
+                  }
+                }
+              }
+            },
+            { name: 'dictTimeCostID' },
+            {
+              name: 'hoursWork',
+              columnConfig: {
+                text: UB.i18n('Годин роботи'),
+                width: 150,
+                floatFormat: 2,
+                align: 'right',
+                editor: {
+                  dataType: 'Currency',
+                  decimalPrecision: 2,
+                  minValue: 0,
+                  maxValue: 24,
+                  allowExponential: false,
+                  maxText: UB.i18n('Кількість годин не може бути більшою ніж {0}'),
+                  allowBlank: false
+                }
+              }
+            }
+          ]
+        },
+        {
+          xtype: 'acGrid',
+          name: 'timeSheetChangeEmp',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_timeSheetChange_timeSheetChangeEmp'),
+          title: UB.i18n('Працівники'),
+          layout: 'fit',
+          flex: 1,
+          autoScroll: true,
+          // rowEditing: true,
+          hideActions: ['addNewByCurrent'],
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          disablePaging: true,
+          enableMultifilter: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          formCode: 'hr_timeSheetChangeEmpEdit',
+          entity: 'hr_timeSheetChangeEmp',
+          onSaveEditData: function (me, grid, record, formData) {
+            me.saveEmpData(grid, record, formData)
+          },
+          /*
+          onBeforeEdit: (control, context) => {
+            const me = context.grid.up('form')
+            AC.viewUtils.setFilterValue(context.column.field, { orgID: me.record.get('organizationID') })
+            context.column.field.on('change', (ctrl) => {
+              context.record.set('employeeNumberID.posName', ctrl.getFieldValue('posName'))
+              context.record.set('employeeNumberID.depName', ctrl.getFieldValue('depName'))
+            })
+            me.setIsDirty(true)
+          },
+          */
+          getRowClass: function (row) {
+            return AC.gridUtils.getOrderRowClass(row.get('orderState'))
+          },
+          fields: [
+            { name: 'ID' },
+            { name: 'mi_modifyDate' },
+            {
+              name: 'employeeNumberID.description',
+              columnConfig: {
+                text: UB.i18n('Працівник'),
+                flex: 1,
+              }
+            },
+            {
+              name: 'employeeNumberID.posName',
+              columnConfig: {
+                text: UB.i18n('Посада'),
+                flex: 1
+              }
+            },
+            {
+              name: 'employeeNumberID.depName',
+              columnConfig: {
+                text: UB.i18n('Підрозділ'),
+                flex: 1
+              }
+            },
+            { name: 'employeeNumberID' },
+            { name: 'orderState' },
+            { name: 'flagsFix' },
+            {
+              name: 'dateToEmpty',
+              columnConfig: {
+                text: UB.i18n('Діє по'),
+                dataType: 'Date',
+                dateFormat: 'd.m.Y',
+                width: 150,
+                align: 'center',
+                sortable: true,
+                sortBy: 'Date',
+                filterBy: 'date'
+              }
+            }
+          ],
+          customToolBarActions: [
+            {
+              xtype: 'button',
+              name: 'addBtn',
+              iconCls: 'u-icon-list-success',
+              cls: 'fill-action',
+              scale: 'medium',
+              tooltip: UB.i18n('Додати списком'),
+              handler: function (btn) {
+                const me = btn.up('form')
+                me.setEmployeeNumbers(me)
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1000 @@
+/* global Ext $App AC _ UB appHR */
+
+exports.formDef = {
+  requiredFields: ['description', 'orderRegistryID', 'orderRegistryID.organizationID', 'orderRegistryID.periodID',
+    'orderRegistryID.periodID.dateFrom', 'flagsRec', 'flagsFix', 'orderState', 'dictIllnessReasonID.code',
+    'employeeNumberID.dateFrom', 'employeeNumberID.dateTo', 'employeeSickLimitID', 'dayFSSU', 'empOrderSicknessID',
+    'empOrderID.description', 'empOrderID', 'parentAccrualID', 'parentSicknessID', 'dictIllnessReasonID.payElFSSUID.methodID.code',
+    'employeePositionID.workPlace', 'dictIllnessReasonID.payElFSSUID.includeSecondJobs', 'parentSicknessID.illnessKind'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'empNumAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'rlAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'subEmpAction'
+        },
+        {
+          orderId: 7,
+          actionId: 'calcSickness'
+        },
+        {
+          orderId: 8,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 9,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 10,
+          actionId: 'printDocumentAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 130 },
+          flex: 2,
+          items: [
+            { attributeName: 'empOrderID', hidden: true },
+            { attributeName: 'employeeID', hidden: true },
+            { attributeName: 'employeeNumberID', hidden: true },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 130 },
+              items: [
+                { attributeName: 'illnessKind', flex: 2, labelWidth: 130 },
+                {
+                  attributeName: 'seria',
+                  minWidth: 160,
+                  labelWidth: 50,
+                  flex: 1,
+                  maskRe: AC.validators.maskRe('charset11'),
+                  maxLength: 11,
+                  vType: 'charset11'
+                },
+                {
+                  attributeName: 'orderNumber',
+                  readOnly: false,
+                  minWidth: 100,
+                  labelWidth: 25,
+                  flex: 1
+                },
+                {
+                  attributeName: 'orderDate',
+                  labelWidth: 90,
+                  flex: 1
+                }
+              ]
+            },
+            {
+              fieldLabel: UB.i18n('Документ-підстава'),
+              xtype: 'textfield',
+              name: 'orderDescription',
+              fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+              flex: 1,
+              hidden: true,
+              readOnly: true
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  attributeName: 'employeePositionID',
+                  fieldList: ['ID', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'dateFrom', 'dateTo',
+                    'employeeNumberID.dateFrom', 'employeeNumberID.dateTo', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+                  orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                  addWorkPlace: true,
+                  addDateTo: true,
+                  labelWidth: 130,
+                  flex: 1,
+                  xtype: 'empPositionCombobox'
+                },
+                {
+                  attributeName: 'workPlaceOnly',
+                  labelWidth: 150,
+                  width: 170
+                },
+                {
+                  name: 'dismissed',
+                  xtype: 'checkbox',
+                  labelWidth: 100,
+                  fieldLabel: UB.i18n('звільнені'),
+                  listeners: {
+                    change: (ctrl, value) => {
+                      const me = ctrl.up('form')
+                      me.record.set('employeePositionID')
+                      me.attr.employeePositionID.setValue()
+                      me.record.set('employeeID')
+                      me.record.set('employeeNumberID')
+                      me.record.set('employeeFamilyID')
+                      me.record.set('parentAccrualID', null)
+                      me.record.set('parentSicknessID', null)
+                      me.attr.parentSicknessID.setValue()
+                      me.record.set('standingYearMonth')
+                      me.record.set('standingAllYear')
+                      me.record.set('standingAllInYear')
+                      me.record.set('percentWork')
+                      me.attr.dateFrom.setValue()
+                      me.attr.dateTo.setValue()
+                      me.attr.dateFirst.setValue()
+                      me.attr.dateFrom.setMaxValue()
+                      me.attr.dateTo.setMinValue()
+                      me.attr.docRegSicknessDt.store.removeAll()
+                      me.setEmployeeFilter(value)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              xtype: 'ubcombobox',
+              name: 'parentSicknessID',
+              valueField: 'ID',
+              fieldLabel: UB.i18n('Попередній лист'),
+              ubRequest: {
+                entity: 'hr_docRegSickness',
+                method: 'getParentSickness',
+                fieldList: ['ID', 'description', 'employeePositionID', 'dateFrom', 'employeeNumberID', 'dateTo',
+                  'dictIllnessReasonID', 'employeeFamilyID', 'avgCalcType', 'standingAll', 'standingYearMonth', 'rate',
+                  'dateFromAvg', 'dateToAvg', 'avgSum', 'calcSum', 'source', 'isOnlyFOP', 'illnessKind'],
+                orderList: {
+                  orderBy: { expression: 'dateFrom', order: 'desc' }
+                }
+              },
+              listeners: {
+                change: ctrl => {
+                  const me = ctrl.up('form')
+                  me.setParentData(ctrl)
+                  me.skipRecalcByParent = false
+                },
+                afterrender: ctrl => {
+                  ctrl.onShowContextMenu = function () {
+                    let ctrl = this
+                    const me = ctrl.up('form')
+                    const parentSicknessID = me.record.get('parentSicknessID')
+                    let menu = ctrl.contextMenu
+                    let editItem = menu.down('[itemID=editItem]')
+                    editItem.disabled = !parentSicknessID
+                    if (editItem.text === UB.i18n('Попередній лист')) {
+                      return
+                    }
+                    editItem.iconCls = 'u-icon-file-export'
+                    editItem.text = UB.i18n('Попередній лист')
+                    editItem.handler = function () {
+                      const ctrl = this
+                      const me = ctrl.up('form')
+                      const parentSicknessID = me.record.get('parentSicknessID')
+                      if (parentSicknessID) {
+                        $App.doCommand({
+                          cmdType: 'showForm',
+                          formCode: 'hr_docRegSickness',
+                          entity: 'hr_docRegSickness',
+                          instanceID: parentSicknessID || 0,
+                          tabId: 'hr_docRegSickness' + (parentSicknessID || 0),
+                          target: $App.getViewport().centralPanel
+                        })
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'dateFrom',
+                  enableKeyEvents: true
+                },
+                {
+                  attributeName: 'dateTo',
+                  enableKeyEvents: true,
+                  labelWidth: 105
+                },
+                {
+                  attributeName: 'dateFirst',
+                  labelWidth: 180
+                }
+              ]
+            },
+            {
+              attributeName: 'isOnlyFOP',
+              labelWidth: 250
+            },
+            {
+              attributeName: 'dictIllnessReasonID',
+              fieldList: ['ID', 'name', 'code', 'payElFSSUID', 'payElFSSUID.methodID.code', 'illnessKind', 'payElFSSUID.includeSecondJobs', 'dateFrom', 'dateTo', 'maxDayFOP'],
+              orderList: {
+                orderBy: { expression: 'orderN', order: 'asc' }
+              }
+            },
+            {
+              attributeName: 'employeeFamilyID',
+              fieldList: ['ID', 'description', 'employeeID']
+            }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          defaults: { labelWidth: 140 },
+          items: [
+            {
+              attributeName: 'calendarDayCount',
+              fieldLabel: UB.i18n('Календарних днів'),
+              readOnly: true
+            },
+            {
+              attributeName: 'notPay'
+            },
+            {
+              layout: { type: 'hbox', align: 'middle' },
+              items: [
+                {
+                  attributeName: 'standingYearMonth',
+                  fieldLabel: UB.i18n('Страховий стаж за попередній рік (місяців)'),
+                  flagsFix: 1 << 20,
+                  enableKeyEvents: true,
+                  labelWidth: 140,
+                  flex: 1
+                },
+                {
+                  xtype: 'label',
+                  name: 'workLess6monthsLabel',
+                  flex: 0.7,
+                  style: {
+                    color: 'red'
+                  }
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox', align: 'middle' },
+              items: [
+                {
+                  attributeName: 'standingAll',
+                  fieldLabel: UB.i18n('Страховий стаж всього (місяців)'),
+                  flagsFix: 1 << 21,
+                  enableKeyEvents: true,
+                  labelWidth: 140,
+                  flex: 1
+                },
+                { attributeName: 'standingAllInYear', hidden: true },
+                {
+                  xtype: 'label',
+                  name: 'standingAllInYearLabel',
+                  cls: 'x-form-item-label',
+                  flex: 0.7
+                }
+              ]
+            },
+            {
+              attributeName: 'dayCount',
+              fieldLabel: UB.i18n('Днів до сплати'),
+              readOnly: true
+            },
+            {
+              xtype: 'numberfield',
+              name: 'rateLabel',
+              fieldLabel: UB.i18n('Відсоток'),
+              enforceMaxLength: true,
+              hideTrigger: true,
+              valueToRaw: UB.core.UBUtil.formatAsCurrency,
+              decimalPrecision: 2,
+              readOnly: true
+            },
+            {
+              attributeName: 'paySum',
+              readOnly: true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          xtype: 'acGrid',
+          name: 'orderRegistryDt',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_docRegSickness_orderRegistryDt'),
+          title: UB.i18n('Розрахунок по місяцям'),
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          cellEditing: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: false,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          summary: { paySum: 'sum', days: 'sum', calendarDays: 'sum' },
+          summaryDataOnClient: true,
+          ignoreAttr: ['posName', 'depName'],
+          ignoreAttrNewByCurrent: ['posName', 'depName', 'employeeNumberID.description', 'employeeNumberID'],
+          includeContextMenuReadOnly: [],
+          hideActions: ['addNew', 'del', 'addNewByCurrent'],
+          onBeforeEdit: (control, context) => {
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null
+            }
+            if (context.record.get('periodCalcID')) {
+              return false
+            }
+          },
+          edit: (control, context) => {
+            const me = context.grid.up('form')
+            me.onGridEdit(me, 'orderRegistryDt', context, control)
+            me.setIsDirty(true)
+          },
+          customPopupMenuItems: [
+            {
+              text: UB.i18n('Розрахунковий лист'),
+              iconCls: 'el-icon-tickets',
+              ubID: 'itemShowRl',
+              handler: function (context) {
+                const grid = context.up('').grid
+                const me = grid.up('form')
+                const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                if (record) {
+                  appHR.showRl(me.attr.employeeNumberID.getValue(), record.get('periodSalaryID'))
+                }
+              }
+            },
+            {
+              text: UB.i18n('Аналітика'),
+              iconCls: 'el-icon-notebook-2',
+              name: 'dimension',
+              cls: 'blue-action',
+              handler: (context) => {
+                const me = context.up('').grid.up('form')
+                let record = context.up('').record || AC.gridUtils.getCurrentRecord(me.attr.orderRegistryDt)
+                me.getDimension(me, record)
+              }
+            }
+          ],
+          fields: [
+            { name: 'ID' },
+            { name: 'mi_modifyDate' },
+            { name: 'orderRegistryID' },
+            { name: 'orderID' },
+            { name: 'employeeNumberID' },
+            { name: 'payElID' },
+            { name: 'periodCalcID' },
+            { name: 'periodSalaryID' },
+            { name: 'periodCalc' },
+            { name: 'periodSalary' },
+            { name: 'mask' },
+            { name: 'maskAdd' },
+            { name: 'rate' },
+            { name: 'flagsFix' },
+            { name: 'flagsRec' },
+            { name: 'baseSum' },
+            { name: 'avgCalcType' },
+            { name: 'dateFromAvg' },
+            { name: 'dateToAvg' },
+            { name: 'koef' },
+            { name: 'linkToParentID' },
+            { name: 'accrualDt' },
+            { name: 'orderNumber' },
+            {
+              name: 'dateFrom',
+              columnConfig: {
+                text: UB.i18n('Дата початку'),
+                flex: 1,
+                sortable: false,
+                dateFormat: 'd',
+                dataType: 'Date'
+              }
+            },
+            {
+              name: 'dateTo',
+              columnConfig: {
+                text: UB.i18n('Дата закінчення'),
+                sortable: false,
+                flex: 1,
+                dateFormat: 'd',
+                dataType: 'Date'
+              }
+            },
+            {
+              name: 'payElID.description',
+              columnConfig: {
+                text: UB.i18n('Вид оплати'),
+                sortable: false,
+                flex: 1
+              }
+            },
+            {
+              name: 'periodSalaryID.name',
+              columnConfig: {
+                text: UB.i18n('Період нарахування'),
+                sortable: false,
+                flex: 1
+              }
+            },
+            {
+              name: 'periodCalcID.name',
+              columnConfig: {
+                text: UB.i18n('Період розрахунку'),
+                sortable: false,
+                flex: 1
+              }
+            },
+            {
+              name: 'calendarDays',
+              columnConfig: {
+                text: UB.i18n('Календарних днів'),
+                sortable: false,
+                flex: 1,
+                dataType: 'Int'
+              }
+            },
+            {
+              name: 'days',
+              columnConfig: {
+                text: UB.i18n('Днів до сплати'),
+                flex: 1,
+                sortable: false,
+                align: 'right',
+                dataType: 'Int',
+                editor: {
+                  dataType: 'Int',
+                  minValue: 0,
+                  flagsFix: 1 << 6
+                }
+              }
+            },
+            {
+              name: 'paySum',
+              columnConfig: {
+                text: UB.i18n('Сума'),
+                flex: 1,
+                sortable: false,
+                align: 'right',
+                floatFormat: 2,
+                editor: {
+                  dataType: 'Currency',
+                  decimalPrecision: 2,
+                  minValue: 0,
+                  flagsFix: 1 << 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Середній заробіток'),
+          layout: { type: 'border' },
+          autoScroll: true,
+          items: [
+            {
+              xtype: 'panel',
+              region: 'west',
+              split: true,
+              autoScroll: true,
+              width: 400,
+              margin: '0 5 0 0',
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'avgCalcType',
+                  width: 500,
+                  enableKeyEvents: true
+                },
+                {
+                  attributeName: 'dateFromAvg',
+                  flagsFix: 1 << 10,
+                  enableKeyEvents: true
+                },
+                {
+                  attributeName: 'dateToAvg',
+                  flagsFix: 1 << 11,
+                  enableKeyEvents: true
+                },
+                {
+                  attributeName: 'avgSum',
+                  flagsFix: 1 << 0,
+                  enableKeyEvents: true,
+                  dataType: 'Currency',
+                  decimalPrecision: 2
+                },
+                {
+                  attributeName: 'minSalary',
+                  readOnly: true
+                },
+                {
+                  attributeName: 'maxECB',
+                  readOnly: true
+                },
+                {
+                  attributeName: 'maxECBDay',
+                  readOnly: true
+                },
+                {
+                  attributeName: 'calcSum',
+                  flagsFix: 1 << 22,
+                  enableKeyEvents: true,
+                  dataType: 'Currency',
+                  decimalPrecision: 2
+                },
+                {
+                  attributeName: 'rate',
+                  flagsFix: 1 << 9,
+                  enableKeyEvents: true
+                }
+              ]
+            },
+            {
+              layout: { type: 'border' },
+              region: 'center',
+              items: [
+                {
+                  region: 'north',
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      xtype: 'button',
+                      name: 'avgDimension',
+                      iconCls: 'u-icon-layers',
+                      cls: 'blue-action',
+                      tooltip: UB.i18n('Коригування сум за аналітиками'),
+                      handler: function (btn) {
+                        const me = btn.up('form')
+                        appHR.setAvgDimensionEdit(me, 'accrualAvg', 143553, 'calcSickness')
+                      }
+                    },
+                    {
+                      xtype: 'button',
+                      name: 'fillBtn',
+                      text: UB.i18n('Додати суми з попереднього документу'),
+                      tooltip: UB.i18n('Додати суми з попереднього документу'),
+                      iconCls: 'fas fa-angle-double-down',
+                      cls: 'fill-action',
+                      padding: '10px 0px 10px 10px',
+                      handler: function (btn) {
+                        const me = btn.up('form')
+                        me.setAvgDataFromPriorDocument(me)
+                      }
+                    }
+                  ]
+                },
+                {
+                  xtype: 'acGrid',
+                  title: '',
+                  name: 'accrualAvg',
+                  stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_docRegSickness_accrualAvg'),
+                  stateHiddenColumn: false,
+                  region: 'center',
+                  flex: 1,
+                  autoScroll: true,
+                  cellEditing: true,
+                  notWriteChanges: true,
+                  storeType: 'local',
+                  showToolBar: false,
+                  disablePaging: true,
+                  loadMaskMessage: UB.i18n('Завантаження даних...'),
+                  summary: { opSum: 'sum', opDays: 'sum', baseSum: 'sum' },
+                  summaryDataOnClient: true,
+                  ignoreAttr: ['posName', 'depName'],
+                  hideActions: ['addNew', 'del', 'addNewByCurrent'],
+                  includeContextMenuReadOnly: [],
+                  onBeforeEdit: (control, context) => {
+                    const me = context.grid.up('form')
+                    if (me.attr.parentSicknessID.getValue()) {
+                      return false
+                    }
+                    if (context.record.phantom && context.record.dirtySave !== null) {
+                      context.record.dirtySave = null
+                    }
+                    context.column.field.prevValue = context.value
+                  },
+                  edit: (control, context) => {
+                    const me = context.grid.up('form')
+                    me.onGridEdit(me, 'orderRegistryDt', context, control)
+                    me.setIsDirty(true)
+                  },
+                  fields: [
+                    { name: 'ID' },
+                    { name: 'dateFrom' },
+                    { name: 'dateTo' },
+                    { name: 'orderID' },
+                    { name: 'periodID' },
+                    { name: 'flagsFix' },
+                    { name: 'accrualDt' },
+                    {
+                      name: 'periodID.name',
+                      columnConfig: {
+                        text: UB.i18n('Місяць'),
+                        sortable: false,
+                        flex: 1
+                      }
+                    },
+                    {
+                      name: 'opDays',
+                      columnConfig: {
+                        text: UB.i18n('Днів'),
+                        sortable: false,
+                        flex: 1,
+                        align: 'right',
+                        floatFormat: 2,
+                        renderer: (value, meta, record) => {
+                          if (record.get('flagsFix') & 1 << 6) {
+                            meta.tdCls = 'grd-color-blue'
+                          }
+                          return value
+                        },
+                        editor: {
+                          dataType: 'Currency',
+                          decimalPrecision: 2,
+                          minValue: 0,
+                          flagsFix: 1 << 6
+                        }
+                      }
+                    },
+                    {
+                      name: 'baseSum',
+                      columnConfig: {
+                        text: UB.i18n('Заробіток'),
+                        sortable: false,
+                        flex: 1,
+                        align: 'right',
+                        floatFormat: 2,
+                        renderer: (value, meta, record) => {
+                          if (record.get('flagsFix') & 1) {
+                            meta.tdCls = 'grd-color-blue'
+                          }
+                          if (_.isNumber(value)) {
+                            return Ext.util.Format.currency(value, '', 2).replace(/ /g, '')
+                          } else return value
+                        },
+                        editor: {
+                          dataType: 'Currency',
+                          decimalPrecision: 2,
+                          minValue: 0,
+                          flagsFix: 1 << 0
+                        }
+                      }
+                    },
+                    {
+                      name: 'opSum',
+                      columnConfig: {
+                        text: UB.i18n('Сума до розрахунку'),
+                        sortable: false,
+                        flex: 1,
+                        align: 'right',
+                        floatFormat: 2
+                      }
+                    }
+                  ],
+                  customPopupMenuItems: [
+                    {
+                      text: UB.i18n('Розрахунковий лист'),
+                      iconCls: 'el-icon-tickets',
+                      ubID: 'itemShowRl',
+                      handler: function (context) {
+                        const grid = context.up('').grid
+                        const me = grid.up('form')
+                        const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                        if (record) {
+                          appHR.showRl(me.attr.employeeNumberID.getValue(), record.get('periodID'))
+                        }
+                      }
+                    },
+                    {
+                      text: UB.i18n('Аналітика'),
+                      iconCls: 'el-icon-notebook-2',
+                      name: 'dimension',
+                      cls: 'blue-action',
+                      handler: (context) => {
+                        const grid = context.up('').grid
+                        const me = grid.up('form')
+                        appHR.showtAvgDimensinEdit(me, context.up('').record || AC.gridUtils.getCurrentRecord(grid), 12481, 'calcSickness')
+                      }
+                    },
+                    {
+                      text: UB.i18n('Коригування сум за аналітиками'),
+                      name: 'avgDimensionRow',
+                      iconCls: 'u-icon-layers',
+                      cls: 'blue-action',
+                      handler: function (context) {
+                        const grid = context.up('').grid
+                        const me = grid.up('form')
+                        appHR.setAvgDimensionRowEdit(me, context.up('').record || AC.gridUtils.getCurrentRecord(grid), 143553, 'calcSickness')
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додаткова інформація'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: {
+            labelWidth: 300
+          },
+          items: [
+            {
+              attributeName: 'isReg'
+            },
+            {
+              attributeName: 'sickNotes'
+            },
+            { layout: { type: 'hbox' }, style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px' },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { xtype: 'label', text: UB.i18n('Перевод тимчасово на легшу роботу'), width: 260, cls: 'x-form-item-label', margin: '8 0 5 15' },
+                {
+                  attributeName: 'easyDateFrom',
+                  labelWidth: 30
+                },
+                {
+                  attributeName: 'easyDateTo',
+                  labelWidth: 30
+                }
+              ]
+            },
+            { layout: { type: 'hbox' }, style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px' },
+            {
+              attributeName: 'msekDateFrom'
+            },
+            {
+              attributeName: 'msekDateTo'
+            },
+            {
+              attributeName: 'msekResult'
+            },
+            { layout: { type: 'hbox' }, style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px' },
+            {
+              xtype: 'label',
+              text: UB.i18n('Акт про нещасний випадок на виробництві, акт розслідування нещасного випадку на виробництві або професійного захворювання'),
+              cls: 'x-form-item-label',
+              margin: '5 0 5 15'
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { xtype: 'label', text: '', width: 270 },
+                {
+                  attributeName: 'actDate',
+                  fieldLabel: UB.i18n('від'),
+                  labelWidth: 30
+                },
+                {
+                  attributeName: 'actNumber',
+                  fieldLabel: '№',
+                  labelWidth: 30
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Звільнення від роботи'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'docRegSicknessDt',
+              stateful: true,
+              stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_docRegSickness_docRegSicknessDt'),
+              rowEditing: true,
+              notWriteChanges: true,
+              autoScroll: true,
+              forceDataLoad: true,
+              disableSearchBar: true,
+              hidePagingBar: true,
+              sortableColumns: false,
+              enableColumnHide: false,
+              pageSize: 10000,
+              hideActions: [],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_docRegSicknessDt',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'dateFrom',
+                    columnConfig: { width: 130 },
+                    editor: { width: 110 }
+                  },
+                  {
+                    name: 'dateTo',
+                    columnConfig: { width: 130 },
+                    editor: { width: 110 }
+                  },
+                  {
+                    name: 'illnessRegime',
+                    columnConfig: { flex: 1 }
+                  }
+                ],
+                orderList: { dateFrom: { expression: 'dateFrom', order: 'ASC' } }
+              },
+              masterFields: ['ID'],
+              detailFields: ['docRegSicknessID'],
+              onValidateEdit: (editor, context) => {
+                const sicknessFrom = AC.dateService.truncTimeToUtcNull(editor.editor.up('form').attr.dateFrom.getValue())
+                const sicknessTo = AC.dateService.truncTimeToUtcNull(editor.editor.up('form').attr.dateTo.getValue())
+                const newPeriodFrom = AC.dateService.truncTimeToUtcNull(editor.editor.form.findField('dateFrom').getValue())
+                const newPeriodTo = AC.dateService.truncTimeToUtcNull(editor.editor.form.findField('dateTo').getValue())
+                if (newPeriodFrom < sicknessFrom) {
+                  const errorMessage = UB.i18n('Не може бути менше ніж "дата початку"')
+                  editor.editor.form.findField('dateFrom').markInvalid(errorMessage)
+                  $App.dialogError(errorMessage)
+                  editor.editor.form.findField('dateFrom').setValue(sicknessFrom)
+                  return false
+                }
+                if (newPeriodTo > sicknessTo) {
+                  const errorMessage = UB.i18n('Не може бути більше ніж "дата закінчення"')
+                  editor.editor.form.findField('dateTo').markInvalid(errorMessage)
+                  $App.dialogError(errorMessage)
+                  editor.editor.form.findField('dateTo').setValue(sicknessTo)
+                }
+
+                const store = context.grid.getStore()
+
+                if (store.getCount() > 0) {
+                  let hasError = false
+                  store.each(record => {
+                    if ((context.record.data.ID && context.record.data.ID === record.get('ID')) || context.record.internalId === record.internalId) return
+                    const recordDateFrom = AC.dateService.truncTimeToUtcNull(record.get('dateFrom'))
+                    const recordDateTo = AC.dateService.truncTimeToUtcNull(record.get('dateTo'))
+                    if (!(newPeriodTo < recordDateFrom || newPeriodFrom > recordDateTo)) {
+                      hasError = true
+                    }
+                  })
+                  if (hasError) {
+                    const errorMessage = UB.i18n(`Періоди перетинаються. Виправіть перед збереженням`)
+                    $App.dialogError(errorMessage)
+                    return false
+                  }
+                }
+                return true
+              },
+              onBeforeEdit: (control, context) => {
+                const me = context.grid.up('form')
+                me.attr['docRegSicknessDt.dateFrom'].field.setMinValue(me.attr.dateFrom.getValue())
+                me.attr['docRegSicknessDt.dateFrom'].field.setMaxValue(me.attr.dateTo.getValue())
+                me.attr['docRegSicknessDt.dateTo'].field.setMinValue(me.attr.dateFrom.getValue())
+                me.attr['docRegSicknessDt.dateTo'].field.setMaxValue(me.attr.dateTo.getValue())
+                me.setIsDirty(true)
+              },
+              onAddNewByCurrent: function () {
+                const me = this
+                const selection = me.getSelectionModel().getSelection()
+                if (selection.length < 1) {
+                  $App.dialogInfo('selectRowFirst')
+                  return
+                }
+                if (!me.rowEditing) {
+                  const eOpt = {
+                    addByCurrent: true,
+                    instanceID: selection[0].get('ID')
+                  }
+                  me.openForm(eOpt)
+                } else {
+                  if (!me.editingPlugin.editing) {
+                    const selectedData = { ...selection[0].getData() }
+                    selectedData.dateFrom = AC.dateService.addDays(selectedData.dateTo, 1)
+                    selectedData.dateTo = AC.dateService.addDays(selectedData.dateTo, 4)
+                    const parentForm = me.up('basepanel')
+                    if (parentForm && (parentForm.isDirty() || parentForm.isNewInstance) && !me.notWriteChanges) {
+                      parentForm.saveForm().then(function (result) {
+                        if (result !== -1) {
+                          me.addNewRecord(selectedData, true)
+                        }
+                      })
+                    } else {
+                      me.addNewRecord(selectedData, true)
+                    }
+                  } else {
+                    $App.dialogInfo('rowEditing')
+                  }
+                }
+              },
+              listeners: {
+                changeData: function (grid) {
+                  const me = grid.up('form')
+                  me.recalSickness()
+                }
+              }
+            }
+
+          ]
+        },
+        {
+          title: UB.i18n(`Пов'язані документи`),
+          layout: { type: 'hbox' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: {
+                labelWidth: 150
+              },
+              flex: 1,
+              items: [
+                {
+                  fieldLabel: UB.i18n('Продовження листа'),
+                  xtype: 'textfield',
+                  name: 'childOrderDescription',
+                  fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+                  readOnly: true
+                },
+                {
+                  fieldLabel: UB.i18n('Заява СС'),
+                  xtype: 'textfield',
+                  name: 'sicknessRequisDescription',
+                  fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+                  readOnly: true
+                },
+                {
+                  fieldLabel: UB.i18n('Платіжна відомість'),
+                  xtype: 'textfield',
+                  name: 'payRollDescription',
+                  fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+                  readOnly: true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додатки'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'docAttachment',
+              entity: 'hr_orderAttachment',
+              detailFields: 'documentID',
+              masterFields: 'ID',
+              showOriginal: true,
+              minHeight: 55,
+              maxHeight: 140,
+              height: 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+/* global Ext UB $App _ AC appAC */
+exports.formDef = 'HR.empOrderCustom'
+
+Ext.define('HR.empOrderCustom', {
+  extend: 'Ext.Panel',
+  layout: { type: 'vbox', align: 'stretch' },
+  initComponent: function () {
+    const me = this
+    me.reportControl = Ext.create('Ext.Component', {
+      flex: 1,
+      autoEl: { tag: 'iframe' }
+    })
+    me.items = me.reportControl
+    me.on('afterrender', () => me.showDesktop())
+    me.callParent(arguments)
+  },
+  showDesktop: async function (allOrders = false) {
+    const me = this
+    const shortcutDataRaw = await me.prepareShortcut(allOrders)
+    const shortcutData = []
+    for (let col = 0; col < shortcutDataRaw.length; col++) {
+      shortcutData[col] = []
+      for (let key in shortcutDataRaw[col]) {
+        if (shortcutDataRaw[col][key].isFolder) {
+          shortcutData[col].push({ ID: '', caption: '', isFolder: false, code: '' })
+        }
+        shortcutData[col].push(shortcutDataRaw[col][key])
+      }
+    }
+    let shTemplate = ''
+    me.showAllOrders = me.showAllOrders.bind(me)
+
+    const rowsCount = shortcutData.reduce((acc, cur) => Math.max(acc, cur.length), 0)
+    for (let row = 0; row < rowsCount; row++) {
+      shTemplate += '<tr>'
+      for (let col = 0; col < shortcutData.length; col++) {
+        const cell = shortcutData[col][row] || { ID: '', caption: '', isFolder: false, code: '' }
+        if (cell.code === 'accDst_empOrderAllOrders') {
+          shTemplate += `
+            <td style="width:300px; height:24px; font-size:${cell.isFolder ? 16 : 14}px; padding-left: 30px;">
+              <span data-id=${cell.ID}>${cell.caption} </span><input type="checkbox" name="${cell.code}" ${allOrders ? 'checked="checked"' : ''} />
+            </td>`
+        } else {
+          shTemplate += `
+            <td style="
+              width:300px;
+              height:24px;
+              font-size:${cell.isFolder ? 16 : 14}px;
+              padding-left: 30px;               
+            ">
+              ${cell.isFolder ? '<b><span ' : '<a href="#"'}
+                data-id=${cell.ID}>${cell.caption === '-' ? '<hr  align="left" width="300"  size="2">' : cell.caption}
+              ${cell.isFolder ? '</span></b>' : '</a>'}
+            </td>`
+        }
+      }
+      shTemplate += '</tr>'
+    }
+
+    const iFrameDoc = me.reportControl.getEl().dom.contentDocument
+    iFrameDoc.head.innerHTML = `
+      <style type="text/css">
+        body {
+          background-color: #FFFFFF;
+          color: #2f7c94;
+          font-family: Roboto, Arial, Helvetica, sans-serif;
+          font-size: 14px;
+          line-height: 1.3;
+        }
+        a {
+          text-decoration: none;
+          color: #2f7c94;
+        }
+        td,th {
+          font-family: Roboto,Arial,Helvetica,sans-serif;
+          font-size: 14px
+        }
+      </style>`
+    iFrameDoc.body.innerHTML = `
+      <table
+        width="900px"
+        border="0"
+        cellspacing="0"
+        cellpadding="0"
+      >
+        <tbody>
+          ${shTemplate}
+        </tbody>
+      </table>`
+
+    const refs = iFrameDoc.getElementsByTagName('a')
+    for (let i = 0; i < refs.length; i++) {
+      refs[i].addEventListener('click', me.onReportClick, true)
+    }
+    const allOrdersCheckBox = iFrameDoc.getElementsByName('accDst_empOrderAllOrders')
+    if (allOrdersCheckBox.length) allOrdersCheckBox[0].addEventListener('change', me.showAllOrders, true)
+  },
+  prepareShortcut: async function (allOrders = false) {
+    const funcOrgType = AC.settings.get('hrFuncOrgType', appAC.globalOrganization())
+    let iconCls = []
+    if (funcOrgType !== '1') {
+      /* Сфера діяльності організації != Загальна */
+      iconCls = ['orgType1']
+    }
+    if (funcOrgType !== '2') {
+      /* Сфера діяльності організації != Державна служба */
+      iconCls = ['orgType2']
+    }
+    if (!allOrders) {
+      iconCls.push('allOrders')
+    }
+    const shortcuts = await UB.Repository('ubm_navshortcut')
+      .attrs(['ID', 'parentID', 'code', 'caption', 'isFolder', 'displayOrder'])
+      .where('parentID.code', '=', 'accDstFolderOrders', 'parent1')
+      .where('parentID.parentID.code', '=', 'accDstFolderOrders', 'parent2')
+      .where('iconCls', 'notIn', iconCls, 'iconNot')
+      .where('iconCls', 'isNull', undefined, 'iconNull')
+      .logic('(([parent1] OR [parent2]) AND ([iconNot] OR [iconNull]))')
+      .orderBy('displayOrder')
+      .selectAsObject()
+    return shortcuts.filter(cur => cur.isFolder)
+      .reduce((accF, curF) => {
+        const col = Math.trunc(curF.displayOrder / 100) - 1
+        if (!accF[col]) accF[col] = []
+        accF[col][curF.displayOrder % 100] = curF
+        return shortcuts.filter(cur => cur.parentID === curF.ID)
+          .reduce((acc, cur) => {
+            acc[col][cur.displayOrder % 100] = cur
+            return acc
+          }, accF)
+      }, [])
+  },
+  onReportClick: function (e) {
+    e.preventDefault()
+    if (e.target.dataset.id && e.target.dataset.id !== '') {
+      const store = UB.core.UBStoreManager.getNavigationShortcutStore()
+      const shortcut = _.find(store.data.items, item => { return item.get('ID') === Number(e.target.dataset.id) })
+      $App.runShortcutCommand(shortcut.get('code'), shortcut.get('inWindow'))
+    }
+  },
+  showAllOrders: function (e) {
+    e.preventDefault()
+    const me = this
+    me.showDesktop(e.target.checked)
+  }
+})

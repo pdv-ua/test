@@ -1,0 +1,261 @@
+/* global Ext _ UB $App */
+exports.formDef = 'HR.payPaymentOrder'
+
+Ext.define('HR.payPaymentOrder', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: { type: 'border' },
+  alias: 'widget.payPaymentOrder',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      Ext.widget('panel', {
+        xtype: 'panel',
+        region: 'center',
+        layout: { type: 'border' },
+        autoScroll: true,
+        items: [
+          {
+            xtype: 'panel',
+            region: 'north',
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            items: [
+              {
+                xtype: 'fieldset',
+                border: true,
+                layout: { type: 'vbox', align: 'stretch' },
+                defaults: { labelWidth: 160 },
+                margin: '10 10 0 10',
+                padding: '5 15 5 15',
+                items: [
+                  {
+                    xtype: 'textfield',
+                    fieldLabel: UB.i18n('Назва'),
+                    name: 'payObligatoryName',
+                    value: '',
+                    allowBlank: true,
+                    readOnly: true
+                  },
+                  {
+                    xtype: 'textfield',
+                    fieldLabel: UB.i18n('Платник'),
+                    name: 'payer',
+                    value: '',
+                    allowBlank: true,
+                    readOnly: true
+                  },
+                  {
+                    xtype: 'textfield',
+                    fieldLabel: UB.i18n('Отримувач'),
+                    name: 'contractor',
+                    value: '',
+                    allowBlank: true,
+                    readOnly: true
+                  },
+                  {
+                    xtype: 'textfield',
+                    fieldLabel: UB.i18n('Р/р отримувача'),
+                    name: 'contrAccount',
+                    value: '',
+                    allowBlank: true,
+                    readOnly: true
+                  },
+                  {
+                    xtype: 'numberfield',
+                    valueToRaw: (value) => {
+                      return _.isNumber(value) ? Ext.util.Format.currency(value, '', this.decimalPrecision || 2) : ''
+                    },
+                    decimalPrecision: 2,
+                    allowExponential: false,
+                    hideTrigger: true,
+                    fieldLabel: UB.i18n('Сума'),
+                    name: 'paySum',
+                    value: '',
+                    allowBlank: true,
+                    readOnly: true
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'textfield',
+                        fieldLabel: UB.i18n('Платіжна відомість'),
+                        name: 'payRollName',
+                        value: '',
+                        labelWidth: 160,
+                        flex: 1,
+                        allowBlank: true,
+                        readOnly: true
+                      },
+                      {
+                        xtype: 'ubdatefield',
+                        fieldLabel: UB.i18n('Дата проведення'),
+                        name: 'payRollDate',
+                        value: '',
+                        dateFormat: 'dd.mm.yyyy',
+                        labelWidth: 150,
+                        readOnly: true
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            region: 'center',
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'payOrderDt',
+                // stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_paymentOrder_payOrderDt'),
+                autoScroll: true,
+                flex: 1,
+                margin: '5, 10, 5, 10',
+                cellEditing: false,
+                storeType: 'local',
+                showToolBar: true,
+                hideDefaultAction: true,
+                hideActions: ['addNew'],
+                exportExcel: {
+                  title: ''
+                },
+                disablePaging: true,
+                loadMaskMessage: UB.i18n('Завантаження даних...'),
+                summary: { paySum: 'sum' },
+                summaryDataOnClient: true,
+                fields: [
+                  {
+                    name: 'employeeNumberID',
+                    visibility: false
+                  },
+                  {
+                    name: 'periodID',
+                    visibility: false
+                  },
+                  {
+                    name: 'employeeNumberID.description',
+                    columnConfig: {
+                      text: UB.i18n('Працівник'),
+                      flex: 1
+                    }
+                  },
+                  {
+                    name: 'paySum',
+                    columnConfig: {
+                      text: UB.i18n('Сума'),
+                      width: 150,
+                      floatFormat: 2,
+                      align: 'right'
+                    }
+                  },
+                  {
+                    name: 'depName',
+                    columnConfig: {
+                      text: UB.i18n('Підрозділ'),
+                      flex: 1
+                    }
+                  },
+                  {
+                    name: 'posName',
+                    columnConfig: {
+                      text: UB.i18n('Посада'),
+                      flex: 1
+                    }
+                  }
+                ],
+                onItemDoubleClick: function (grid, record) {
+                  Promise.all([
+                    UB.Repository('hr_payElDepend')
+                      .attrs('payElID')
+                      .where('ownerID', '=', me.attr.payObligatoryID)
+                      .selectAsObject(),
+                    UB.Repository('hr_payFundDepend')
+                      .attrs('fundID')
+                      .where('ownerID', '=', me.attr.payObligatoryID)
+                      .selectAsObject()
+                  ]).then(([payEl, payFund]) => {
+                    $App.doCommand({
+                      cmdType: 'showForm',
+                      formCode: 'hr_rl',
+                      tabId: 'hr_rl' + record.get('employeeNumberID') + (me.defaultValues && me.defaultValues.periodID),
+                      target: $App.getViewport().centralPanel,
+                      cmpInitConfig: {
+                        defaultValues: {
+                          employeeNumberID: record.get('employeeNumberID'),
+                          periodID: (me.defaultValues && me.defaultValues.periodID),
+                          makeBold: 'paymentOrder',
+                          payFundID: payFund,
+                          payElID: payEl
+                        }
+                      }
+                    })
+                  })
+                }
+              }
+            ]
+          }
+        ]
+      })
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        payObligatoryName: me.down('[name=payObligatoryName]'),
+        payer: me.down('[name=payer]'),
+        contractor: me.down('[name=contractor]'),
+        contrAccount: me.down('[name=contrAccount]'),
+        paySum: me.down('[name=paySum]'),
+        payRollName: me.down('[name=payRollName]'),
+        payRollDate: me.down('[name=payRollDate]'),
+        payOrderDt: me.down('[name=payOrderDt]')
+      }
+      if (me.defaultValues) {
+        _.forEach(me.attr, attr => {
+          if (me.defaultValues[attr.name]) {
+            if (attr.xtype === 'ubdatefield') {
+              if (me.defaultValues[attr.name] && me.defaultValues.orderState === 'POSTED') {
+                attr.setValue(new Date(me.defaultValues[attr.name]))
+              }
+            } else {
+              attr[attr.setValueById ? 'setValueById' : 'setValue'](me.defaultValues[attr.name])
+            }
+          }
+        })
+        if (me.defaultValues.paymentOrderDt && me.defaultValues.paymentOrderDt.length) {
+          me.attr.payOrderDt.setLocalStoreData(me.defaultValues.paymentOrderDt || [])
+        } else {
+          me.attr.payOrderDt.hide()
+        }
+        if (me.defaultValues && me.defaultValues.payObligatoryID) {
+          me.attr.payObligatoryID = me.defaultValues.payObligatoryID
+        }
+
+        if (me.defaultValues.openFrom && me.defaultValues.openFrom === 'PaySummary') {
+          me.setTitle(me.defaultValues.payObligatoryName + UB.i18n(', підсумок за ') + me.defaultValues.periodName)
+        }
+      }
+      if (me.readOnlyAttr) {
+        me.readOnlyAttr.forEach(attrName => {
+          me.attr[attrName].setReadOnly(true)
+        })
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

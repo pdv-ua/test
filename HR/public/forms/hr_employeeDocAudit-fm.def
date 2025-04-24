@@ -1,0 +1,169 @@
+/* global UB */
+exports.formDef = {
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'printAction',
+          iconCls: 'fas fa-print',
+          cls: 'blue-action'
+        }
+      ]
+    }
+  ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      fieldLabel: UB.i18n('Тип перевірки'),
+      attributeName: 'auditType',
+      disableContextMenu: true,
+      readOnly: true
+    },
+    {
+      attributeName: 'employeeID',
+      readOnly: true,
+      disableContextMenu: true,
+      displayField: 'fullFIO'
+    },
+    {
+      attributeName: 'orgID',
+      // readOnly: true,
+      disableContextMenu: true,
+      fieldList: ['mi_data_id', 'description'],
+      valueField: 'mi_data_id',
+      displayField: 'description',
+      whereList: {
+        state: {
+          expression: '[state]',
+          condition: '=',
+          values: {
+            state: 'ACTIVE'
+          }
+        }
+      }
+    },
+    {
+      layout: {
+        type: 'hbox'
+      },
+      items: [
+        {
+          attributeName: 'positionID',
+          fieldLabel: UB.i18n('Посада'),
+          valueField: 'mi_data_id',
+          flex: 1,
+          displayField: 'name',
+          fieldList: [ 'ID', 'mi_data_id', 'name', 'psCategory.name', 'accrualSum', 'positionType' ],
+          gridFieldList: [ { name: 'mi_data_id', visibility: false }, 'code', 'name', 'psCategory', 'positionType',
+            { name: 'parentUnitID.name', description: UB.i18n('Підпорядкування') } ],
+          whereList: {
+            state: {
+              expression: '[state]',
+              condition: 'equal',
+              value: 'ACTIVE'
+            }
+          },
+          ubRequest: {
+            orderList: { orderBy: { expression: 'name' } }
+          },
+          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+          disableModifyEntity: true
+        },
+        {
+          xtype: 'button',
+          cls: 'treeIconNotFocus',
+          ubID: 'btnSelectByTree1',
+          width: 35,
+          height: 35,
+          margin: '0 2 0 -12',
+          listeners: {
+            click: function (ctrl) {
+              const me = ctrl.up('form')
+              me.showStaffTree(me.attr.positionID)
+            },
+            render: ctrl => {
+              ctrl.setTooltip(UB.i18n('Вибір посади з дерева орг. структури'))
+            }
+          }
+        }
+      ]
+    },
+    {
+      attributeName: 'comment'
+    },
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Результати перевірки'),
+      margin: '0 10 0 10',
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'docNumber', width: 230, labelWidth: 120 },
+            { attributeName: 'docDate', labelWidth: 120 }
+          ]
+        },
+        { attributeName: 'endDate', labelWidth: 120 },
+        {
+          attributeName: 'preventInfoResult',
+          disableContextMenu: false,
+          width: '100%',
+          labelWidth: 120,
+          hideEntityItemInContext: true
+        },
+        { attributeName: 'auditResult',
+          disableContextMenu: false,
+          width: '100%',
+          labelWidth: 120,
+          hideEntityItemInContext: true
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'resultDocNumber', width: 230, disabled: true, labelWidth: 120 },
+            { attributeName: 'resultDocDate', labelWidth: 120, disabled: true }
+          ]
+        }
+
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      autoScroll: true,
+      entityConfig: {
+        entity: 'hr_employeeDocAuditDt',
+        method: 'select',
+        fieldList: [
+          { name: 'organizationAuditName', description: UB.i18n('Організація') },
+          { name: 'outgoingDate', description: UB.i18n('Вихідна дата') },
+          { name: 'outgoingNumber', description: UB.i18n('Вихідний номер') },
+          { name: 'controlDate', description: UB.i18n('Дата контролю') }
+        ]
+      },
+      masterFields: ['ID'],
+      detailFields: ['employeeDocAuditID'],
+      cmpInitConfig: {
+        onDeterminateForm: function (grid) {
+          return {
+            entityName: 'hr_employeeDocAuditDt',
+            formCode: 'hr_employeeDocAuditDt',
+            cmpInitConfig: {
+              auditType: grid.up('form').record.get('auditType')
+            }
+          }
+        }
+      }
+    }
+  ]
+}

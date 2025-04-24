@@ -1,0 +1,1064 @@
+/* global UB Ext appAC UB $App _ AC */
+
+exports.formDef = 'HR.massAccrualChangeParams'
+
+Ext.define('HR.massAccrualChangeParams', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 675,
+  layout: 'border',
+  alias: 'widget.massAccrualChangeParams',
+  initComponent: function () {
+    const me = this
+    const divider = ','
+
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри для зміни нарахувань'),
+            layout: { type: 'vbox', align: 'stretch' },
+            name: 'changesParamsPanel',
+            collapsed: false,
+            items: [
+              {
+                xtype: 'panel',
+                layout: { type: 'vbox', align: 'stretch' },
+                region: 'center',
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'combobox',
+                        name: 'action',
+                        labelWidth: 100,
+                        width: 250,
+                        fieldLabel: UB.i18n('Дія'),
+                        valueField: 'code',
+                        displayField: 'name',
+                        allowBlank: false,
+                        editable: true,
+                        defaultValue: 'CREATE',
+                        store: Ext.create('Ext.data.Store', {
+                          fields: [
+                            { name: 'name' },
+                            { name: 'code' }
+                          ],
+                          data: [
+                            { name: UB.i18n('Встановити'), code: 'CREATE' },
+                            { name: UB.i18n('Змінити'), code: 'CHANGE' },
+                            { name: UB.i18n('Скасувати'), code: 'CANCEL' }
+                          ]
+                        }),
+                        listeners: {
+                          change: (ctrl, value) => {
+                            me.attr.value.setDisabled(value === 'CANCEL')
+                            me.attr.curValue.setDisabled(value !== 'CHANGE')
+                            me.attr.valuation.setDisabled(value === 'CANCEL')
+                            me.down('[name=payElFilterSet]')[value === 'CANCEL' ? 'show' : 'hide']()
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        fieldLabel: UB.i18n('Вид оплати'),
+                        labelWidth: 120,
+                        flex: 1,
+                        name: 'payElID',
+                        hideEntityItemInContext: true,
+                        valueField: 'ID',
+                        allowBlank: false,
+                        ubRequest: {
+                          entity: 'hr_payEl',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description', 'methodID.valuation'],
+                          whereList: {
+                            notBasePay: {
+                              expression: '[methodID.methodGroupID.code]',
+                              condition: 'notEqual',
+                              values: { value: '1' }
+                            },
+                            groupType: {
+                              expression: '[methodID.methodGroupID.groupType]',
+                              condition: 'equal',
+                              values: { value: 'PAYMENT' }
+                            },
+                            isNotTariff: {
+                              expression: '[methodID.code]',
+                              condition: 'notIn',
+                              value: ['13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '36', '37', '38', '39',
+                                '40', '41', '42', '51', '52', '53', '54', '55', '57', '58', '61', '62', '67', '73', '140',
+                                '142', '144', '148', '149', '150', '159', '201', '202', '203']
+                            }
+                          }
+                        },
+                        listeners: {
+                          change: (ctrl) => {
+                            me.attr.payElText.setValue(ctrl.getFieldValue('description'))
+
+                            if (ctrl.getFieldValue('methodID.valuation') && ctrl.getFieldValue('methodID.valuation') === 'DICT') {
+                              me.attr.value.setValue()
+                              me.attr.value.setAllowBlank(true)
+                              me.attr.value.setDisabled(true)
+                            } else {
+                              me.attr.value.setAllowBlank(false)
+                              me.attr.value.setDisabled(false)
+                            }
+
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'combobox',
+                        name: 'valuation',
+                        labelWidth: 100,
+                        width: 250,
+                        fieldLabel: UB.i18n('Оцінка'),
+                        valueField: 'code',
+                        displayField: 'name',
+                        defaultValue: 'PRC',
+                        allowBlank: false,
+                        editable: true,
+                        store: Ext.create('Ext.data.Store', {
+                          fields: [
+                            { name: 'name' },
+                            { name: 'code' }
+                          ],
+                          data: [
+                            { name: UB.i18n('Відсоток'), code: 'PRC' },
+                            { name: UB.i18n('Сума'), code: 'SUM' }
+                          ]
+                        })
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'curValue',
+                        labelWidth: 120,
+                        fieldLabel: UB.i18n('Поточне значення'),
+                        allowDecimals: true,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        disabled: true,
+                        vtype: 'floatValidator',
+                        decimalPrecision: 2,
+                        width: 350
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'value',
+                        labelWidth: 120,
+                        fieldLabel: UB.i18n('Встановити значення'),
+                        allowDecimals: true,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        allowBlank: false,
+                        vtype: 'floatValidator',
+                        decimalPrecision: 2,
+                        width: 350
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            title: UB.i18n('Параметри відбору посад'),
+            layout: { type: 'vbox', align: 'stretch' },
+            name: 'searchParamsPanel',
+            collapsed: true,
+            items: [
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Тип посади'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'posTypeSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              const sourceData = me.getEnumData('HR_POSITION_TYPE')
+                              me.selectElements({
+                                attrName: 'positionType',
+                                attrTextName: 'positionTypeText',
+                                sourceData,
+                                selectedData: me.params.positionType
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'positionTypeText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Посада'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'dictPositionSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: async function () {
+                              const sourceData = await UB.Repository('hr_dictPosition')
+                                .attrs(['ID', 'description'])
+                                .orderBy('description')
+                                .selectAsObject()
+                              me.selectElements({
+                                attrName: 'dictPosition',
+                                attrTextName: 'dictPositionText',
+                                sourceData
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'dictPositionText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Категорія посади'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'positionCategorySelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              const sourceData = me.getEnumData('HR_POSITION_CATEGORY')
+                              me.selectElements({
+                                attrName: 'positionCategory',
+                                attrTextName: 'positionCategoryText',
+                                sourceData
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'positionCategoryText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Категорія персоналу'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'dictStaffCatSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: async function () {
+                              const sourceData = await UB.Repository('hr_dictStaffCat')
+                                .attrs(['ID', 'name'])
+                                .orderBy('name')
+                                .selectAsObject({
+                                  'name': 'description'
+                                })
+                              me.selectElements({
+                                attrName: 'dictStaffCat',
+                                attrTextName: 'dictStaffCatText',
+                                sourceData
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'dictStaffCatText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Вид посади'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'dictPositionKindSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: async function () {
+                              const sourceData = await UB.Repository('hr_dictPositionKind')
+                                .attrs(['ID', 'name'])
+                                .orderBy('name')
+                                .selectAsObject({
+                                  'name': 'description'
+                                })
+                              me.selectElements({
+                                attrName: 'dictPositionKind',
+                                attrTextName: 'dictPositionKindText',
+                                sourceData
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'dictPositionKindText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Група посади'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'dictPositionGroupSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: async function () {
+                              const sourceData = await UB.Repository('hr_dictPositionGroup')
+                                .attrs(['ID', 'name'])
+                                .orderBy('name')
+                                .selectAsObject({
+                                  'name': 'description'
+                                })
+                              me.selectElements({
+                                attrName: 'dictPositionGroup',
+                                attrTextName: 'dictPositionGroupText',
+                                sourceData
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'dictPositionGroupText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Підрозділ'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'selectDepartmentBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: async function () {
+                              const sourceData = await UB.Repository('hr_department')
+                                .attrs(['mi_data_id', 'name', 'description'])
+                                .where('orgID', '=', me.orgID || appAC.globalOrganization())
+                                .misc({ __mip_ondate: me.onDate || appAC.globalApplicationDate() })
+                                .where('state', '=', 'ACTIVE')
+                                .orderBy('code')
+                                .selectAsObject({
+                                  'mi_data_id': 'ID'
+                                })
+                              me.selectElements({
+                                attrName: 'department',
+                                attrTextName: 'departmentText',
+                                sourceData
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'departmentText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Вид оплати'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    hidden: true,
+                    name: 'payElFilterSet',
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'payElText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Джерело фінансування'),
+                    flex: 1,
+                    margin: '5 5 5 5',
+                    padding: '0 0 5 5',
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'fundSourceSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              $App.connection.run({
+                                entity: 'ac_fundSource',
+                                method: 'selectByOrg',
+                                fieldList: ['ID', 'name'],
+                                orgID: appAC.globalOrganization()
+                              }).then(result => {
+                                const sourceData = []
+                                result.resultData.data.forEach(item => {
+                                  sourceData.push({
+                                    ID: item[0],
+                                    description: item[1]
+                                  })
+                                })
+                                me.selectElements({
+                                  attrName: 'dictFundSource',
+                                  attrTextName: 'dictFundSourceText',
+                                  sourceData
+                                })
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'dictFundSourceText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Кваліфікаційна категорія'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'dictEmpCategorySelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: async function () {
+                              const sourceData = await UB.Repository('hr_dictEmpCategory')
+                                .attrs(['ID', 'name'])
+                                .orderBy('name')
+                                .selectAsObject({
+                                  'name': 'description'
+                                })
+                              me.selectElements({
+                                attrName: 'dictEmpCategory',
+                                attrTextName: 'dictEmpCategoryText',
+                                sourceData
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'dictEmpCategoryText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Група (рівень) за схемою окладів'),
+                    margin: '5 5 5 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'dictSalarySchemeLevelSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: async function () {
+                              const sourceData = await UB.Repository('hr_dictSalarySchemeLevel')
+                                .attrs(['ID', 'name'])
+                                .where('isActive', '=', 1)
+                                .exists(UB.Repository('hr_dictSalarySchemeOrg')
+                                  .correlation('dictSalarySchemeID', 'dictSalarySchemeID')
+                                  .where('orgID', '=', appAC.globalOrganization())
+                                )
+                                .orderBy('name')
+                                .selectAsObject({
+                                  'name': 'description'
+                                })
+                              me.selectElements({
+                                attrName: 'dictSalarySchemeLevel',
+                                attrTextName: 'dictSalarySchemeLevelText',
+                                sourceData
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'dictSalarySchemeLevelText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Тарифний розряд'),
+                    margin: '5 5 5 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'dictTarifCoeffSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: async function () {
+                              const sourceData = await UB.Repository('hr_dictTarifCoeff')
+                                .attrs(['ID', 'name'])
+                                .orderBy('name')
+                                .selectAsObject({
+                                  'name': 'description'
+                                })
+                              me.selectElements({
+                                attrName: 'dictTarifCoeff',
+                                attrTextName: 'dictTarifCoeffText',
+                                sourceData
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'dictTarifCoeffText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'acGrid',
+        stripeRows: true,
+        storeType: 'local',
+        disablePaging: true,
+        autoScroll: true,
+        name: 'positionList',
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_positionSearch_positionList'),
+        notWriteChanges: true,
+        showToolBar: true,
+        enableMultifilter: true,
+        useCheckBoxColumn: true,
+        checkboxModelConfig: {
+          showHeaderCheckbox: true
+        },
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        region: 'center',
+        customToolBarActions: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Відібрати посади'),
+            text: UB.i18n('Відібрати посади'),
+            iconCls: 'fas fa-angle-double-down',
+            cls: 'fill-action',
+            handler: function () {
+              me.selectPosition()
+            }
+          },
+          {
+            xtype: 'component',
+            width: 50
+          },
+          {
+            xtype: 'checkbox',
+            name: 'hideSelected',
+            labelWidth: 200,
+            fieldLabel: UB.i18n('Не показувати вже доданих'),
+            listeners: {
+              change: function (ctrl) {
+                const me = ctrl.up('form')
+                if (me.loaded && me.selected.length) me.selectPosition()
+              }
+            }
+          }
+        ],
+        fields: [
+          { name: 'name', columnConfig: { text: UB.i18n('Посада'), flex: 1, filterBy: 'string' } },
+          { name: 'depName', columnConfig: { text: UB.i18n('Підрозділ'), flex: 1, filterBy: 'string' } },
+          { name: 'accrualSum', columnConfig: { text: UB.i18n('Поточний оклад'), flex: 1, floatFormat: 2, filterBy: 'float' } },
+          { name: 'dictSalarySchemeLevel', columnConfig: { text: UB.i18n('Рівень схеми посадового окладу'), flex: 1, filterBy: 'string' } },
+          { name: 'dictTarifCoeff', columnConfig: { text: UB.i18n('Тарифний розряд'), flex: 1, filterBy: 'string' } },
+          { name: 'positionCategoryName', columnConfig: { text: UB.i18n('Категорія посади'), flex: 1, filterBy: 'string' } },
+          { name: 'departmentID' },
+          { name: 'positionID' }
+        ],
+        getRowClass: function (row) {
+          const selectedRow = me.selected.find(o => o === row.get('positionID'))
+          if (selectedRow) {
+            return 'grd-color-blue-italic'
+          }
+        }
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Додати'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.closeAndLoad()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.selectElements = function ({ attrName, attrTextName, sourceData = [] }) {
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: 'hr_elementSelectEx',
+        cmpInitConfig: {
+          sourceData,
+          selectedData: me.params[attrName],
+          onSelectData: (data) => {
+            me.params[attrName] = data.selected
+            me.params[attrTextName] = data.selected.reduce((res, item) => {
+              res += item.description + divider
+              return res
+            }, '')
+            me.attr[attrTextName].setValue(me.params[attrTextName])
+          }
+        }
+      })
+    }
+
+    me.getEnumData = function (enumName) {
+      const sourceData = []
+      UB.core.UBEnumManager.getArrayStore(enumName).data.items.forEach(item => {
+        sourceData.push({
+          ID: item.get('code'),
+          description: item.get('name')
+        })
+      })
+      return sourceData
+    }
+
+    me.closeAndLoad = function () {
+      const selection = me.attr.grid.getSelectionModel().selected.items
+      if (!selection.length) {
+        $App.dialogInfo(UB.i18n('Не вибрано жодного елементу'), UB.i18n('Увага'))
+        return
+      }
+      const params = {
+        valuation: me.attr.valuation.getValue(),
+        value: me.attr.value.getValue(),
+        curValue: me.attr.curValue.getValue(),
+        action: me.attr.action.getValue(),
+        payElID: me.attr.payElID.getValue()
+      }
+      if ((!(me.attr.payElID.getFieldValue('methodID.valuation') === 'DICT') && !me.attr.value.getValue()) && me.attr.action.getValue() === 'CREATE') {
+        me.attr.value.markInvalid(UB.i18n(me.attr.value.blankText))
+        AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказано значення'))
+        return
+      }
+      /*
+      if (!me.attr.curValue.getValue() && me.attr.action.getValue() === 'CHANGE') {
+        me.attr.curValue.markInvalid(UB.i18n(me.attr.curValue.blankText))
+        AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказано поточне значення'))
+        return
+      }
+      */
+      if (me.onSelectData && _.isFunction(me.onSelectData)) {
+        const data = []
+        selection.forEach(item => {
+          data.push(item.getData())
+        })
+        me.onSelectData(data, params)
+      }
+      me.up('window').close()
+    }
+
+    me.selectPosition = async (posIDs = []) => {
+      if ((me.attr.action.getValue() === 'CANCEL' || me.attr.action.getValue() === 'CHANGE') && !me.attr.payElID.getValue()) {
+        AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказано вид оплати'))
+        return
+      }
+      me.setLoading(true)
+      const onDate = me.onDate || appAC.globalApplicationDate()
+      const positionQuery = UB.Repository('hr_position')
+        .attrs(['ID', 'parentUnitID', 'name', 'depDescription', 'accrualSum', 'positionCategory.name',
+          'dictSalarySchemeLevelID.description', 'dictSalarySchemeLevelID.accrualSumMax'
+        ])
+        .where('orgID', '=', me.orgID || appAC.globalOrganization())
+        .where('state', '=', 'ACTIVE')
+        .where('liquidate', '=', 0)
+        .misc({
+          __mip_ondate: onDate
+        })
+      if (me.attr.hideSelected.getValue()) {
+        positionQuery.where('ID', 'notIn', me.selected)
+      }
+      if (posIDs.length) {
+        positionQuery.where('ID', 'in', posIDs)
+      } else {
+        if (me.params.positionType.length) {
+          positionQuery.where('positionType', 'in', me.params.positionType.map(o => o.value))
+        }
+        if (me.params.positionCategory.length) {
+          positionQuery.where('positionCategory', 'in', me.params.positionCategory.map(o => o.value))
+        }
+        if (me.params.dictStaffCat.length) {
+          positionQuery.where('dictStaffCatID', 'in', me.params.dictStaffCat.map(o => o.value))
+        }
+        if (me.params.dictPosition.length) {
+          positionQuery.where('dictPositionID', 'in', me.params.dictPosition.map(o => o.value))
+        }
+        if (me.params.dictPositionKind.length) {
+          positionQuery.where('dictPositionKindID', 'in', me.params.dictPositionKind.map(o => o.value))
+        }
+        if (me.params.dictPositionGroup.length) {
+          positionQuery.where('dictPositionGroupID', 'in', me.params.dictPositionGroup.map(o => o.value))
+        }
+        if (me.params.department.length) {
+          positionQuery.where('parentUnitID', 'in', me.params.department.map(o => o.value))
+        }
+        if (me.params.dictFundSource.length) {
+          positionQuery.where('dictFundSourceID', 'in', me.params.dictFundSource.map(o => o.value))
+        }
+        if (me.params.dictEmpCategory.length) {
+          positionQuery.where('dictEmpCategoryID', 'in', me.params.dictEmpCategory.map(o => o.value))
+        }
+        if (me.params.dictSalarySchemeLevel.length) {
+          positionQuery.where('dictSalarySchemeLevelID', 'in', me.params.dictSalarySchemeLevel.map(o => o.value))
+        }
+        if (me.params.dictTarifCoeff.length) {
+          positionQuery.where('dictTarifCoeffID', 'in', me.params.dictTarifCoeff.map(o => o.value))
+        }
+      }
+      if (me.attr.action.getValue() === 'CANCEL') {
+        positionQuery.exists(UB.Repository('hr_positionAccrual')
+          .correlation('positionID', 'ID')
+          .where('payElID', '=', me.attr.payElID.getValue())
+        )
+      }
+      if (me.attr.action.getValue() === 'CHANGE') {
+        if (me.attr.curValue.getValue()) {
+          positionQuery.exists(UB.Repository('hr_positionAccrual')
+            .correlation('positionID', 'ID')
+            .where('payElID', '=', me.attr.payElID.getValue())
+            .whereIf(me.attr.valuation.getValue() === 'PRC', 'accrualRate', '=', me.attr.curValue.getValue())
+            .whereIf(me.attr.valuation.getValue() === 'SUM', 'accrualSum', '=', me.attr.curValue.getValue())
+          )
+        } else {
+          positionQuery.exists(UB.Repository('hr_positionAccrual')
+            .correlation('positionID', 'ID')
+            .where('payElID', '=', me.attr.payElID.getValue())
+          )
+        }
+      }
+      try {
+        const data = await positionQuery.selectAsObject({
+          'positionCategory.name': 'positionCategoryName',
+          'ID': 'positionID',
+          'dictSalarySchemeLevelID.description': 'dictSalarySchemeLevel',
+          'dictTarifCoeffID.description': 'dictTarifCoeff',
+          'depDescription': 'depName'
+        })
+        me.setLoading(false)
+        const store = me.attr.grid.getStore()
+        me.attr.grid.removeAll()
+        store.insert(store.data.length, data)
+        me.attr.searchPanel.collapse()
+        me.attr.panel.collapse()
+      } catch (e) {
+        me.setLoading(false)
+      }
+      me.loaded = true
+    }
+
+    me.attrList = [ 'positionType', 'positionCategory', 'dictStaffCat', 'dictPositionKind', 'dictPositionGroup', 'department',
+      'dictFundSource', 'dictEmpCategory', 'dictSalarySchemeLevel', 'dictTarifCoeff', 'dictPosition'
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      const win = this.window
+      if (win) {
+        if (!win.height || win.height < 675) {
+          win.height = 675
+        }
+        if (!win.width || win.width < 1100) {
+          win.width = 1100
+        }
+      }
+      me.attr = {
+        panel: me.down('[name=paramsPanel]'),
+        grid: me.down('[name=positionList]'),
+        searchPanel: me.down('[name=searchParamsPanel]'),
+        positionTypeText: me.down('[name=positionTypeText]'),
+        positionCategoryText: me.down('[name=positionCategoryText]'),
+        dictStaffCatText: me.down('[name=dictStaffCatText]'),
+        departmentText: me.down('[name=departmentText]'),
+        dictPositionText: me.down('[name=dictPositionText]'),
+        dictPositionKindText: me.down('[name=dictPositionKindText]'),
+        dictPositionGroupText: me.down('[name=dictPositionGroupText]'),
+        dictFundSourceText: me.down('[name=dictFundSourceText]'),
+        dictEmpCategoryText: me.down('[name=dictEmpCategoryText]'),
+        dictSalarySchemeLevelText: me.down('[name=dictSalarySchemeLevelText]'),
+        dictTarifCoeffText: me.down('[name=dictTarifCoeffText]'),
+        hideSelected: me.down('[name=hideSelected]'),
+        valuation: me.down('[name=valuation]'),
+        value: me.down('[name=value]'),
+        curValue: me.down('[name=curValue]'),
+        action: me.down('[name=action]'),
+        payElID: me.down('[name=payElID]'),
+        payElText: me.down('[name=payElText]')
+      }
+
+      const panel = me.down('[name=searchParamsPanel]')
+      panel.header.add({ xtype: 'component', flex: 1 })
+      panel.header.add(
+        {
+          xtype: 'button',
+          tooltip: UB.i18n('Пошук посад'),
+          iconCls: 'fa fa-search',
+          cls: 'blue-action',
+          handler: function () {
+            me.attr.searchPanel.collapse()
+            $App.doCommand({
+              cmdType: 'showForm',
+              formCode: 'hr_searchPosition',
+              customParams: {
+                showSelectButton: true
+              },
+              cmpInitConfig: {
+                onSelectData: function (data, isDelete) {
+                  const posIDs = data.map(o => o.ID)
+                  me.selectPosition(posIDs)
+                }
+              }
+            })
+          }
+        }
+      )
+
+      me.attrList.forEach(attrName => {
+        if (me.params[attrName].length) {
+          me.params[attrName + 'Text'] = me.params[attrName].reduce((res, item) => {
+            res += item.description + divider
+            return res
+          }, '')
+          me.attr[attrName + 'Text'].setValue(me.params[attrName + 'Text'])
+        }
+      })
+      const hideSelectedChkBox = me.down('[name=hideSelected]')
+      if (hideSelectedChkBox) {
+        hideSelectedChkBox.inputEl.el.setStyle('margin-top', '2px')
+      }
+      me.attr.valuation.setValue('PRC')
+      me.attr.action.setValue('CREATE')
+    }, me)
+
+    me.params = {
+      ID: null
+    }
+
+    me.attrList.forEach(attrName => {
+      me.params[attrName] = me[attrName] || []
+      me.params[attrName + 'Text'] = ''
+    })
+
+    me.selected = me.selected || []
+    me.loaded = false
+
+    me.callParent(arguments)
+  }
+})

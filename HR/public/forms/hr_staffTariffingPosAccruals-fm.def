@@ -1,0 +1,197 @@
+/* global _ Ext UB $App */
+
+exports.formDef = 'HR.staffTariffingPosAccruals'
+
+Ext.define('HR.staffTariffingPosAccruals', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'fit',
+  initComponent: function () {
+    let me = this
+
+    me.items = [
+      {
+        xtype: 'acGrid',
+        name: 'accrualList',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        storeType: 'local',
+        disablePaging: true,
+        notWriteChanges: true,
+        showToolBar: true,
+        rowEditing: true,
+        hideActions: ['edit', 'addNewByCurrent'],
+        fields: [
+          { name: 'ID' },
+          { name: 'payElID' },
+          {
+            name: 'payElID.description',
+            columnConfig: {
+              text: UB.i18n('Вид оплати'),
+              flex: 1,
+              editor: {
+                dataType: 'Entity',
+                hideEntityItemInContext: true,
+                associatedEntity: 'hr_payEl',
+                allowBlank: false,
+                disableClearSelection: false,
+                // disableContextMenu: true,
+                storeAttributeValueField: 'payElID',
+                fieldList: ['ID', 'description'],
+                whereList: {
+                  method: {
+                    expression: '[methodID.methodGroupID.code]',
+                    condition: 'in',
+                    value: ['2', '3', '8', '9']
+                  }
+                },
+                orderList: { orderBy: { expression: 'codeSort' } }
+              }
+            }
+          },
+          {
+            name: 'accrualRate',
+            columnConfig: {
+              text: UB.i18n('Відсоток'),
+              width: 150,
+              floatFormat: 2,
+              align: 'right',
+              sortBy: 'Number',
+              filterBy: 'float',
+              editor: {
+                dataType: 'Currency',
+                decimalPrecision: 2,
+                minValue: 0
+              }
+            }
+          },
+          {
+            name: 'accrualSum',
+            columnConfig: {
+              text: UB.i18n('Сума'),
+              width: 150,
+              floatFormat: 2,
+              align: 'right',
+              sortBy: 'Number',
+              filterBy: 'float',
+              editor: {
+                dataType: 'Currency',
+                decimalPrecision: 2,
+                minValue: 0
+              }
+            }
+          }
+        ],
+        customToolBarActions: [
+          {
+            xtype: 'button',
+            scale: 'medium',
+            iconCls: 'u-icon-save-and-close',
+            tooltip: UB.i18n('saveAndClose'),
+            cls: 'save-action',
+            name: 'saveAndClose',
+            disabled: true,
+            handler: () => {
+              me.saveData(true)
+            }
+          }
+        ],
+        edit: (control, context) => {
+          me.setIsDirty(true)
+        }
+      }
+    ]
+
+    me.setIsDirty = function (value) {
+      me.down('[name=saveAndClose]').setDisabled(false)
+      me.isChangedData = value
+    }
+
+    me.saveData = function (isClose) {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_staffTariffing',
+        method: 'savePosAccruals',
+        data: JSON.stringify(me.attr.grid.getData()),
+        recordID: me.recordID
+      }).then(() => {
+        me.setLoading(false)
+        if (isClose) {
+          me.isChangedData = false
+          me.up('window').canClose = true
+          me.up('window').close()
+        } else {
+          me.loadData()
+        }
+      })
+    }
+
+    me.on('afterrender', function () {
+      me.attr = {
+        grid: me.down('[name=accrualList]')
+      }
+
+      me.up('window').on('close', () => {
+        if (me.customParams && _.isFunction(me.customParams.onClose)) {
+          me.customParams.onClose()
+        }
+      })
+
+      me.up('window').on('beforeclose', win => {
+        if (win.canClose) {
+          win.canClose = false
+          return true
+        }
+        if (!me.isChangedData) {
+          win.canClose = true
+          return true
+        } else {
+          Ext.Msg.confirm({
+            buttons: Ext.MessageBox.YESNOCANCEL,
+            icon: Ext.MessageBox.WARNING,
+            buttonText: {
+              yes: UB.i18n('save'),
+              no: UB.i18n('doNotSave'),
+              cancel: UB.i18n('cancel')
+            },
+            minWidth: 320,
+            title: UB.i18n('unsavedData'),
+            msg: UB.i18n('confirmSave'),
+            fn: function (btn) {
+              if (btn === 'yes') {
+                me.saveData(true)
+              }
+              if (btn === 'no') {
+                win.canClose = true
+                win.close()
+              }
+            }
+          })
+          return false
+        }
+      })
+
+      const accrualDt = JSON.parse(me.accrualDt) || []
+      UB.Repository('hr_payEl')
+        .attrs('ID', 'description')
+        .where('ID', 'in', accrualDt.map(o => o.payElID))
+        .selectAsObject()
+        .then(data => {
+          const gridData = accrualDt.map((row, idx) => {
+            const payEl = data.find(o => o.ID === row.payElID)
+            return {
+              ID: idx + 1,
+              payElID: row.payElID,
+              'payElID.description': payEl ? payEl.description : '',
+              accrualSum: row.accrualSum || row.baseSum || null,
+              accrualRate: row.accrualRate || row.rate || null
+            }
+          })
+          me.attr.grid.setLocalStoreData(gridData)
+        })
+    })
+    me.callParent(arguments)
+  }
+})

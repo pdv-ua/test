@@ -1,0 +1,61 @@
+/* global Ext UB $App */
+exports.formDef = 'HR.paySummaryCalcState'
+
+Ext.define('HR.paySummaryCalcState', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_paySummaryCalcState',
+  height: 600,
+  width: 1000,
+  layout: 'border',
+  readOnly: true,
+  checkPaySum: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'acGrid',
+        name: 'details',
+        flex: 1,
+        title: UB.i18n('Не розраховані'),
+        autoScroll: true,
+        region: 'center',
+        storeType: 'local',
+        disablePaging: true,
+        notWriteChanges: true,
+        hideActions: ['addNewByCurrent', 'addNew', 'edit', 'del'],
+        enableMultifilter: true,
+        // summary: me.summary,
+        hideDefaultAction: true,
+        showToolBar: true,
+        exportExcel: {
+          title: UB.i18n(`Не розраховані ${me.reportCode} ${me.cellCode || ''}`),
+          fileName: UB.i18n(`Не розраховані ${me.reportCode} ${me.cellCode || ''}`)
+        },
+        fields: [
+          { name: 'tabNum', columnConfig: { text: UB.i18n('Таб. №'), width: 80, filterBy: 'string' } },
+          { name: 'fullFIO', columnConfig: { text: UB.i18n('ПІБ'), flex: 1, filterBy: 'string' } }
+        ]
+      }
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        details: me.down('[name=details]')
+      }
+      if (me.periodID) {
+        $App.connection.run({
+          entity: 'hr_paySummary',
+          method: 'getPaySummaryCalcState',
+          periodID: me.periodID
+        }).then(response => {
+          const resultData = JSON.parse(response.resultData)
+          if (resultData.length) {
+            me.attr.details.setLocalStoreData(resultData)
+          }
+        })
+      }
+    }, me)
+    me.callParent(arguments)
+  }
+})

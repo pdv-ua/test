@@ -1,0 +1,94 @@
+/* global UB */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'organizationID', 'employeeID', 'empOrderType', 'firstName', 'lastName', 'middleName', 'employeePositionID.employeeNumberID'],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      defaults: { labelWidth: 160 }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    dockedItems: [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        items: [
+          {
+            orderId: 4,
+            actionId: 'addIntComb'
+          }
+        ]
+      }
+    ],
+    items: [
+      {
+        attributeName: 'dateFrom',
+        fieldLabel: UB.i18n('Дата повернення'),
+        allowBlank: false
+      },
+      {
+        attributeName: 'employeePositionID',
+        fieldLabel: UB.i18n('Працівник'),
+        allowBlank: false,
+        // xtype: 'empPositionCombobox',
+        // addWorkPlace: true,
+        fieldList: ['ID', 'description', 'workScheduleID', 'employeeNumberID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+        orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } }
+      },
+      {
+        attributeName: 'sourceParaID',
+        disabled: true,
+        gridFieldList: ['orderID.description'],
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+        fieldList: ['ID', 'orderID.description'],
+        displayField: ['orderID.description'],
+        allowBlank: false,
+        disabledIf: (ctrl, me) => !me.record.get('employeePositionID'),
+        fieldLabel: UB.i18n('Наказ про військову службу'),
+        whereList: {
+          empOrderType: {
+            expression: '[empOrderType]',
+            condition: '=',
+            value: 'MILSERVICE'
+          },
+          orderState: {
+            expression: '[orderID.orderState]',
+            condition: 'in',
+            value: ['POSTED', 'PROCESSED']
+          }
+        }
+      },
+      {
+        layout: {
+          type: 'hbox',
+          align: 'top'
+        },
+        flex: 1,
+        name: 'reasonDocPanel',
+        hidden: true,
+        items: [{
+          labelWidth: 160,
+          fieldLabel: UB.i18n('Підстава (до пункту наказу)'),
+          attributeName: 'reason',
+          flex: 1
+        },
+          {
+            xtype: 'button',
+            cls: 'list-icon',
+            name: 'reasonButton',
+            tooltip: UB.i18n('Вибрати'),
+            width: 35,
+            height: 35,
+            margin: '0 2 0 -45',
+            handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+          }
+        ]
+      }
+    ]
+  }
+})()

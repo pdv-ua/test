@@ -1,0 +1,525 @@
+/* global Ext UB */
+
+exports.formDef = 'HR.payElSelect'
+
+Ext.define('HR.payElSelect', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  valueAttr: 'valuesID',
+  initComponent: function () {
+    const me = this
+    const queryDelay = 500
+    let allGrid
+    let selGrid
+    const storeMain = Ext.create('Ext.data.Store', {
+      groupField: 'groupCode',
+      columnName: 'groupName',
+      fields: [
+        { name: 'ID' },
+        { name: 'description' },
+        { name: 'dataFrom' },
+        { name: 'dateTo' },
+        { name: 'groupName' },
+        { name: 'groupCode' },
+        { name: 'isChecked' },
+        { name: 'isGroupChecked' },
+        { name: 'orderN' }
+      ],
+      data: []
+
+    })
+    function setFilter () {
+      storeMain.filter({
+        id: 'searchTask',
+        property: 'description',
+        condition: UB.core.UBCommand.condition.sqlecLike,
+        value: searchCtrl.getValue(),
+        anyMatch: true,
+        caseSensitive: false
+      })
+    }
+    function clearFilter () {
+      storeMain.filters.removeAtKey('searchTask')
+      storeMain.clearFilter()
+    }
+    const doQueryTask = new Ext.util.DelayedTask(function () {
+      const value = searchCtrl.getValue()
+      if (value === '') {
+        clearFilter()
+      } else {
+        setFilter()
+      }
+    }, me)
+    const searchCtrl = Ext.widget('textfield', {
+      labelWidth: 60,
+      fieldLabel: UB.i18n('filter')
+    })
+    searchCtrl.on('change', function () {
+      doQueryTask.delay(queryDelay)
+    })
+
+    const storeSel = Ext.create('Ext.data.ArrayStore', {
+      fields: [
+        { name: 'ID' },
+        { name: 'description' },
+        { name: 'dateFrom' },
+        { name: 'dateTo' },
+        { name: 'groupName' },
+        { name: 'orderN' }
+      ],
+      data: []
+    })
+    me.items = [
+      allGrid = Ext.create('Ext.grid.Panel', {
+        xtype: 'grid',
+        store: storeMain,
+        features: [{
+          id: 'group',
+          ftype: 'grouping',
+          groupHeaderTpl: ['<input class="grpCheckbox" {[values.rows[0].data.isGroupChecked ? "checked" : ""]} type="checkbox"> {[this.styleFunc(values)]}{[values.rows[0].data.groupCode + " " + values.rows[0].data.groupName]}</span></font>', {
+            styleFunc: function (values) {
+              return values.rows.filter(row => (row.get('isChecked') !== '' && row.get('isChecked'))).length ? '<span  style="color: blue; ">' : '<span  style="color: black; ">'
+            }
+          }],
+          enableGroupingMenu: false,
+          hideGroupHeader: true,
+          startCollapsed: true
+        }],
+        viewConfig: {
+          markDirty: false
+        },
+        listeners: {
+          groupclick: function (grid, node, group, event, eOpts) {
+            if (event && grid) {
+              const store = allGrid.getStore()
+              const storeSel = selGrid.getStore()
+              Ext.suspendLayouts()
+              allGrid.suspendEvents()
+              store.suspendEvents()
+              selGrid.suspendEvents()
+              storeSel.suspendEvents()
+              const target = event.getTarget('.grpCheckbox')
+              const groupRecord = store.groups.getByKey(group)
+              if (target && store && groupRecord) {
+                const { checked } = target
+                allGrid.updatingRecords = true
+                selGrid.updatingRecords = true
+                groupRecord.records.forEach(function (rec) {
+                  rec.beginEdit()
+                  if (checked) {
+                    if (!rec.get('isChecked')) {
+                      rec.set('isChecked', checked)
+                      if (me.enableOrderN) {
+                        const maxOrderN = storeSel.getMax(storeSel.data.items, 'orderN')
+                        rec.set('orderN', maxOrderN ? maxOrderN + 1 : 1)
+                      }
+                      storeSel.add(rec)
+                    }
+                  } else {
+                    if (rec.get('isChecked')) {
+                      rec.set('isChecked', checked)
+                      const selRec = storeSel.findRecord('ID', rec.get('ID'))
+                      if (selRec) {
+                        storeSel.remove(selRec)
+                        if (me.enableOrderN) {
+                          storeSel.data.items.forEach((row, idx) => {
+                            row.data.orderN = idx + 1
+                          })
+                        }
+                      }
+                    }
+                  }
+                  rec.set('isGroupChecked', checked)
+                  rec.endEdit(true)
+                })
+                allGrid.updatingRecords = false
+                selGrid.updatingRecords = false
+                if (allGrid.view.features[0].isExpanded(group)) {
+                  allGrid.view.features[0].collapse(group)
+                } else {
+                  allGrid.view.features[0].expand(group)
+                }
+              }
+              allGrid.resumeEvents()
+              store.resumeEvents()
+              selGrid.resumeEvents()
+              storeSel.resumeEvents()
+              Ext.resumeLayouts(true)
+              allGrid.getView().refreshView()
+              selGrid.getView().refreshView()
+            }
+          },
+          scope: me
+        },
+        autoScroll: true,
+        flex: 1,
+        split: true,
+        region: 'west',
+        title: UB.i18n('Всі елементи'),
+        collapsible: true,
+        columnLines: true,
+        plugins: [Ext.create('Ext.grid.plugin.CellEditing', {
+          clicksToEdit: 1
+        })],
+        tbar: Ext.create('Ext.toolbar.Toolbar', {
+          height: 40,
+          items: [
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Відмітити всі'),
+              iconCls: 'u-icon-check',
+              cls: 'green-action',
+              listeners: {
+                click: function () {
+                  const store = allGrid.getStore()
+                  const storeSel = selGrid.getStore()
+                  Ext.suspendLayouts()
+                  allGrid.suspendEvents()
+                  store.suspendEvents()
+                  selGrid.suspendEvents()
+                  storeSel.suspendEvents()
+
+                  if (searchCtrl.getValue() !== '') {
+                    clearFilter()
+                  }
+                  allGrid.updatingRecords = true
+                  selGrid.updatingRecords = true
+
+                  allGrid.getStore().each(rec => {
+                    rec.beginEdit()
+                    if (!rec.get('isChecked')) {
+                      rec.set('isChecked', true)
+                      if (me.enableOrderN) {
+                        const maxOrderN = storeSel.getMax(storeSel.data.items, 'orderN')
+                        rec.set('orderN', maxOrderN ? maxOrderN + 1 : 1)
+                      }
+                      storeSel.add(rec)
+                    }
+                    rec.endEdit(true)
+                  })
+                  allGrid.updatingRecords = false
+                  selGrid.updatingRecords = false
+                  store.groups.each(group => {
+                    setGroupCheked(me, group.records[0].get('groupCode'))
+                  })
+                  allGrid.resumeEvents()
+                  store.resumeEvents()
+                  selGrid.resumeEvents()
+                  storeSel.resumeEvents()
+                  Ext.resumeLayouts(true)
+                  selGrid.getView().refreshView()
+                }
+              }
+            },
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Виключити всі'),
+              iconCls: 'u-icon-close',
+              cls: 'red-action',
+              listeners: {
+                click: function () {
+                  const store = allGrid.getStore()
+                  const storeSel = selGrid.getStore()
+                  Ext.suspendLayouts()
+                  allGrid.suspendEvents()
+                  store.suspendEvents()
+                  selGrid.suspendEvents()
+                  storeSel.suspendEvents()
+                  if (searchCtrl.getValue() !== '') {
+                    clearFilter()
+                  }
+                  allGrid.updatingRecords = true
+                  selGrid.updatingRecords = true
+
+                  allGrid.getStore().each(rec => {
+                    rec.beginEdit()
+                    rec.set('isChecked', false)
+                    const selRec = storeSel.findRecord('ID', rec.get('ID'))
+                    if (selRec) {
+                      storeSel.remove(selRec)
+                    }
+                    rec.endEdit(true)
+                  })
+                  allGrid.updatingRecords = false
+                  selGrid.updatingRecords = false
+                  store.groups.each(group => {
+                    setGroupCheked(me, group.records[0].get('groupCode'))
+                  })
+                  allGrid.resumeEvents()
+                  store.resumeEvents()
+                  selGrid.resumeEvents()
+                  storeSel.resumeEvents()
+                  Ext.resumeLayouts(true)
+                  selGrid.getView().refreshView()
+                }
+              }
+            },
+            searchCtrl
+          ]
+
+        }),
+        columns: [
+          { xtype: 'checkcolumn', dataIndex: 'isChecked' },
+          {
+            header: UB.i18n('Вид оплати'),
+            dataIndex: 'description',
+            flex: 1
+          }
+        ]
+      }),
+      selGrid = Ext.widget('grid', {
+        xtype: 'grid',
+        stripeRows: true,
+        store: storeSel,
+        autoScroll: true,
+        region: 'center',
+        flex: 1,
+        title: UB.i18n('Відібрані елементи'),
+        viewConfig: {
+          plugins: {
+            ptype: 'gridviewdragdrop',
+            dragText: UB.i18n('Перетягніть для зміни порядку відображення'),
+            enableDrag: me.enableOrderN
+          },
+          listeners: {
+            drop: function () {
+              const store = selGrid.getStore()
+              Ext.suspendLayouts()
+              selGrid.suspendEvents()
+              store.suspendEvents()
+              selGrid.updatingRecords = true
+              store.data.items.forEach((row, idx) => {
+                row.data.orderN = idx + 1
+              })
+              selGrid.updatingRecords = false
+              selGrid.resumeEvents()
+              store.resumeEvents()
+              Ext.resumeLayouts(true)
+              selGrid.getView().refreshView()
+            }
+          }
+        },
+        columns: [
+          {
+            header: UB.i18n('Вид оплати'),
+            dataIndex: 'description',
+            sortable: !me.enableOrderN,
+            flex: 1
+          },
+          {
+            header: UB.i18n('Порядок'),
+            dataIndex: 'orderN',
+            sortable: !me.enableOrderN,
+            align: 'center',
+            flex: 0.2,
+            hidden: !me.enableOrderN
+          }
+        ],
+        tbar: Ext.create('Ext.toolbar.Toolbar', { height: 40 }),
+
+        listeners: {
+          itemdblclick: function (row, record) {
+            if (searchCtrl.getValue() !== '') {
+              clearFilter()
+            }
+            storeSel.remove(record)
+            const rec = storeMain.findRecord('ID', record.get('ID'))
+            rec.set('isChecked', false)
+            if (searchCtrl.getValue() !== '') {
+              setFilter()
+            }
+            if (me.enableOrderN) {
+              storeSel.data.items.forEach((row, idx) => {
+                row.data.orderN = idx + 1
+              })
+              me.selGrid.getView().refreshView()
+            }
+          }
+        }
+      })
+    ]
+    me.tbar = [
+      {
+        xtype: 'button',
+        scale: 'medium',
+        iconCls: 'u-icon-save-and-close',
+        tooltip: UB.i18n('saveAndClose'),
+        cls: 'save-action',
+        handler: function (btn) {
+          const result = {
+            selected: [],
+            add: [],
+            update: [],
+            remove: []
+          }
+          storeSel.data.each(record => {
+            let ID = record.get('ID')
+            result.selected.push(ID)
+            if (me.selectData && !me.selectData.includes(ID)) {
+              result.add.push(me.enableOrderN ? { ID: ID, orderN: record.get('orderN') }
+                : (me.getDescription ? { ID: ID, description: record.get('description') } : ID))
+            }
+          })
+          if (me.sourceData) {
+            if (me.enableOrderN) {
+              storeSel.data.each(record => {
+                let ID = record.get('ID')
+                const sourceRec = me.sourceData.find(o => o[me.valueAttr] === ID)
+                if (sourceRec) {
+                  if (!result.add.includes(ID) && sourceRec.orderN !== record.get('orderN')) {
+                    result.update.push({ ID: sourceRec.ID, orderN: record.get('orderN') })
+                  }
+                }
+              })
+            }
+            me.sourceData.forEach(sourceRow => {
+              if (!result.selected.includes(sourceRow[me.sourceAttr])) {
+                result.remove.push(sourceRow.ID)
+              }
+            })
+          }
+          if (me.onSelectData) {
+            const wnd = me.up('window')
+            me.onSelectData(result, wnd)
+            if (!me.showAfterSave) wnd.close()
+          }
+        }
+      }
+    ]
+
+    me.bbar = [
+      '->'
+    ]
+    me.allGrid = allGrid
+    me.selGrid = selGrid
+    me.on('afterrender', function () {
+      loadData(me, storeMain)
+    })
+    me.callParent(arguments)
+  }
+})
+
+function loadData (me, store) {
+  store.un('update', me.onStoreUpdate)
+  const query = UB.Repository('hr_payEl')
+    .attrs(['ID', 'description', 'dateFrom', 'dateTo', 'methodID.methodGroupID.name', 'methodID.methodGroupID.code'])
+  if (me.payElEntryType) {
+    query.where('methodID.methodGroupID.groupType', 'in', me.payElEntryType)
+  }
+  if (me.excludePayEl) {
+    query.where('ID', 'notIn', me.excludePayEl)
+  }
+  if (me.methodGroupCode) {
+    query.where('methodID.methodGroupID.code', 'in', me.methodGroupCode)
+  }
+  if (me.methodCode) {
+    query.where('methodID.code', 'in', me.methodCode)
+  }
+
+  if (me.isAutoCalc) {
+    query.where('isAutoCalc', '=', 1)
+  }
+
+  if (me.tabsCode) {
+    const subQuery = UB.Repository('hr_idParam')
+      .correlation('valuesID', 'ID')
+      .where('listParamID.code', 'in', me.tabsCode)
+      .where('orgID', '=', me.orgID)
+      .where('mi_deleteDate', '>=', '#maxdate')
+    if (me.listParamID) {
+      subQuery.where('listParamID.ID', '<>', me.listParamID)
+    }
+    query.notExists(subQuery)
+  }
+  query.orderBy('methodID.methodGroupID.code')
+    .orderBy('description')
+    .selectAsObject({
+      'methodID.methodGroupID.name': 'groupName',
+      'methodID.methodGroupID.code': 'groupCode'
+    }).then(result => {
+      store.loadData(result)
+      if (me.selectData) {
+        const allRecord = store.snapshot || store.data
+        const storeSel = me.selGrid.getStore()
+        allRecord.items.forEach((row, idx) => {
+          if (me.selectData.includes(row.get('ID'))) {
+            row.set('isChecked', true)
+            if (me.enableOrderN) {
+              let { orderN } = me.sourceData.find(o => o[me.valueAttr] === row.get('ID'))
+              if (!orderN) {
+                // const maxOrderN = storeSel.getMax(storeSel.data.items, 'orderN')
+                const maxOrderN = Math.max.apply(null, me.sourceData.map(o => o.orderN))
+                orderN = maxOrderN ? maxOrderN + 1 : 1
+              }
+              row.set('orderN', orderN)
+            }
+            storeSel.add(row)
+          }
+        })
+        if (me.enableOrderN) {
+          storeSel.sort('orderN', 'ASC')
+          storeSel.data.items.forEach((row, idx) => {
+            row.data.orderN = idx + 1
+          })
+          me.selGrid.getView().refreshView()
+        }
+      }
+      store.on('update', onStoreUpdate, me)
+
+      store.groups.each(group => {
+        setGroupCheked(me, group.records[0].get('groupCode'))
+      })
+    })
+}
+
+function onStoreUpdate (store, record) {
+  const me = this
+  const storeSel = me.selGrid.getStore()
+  if (record.get('isChecked')) {
+    if (me.enableOrderN) {
+      Ext.suspendLayouts()
+      me.allGrid.suspendEvents()
+      store.suspendEvents()
+      const maxOrderN = storeSel.getMax(storeSel.data.items, 'orderN')
+      record.set('orderN', maxOrderN ? maxOrderN + 1 : 1)
+      store.resumeEvents()
+      me.allGrid.resumeEvents()
+      Ext.resumeLayouts()
+    }
+    storeSel.add(record)
+  } else {
+    const rec = storeSel.findRecord('ID', record.get('ID'))
+    if (rec) {
+      storeSel.remove(rec)
+      if (me.enableOrderN) {
+        storeSel.data.items.forEach((row, idx) => {
+          row.data.orderN = idx + 1
+        })
+        me.selGrid.getView().refreshView()
+      }
+    }
+  }
+  setGroupCheked(me, record.get('groupCode'))
+}
+
+function setGroupCheked (me, groupName) {
+  let isGroupChecked = true
+  const store = me.allGrid.getStore()
+  const groupRecord = store.groups.getByKey(groupName)
+  groupRecord.records.forEach(rec => {
+    if (!rec.get('isChecked')) {
+      isGroupChecked = false
+    }
+  })
+  me.allGrid.updatingRecords = true
+
+  groupRecord.records.forEach(function (rec) {
+    rec.beginEdit()
+    rec.set('isGroupChecked', isGroupChecked)
+    rec.endEdit(true)
+  })
+  me.allGrid.updatingRecords = false
+  me.allGrid.getView().refreshView()
+}

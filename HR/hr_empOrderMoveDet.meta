@@ -1,0 +1,679 @@
+{
+  "caption": "Наказ про переміщення. Деталь",
+  "description": "Наказ про переміщення. Деталь",
+  "descriptionAttribute": "orderID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "itemIdx",
+      "dataType": "Int",
+      "caption": "№",
+      "description": "№ за порядком",
+      "documentation": "№ за порядком"
+    },
+    {
+      "name": "tabNum",
+      "dataType": "String",
+      "size": 15,
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "allowNull": true
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ про переміщення",
+      "description": "Наказ про переміщення",
+      "documentation": "Наказ про переміщення",
+      "allowNull": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultView": false
+    },
+    {
+      "name": "cancelOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Скасовано наказом",
+      "description": "Наказ, що скасував даний пункт",
+      "documentation": "Наказ, що скасував даний пункт"
+    },
+    {
+      "name": "cancelParaID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Скасовано пунктом",
+      "description": "Пункт, що скасував даний пункт",
+      "documentation": "Пункт, що скасував даний пункт"
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "destOrganizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "У організацію",
+      "description": "У організацію",
+      "documentation": "У організацію",
+      "allowNull": false
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "allowNull": false
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "caption": "У підрозділ",
+      "description": "У підрозділ",
+      "documentation": "У підрозділ"
+    },
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "caption": "На посаду",
+      "description": "На посаду",
+      "documentation": "На посаду",
+      "allowNull": true
+    },
+    {
+      "name": "dictPositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPosition",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада"
+    },
+    {
+      "name": "posNameAddition",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Доповнення до назви посади",
+      "description": "Доповнення до назви посади",
+      "documentation": "Доповнення до назви посади",
+      "allowNull": true
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "З",
+      "description": "Початок дії",
+      "documentation": "Початок дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Закінчення дії",
+      "description": "Закінчення дії",
+      "documentation": "Закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "dictAppointKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictAppointKind",
+      "caption": "Тип переведення",
+      "description": "Тип переведення",
+      "documentation": "Тип переведення",
+      "allowNull": true
+    },
+    {
+      "name": "isStaffAccording",
+      "dataType": "Boolean",
+      "caption": "Згідно зі штатним розписом",
+      "description": "Згідно зі штатним розписом",
+      "documentation": "Згідно зі штатним розписом",
+      "defaultValue": "1"
+    },
+    {
+      "name": "dictRankID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictRank",
+      "caption": "Ранг держслужбовця",
+      "description": "Ранг держслужбовця",
+      "documentation": "Ранг держслужбовця",
+      "allowNull": true
+    },
+    {
+      "name": "dictStaffCatID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStaffCat",
+      "caption": "Категорія персоналу",
+      "description": "Категорія персоналу",
+      "documentation": "Категорія персоналу"
+    },
+    {
+      "name": "dictCategoryECBID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictCategoryECB",
+      "caption": "Категорія застрахованої особи",
+      "description": "Категорія застрахованої особи",
+      "documentation": "Категорія застрахованої особи"
+    },
+    {
+      "name": "isRankSave",
+      "dataType": "Boolean",
+      "caption": "Зберегти ранг",
+      "description": "Зберегти ранг",
+      "documentation": "Зберегти ранг",
+      "allowNull": true,
+      "defaultValue": "1"
+    },
+    {
+      "name": "isRankAssign",
+      "dataType": "Boolean",
+      "caption": "Присвоїти ранг",
+      "description": "Присвоїти ранг",
+      "documentation": "Присвоїти ранг",
+      "allowNull": true,
+      "defaultValue": "0"
+    },
+    {
+      "name": "isSupplSave",
+      "dataType": "Boolean",
+      "caption": "Зі збереженням надбавок",
+      "description": "Зі збереженням надбавок",
+      "documentation": "Зі збереженням надбавок",
+      "defaultValue": "1"
+    },
+    {
+      "name": "reason",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Підстава",
+      "description": "Підстава",
+      "documentation": "Підстава",
+      "allowNull": true
+    },
+    {
+      "name": "dictReasonMovingKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictReasonMoving",
+      "caption": "Причина переведення",
+      "description": "Причина переведення",
+      "documentation": "Причина переведення",
+      "allowNull": false
+    },
+    {
+      "name": "contractType",
+      "dataType": "Enum",
+      "enumGroup": "HR_CONTRACT_TYPE",
+      "caption": "Тип договору",
+      "documentation": "Тип договору",
+      "description": "Тип договору",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "dictContractKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictContractKind",
+      "caption": "Вид договору",
+      "description": "Вид договору",
+      "documentation": "Вид договору",
+      "allowNull": false
+    },
+    {
+      "name": "workerType",
+      "dataType": "Enum",
+      "enumGroup": "HR_WORKER_TYPE",
+      "caption": "Форма зайнятості",
+      "documentation": "Форма зайнятості",
+      "description": "Форма зайнятості",
+      "allowNull": true,
+      "defaultValue": "1"
+    },
+    {
+      "name": "workPlace",
+      "dataType": "Enum",
+      "enumGroup": "HR_WORKER_PLACE",
+      "caption": "Місце роботи",
+      "documentation": "Місце роботи",
+      "description": "Місце роботи",
+      "allowNull": true,
+      "defaultValue": "1"
+    },
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "allowNull": false
+    },
+    {
+      "name": "firstName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Ім'я",
+      "description": "Ім'я",
+      "documentation": "Ім'я",
+      "allowNull": false
+    },
+    {
+      "name": "lastName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Прізвище",
+      "description": "Прізвище",
+      "documentation": "Прізвище",
+      "allowNull": false
+    },
+    {
+      "name": "middleName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "По батькові",
+      "description": "По батькові",
+      "documentation": "По батькові"
+    },
+    {
+      "name": "empNameCase",
+      "dataType": "String",
+      "size": 200,
+      "caption": "ПІБ для друку",
+      "allowNull": true
+    },
+    {
+      "name": "title",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада"
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false,
+      "defaultValue": "MOVE"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Інформація",
+      "documentation": "Інформація",
+      "description": "Інформація",
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": [
+         "positionID.name",
+         "departmentID.name",
+         "destOrganizationID.name"
+        ],
+        "compositeSeparator": [
+         " ", " ", " "
+        ]
+      }
+    },
+    {
+      "name": "tabDate",
+      "dataType": "Date",
+      "caption": "Табелюється з",
+      "description": "Табелюється з",
+      "documentation": "Табелюється з",
+      "allowNull": true
+    },
+    {
+      "name": "workScheduleID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_workSchedule",
+      "caption": "Графік роботи",
+      "description": "Графік роботи",
+      "documentation": "Графік роботи",
+      "allowNull": true
+    },
+    {
+      "name": "dictTarifCoeffID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTarifCoeff",
+      "caption": "Тарифний розряд",
+      "description": "Тарифний розряд",
+      "documentation": "Тарифний розряд"
+    },
+    {
+      "name": "mtCount",
+      "dataType": "Float",
+      "caption": "Кількість ставок",
+      "description": "Кількість ставок",
+      "documentation": "Кількість ставок",
+      "defaultValue": "1",
+      "allowNull": false
+    },
+    {
+      "name": "accrualSum",
+      "dataType": "Currency",
+      "caption": "Оклад",
+      "documentation": "Оклад",
+      "description": "Оклад"
+    },
+    {
+      "name": "accrualSumPrev",
+      "dataType": "Currency",
+      "caption": "Попередній оклад",
+      "documentation": "Попередній оклад",
+      "description": "Попередній оклад"
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати",
+      "description": "Вид оплати для окладу",
+      "documentation": "Вид оплати для окладу",
+      "allowNull": true
+    },
+    {
+      "name": "isResponsible",
+      "dataType": "Boolean",
+      "caption": "МВО",
+      "description": "МВО",
+      "documentation": "МВО",
+      "defaultValue": "0"
+    },
+    {
+      "name": "changedValues",
+      "dataType": "Text",
+      "caption": "Дані змінені при проведенні",
+      "description": "Дані змінені при проведенні",
+      "documentation": "Дані змінені при проведенні"
+    },
+    {
+      "name": "isGroup",
+      "dataType": "Boolean",
+      "caption": "Груповий",
+      "documentation": "Чи являється наказ груповим",
+      "description": "Чи являється наказ груповим",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "raiseSalary",
+      "dataType": "Date",
+      "caption": "Місяць підвищення доходу для індексації доходу",
+      "description": "Місяць підвищення доходу для індексації доходу",
+      "documentation": "Місяць підвищення доходу для індексації доходу"
+    },
+    {
+      "name": "isIndex",
+      "dataType": "Boolean",
+      "caption": "Індексувати середній заробіток відповідно підвищенню оклада",
+      "description": "Індексувати середній заробіток відповідно підвищенню оклада",
+      "documentation": "Індексувати середній заробіток відповідно підвищенню оклада",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isTrialPeriod",
+      "dataType": "Boolean",
+      "caption": "Встановити випробувальний строк",
+      "description": "Встановити випробувальний строк",
+      "documentation": "Встановити випробувальний строк",
+      "allowNull": true,
+      "defaultValue": "0"
+    },
+    {
+      "name": "dictTrialPeriodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTrialPeriod",
+      "caption": "Термін",
+      "description": "Термін випробувального періоду",
+      "documentation": "Термін випробувального періоду",
+      "allowNull": true
+    },
+    {
+      "name": "dateTrialEnd",
+      "dataType": "Date",
+      "caption": "Закінчення випробувального терміну",
+      "description": "Закінчення випробувального терміну",
+      "documentation": "Закінчення випробувального терміну",
+      "allowNull": true
+    },
+    {
+      "name": "vacPositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Тимчасово на місце",
+      "description": "Тимчасово на місце",
+      "documentation": "Тимчасово на місце"
+    },
+    {
+      "name": "notStoreInWorkBook",
+      "dataType": "Boolean",
+      "caption": "Не вносити у трудову книжку",
+      "description": "Не вносити у трудову книжку",
+      "documentation": "Не вносити у трудову книжку",
+      "allowNull": true,
+      "defaultValue": "0"
+    },
+    {
+      "name": "termAddPayment",
+      "dataType": "Enum",
+      "enumGroup": "HR_TERMADDPAYMENT_TYPE",
+      "caption": "Термін доплати",
+      "documentation": "Термін доплати",
+      "description": "Термін доплати"
+    },
+    {
+      "name": "addPayDateFrom",
+      "dataType": "Date",
+      "caption": "З",
+      "description": "Початок виплати доплати",
+      "documentation": "Початок виплати доплати"
+    },
+    {
+      "name": "addPayDateTo",
+      "dataType": "Date",
+      "caption": "По",
+      "description": "Закінчення виплати доплати",
+      "documentation": "Закінчення виплати доплати"
+    },
+    {
+      "name": "addPayElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати для доплати",
+      "description": "Вид оплати для доплати",
+      "documentation": "Вид оплати для доплати",
+      "allowNull": true
+    },
+    {
+      "name": "empOrderSicknessID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderSickness",
+      "caption": "згідно лікарняному",
+      "description": "згідно лікарняному",
+      "documentation": "згідно лікарняному"
+    },
+    {
+      "name": "isOutStaff",
+      "dataType": "Boolean",
+      "caption": "Поза штатом",
+      "description": "Поза штатом",
+      "documentation": "Поза штатом",
+      "allowNull": true,
+      "defaultValue": "0"
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_fundSource",
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування",
+      "documentation": "Джерело фінансування"
+    },
+    {
+      "name": "dictCostTypeID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictCostType",
+      "caption": "Місце виникнення витрат",
+      "description": "Місце виникнення витрат",
+      "documentation": "Місце виникнення витрат"
+    },
+    {
+      "name": "isPreservExistCharges",
+      "dataType": "Boolean",
+      "caption": "Зі збереженням існуючих нарахувань",
+      "description": "Зі збереженням існуючих нарахувань",
+      "documentation": "Зі збереженням існуючих нарахувань",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dictEmpCategoryID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictEmpCategory",
+      "caption": "Кваліфікаційна категорія",
+      "description": "Кваліфікаційна категорія",
+      "documentation": "Кваліфікаційна категорія",
+      "allowNull": true
+    },
+    {
+      "name": "factPosition",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Фактична посада",
+      "description": "Фактична посада",
+      "documentation": "Фактична посада",
+      "defaultView": false
+    },
+    {
+      "name": "addOrderText",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Додатковий текст в наказ",
+      "description": "Додатковий текст в наказ",
+      "documentation": "Додатковий текст в наказ",
+      "allowNull": true
+    },
+    {
+      "name": "dictVehicleID",
+      "dataType": "Entity",
+      "associatedEntity": "trans_vehicle",
+      "caption": "Транспортний засіб",
+      "description": "Транспортний засіб",
+      "documentation": "Транспортний засіб",
+      "allowNull": true
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_EMPORDERMOVE_ORDERDAT": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "orderID": { "sort": "ASC" },
+          "empOrderType": { "sort": "ASC" },
+          "dateFrom": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_EMPORDERMOVE_ORGDAT": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "organizationID": { "sort": "ASC" },
+          "empOrderType": { "sort": "ASC" },
+          "mi_deleteDate": { "sort": "ASC" },
+          "dateFrom": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "unity": {
+      "entity": "hr_empOrderDet",
+      "attributeList": [
+        "organizationID",
+        "departmentID",
+        "positionID",
+        "empOrderType",
+        "orderID",
+        "orderState",
+        "cancelOrderID",
+        "cancelParaID",
+        "employeePositionID",
+        "employeeNumberID",
+        "employeeID",
+        "firstName",
+        "lastName",
+        "middleName",
+        "title",
+        "description",
+        "empNameCase",
+        "changedValues",
+        "dateFrom",
+        "dateTo",
+        "itemIdx",
+        "isGroup"
+      ],
+      "defaults": {
+        "isExternal": "0"
+      },
+      "mapping": {
+        "title": "title"
+      }
+    }
+  }
+}

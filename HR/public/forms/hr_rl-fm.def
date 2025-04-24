@@ -1,0 +1,1838 @@
+/* global Ext $App appAC appHR UB _ AC */
+exports.formDef = 'HR.rl'
+
+Ext.define('HR.rl', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_rl',
+  height: 400,
+  width: 800,
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+    const labelStyleLink = 'color: #2f7c94; cursor:pointer'
+    const fieldStyleLink = 'cursor:pointer; text-align: right'
+    me.changeRecalculatePeriod = false
+    const balanceInListeners = {
+      click: {
+        element: 'body',
+        fn: function () {
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'hr_accrualBalance',
+            entity: 'hr_accrualBalance',
+            cmpInitConfig: {
+              periodID: me.attr.periodID.getValue(),
+              employeeNumberID: me.attr.employeeNumberID.getValue(),
+              secondaryJobsNumbers: (me.secondaryJobsNumbers && me.secondaryJobsNumbers.length) ? me.secondaryJobsNumbers : [],
+              inBalance: true
+            }
+          })
+        }
+      }
+    }
+    const balanceOutListeners = {
+      click: {
+        element: 'body',
+        fn: function () {
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'hr_accrualBalance',
+            entity: 'hr_accrualBalance',
+            cmpInitConfig: {
+              periodID: me.attr.periodID.getValue(),
+              employeeNumberID: me.attr.employeeNumberID.getValue(),
+              secondaryJobsNumbers: (me.secondaryJobsNumbers && me.secondaryJobsNumbers.length) ? me.secondaryJobsNumbers : [],
+              inBalance: false
+            }
+          })
+        }
+      }
+    }
+
+    me.dockedItems = [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        ubID: 'mainToolbar',
+        enableOverflow: true,
+        items: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Оновити'),
+            scale: 'medium',
+            iconCls: 'u-icon-refresh',
+            handler: function () {
+              me.changeRecalculatePeriod = false
+              /* me.attr.periodFromID.calcValue = null
+              if (me.attr.periodFromID.getValue() !== null) {
+                me.attr.periodFromID.setValueById(null)
+              } */
+              me.getData()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Об\'єднувати записи'),
+            scale: 'medium',
+            cls: 'fill-action',
+            name: 'unionRowButton',
+            iconCls: 'u-icon-copy-alt',
+            handler: function (btn) {
+              me.unionRow = !me.unionRow
+              btn.addCls(me.unionRow ? 'custom-action_btn' : '')
+              btn.removeCls(!me.unionRow ? 'custom-action_btn' : '')
+              btn.setTooltip(me.unionRow ? UB.i18n('Виключити об\'єднання записів') : UB.i18n('Включити об\'єднання записів'))
+              me.saveStorageData()
+              me.getData()
+              me.attr.employeeNumberID.focus()
+            }
+          },
+          {
+            iconCls: 'el-icon-s-custom',
+            cls: 'green-action',
+            tooltip: UB.i18n('Особовий рахунок'),
+            handler: function () {
+              if (me.attr.employeeNumberID.getFieldValue('kind') === 'STUD') {
+                const employeeID = me.attr.employeeNumberID.getFieldValue('employeeID')
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: 'hr_employeeStud',
+                  entity: 'hr_employee',
+                  instanceID: employeeID,
+                  tabId: 'hr_employeeStud' + employeeID,
+                  target: $App.getViewport().centralPanel,
+                  cmpInitConfig: {
+                    employeeNumberID: me.attr.employeeNumberID.getValue()
+                  }
+                })
+              } else {
+                appHR.showEmployeeNumber(me.attr.employeeNumberID.getValue())
+              }
+            }
+          },
+          {
+            iconCls: 'far fa-calendar-alt',
+            cls: 'fill-action',
+            tooltip: UB.i18n('Табель'),
+            handler: function () {
+              appHR.showTimeSheet(me.attr.employeeNumberID.getValue(), me.attr.periodID.getValue())
+            }
+          },
+          {
+            iconCls: 'fas fa-print',
+            cls: 'blue-action',
+            tooltip: UB.i18n('Друкувати'),
+            name: 'printBtn',
+            menu: [
+              {
+                text: UB.i18n('Розрахунковий лист за місяць'),
+                handler: function () {
+                  $App.doCommand({
+                    cmdType: 'showForm',
+                    formCode: 'hr_accrual-report',
+                    tabId: UB.i18n('Розрахунковий лист') + Date.now(),
+                    target: $App.getViewport().centralPanel,
+                    cmpInitConfig: {
+                      defaultEmployeeNumberID: me.attr.employeeNumberID.getValue(),
+                      defaultIncludeSecEmp: me.attr.includeSecEmp.getValue()
+                    },
+                    cmdData: {
+                      reportCode: 'hr_accrual-rlMonth',
+                      reportOptions: {}
+                    }
+                  })
+                }
+              },
+              {
+                text: UB.i18n('Розрахунковий лист за місяць №2'),
+                handler: function () {
+                  me.doReport('hr_rl_1_second')
+                }
+              },
+              {
+                text: UB.i18n('Розрахунковий лист за місяць (освіта)'),
+                name: 'rlEducationBtn',
+                handler: function () {
+                  $App.doCommand({
+                    cmdType: 'showForm',
+                    formCode: 'hr_accrual-report',
+                    tabId: UB.i18n('Розрахунковий лист за місяць (освіта)') + Date.now(),
+                    target: $App.getViewport().centralPanel,
+                    cmpInitConfig: {
+                      defaultEmployeeNumberID: me.attr.employeeNumberID.getValue(),
+                      defaultIncludeSecEmp: me.attr.includeSecEmp.getValue()
+                    },
+                    cmdData: {
+                      reportCode: 'hr_accrual-rlMonthEdu',
+                      reportOptions: {}
+                    }
+                  })
+                }
+              }/*,
+              {
+                text: UB.i18n('Розрахунковий лист за місяць (освіта)'),
+                name: 'rlEducationBtn',
+                handler: function () {
+                  me.doReport('hr_rl_1_education')
+                }
+              } */
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.items = [
+      {
+        region: 'north',
+        layout: { type: 'vbox', align: 'stretch' },
+        split: true,
+        items: [
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'empNumComboBox',
+                name: 'employeeNumberID',
+                flex: 1,
+                fieldLabel: UB.i18n('Працівник'),
+                selectOnFocus: true,
+                addDateTo: true,
+                addPlural: true,
+                labelWidth: 120,
+                ubRequest: {
+                  entity: 'hr_employeeNumberSR',
+                  fieldList: ['ID', 'description', 'orgID', 'employeeID', 'dateTo', 'workPlace', 'workPlaceCode', 'kind', 'empDictPositionID.name'],
+                  orderList: { orderBy: { expression: 'tabNumSort' } }
+                },
+                listeners: {
+                  change: function (ctrl, value) {
+                    if (value && me.defaultValues && me.defaultValues.employeeNumberID && ctrl.getFieldValue('orgID') !== appAC.globalOrganization()) {
+                      $App.dialogInfo('Працівник не відноситься до вибраної організаціїї, виберіть організацію працівника', UB.i18n('Увага')).then(() => {
+                        me.close()
+                      })
+                    }
+                    me.changeRecalculatePeriod = false
+                    me.saveStorageData()
+                    me.getData()
+                  }
+                }
+
+              },
+              {
+                layout: { type: 'hbox' },
+                flex: 1,
+                items: [
+                  {
+                    xtype: 'label',
+                    text: UB.i18n('Період:'),
+                    cls: 'x-form-item-label',
+                    margin: '8 0 0 5',
+                    width: 120
+                  },
+                  {
+                    xtype: 'button',
+                    text: '<',
+                    margin: '2 0 0 0',
+                    tooltip: UB.i18n('Попередній період'),
+                    width: 30,
+                    handler: () => {
+                      const priorID = me.attr.periodID.getFieldValue('priorPeriodID')
+                      if (priorID) {
+                        me.attr.periodID.setValueById(priorID)
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'periodID',
+                    margin: '2 0 0 5',
+                    flex: 1,
+                    fieldLabel: '', // 'Період',
+                    labelWidth: 120,
+                    hideEntityItemInContext: true,
+                    selectOnFocus: true,
+                    pageSize: 50,
+                    ubRequest: {
+                      entity: 'hr_dictPeriod',
+                      fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'priorPeriodID', 'nextPeriodID', 'isClosed', 'isCurrent', 'priorPeriodID.isCurrent'],
+                      orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                    },
+                    listeners: {
+                      change: function (ctrl, value) {
+                        me.changeRecalculatePeriod = false
+                        me.down('[name=printBtn]').setDisabled(!value)
+                        if (value) {
+                          const ubRequest = me.attr.periodFromID.getStore().ubRequest
+                          if (!ubRequest.whereList) {
+                            ubRequest.whereList = {}
+                          }
+                          ubRequest.whereList.dateFrom = {
+                            expression: '[dateFrom]',
+                            condition: '<=',
+                            value: AC.dateService.truncTimeToUtcNull(ctrl.getFieldValue('dateTo'))
+                          }
+                          me.setFilterEmployee()
+                          me.getData()
+                        }
+                      },
+                      expand: appHR.periodExpand
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    text: '>',
+                    margin: '2 15 0 0',
+                    tooltip: UB.i18n('Наступний період'),
+                    width: 30,
+                    handler: () => {
+                      const nextID = me.attr.periodID.getFieldValue('nextPeriodID')
+                      if (nextID) {
+                        me.attr.periodID.setValueById(nextID)
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            name: 'employeeData',
+            margin: '0 15 0 15'
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'periodFromID',
+                    width: 400,
+                    margin: '8 0 0 15',
+                    fieldLabel: UB.i18n('Перерахунок з'),
+                    labelWidth: 120,
+                    hideEntityItemInContext: true,
+                    selectOnFocus: true,
+                    ubRequest: {
+                      entity: 'hr_dictPeriod',
+                      fieldList: ['ID', 'name', 'dateFrom', 'dateTo', 'orgID'],
+                      orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                    },
+                    listeners: {
+                      expand: appHR.periodExpand,
+                      change: function (ctrl, value) {
+                        me.recalculatePeiodID = value
+                        if (value !== ctrl.calcValue && !ctrl.skipChange) {
+                          me.changeRecalculatePeriod = true
+                          me.getData()
+                        }
+                        ctrl.skipChange = false
+                        ctrl.calcValue = 0
+                      }
+                    }
+                  },
+                  {
+                    name: 'includeSecEmp',
+                    xtype: 'checkbox',
+                    fieldLabel: UB.i18n('Підсумки разом по працівнику'),
+                    boxLabelAlign: 'before',
+                    labelWidth: 300,
+                    width: 400
+                  }
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  {
+                    xtype: 'ubboxselect',
+                    name: 'dictFundSourceID',
+                    fieldLabel: UB.i18n('Джерело фінансування'),
+                    labelWidth: 170,
+                    margin: '8 15 0 15',
+                    displayField: 'description',
+                    hideEntityItemInContext: true,
+                    valueField: 'ID',
+                    multiSelect: true,
+                    allowBlank: true,
+                    enableKeyEvents: true,
+                    ubRequest: {
+                      entity: 'ac_fundSource',
+                      method: 'selectByOrg',
+                      fieldList: ['ID', 'description'],
+                      whereList: {},
+                      __allowSelectSafeDeleted: true
+                    },
+                    listeners: {
+                      focus: (field) => {
+                        if (field.isChanged) {
+                          me.getData()
+                        }
+                        field.isChanged = false
+                      },
+                      change: (field) => {
+                        field.isChanged = true
+                      },
+                      blur: (field) => {
+                        if (field.isChanged) {
+                          me.getData()
+                        }
+                      },
+                      afterrender: function (ctrl) {
+                        ctrl.store.ubRequest.orgID = appAC.globalOrganization()
+                      },
+                      beforeQuerySend: (ctrl) => {
+                        ctrl.combo.store.ubRequest.orgID = appAC.globalOrganization()
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubboxselect',
+                    name: 'dictProgClassID',
+                    fieldLabel: UB.i18n('КПК'),
+                    labelWidth: 170,
+                    margin: '8 15 0 15',
+                    displayField: 'description',
+                    hideEntityItemInContext: true,
+                    valueField: 'ID',
+                    multiSelect: true,
+                    allowBlank: true,
+                    enableKeyEvents: true,
+                    hidden: true,
+                    ubRequest: {
+                      entity: 'ac_dictProgClass',
+                      fieldList: ['ID', 'description'],
+                      whereList: {}
+                    },
+                    listeners: {
+                      focus: (field) => {
+                        if (field.isChanged) {
+                          me.getData()
+                        }
+                        field.isChanged = false
+                      },
+                      change: (field) => {
+                        field.isChanged = true
+                      },
+                      blur: (field, event, eOpts) => {
+                        if (field.isChanged) {
+                          me.getData()
+                        }
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubboxselect',
+                    name: 'dictProjectID',
+                    flex: 1,
+                    fieldLabel: UB.i18n('Проєкт'),
+                    labelWidth: 170,
+                    margin: '8 15 0 15',
+                    displayField: 'description',
+                    hideEntityItemInContext: true,
+                    valueField: 'ID',
+                    multiSelect: true,
+                    allowBlank: true,
+                    enableKeyEvents: true,
+                    hidden: true,
+                    ubRequest: {
+                      entity: 'ac_dictProject',
+                      fieldList: ['ID', 'description'],
+                      whereList: {}
+                    },
+                    listeners: {
+                      focus: (field) => {
+                        if (field.isChanged) {
+                          me.getData()
+                        }
+                        field.isChanged = false
+                      },
+                      change: (field) => {
+                        field.isChanged = true
+                      },
+                      blur: (field) => {
+                        if (field.isChanged) {
+                          me.getData()
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'tabpanel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        items: [
+          {
+            xtype: 'panel',
+            title: UB.i18n('Зарплата'),
+            layout: 'border',
+            flex: 1,
+            items: [
+              {
+                layout: { type: 'hbox' },
+                region: 'north',
+                items: [
+                  {
+                    layout: { type: 'hbox', pack: 'end' },
+                    listeners: balanceInListeners,
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'displayfield',
+                        name: 'balanceIn',
+                        fieldLabel: UB.i18n('Сальдо вхідне'),
+                        valueToRaw: (value) => {
+                          return _.isNumber(value) ? Ext.util.Format.currency(value, '', this.decimalPrecision || 2) : ''
+                        },
+                        fieldStyle: fieldStyleLink,
+                        labelStyle: labelStyleLink,
+                        labelWidth: 120,
+                        width: 250
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                xtype: 'acGrid',
+                name: 'accrual',
+                stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_rl_accrual'),
+                flex: 1,
+                autoScroll: true,
+                region: 'center',
+                storeType: 'local',
+                disablePaging: true,
+                notWriteChanges: true,
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                summary: {
+                  paySum: (store, dataIndex) => {
+                    const includeSecEmp = me.attr.includeSecEmp.getValue()
+                    const allRecord = store.snapshot || store.data
+                    return allRecord.items.reduce((sum, row) => {
+                      return sum + (((includeSecEmp && row.get('ignoreInCalcPay')) || (!includeSecEmp && row.get('flagsRec') & 8192)) ? 0 : (row.get(dataIndex) || 0))
+                    }, 0)
+                  }
+                },
+                showToolBar: true,
+                onItemDoubleClick: (row, record) => {
+                  if (record.get('periodSalaryID')) {
+                    me.showEditForm('PAYMENT', record.data)
+                  }
+                },
+                customToolBarActions: [
+                  {
+                    xtype: 'button',
+                    scale: 'medium',
+                    name: 'add',
+                    iconCls: 'fa fa-plus-circle',
+                    tooltip: UB.i18n('actionAdd'),
+                    cls: 'add-new-action',
+                    disabled: !AC.entityUtils.verifyRightsMethod('hr_rl', 'calcAccrual'),
+                    handler: () => { me.showEditForm('PAYMENT') }
+                  }
+                ],
+                customContextActions: [
+                  {
+                    text: UB.i18n('Аналітика'),
+                    iconCls: 'el-icon-notebook-2',
+                    name: 'dimension',
+                    cls: 'blue-action',
+                    handler: () => { me.dimension('accrual') }
+                  },
+                  {
+                    xtype: 'menuseparator'
+                  },
+                  {
+                    text: UB.i18n('Сторнувати'),
+                    iconCls: 'fas fa-minus',
+                    name: 'reversal',
+                    cls: 'delete-action',
+                    hidden: !AC.entityUtils.verifyRightsMethod('hr_rl', 'getReversalAccrual'),
+                    handler: () => { me.reversal('accrual') }
+                  },
+                  {
+                    text: UB.i18n('Delete'),
+                    iconCls: 'fa fa-trash-o',
+                    name: 'delete',
+                    cls: 'delete-action',
+                    hidden: !AC.entityUtils.verifyRightsMethod('hr_rl', 'deleteAccrual'),
+                    handler: () => { me.delAccrual('accrual') }
+                  }
+
+                ],
+                fields: [
+                  { name: 'ID' },
+                  { name: 'orgID' },
+                  { name: 'periodCalcID' },
+                  { name: 'periodSalaryID' },
+                  { name: 'periodSalaryID.name' },
+                  { name: 'periodCalc' },
+                  { name: 'periodSalary' },
+                  { name: 'employeeNumberID' },
+                  { name: 'employeeNumberPartID' },
+                  { name: 'missingEmployeeNumberID' },
+                  { name: 'payElID' },
+                  { name: 'flagsRec' },
+                  { name: 'flagsFix' },
+                  { name: 'planHours' },
+                  { name: 'planDays' },
+                  { name: 'baseSum' },
+                  { name: 'mask' },
+                  { name: 'maskAdd' },
+                  { name: 'mtCount', format: '0.00' },
+                  { name: 'dateFrom' },
+                  { name: 'dateTo' },
+                  { name: 'avgCalcType' },
+                  { name: 'dateFromAvg' },
+                  { name: 'dateToAvg' },
+                  { name: 'orderDateFrom' },
+                  { name: 'orderDateTo' },
+                  { name: 'planSumAvg' },
+                  { name: 'sumAvg' },
+                  { name: 'linkToParentID' },
+                  { name: 'source' },
+                  { name: 'sourceID' },
+                  { name: 'paymentID' },
+                  { name: 'orderID' },
+                  { name: 'empOrderID' },
+                  { name: 'timeSheetID' },
+                  { name: 'orderNumber' },
+                  { name: 'orderDate' },
+                  { name: 'orderID.description' },
+                  { name: 'orderID.orderDate' },
+                  { name: 'orderID.orderNumber' },
+                  { name: 'orderEntityName' },
+                  { name: 'orderDtID' },
+                  { name: 'koef' },
+                  { name: 'baseDate' },
+                  { name: 'minSalarySum' },
+                  { name: 'incomingDebtSum' },
+                  { name: 'repaymentDebtSum' },
+                  { name: 'calculatedSum' },
+                  { name: 'paySumAccrual' },
+                  { name: 'repaymentSum' },
+                  { name: 'basePayment' },
+                  { name: 'methodCode' },
+                  { name: 'payType' },
+                  { name: 'taxIndividAcc' },
+                  { name: 'accrualAvg' },
+                  { name: 'accrualDt' },
+                  { name: 'planHoursByDays' },
+                  { name: 'hoursByDays' },
+                  { name: 'leadingHoursByDays' },
+                  { name: 'calcParams' },
+                  { name: 'extraRate' },
+                  { name: 'calendarDays' },
+                  { name: 'standingAll' },
+                  { name: 'payElDeleted' },
+                  { name: 'createUserFullFIO' },
+                  { name: 'createUserFullName' },
+                  { name: 'createUserName' },
+                  { name: 'calculateDate' },
+                  { name: 'dictFundSourceID' },
+                  { name: 'dictProgClassID' },
+                  { name: 'dictProjectID' },
+                  { name: 'ignoreInCalcPay' },
+                  { name: 'calcEarnings' },
+                  { name: 'code', columnConfig: { text: UB.i18n('Код'), width: 50, sortBy: 'Number' } },
+                  {
+                    name: 'name',
+                    columnConfig: {
+                      text: UB.i18n('Нарахування'),
+                      flex: 1,
+                      renderer: (value, meta, record) => {
+                        if (record.get('payElDeleted')) { meta.tdCls = 'grd-line-through' }
+                        return value
+                      }
+                    }
+                  },
+                  {
+                    name: 'days',
+                    columnConfig: {
+                      text: UB.i18n('Дні'),
+                      width: 100,
+                      align: 'right',
+                      sortBy: 'Number',
+                      renderer: function (value, metadata, record) { return record.get('methodCode') === '201' ? record.get('koef') : value }
+                    }
+                  },
+                  { name: 'hours', columnConfig: { text: UB.i18n('Години'), width: 100, align: 'right', /* floatFormat: 2, */ sortBy: 'Number' } },
+                  {
+                    name: 'rate',
+                    columnConfig: {
+                      text: '%',
+                      width: 100,
+                      align: 'right',
+                      floatFormat: 1,
+                      sortBy: 'Number',
+                      renderer: function (value) { return AC.currencyService.valueAsMinDecimalPrecision(value, 1) }
+                    }
+                  },
+                  { name: 'paySum', columnConfig: { text: UB.i18n('Сума'), width: 150, align: 'right', floatFormat: 2, sortBy: 'Number' } }
+                ],
+                getRowClass: function (record) {
+                  if (me.defaultValues.makeBold) {
+                    let isApproach = false
+                    if (me.defaultValues.payElID) {
+                      me.defaultValues.payElID.forEach(el => {
+                        if (record.get('payElID') === el.payElID && (!me.defaultValues.periodSalaryID || me.defaultValues.periodSalaryID === record.get('periodSalaryID'))) { isApproach = true }
+                      })
+                    }
+                    if (record.get('flagsRec') & 4) {
+                      if (isApproach) {
+                        return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-lightgreen-bold-italic' : 'grd-color-lightgreen-bold')
+                      } else return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-lightgreen-italic' : 'grd-color-lightgreen')
+                    } else if ((record.get('flagsRec') & 1 << 12) || (record.get('flagsRec') & 1 << 13)) {
+                      if (isApproach) {
+                        return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-grey-bold-italic' : 'grd-color-grey-bold')
+                      } else return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-grey-italic' : 'grd-color-grey')
+                    } else if (!record.get('periodCalcID')) {
+                      if (isApproach) {
+                        return ((record.get('flagsRec') & 1 << 20) ? 'org-node-bold-italic' : 'org-node-bold')
+                      } else return ((record.get('flagsRec') & 1 << 20) ? 'org-node-italic' : 'org-node')
+                    } else if (record.get('flagsRec') & 1 << 9) {
+                      if (isApproach) {
+                        return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-red-bold-italic' : 'grd-color-red-bold')
+                      } else return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-red-italic' : 'grd-color-red')
+                    } else if (record.get('flagsRec') & 1) {
+                      if (isApproach) {
+                        return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-blue-bold-italic' : 'grd-color-blue-bold')
+                      } else return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-blue-italic' : 'grd-color-blue')
+                    } else {
+                      if (isApproach) {
+                        return ((record.get('flagsRec') & 1 << 20) ? 'grd-bold-italic' : 'grd-bold')
+                      } else if (record.get('flagsRec') & 1 << 20) {
+                        return 'grd-italic'
+                      }
+                    }
+                  } else {
+                    if (record.get('flagsRec') & 4) {
+                      return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-lightgreen-italic' : 'grd-color-lightgreen')
+                    } else
+                    if ((record.get('flagsRec') & 1 << 12) || (record.get('flagsRec') & 1 << 13)) {
+                      return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-grey-italic' : 'grd-color-grey')
+                    } else if (!record.get('periodCalcID')) {
+                      return ((record.get('flagsRec') & 1 << 20) ? 'org-node-italic' : 'org-node')
+                    } else if (record.get('flagsRec') & 1 << 9) {
+                      return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-red-italic' : 'grd-color-red')
+                    } else if (record.get('flagsRec') & 1) {
+                      return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-blue-italic' : 'grd-color-blue')
+                    } else if (record.get('flagsRec') & 1 << 20) {
+                      return 'grd-italic'
+                    }
+                  }
+                }
+              },
+              {
+                xtype: 'acGrid',
+                name: 'retention',
+                stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_rl_retention'),
+                flex: 1,
+                autoScroll: true,
+                split: true,
+                region: 'east',
+                width: '50%',
+                storeType: 'local',
+                disablePaging: true,
+                notWriteChanges: true,
+                showToolBar: true,
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                summary: {
+                  paySum: (store, dataIndex) => {
+                    const includeSecEmp = me.attr.includeSecEmp.getValue()
+                    const allRecord = store.snapshot || store.data
+                    return allRecord.items.reduce((sum, row) => {
+                      return sum + (((includeSecEmp && row.get('ignoreInCalcPay')) || (!includeSecEmp && row.get('flagsRec') & 8192)) ? 0 : (row.get(dataIndex) || 0))
+                    }, 0)
+                  }
+                },
+                onItemDoubleClick: function (row, record) {
+                  if (record.get('periodSalaryID')) {
+                    me.showEditForm('OFFTAKE', record.data)
+                  }
+                },
+                customToolBarActions: [
+                  {
+                    xtype: 'button',
+                    scale: 'medium',
+                    name: 'add',
+                    iconCls: 'fa fa-plus-circle',
+                    tooltip: UB.i18n('actionAdd'),
+                    cls: 'add-new-action',
+                    disabled: !AC.entityUtils.verifyRightsMethod('hr_rl', 'calcAccrual'),
+                    handler: () => { me.showEditForm('OFFTAKE') }
+                  }
+                ],
+                customContextActions: [
+                  {
+                    text: UB.i18n('Аналітика'),
+                    iconCls: 'el-icon-notebook-2',
+                    name: 'dimension',
+                    cls: 'blue-action',
+                    handler: () => { me.dimension('retention') }
+                  },
+                  {
+                    xtype: 'menuseparator'
+                  },
+                  {
+                    text: UB.i18n('Сторнувати'),
+                    iconCls: 'fas fa-minus',
+                    name: 'reversal',
+                    cls: 'delete-action',
+                    hidden: !AC.entityUtils.verifyRightsMethod('hr_rl', 'getReversalAccrual'),
+                    handler: () => { me.reversal('retention') }
+                  },
+                  {
+                    text: UB.i18n('Delete'),
+                    iconCls: 'fa fa-trash-o',
+                    name: 'delete',
+                    cls: 'delete-action',
+                    hidden: !AC.entityUtils.verifyRightsMethod('hr_rl', 'deleteAccrual'),
+                    handler: () => { me.delAccrual('retention') }
+                  }
+
+                ],
+                fields: [
+                  { name: 'ID' },
+                  { name: 'orgID' },
+                  { name: 'periodCalcID' },
+                  { name: 'periodSalaryID' },
+                  { name: 'periodSalaryID.name' },
+                  { name: 'periodCalc' },
+                  { name: 'periodSalary' },
+                  { name: 'employeeNumberID' },
+                  { name: 'employeeNumberPartID' },
+                  { name: 'payElID' },
+                  { name: 'flagsRec' },
+                  { name: 'flagsFix' },
+                  { name: 'planHours' },
+                  { name: 'planDays' },
+                  { name: 'baseSum' },
+                  { name: 'mask' },
+                  { name: 'maskAdd' },
+                  { name: 'mtCount', format: '0.00' },
+                  { name: 'dateFrom' },
+                  { name: 'dateTo' },
+                  { name: 'linkToParentID' },
+                  { name: 'source' },
+                  { name: 'sourceID' },
+                  { name: 'paymentID' },
+                  { name: 'orderID' },
+                  { name: 'empOrderID' },
+                  { name: 'timeSheetID' },
+                  { name: 'orderNumber' },
+                  { name: 'orderDate' },
+                  { name: 'orderID.description' },
+                  { name: 'orderID.orderDate' },
+                  { name: 'orderID.orderNumber' },
+                  { name: 'orderEntityName' },
+                  { name: 'orderDtID' },
+                  { name: 'koef' },
+                  { name: 'baseDate' },
+                  { name: 'minSalarySum' },
+                  { name: 'incomingDebtSum' },
+                  { name: 'repaymentDebtSum' },
+                  { name: 'calculatedSum' },
+                  { name: 'paySumAccrual' },
+                  { name: 'repaymentSum' },
+                  { name: 'basePayment' },
+                  { name: 'methodCode' },
+                  { name: 'payType' },
+                  { name: 'taxIndividAcc' },
+                  { name: 'accrualAvg' },
+                  { name: 'accrualDt' },
+                  { name: 'planHoursByDays' },
+                  { name: 'hoursByDays' },
+                  { name: 'leadingHoursByDays' },
+                  { name: 'calcParams' },
+                  { name: 'createUserFullFIO' },
+                  { name: 'createUserFullName' },
+                  { name: 'createUserName' },
+                  { name: 'calculateDate' },
+                  { name: 'dictFundSourceID' },
+                  { name: 'dictProgClassID' },
+                  { name: 'dictProjectID' },
+                  { name: 'ignoreInCalcPay' },
+                  { name: 'calcEarnings' },
+                  { name: 'code', columnConfig: { text: UB.i18n('Код'), width: 50, sortBy: 'Number' } },
+                  { name: 'payElDeleted' },
+                  {
+                    name: 'name',
+                    columnConfig: {
+                      text: UB.i18n('Утримання'),
+                      flex: 1,
+                      renderer: (value, meta, record) => {
+                        if (record.get('payElDeleted')) { meta.tdCls = 'grd-line-through' }
+                        return value
+                      }
+                    }
+                  },
+                  {
+                    name: 'rate',
+                    columnConfig: {
+                      text: '%',
+                      width: 100,
+                      align: 'right',
+                      floatFormat: 1,
+                      sortBy: 'Number',
+                      renderer: function (value) { return AC.currencyService.valueAsMinDecimalPrecision(value, 1) }
+                    }
+                  },
+                  { name: 'paySum', columnConfig: { text: UB.i18n('Сума'), width: 150, align: 'right', floatFormat: 2, sortBy: 'Number' } }
+                ],
+                getRowClass: function (record) {
+                  if (me.defaultValues.makeBold) {
+                    let isApproach = false
+                    if (me.defaultValues.payElID) {
+                      me.defaultValues.payElID.forEach(el => {
+                        if (record.get('payElID') === el.payElID && (!me.defaultValues.periodSalaryID || me.defaultValues.periodSalaryID === record.get('periodSalaryID'))) { isApproach = true }
+                      })
+                    }
+                    if (record.get('flagsRec') & 4) {
+                      if (isApproach) {
+                        return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-lightgreen-bold-italic' : 'grd-color-lightgreen-bold')
+                      } else return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-lightgreen-italic' : 'grd-color-lightgreen')
+                    } else if ((record.get('flagsRec') & 1 << 12) || (record.get('flagsRec') & 1 << 13)) {
+                      if (isApproach) {
+                        return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-grey-bold-italic' : 'grd-color-grey-bold')
+                      } else return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-grey-italic' : 'grd-color-grey')
+                    } else if (!record.get('periodCalcID')) {
+                      if (isApproach) {
+                        return ((record.get('flagsRec') & 1 << 20) ? 'org-node-bold-italic' : 'org-node-bold')
+                      } else return ((record.get('flagsRec') & 1 << 20) ? 'org-node-italic' : 'org-node')
+                    } else if (record.get('flagsRec') & 1 << 9) {
+                      if (isApproach) {
+                        return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-red-bold-italic' : 'grd-color-red-bold')
+                      } else return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-red-italic' : 'grd-color-red')
+                    } else if (record.get('flagsRec') & 1) {
+                      if (isApproach) {
+                        return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-blue-bold-italic' : 'grd-color-blue-bold')
+                      } else return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-blue-italic' : 'grd-color-blue')
+                    } else {
+                      if (isApproach) {
+                        return ((record.get('flagsRec') & 1 << 20) ? 'grd-bold-italic' : 'grd-bold')
+                      } else if (record.get('flagsRec') & 1 << 20) {
+                        return 'grd-italic'
+                      }
+                    }
+                  } else {
+                    if (record.get('flagsRec') & 4) {
+                      return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-lightgreen-italic' : 'grd-color-lightgreen')
+                    } else
+                    if ((record.get('flagsRec') & 1 << 12) || (record.get('flagsRec') & 1 << 13)) {
+                      return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-grey-italic' : 'grd-color-grey')
+                    } else if (!record.get('periodCalcID')) {
+                      return ((record.get('flagsRec') & 1 << 20) ? 'org-node-italic' : 'org-node')
+                    } else if (record.get('flagsRec') & 1 << 9) {
+                      return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-red-italic' : 'grd-color-red')
+                    } else if (record.get('flagsRec') & 1) {
+                      return ((record.get('flagsRec') & 1 << 20) ? 'grd-color-blue-italic' : 'grd-color-blue')
+                    } if (record.get('flagsRec') & 1 << 20) {
+                      return 'grd-italic'
+                    }
+                  }
+                }
+              },
+              {
+                layout: { type: 'hbox', pack: 'end' },
+                region: 'south',
+                listeners: balanceOutListeners,
+                split: true,
+                items: [
+                  {
+                    xtype: 'displayfield',
+                    name: 'balanceOut',
+                    fieldLabel: UB.i18n('Сальдо вихідне'),
+                    valueToRaw: (value) => {
+                      return _.isNumber(value) ? Ext.util.Format.currency(value, '', this.decimalPrecision || 2) : ''
+                    },
+                    fieldStyle: fieldStyleLink,
+                    labelStyle: labelStyleLink,
+                    labelWidth: 120,
+                    width: 250
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            title: UB.i18n('Нарахування на зарплату'),
+            layout: 'border',
+            flex: 1,
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'accrualFund',
+                stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_rl_accrualFund'),
+                flex: 1,
+                autoScroll: true,
+                region: 'center',
+                storeType: 'local',
+                disablePaging: true,
+                notWriteChanges: true,
+                showToolBar: true,
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                summary: {
+                  paySum: (store, dataIndex) => {
+                    const allRecord = store.snapshot || store.data
+                    return allRecord.items.reduce((sum, row) => {
+                      return AC.currencyService.round(sum + (row.get('isRecSum') ? 0 : (row.get(dataIndex) || 0)))
+                    }, 0)
+                  },
+                  sourceSum: (store, dataIndex) => {
+                    const allRecord = store.snapshot || store.data
+                    return allRecord.items.reduce((sum, row) => {
+                      return AC.currencyService.round(sum + (row.get('isRecSum') ? 0 : (row.get(dataIndex) || 0)))
+                    }, 0)
+                  },
+                  baseSum: (store, dataIndex) => {
+                    const allRecord = store.snapshot || store.data
+                    return allRecord.items.reduce((sum, row) => {
+                      return AC.currencyService.round(sum + (row.get('isRecSum') ? 0 : (row.get(dataIndex) || 0)))
+                    }, 0)
+                  }
+                },
+                onItemDoubleClick: function (row, record) {
+                },
+                customContextActions: [
+                  {
+                    text: UB.i18n('Аналітика'),
+                    iconCls: 'el-icon-notebook-2',
+                    cls: 'blue-action',
+                    handler: () => { me.foundDimension() }
+                  }
+                ],
+                fields: [
+                  { name: 'ID' },
+                  { name: 'periodCalcID' },
+                  { name: 'periodSalaryID' },
+                  { name: 'periodCalc' },
+                  { name: 'periodSalary' },
+                  { name: 'employeeNumberID' },
+                  { name: 'payFundID' },
+                  { name: 'accrualFundDt' },
+                  { name: 'isRecSum' },
+                  { name: 'code', columnConfig: { text: UB.i18n('Код'), width: 50, sortBy: 'Number' } },
+                  { name: 'name', columnConfig: { text: UB.i18n('Назва'), flex: 1 } },
+                  { name: 'sourceSum', columnConfig: { text: UB.i18n('Нарахована сума'), width: 150, align: 'right', floatFormat: 2, sortBy: 'Number' } },
+                  { name: 'baseSum', columnConfig: { text: UB.i18n('База нарахування'), width: 150, align: 'right', floatFormat: 2, sortBy: 'Number' } },
+                  { name: 'rate', columnConfig: { text: '%', width: 100, align: 'right', floatFormat: 2, sortBy: 'Number' } },
+                  { name: 'paySum', columnConfig: { text: UB.i18n('Сума'), width: 150, align: 'right', floatFormat: 2, sortBy: 'Number' } },
+                  { name: 'calculateDate',
+                    columnConfig: {
+                      text: UB.i18n('Дата розрахунку'),
+                      width: 150,
+                      sortable: false,
+                      hidden: true,
+                      renderer: (value) => { return value ? AC.dateService.formatDate(value, 'dd.mm.yyyy hh:nn:ss') : value }
+                    } }
+                ],
+                getRowClass: function (record) {
+                  if (record.get('isRecSum') || record.get('employeeNumberID') !== me.attr.employeeNumberID.getValue()) {
+                    return 'grd-color-grey'
+                  } else if (me.defaultValues.makeBold === 'paymentOrder' || me.defaultValues.makeBold === 'accrualFund') {
+                    let isApproach = false
+                    if (me.defaultValues.payFundIDDef) {
+                      if (typeof me.defaultValues.payFundIDDef === 'object') {
+                        for (let el in me.defaultValues.payFundIDDef) {
+                          if (record.get('payFundID') === me.defaultValues.payFundIDDef[el].fundID && (!me.defaultValues.periodSalaryID || me.defaultValues.periodSalaryID === record.get('periodSalaryID'))) { isApproach = true }
+                        }
+                      } else {
+                        if (record.get('payFundID') === me.defaultValues.payFundIDDef && (!me.defaultValues.periodSalaryID || me.defaultValues.periodSalaryID === record.get('periodSalaryID'))) { isApproach = true }
+                      }
+                    }
+                    if (!record.get('periodCalcID')) {
+                      if (isApproach) {
+                        return 'org-node-bold'
+                      } else return 'org-node'
+                    } else {
+                      if (isApproach) {
+                        return 'grd-color-blue-bold'
+                      } else return 'grd-color-blue'
+                    }
+                  } else {
+                    if (!record.get('periodCalcID')) {
+                      return 'org-node'
+                    } else {
+                      return 'grd-color-blue'
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.getData = () => {
+      me.attr.accrual.setLocalStoreData([])
+      me.attr.retention.setLocalStoreData([])
+      me.attr.accrualFund.setLocalStoreData([])
+      me.setEmployeeData()
+      if (!me.attr.employeeNumberID.getValue() || !me.attr.periodID.getValue()) {
+        me.down('[name=printBtn]').setDisabled(true)
+        return
+      }
+      me.down('[name=printBtn]').setDisabled(false)
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_rl',
+        method: 'getRL',
+        orgID: me.attr.employeeNumberID.getFieldValue('orgID'),
+        employeeNumberID: me.attr.employeeNumberID.getValue(),
+        periodID: me.attr.periodID.getValue(),
+        changeRecalculatePeriod: me.changeRecalculatePeriod,
+        recalculatePeiodID: me.changeRecalculatePeriod ? me.recalculatePeiodID : null,
+        includeSecEmp: me.attr.includeSecEmp.getValue(),
+        dictFundSourceIDs: (me.attr.dictFundSourceID.getValue() && me.attr.dictFundSourceID.getValue() !== '')
+          ? JSON.stringify(AC.dataService.getIDsFromString(me.attr.dictFundSourceID.getValue())) : null,
+        dictProgClassIDs: (me.hrProgClassAcc && me.attr.dictProgClassID.getValue() && me.attr.dictProgClassID.getValue() !== '')
+          ? JSON.stringify(AC.dataService.getIDsFromString(me.attr.dictProgClassID.getValue())) : null,
+        dictProjectIDs: (me.hrProjectAcc && me.attr.dictProjectID.getValue() && me.attr.dictProjectID.getValue() !== '')
+          ? JSON.stringify(AC.dataService.getIDsFromString(me.attr.dictProjectID.getValue())) : null
+      }).then(response => {
+        me.changeRecalculatePeriod = false
+        if (me.attr.periodFromID.getValue() !== response.recalcPeiodID) {
+          me.attr.periodFromID.calcValue = response.recalcPeiodID
+          me.attr.periodFromID.skipChange = true
+          me.attr.periodFromID.setValueById(response.recalcPeiodID)
+        }
+        if (me.defaultValues.isClearDictFund) {
+          me.defaultValues.isClearDictFund = false
+          me.attr.dictFundSourceID.clearValue()
+        }
+        if (JSON.parse(response.resultData).dictFundSourceIDs) {
+          let dictFundSourceIDs = JSON.parse(response.resultData).dictFundSourceIDs
+          dictFundSourceIDs.push(0)
+          AC.viewUtils.setFilterValue(me.attr.dictFundSourceID, {
+            ID: dictFundSourceIDs || [0]
+          })
+        }
+        if (me.defaultValues.isClearProgClass) {
+          me.defaultValues.isClearProgClass = false
+          me.attr.dictProgClassID.clearValue()
+        }
+        if (me.hrProgClassAcc && JSON.parse(response.resultData).dictProgClassIDs) {
+          let dictProgClassIDs = JSON.parse(response.resultData).dictProgClassIDs
+          dictProgClassIDs.push(0)
+          AC.viewUtils.setFilterValue(me.attr.dictProgClassID, {
+            ID: dictProgClassIDs || [0]
+          })
+        }
+        if (me.defaultValues.isClearProject) {
+          me.defaultValues.isClearProject = false
+          me.attr.dictProjectID.clearValue()
+        }
+        if (me.hrProjectAcc && JSON.parse(response.resultData).dictProjectIDs) {
+          let dictProjectIDs = JSON.parse(response.resultData).dictProjectIDs
+          dictProjectIDs.push(0)
+          AC.viewUtils.setFilterValue(me.attr.dictProjectID, {
+            ID: dictProjectIDs || [0]
+          })
+        }
+        const resultData = JSON.parse(response.resultData)
+        me.secondaryJobsNumbers = resultData.secondaryJobsNumbers || []
+        me.attr.balanceIn.setValue(AC.currencyService.round(response.balance || 0))
+        const includeSecEmp = me.attr.includeSecEmp.getValue()
+        me.attr.balanceOut.setValue(AC.currencyService.round(
+          resultData.accrual.reduce((sum, o) => {
+            return sum + (o.payType === 'PAYMENT' ? 1 : -1) * (((includeSecEmp && o.ignoreInCalcPay) || (!includeSecEmp && o.flagsRec & 8192)) ? 0 : (o.paySum || 0))
+          }, response.balance || 0)
+        ))
+        if (me.currentPeriod && (response.currentPeriod.ID !== me.currentPeriod.ID && me.currentPeriod.ID === me.attr.periodID.getValue())) {
+          me.attr.periodID.setValueById(response.currentPeriod.ID)
+          me.currentPeriod = response.currentPeriod
+        }
+
+        const rlEducationBtn = me.down('[name=printBtn]').menu.items.items.find(o => o.name === 'rlEducationBtn')
+        const employeeNumberValue = me.attr.employeeNumberID.lastSelection.find(o => o.data.ID === me.attr.employeeNumberID.getValue())
+        const isMainWorkPlace = (rlEducationBtn && me.attr.employeeNumberID.getValue() && employeeNumberValue) && (employeeNumberValue.data.workPlaceCode !== '5')
+        rlEducationBtn[`${AC.settings.get('hrTariffingEducational', appAC.globalOrganization()) && isMainWorkPlace ? 'show' : 'hide'}`]()
+
+        me.setEmployeeData(response.employeeData)
+        me.setGridData(resultData)
+        me.setLoading(false)
+      }, (err) => {
+        me.setLoading(false)
+        throw err
+      })
+    }
+
+    me.doReport = code => {
+      const report = Ext.create('UBS.UBReport', {
+        code,
+        type: 'html',
+        params: {
+          orgID: me.attr.employeeNumberID.getFieldValue('orgID'),
+          employeeNumberID: me.attr.employeeNumberID.getValue(),
+          periodID: me.attr.periodID.getValue(),
+          dateFrom: me.attr.periodID.lastSelection[0] ? AC.dateService.unshiftDate(me.attr.periodID.lastSelection[0].getData().dateFrom) : null,
+          dateTo: me.attr.periodID.lastSelection[0] ? AC.dateService.unshiftDate(me.attr.periodID.lastSelection[0].getData().dateTo) : null,
+          dictProgClassID: me.attr.dictProgClassID.getValue(),
+          dictProjectID: me.attr.dictProjectID.getValue(),
+          dictFundSourceID: me.attr.dictFundSourceID.getValue()
+        }
+      })
+      report.init().then(function () {
+        const config = {
+          cmdType: 'showForm',
+          formCode: 'ac_documentViewer',
+          caption: UB.i18n('Друкована форма'),
+          cmpInitConfig: { report: report },
+          tabId: 'printDocument' + me.report_code + Date.now(),
+          description: me.initialConfig.commandConfig.description,
+          target: $App.getViewport().centralPanel
+        }
+        $App.doCommand(config)
+      })
+    }
+
+    me.delAccrual = (gridName) => {
+      if (me.unionRow) {
+        $App.dialogInfo(UB.i18n(`Необхідно виключити об'єднання записів`))
+        return
+      }
+      const gridSelection = me.attr[gridName].getSelectionModel().getSelection()
+      if (gridSelection.length && gridSelection[0].get('ID') && !((gridSelection[0].get('flagsRec') & 1 << 0) && (gridSelection[0].get('flagsRec') & 1 << 9))) {
+        $App.connection.run({
+          entity: 'hr_rl',
+          method: 'deleteAccrual',
+          ID: gridSelection[0].get('ID')
+        }).then(response => {
+          me.getData()
+        })
+      }
+    }
+    me.reversal = (gridName) => {
+      if (me.unionRow) {
+        $App.dialogInfo(UB.i18n(`Необхідно виключити об'єднання записів`))
+        return
+      }
+      const gridSelection = me.attr[gridName].getSelectionModel().getSelection()
+      if (gridSelection.length && gridSelection[0].get('ID')) {
+        appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+          me.currentPeriod = response
+          const flagsRec = gridSelection[0].get('flagsRec')
+          if (gridSelection[0].get('periodCalcID') === me.currentPeriod.ID && (flagsRec & 1)) {
+            $App.dialogInfo(UB.i18n('Запис автоматичного розрахунку поточного розрахункового періоду не може бути сторновано, використовуйте коригування запису'))
+            return
+          }
+          if (AC.dateService.unshiftDate(gridSelection[0].get('periodCalc')) > AC.dateService.unshiftDate(me.currentPeriod.dateFrom)) {
+            $App.dialogInfo(UB.i18n('Записи майбутніх розрахункових періодів не можуть бути сторновані'))
+            return
+          }
+          if ((flagsRec & 1 << 9) || (flagsRec & 1 << 12) ||
+            ((flagsRec & 1 << 10) && AC.dateService.unshiftDate(gridSelection[0].get('periodCalc')) >= AC.dateService.unshiftDate(me.currentPeriod.dateFrom))) {
+            $App.dialogInfo(UB.i18n(`Неможливо сторнувати ({0})`, (flagsRec & 1 << 9) ? 'сторно' : (flagsRec & 1 << 10) ? 'донарахування' : 'записи сумісника'))
+            return
+          }
+          if (gridSelection[0].get('orderEntityName') === 'hr_docRegShift' && gridSelection[0].get('methodCode') !== '150') {
+            $App.dialogInfo(UB.i18n(`Неможливо сторнувати, потрібно сторнувати запис з видом оплати Заміна`))
+            return
+          }
+
+          $App.connection.run({
+            entity: 'hr_rl',
+            method: 'getReversalAccrual',
+            orgID: me.attr.employeeNumberID.getFieldValue('orgID'),
+            employeeNumberID: me.attr.employeeNumberID.getValue(),
+            accrualID: gridSelection[0].get('ID')
+          }).then(response => {
+            const defaultValues = JSON.parse(response.defaultValues)
+            const reversalValues = JSON.parse(response.reversalValues)
+            const addReversal = response.addReversal ? JSON.parse(response.addReversal) : null
+            if (reversalValues.paySum === 0) {
+              $App.dialogInfo(UB.i18n('Запис повністю сторновано, повторне сторнування неможливе'))
+              return
+            }
+
+            defaultValues.methodCode = gridSelection[0].get('methodCode')
+            defaultValues.payType = gridSelection[0].get('payType')
+            if (['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '24', '25', '33', '38', '42',
+              '43', '45', '46', '47', '63', '65', '77', '138', '139', '141', '146', '147', '148', '150', '159', '153', '154', '155', '156', '206', '207'].includes(defaultValues.methodCode)) {
+              $App.doCommand({
+                cmdType: 'showForm',
+                formCode: 'hr_rlEl',
+                isModal: true,
+                cmpInitConfig: {
+                  defaultValues,
+                  reversalValues,
+                  addReversal,
+                  onAfterSave: me.getData,
+                  payType: defaultValues.payType,
+                  formTitle: UB.i18n('Сторнування')
+                }
+              })
+            } else {
+              $App.connection.run({
+                entity: 'hr_rl',
+                method: 'saveAccrual',
+                params: JSON.stringify(reversalValues)
+              }).then(response => {
+                $App.dialogInfo(UB.i18n('Запис сторновано'))
+                me.getData()
+              })
+            }
+          })
+        })
+      }
+    }
+    me.setGridData = (data) => {
+      let periodID
+      const accrual = []
+      const retention = []
+      const accrualFund = []
+      data.accrual.filter(o => o.payType === 'PAYMENT')
+        .sort((a, b) => new Date(a.periodSalary) > new Date(b.periodSalary) ? 1
+          : (a.periodSalaryID === b.periodSalaryID) ? ((Number(a.code) > Number(b.code)) ? 1
+            : (Number(a.code) === Number(b.code)) ? (new Date(a.dateFrom) > new Date(b.dateFrom)) ? 1 : -1 : -1) : -1)
+        .forEach(row => {
+          if (!periodID || periodID !== row.periodSalaryID) {
+            accrual.push({ name: row['periodSalaryID.name'] })
+            periodID = row.periodSalaryID
+          }
+          if (me.unionRow) {
+            const additional = row.flagsRec & 1 << 10 && !(['12', '47'].includes(row.methodCode) && row.orderID)
+            const revert = !!(row.flagsRec & 1 << 9)
+            row.flagsRec = (row.flagsRec & 1 << 12 ? 1 << 12 : 1 << 0) | (row.flagsRec & 1 << 13)
+            const accr = accrual.find(o => o.periodSalaryID === row.periodSalaryID && o.payElID === row.payElID &&
+              (o.flagsRec & row.flagsRec) /* && ((!o.rate && !row.rate) || (o.rate === row.rate)) */)
+            if (accr) {
+              accr.paySum = AC.currencyService.round(accr.paySum + row.paySum)
+              if (!additional) {
+                if (!revert && (accr.rate || row.rate)) {
+                  accr.days = (accr.mask && row.mask) ? ((accr.mask | row.mask).toString(2).match(/1/g) || []).length : Math.max((accr.days || 0), (row.days || 0))
+                  if (accr.hours && row.hours) {
+                    accr.hours = Math.max((accr.hours || 0), (row.hours || 0), 3)
+                  }
+                } else {
+                  accr.days = AC.currencyService.round((accr.days || 0) + (row.days || 0))
+                  if (accr.hours && row.hours) {
+                    accr.hours = AC.currencyService.round((accr.hours || 0) + (row.hours || 0), 3)
+                  }
+                }
+              }
+              if (accr.rate !== row.rate) {
+                accr.rate = null
+              }
+            } else {
+              if (additional) {
+                row.days = 0
+                row.hours = row.hours ? 0 : row.hours
+              }
+              accrual.push(row)
+            }
+          } else {
+            accrual.push(row)
+          }
+        })
+      periodID = null
+      data.accrual.filter(o => o.payType !== 'PAYMENT')
+        .sort((a, b) => new Date(a.periodSalary) > new Date(b.periodSalary) ? 1
+          : (a.periodSalaryID === b.periodSalaryID) ? ((Number(a.code) > Number(b.code)) ? 1
+            : (Number(a.code) === Number(b.code)) ? (new Date(a.dateFrom) > new Date(b.dateFrom)) ? 1 : -1 : -1) : -1)
+        .forEach(row => {
+          if (!periodID || periodID !== row.periodSalaryID) {
+            retention.push({ name: row['periodSalaryID.name'] })
+            periodID = row.periodSalaryID
+          }
+          if (me.unionRow) {
+            row.flagsRec = (row.flagsRec & 1 << 12 ? 1 << 12 : 1 << 0) | (row.flagsRec & 1 << 13)
+            const accr = retention.find(o => o.periodSalaryID === row.periodSalaryID && o.payElID === row.payElID && (o.flagsRec & row.flagsRec) && ((!o.rate && !row.rate) || (o.rate === row.rate)))
+            if (accr) {
+              if (accr.rate !== row.rate) {
+                accr.rate = null
+              }
+              accr.paySum = AC.currencyService.round(accr.paySum + row.paySum)
+            } else {
+              retention.push(row)
+            }
+          } else {
+            retention.push(row)
+          }
+        })
+      periodID = null
+      data.accrualFund.sort((a, b) => new Date(a.periodSalary) > new Date(b.periodSalary) ? 1
+        : (a.periodSalaryID === b.periodSalaryID) ? ((Number(a.code) > Number(b.code)) ? 1
+          : (Number(a.code) === Number(b.code)) ? 1 : -1) : -1)
+        .forEach(row => {
+          if (!periodID || periodID !== row.periodSalaryID) {
+            accrualFund.push({ name: row.periodName })
+            periodID = row.periodSalaryID
+          }
+          accrualFund.push(row)
+        })
+      me.attr.accrual.setLocalStoreData(accrual)
+      me.attr.retention.setLocalStoreData(retention)
+      me.attr.accrualFund.setLocalStoreData(accrualFund)
+    }
+
+    me.setEmployeeData = (data) => {
+      if (!data) {
+        me.attr.employeeData.update('')
+        return
+      }
+      const template = _.template(` <style type="text/css">
+                         .table { width: 100%; padding:10px;}
+                         #td { text-indent: 20px;}
+                         .span { color: #104ab9}
+                         a { text-decoration: none; color: #2f7c94; }
+                        </style>
+                        <table width="100%">
+                        <tr>
+                            <td valign="top" align="left" height="20" width="10%">${UB.i18n('Місце роботи')}</td>
+                            <td valign="top" align="left" height="20" width="40%" colspan="2"><span class = "span"><%=workPlaceName%></span></td>
+                            <td valign="top" align="left" height="20" width="10%">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n('Графік')}</td>
+                            <td valign="top" align="left" height="20" width="40%" colspan="3">
+                              <a href="#" data-entity="hr_workSchedule" data-id="<%=workScheduleID%>"><%=workScheduleName%></a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td valign="top" align="left" height="20" width="10%">${UB.i18n('Підрозділ')}</td>
+                            <td valign="top" align="left" height="20" width="40%" colspan="2"><span class = "span"><%=departmentName%></span></td>
+                            <td valign="top" align="left" height="20" width="10%">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n('План')}</td>
+                            <td valign="top" align="left" height="20" width="5%" style="text-align: right"><span class = "span"><%=planDay%></td>
+                            <td valign="top" align="left" height="20" width="5%" style="text-align: right"><span class = "span"><%=planHour%></td>
+                            <td valign="top" align="left" height="20" width="30%"></td>
+                        </tr>
+                        <tr>
+                            <td valign="top" align="left" height="20" width="10%">${UB.i18n('Посада')}</td>
+                            <td valign="top" align="left" height="20" width="40%" colspan="2"><span class = "span"><%=positionName%></span></td>
+                            <td valign="top" align="left" height="20" width="10%">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n('Факт')}</td>
+                            <td valign="top" align="left" height="20" width="5%" style="text-align: right"><span class = "span"><%=factDay%></span></td>
+                            <td valign="top" align="left" height="20" width="5%" style="text-align: right"><span class = "span"><%=factHour%></span></td>
+                            <td valign="top" align="left" height="20" width="30%"></td>
+                        </tr>
+                        </table>
+                        <table width="100%">
+                          <tr>
+                              <td valign="top" align="left" height="20" width="10%">${UB.i18n('Пільги ПДФО')}</td>
+                              <td valign="top" align="left" height="20" width="40%" colspan="2"><a href="#" title="<%=taxLimit%>" display="block" height="20"  data-entity="hr_employeeNumber" data-id="<%=employeeID%>" data-targetTab="hr_employeeTaxLimit"><%=taxLimitShort%></a></td>
+                              <td valign="top" align="left" height="20" width="10%">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n('Система оплати')}</td>
+                              <td valign="top" align="left" height="20" width="30%" colspan="2">
+                                <a href="#" data-entity="hr_payEl" data-id="<%=payElID%>"><%=payElName%></a>
+                              </td>
+                              <td valign="top" align="right" height="20" width="10%" colspan="1">
+                               <span class = "span"><%=systemPay%></span>
+                              </td>
+                          </tr>
+                      
+                        </table>
+`)
+      _.forEach(data, (value, name) => {
+        if (!value) {
+          data[name] = ''
+        }
+      })
+      if (data && data.accrualSum) {
+        data.accrualSum = AC.currencyService.round(_.isNumber(data.accrualSum) ? data.accrualSum : 0, 3)
+        data.planHour = AC.currencyService.round(_.isNumber(data.planHour) ? data.planHour : 0, 3)
+        data.factHour = AC.currencyService.round(_.isNumber(data.factHour) ? data.factHour : 0, 3)
+      }
+
+      const hrTariffingEducational = AC.settings.get('hrTariffingEducational', appAC.globalOrganization())
+      if (hrTariffingEducational && data.systemPay) {
+        data.systemPay = ''
+      }
+      me.attr.employeeData.update(template(data))
+      const refs = me.attr.employeeData.getEl().dom.getElementsByTagName('a')
+      for (let i = 0; i < refs.length; i++) {
+        refs[i].addEventListener('click', me.showLinkForm, true)
+      }
+    }
+
+    me.showEditForm = (payType, data) => {
+      if (me.unionRow) {
+        $App.dialogInfo(UB.i18n(`Необхідно виключити об'єднання записів`))
+        return
+      }
+      if (!data) {
+        if (!me.attr.periodID.getValue() || !me.attr.employeeNumberID.getValue()) {
+          return
+        }
+        data = {
+          employeeNumberID: me.attr.employeeNumberID.getValue(),
+          periodSalaryID: me.attr.periodID.getValue(),
+          periodCalcID: me.attr.periodID.getValue()
+        }
+      }
+      if (['13', '16', '71', '67', '142', '21', '22', '23', '44', '68', '73', '17', '18', '19', '20', '48', '40', '36', '37', '149'].includes(data.methodCode)) {
+        if ((data.flagsRec & 1 << 1 || data.flagsRec & 1 << 2 || data.flagsRec & 1 << 3) && !(data.flagsRec & 1 << 9) && !(data.flagsRec & 1 << 10)) {
+          const orderData = me.attr.accrual.getData()
+          me.showRlElForm(payType, orderData.filter(o => o.orderID === data.orderID && (data.orderID !== null || data.ID === o.ID) &&
+            (o.flagsRec & 1 << 1 || o.flagsRec & 1 << 2 || o.flagsRec & 1 << 3) && !(o.flagsRec & 1 << 9) && !(o.flagsRec & 1 << 10)), data.orderID || data.ID)
+        } else {
+          me.showRlElForm(payType, [data], data.orderID || data.ID)
+        }
+      } else {
+        if (data.orderID && !(data.flagsRec & 1 << 9) && !(data.flagsRec & 1 << 10)) {
+          UB.Repository('hr_order')
+            .attrs(['ID', 'orderClass.entityName'])
+            .selectById(data.orderID)
+            .then(result => {
+              const formCode = result && result['orderClass.entityName']
+              if (formCode === 'hr_orderRegistry') {
+                UB.Repository('hr_orderRegistry')
+                  .attrs('orderType')
+                  .selectById(data.orderID)
+                  .then(order => {
+                    const formStore = UB.core.UBStoreManager.getFormStore()
+                    if (order && formStore.findRecord('code', order.orderType, 0, false, true, true)) {
+                      $App.doCommand({
+                        cmdType: 'showForm',
+                        formCode: order.orderType,
+                        entity: 'hr_orderRegistry',
+                        instanceID: data.orderID,
+                        tabId: order.orderType + data.orderID,
+                        target: $App.getViewport().centralPanel
+                      })
+                    }
+                  })
+              } else {
+                const formStore = UB.core.UBStoreManager.getFormStore()
+                if (formStore.findRecord('code', formCode, 0, false, true, true)) {
+                  $App.doCommand({
+                    cmdType: 'showForm',
+                    formCode: formCode,
+                    entity: result['orderClass.entityName'],
+                    instanceID: data.orderID,
+                    tabId: result['orderClass.entityName'] + data.orderID,
+                    target: $App.getViewport().centralPanel
+                  })
+                } else {
+                  me.showRlElForm(payType, data)
+                }
+              }
+            })
+        } else {
+          me.showRlElForm(payType, data)
+        }
+      }
+    }
+
+    me.showRlElForm = (payType, data, orderID) => {
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: 'hr_rlEl',
+        isModal: true,
+        cmpInitConfig: {
+          defaultValues: data,
+          onAfterSave: me.getData,
+          orderID,
+          payType: data.payType || payType
+        }
+      })
+    }
+    me.showRlElOrderForm = (payType, data, orderID) => {
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: 'hr_rlElOrder',
+        isModal: true,
+        cmpInitConfig: {
+          defaultValues: data,
+          onAfterSave: me.getData,
+          orderID,
+          payType: data.payType || payType
+        }
+      })
+    }
+
+    me.showLinkForm = (e) => {
+      $App.doCommand({
+        cmdType: 'showForm',
+        entity: e.target.dataset.entity,
+        instanceID: e.target.dataset.id,
+        cmpInitConfig: {
+          isInstance: false,
+          targetTab: e.target.dataset.targettab
+        }
+      })
+    }
+
+    me.changeGlobal = () => {
+      const globalOrganization = appAC.globalOrganization()
+      me.attr.periodID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization }, [], 0)
+      AC.viewUtils.setFilterValue(me.attr.periodFromID, { orgID: globalOrganization })
+      AC.viewUtils.setFilterValue(me.attr.employeeNumberID, { orgID: globalOrganization })
+      me.attr.periodFromID.clearValue()
+      me.attr.periodID.clearValue()
+      me.attr.employeeNumberID.clearValue()
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        me.attr.periodID.setValueById(response.ID)
+        me.currentPeriod = response
+      })
+    }
+
+    me.dimension = (gridName) => {
+      if (me.unionRow) {
+        $App.dialogInfo(UB.i18n(`Необхідно виключити об'єднання записів`))
+        return
+      }
+      const gridSelection = me.attr[gridName].getSelectionModel().getSelection()
+      if (gridSelection.length && gridSelection[0].get('ID')) {
+        const accrualDt = gridSelection[0].get('accrualDt')
+        $App.connection.run({
+          entity: 'hr_rl',
+          method: 'getDimension',
+          params: accrualDt,
+          orgID: me.attr.employeeNumberID.getFieldValue('orgID')
+        }).then(response => {
+          const data = JSON.parse(response.resultData)
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'hr_rlDimension',
+            isModal: true,
+            cmpInitConfig: {
+              defaultValues: data,
+              typeData: gridName
+            }
+          })
+        })
+      }
+    }
+    me.foundDimension = () => {
+      if (me.unionRow) {
+        $App.dialogInfo(UB.i18n(`Необхідно виключити об'єднання записів`))
+        return
+      }
+      const gridSelection = me.attr.accrualFund.getSelectionModel().getSelection()
+      if (gridSelection.length && gridSelection[0].get('ID')) {
+        const accrualDt = gridSelection[0].get('accrualFundDt')
+        $App.connection.run({
+          entity: 'hr_rl',
+          method: 'getDimension',
+          params: accrualDt,
+          orgID: me.attr.employeeNumberID.getFieldValue('orgID')
+        }).then(response => {
+          const data = JSON.parse(response.resultData)
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'hr_rlDimension',
+            isModal: true,
+            cmpInitConfig: {
+              defaultValues: data
+            }
+          })
+        })
+      }
+    }
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+
+    me.on('afterrender', () => {
+      const me = this
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+      me.attr = {
+        employeeNumberID: me.down('[name=employeeNumberID]'),
+        periodID: me.down('[name=periodID]'),
+        periodFromID: me.down('[name=periodFromID]'),
+        dictFundSourceID: me.down('[name=dictFundSourceID]'),
+        dictProgClassID: me.down('[name=dictProgClassID]'),
+        dictProjectID: me.down('[name=dictProjectID]'),
+        employeeData: me.down('[name=employeeData]'),
+        accrual: me.down('[name=accrual]'),
+        retention: me.down('[name=retention]'),
+        accrualFund: me.down('[name=accrualFund]'),
+        balanceOut: me.down('[name=balanceOut]'),
+        balanceIn: me.down('[name=balanceIn]'),
+        unionRowButton: me.down('[name=unionRowButton]'),
+        includeSecEmp: me.down('[name=includeSecEmp]'),
+        printBtn: me.down('[name=printBtn]')
+      }
+      const globalOrganization = appAC.globalOrganization()
+      me.hrProgClassAcc = AC.settings.get('hrProgClassAcc', globalOrganization)
+      me.hrProjectAcc = AC.settings.get('hrProjectAcc', globalOrganization)
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization }, [], 0)
+      AC.viewUtils.setFilterValue(me.attr.periodFromID, { orgID: globalOrganization }, [], 0)
+      // me.attr.periodFromID.getStore().load()
+      AC.viewUtils.setFilterValue(me.attr.employeeNumberID, { orgID: globalOrganization })
+      const settings = JSON.parse(UB.core.UBLocalStorageManager.getItem('hr_rlSettings') || '{}')
+      me.unionRow = settings.unionRow || false
+      me.attr.includeSecEmp.setValue(!!settings.includeSecEmp)
+      me.attr.includeSecEmp.on('change', () => {
+        me.saveStorageData()
+        me.getData()
+      })
+      me.attr.unionRowButton.addCls(me.unionRow ? 'custom-action_btn' : '')
+      me.attr.unionRowButton.removeCls(!me.unionRow ? 'custom-action_btn' : '')
+      me.attr.unionRowButton.setTooltip(me.unionRow ? UB.i18n('Виключити об\'єднання записів') : UB.i18n('Включити об\'єднання записів'))
+      if (!me.defaultValues) {
+        me.defaultValues = {}
+      }
+      if (me.defaultValues.employeeNumberID) {
+        me.attr.employeeNumberID.setValueById(me.defaultValues.employeeNumberID)
+        me.attr.employeeNumberID.setReadOnly(true)
+      } else {
+        if (globalOrganization) {
+          if (settings[String(globalOrganization)]) {
+            me.attr.employeeNumberID.setValueById(settings[String(globalOrganization)])
+          }
+        }
+      }
+
+      if (me.defaultValues.payElID) {
+        if (typeof me.defaultValues.payElID !== 'object') {
+          me.defaultValues.payElID = [{ payElID: me.defaultValues.payElID }]
+        }
+      }
+      if (me.defaultValues.payFundID) {
+        if (typeof me.defaultValues.payElID !== 'object' || !me.defaultValues.payElID.length) {
+          me.defaultValues.payFundIDDef = me.defaultValues.payFundID
+        }
+      }
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        me.currentPeriod = response
+        me.attr.periodID.setValueById((me.defaultValues.periodID) ? me.defaultValues.periodID : response.ID)
+      })
+      if (me.defaultValues.makeBold === 'accrualFund') {
+        const tabPanel = me.down('tabpanel')
+        tabPanel.setActiveTab(1)
+      }
+      if (me.defaultValues.payFundID) {
+        if (me.defaultValues.payFundID.length) {
+          const tabPanel = me.down('tabpanel')
+          tabPanel.setActiveTab(1)
+        }
+      }
+      me.attr.periodFromID.setDisabled(!AC.entityUtils.verifyRightsMethod('hr_rl', 'saveAccrual'))
+      me.attr.dictFundSourceID.store.ubRequest.orgID = globalOrganization
+      me.attr.dictFundSourceID.store.ubRequest.emptyValue = true
+      me.attr.dictProgClassID.store.ubRequest.emptyValue = true
+      me.attr.dictProgClassID[me.hrProgClassAcc ? 'show' : 'hide']()
+      me.attr.dictProjectID.store.ubRequest.emptyValue = true
+      me.attr.dictProjectID[me.hrProjectAcc ? 'show' : 'hide']()
+      me.attr.periodFromID.contextMenu.add([{
+        xtype: 'menuseparator'
+      },
+      {
+        text: UB.i18n('showAudit'),
+        iconCls: 'u-icon-line-chart',
+        handler: function () {
+          $App.doCommand({
+            cmdType: 'showList',
+            isModal: true,
+            description: UB.i18n(`Дата початку перерахунку зарплати`),
+            cmpInitConfig: {
+              dfm: {
+                size: {
+                  width: 1000,
+                  height: 500
+                }
+              },
+              onItemDblClick: function (grid, record) {
+                return false
+              }
+            },
+            hideActions: ['addNew', 'addNewByCurrent', 'del', 'edit', 'itemSelect'],
+            cmdData: {
+              params: [{
+                entity: 'hr_payCalcDateFrom',
+                method: 'select',
+                __allowSelectSafeDeleted: true,
+                fieldList: [
+                  { name: 'periodSalaryID.name', description: UB.i18n('Перерахунок з') },
+                  { name: 'description' },
+                  { name: 'mi_modifyDate', description: UB.i18n('Дата останнього коригування') },
+                  { name: 'mi_modifyUser', description: UB.i18n('Користувач, що останнім коригував') },
+                  { name: 'mi_deleteDate' },
+                  { name: 'mi_deleteUser' },
+                  { name: 'entityName', hidden: true },
+                  { name: 'initiatorID', hidden: true },
+                  { name: 'ID', visibility: false }
+                ],
+                whereList: {
+                  periodCalcID: {
+                    expression: '[periodCalcID]',
+                    condition: '=',
+                    value: me.attr.periodID.getValue()
+                  },
+                  employeeNumberID: {
+                    expression: '[employeeNumberID]',
+                    condition: '=',
+                    value: me.attr.employeeNumberID.getValue()
+                  }
+                },
+                orderList: { mi_modifyDate: { expression: 'mi_modifyDate', order: 'dasc' } }
+              }]
+            }
+          })
+        }
+      }
+      ])
+    }, me)
+
+    me.setFilterEmployee = () => {
+      const ctrl = me.attr.employeeNumberID
+      const globalOrganization = appAC.globalOrganization()
+      let store = ctrl.getStore ? ctrl.getStore() : ctrl.store
+      let ubRequest = store.ubRequest || ctrl.ubStoreConfig
+      ubRequest.whereList = {}
+      ubRequest.whereList.dateTo = {
+        expression: '[dateTo]',
+        condition: '>=',
+        value: me.attr.periodID.getFieldValue('dateTo') ? AC.dateService.truncTimeToUtcNull(AC.dateService.addMonths(me.attr.periodID.getFieldValue('dateFrom'), -2)) : 0
+      }
+      ubRequest.whereList.orgID = {
+        expression: '[orgID]',
+        condition: 'equal',
+        value: globalOrganization
+      }
+      ubRequest.whereList.exists = {
+        expression: '',
+        condition: 'subquery',
+        subQueryType: 'exists',
+        value: {
+          entity: 'hr_accrual',
+          fieldList: [],
+          method: 'select',
+          whereList: {
+            cond: {
+              expression: '[employeeNumberID]=[{master}.ID]',
+              condition: 'custom'
+            },
+            periodCalcID: {
+              expression: '[periodCalcID]',
+              condition: '=',
+              value: me.attr.periodID.getValue() || 0
+            }
+          }
+        }
+      }
+      ubRequest.logicalPredicates = ['([exists] OR [dateTo])']
+      store.clearFilter()
+    }
+
+    me.saveStorageData = () => {
+      const globalOrganization = appAC.globalOrganization()
+      const employeeNumberID = me.attr.employeeNumberID.getValue()
+      if (globalOrganization && employeeNumberID) {
+        const settings = JSON.parse(UB.core.UBLocalStorageManager.getItem('hr_rlSettings') || '{}')
+        settings[String(globalOrganization)] = employeeNumberID
+        settings.unionRow = me.unionRow || false
+        settings.includeSecEmp = me.attr.includeSecEmp.getValue()
+        UB.core.UBLocalStorageManager.setItem('hr_rlSettings', JSON.stringify(settings))
+      }
+    }
+    me.on('beforeclose', () => {
+      me.saveStorageData()
+    })
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,567 @@
+/* global Ext, UB, AC appAC $App appHR */
+
+exports.formDef = 'HR.trfPositionEdit'
+
+Ext.define('HR.trfPositionEdit', {
+  extend: 'Ext.form.Panel',
+
+  requires: [
+    'AC.validators',
+    'UB.core.UBCommand',
+    'UB.core.UBUtil',
+    'UB.ux.form.field.UBComboBox'
+  ],
+
+  width: 600,
+  height: 500,
+  layout: { type: 'vbox', align: 'stretch' },
+  autoScroll: true,
+  actionId: {
+    save: 'save'
+  },
+  eventId: {
+    save: 'save'
+  },
+  hotKeys: {
+    save: {
+      key: Ext.EventObject.ENTER,
+      shift: false,
+      ctrl: true,
+      text: ' (Ctrl+Enter)'
+    }
+  },
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [],
+      ubID: 'mainToolbar',
+      enableOverflow: true
+    }]
+    me.parentForm = me.gridSender.up('form')
+    me.docDateFrom = me.parentForm.attr.dateFrom.getValue()
+    me.docDateTo = me.parentForm.attr.dateToEmpty.getValue() || AC.dateService.maxDate()
+    me.items = [
+
+      {
+        layout: { type: 'vbox', align: 'stretch' },
+        autoScroll: true,
+        items: [
+          {
+            xtype: 'textfield',
+            name: 'employeeNumber',
+            autoScroll: true,
+
+            split: true,
+            readOnly: true,
+
+            fieldLabel: UB.i18n('Робоче місце'),
+            allowBlank: true,
+            hidden: true
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictPositionID',
+            fieldLabel: UB.i18n('Посада'),
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'hr_dictPosition',
+              fieldList: ['ID', 'caption', 'positionType', 'dictStaffCatID.accCategory', 'dictStaffSubCatID',
+                'workNormID'
+              ],
+              whereList: {
+                dateFrom: {
+                  expression: '[dateFrom]',
+                  condition: '<=',
+                  value: me.docDateTo
+                },
+                dateTo: {
+                  expression: '[dateTo]',
+                  condition: '>=',
+                  value: me.docDateFrom
+                },
+                orgEqualID: {
+                  expression: '[organizationID]',
+                  condition: 'equal',
+                  value: me.docOrgID || appAC.globalOrganization()
+                },
+                orgIsNull: {
+                  expression: '[organizationID]',
+                  condition: 'isNull'
+                }
+              },
+              logicalPredicates: ['[dateTo] and [dateFrom] and ([orgEqualID] or [orgIsNull])'],
+              orderList: { orderBy: { expression: 'name' } }
+            },
+            listeners: {
+              beforeQuerySend: function () {
+                const rawValue = me.attr.dictPositionID.getRawValue()
+                if (rawValue && rawValue.length > 0 && Number(rawValue[0])) {
+                  this.store.ubRequest.orderList = { orderBy: { expression: 'codeSort' } }
+                } else {
+                  this.store.ubRequest.orderList = { orderBy: { expression: 'name' } }
+                }
+              }
+            }
+          },
+          {
+            layout: { type: 'hbox' },
+            style: 'margin-top: 10px; margin-bottom: 10px'
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictEducationRankID',
+            fieldLabel: UB.i18n('Звання'),
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'trf_dictEducationRank',
+              fieldList: ['ID', 'description'],
+              orderList: { orderBy: { expression: 'description' } }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictEducationLevelID',
+            fieldLabel: UB.i18n('Освіта'),
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'hr_dictEducationLevel',
+              fieldList: ['ID', 'name'],
+              orderList: { orderBy: { expression: 'name' } }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictQualificationID',
+            fieldLabel: UB.i18n('Кваліфікація'),
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'trf_dictQualification',
+              fieldList: ['ID', 'description'],
+              orderList: { orderBy: { expression: 'description' } }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictRankID',
+            fieldLabel: UB.i18n('Ранг'),
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'hr_dictRank',
+              fieldList: ['ID', 'description'],
+              orderList: { orderBy: { expression: 'description' } }
+            }
+          },
+          {
+            layout: { type: 'hbox' },
+            style: 'margin-top: 10px; margin-bottom: 10px'
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictTarifCoeffID',
+            fieldLabel: UB.i18n('Розряд'),
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'hr_dictTarifCoeff',
+              fieldList: ['ID', 'name'],
+              orderList: { orderBy: { expression: 'name' } }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictSubjectID',
+            hidden: true,
+            fieldLabel: UB.i18n('Предмет'),
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'trf_dictSubject',
+              fieldList: ['ID', 'description'],
+              orderList: { orderBy: { expression: 'description' } }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'workNormID',
+            fieldLabel: UB.i18n('Норма'),
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'trf_workNorm',
+              fieldList: ['ID', 'weekHours', 'dateFrom', 'dateTo'],
+              orderList: { orderBy: { expression: 'weekHours' } }
+            }
+          },
+          {
+            layout: { type: 'hbox' },
+            style: 'margin-top: 10px; margin-bottom: 10px'
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictFundSourceID',
+            fieldLabel: UB.i18n('Фінансування'),
+            allowBlank: false,
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'ac_fundSource',
+              fieldList: ['ID', 'name'],
+              orderList: { orderBy: { expression: 'name' } }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictProgClassID',
+            fieldLabel: UB.i18n('КПК'),
+            allowBlank: false,
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'ac_dictProgClass',
+              fieldList: ['ID', 'description'],
+              orderList: { orderBy: { expression: 'description' } }
+            }
+          },
+          {
+            xtype: 'numberfield',
+            name: 'rate',
+            fieldLabel: UB.i18n('Навантаження'),
+            maxLength: 17,
+            enforceMaxLength: true,
+            hideTrigger: true,
+            selectOnFocus: true,
+            keyNavEnabled: false,
+            mouseWheelEnabled: false,
+            vtype: 'floatValidator',
+            maskRe: AC.validators.maskRe('currency'),
+            valueToRaw: UB.core.UBUtil.formatAsCurrency,
+            decimalPrecision: 2,
+            maxValue: 8999000000000000,
+            minValue: -8999000000000000,
+            hidden: true
+          },
+          {
+            layout: { type: 'hbox' },
+            style: 'margin-top: 10px; margin-bottom: 10px'
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictPartID',
+            fieldLabel: UB.i18n('Розділ тарифікації'),
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'trf_dictPart',
+              fieldList: ['ID', 'name', 'code'],
+              orderList: { orderBy: { expression: 'code' } }
+            }
+          },
+          {
+            xtype: 'numberfield',
+            name: 'posIndex',
+            fieldLabel: UB.i18n('Порядковий номер'),
+            maxLength: 17,
+            enforceMaxLength: true,
+            selectOnFocus: true,
+            keyNavEnabled: true,
+            mouseWheelEnabled: false,
+            maxValue: 99,
+            minValue: 1,
+            hidden: true
+          }
+        ]
+      }
+
+    ]
+    me.on('afterrender',
+      function () {
+        me.up('window').setTitle(UB.i18n('Посадове місце'))
+        me.createToolbarButtons(me)
+        me.attr = {
+          employeeNumber: me.down('[name=employeeNumber]'),
+          dictFundSourceID: me.down('[name=dictFundSourceID]'),
+          dictProgClassID: me.down('[name=dictProgClassID]'),
+          dictPositionID: me.down('[name=dictPositionID]'),
+          dictEducationLevelID: me.down('[name=dictEducationLevelID]'),
+          dictEducationRankID: me.down('[name=dictEducationRankID]'),
+          dictQualificationID: me.down('[name=dictQualificationID]'),
+          dictTarifCoeffID: me.down('[name=dictTarifCoeffID]'),
+          dictRankID: me.down('[name=dictRankID]'),
+          dictSubjectID: me.down('[name=dictSubjectID]'),
+          workNormID: me.down('[name=workNormID]'),
+          dictPartID: me.down('[name=dictPartID]'),
+          rate: me.down('[name=rate]'),
+          posIndex: me.down('[name=posIndex]')
+        }
+
+        if (me.parentForm.record.get('state') === 'POSTED') {
+          Object.keys(me.attr).forEach(attrName => {
+            me.attr[attrName].setReadOnly(true)
+          })
+          me.down('[name=saveAndClose]').setDisabled(true)
+        }
+        me.employeeNumberID = me.parentForm.attr.employeeNumberID.getValue()
+        me.attr.employeeNumber.setValue(me.parentForm.attr.employeeNumberID.getFieldValue('description'))
+        me.employeeID = me.parentForm.attr.employeeNumberID.getFieldValue('employeeID')
+        AC.viewUtils.setFilterValue(me.attr.workNormID, { dateTo: { value: me.parentForm.attr.dateToEmpty.getValue() || AC.dateService.maxDate(), condition: '>=' } })
+        if (me.formData) {
+          Object.keys(me.formData).forEach(attrName => {
+            if (me.formData[attrName] !== undefined) {
+              switch (attrName) {
+                case 'rate':
+                case 'posIndex':
+                  me.attr[attrName].setValue(me.formData[attrName])
+                  break
+                case 'dictFundSourceID':
+                case 'dictProgClassID':
+                case 'dictPositionID':
+                case 'dictEducationLevelID':
+                case 'dictEducationRankID':
+                case 'dictQualificationID':
+                case 'dictTarifCoeffID':
+                case 'dictRankID':
+                case 'dictSubjectID':
+                case 'workNormID':
+                case 'dictPartID':
+                  me.attr[attrName].setValueById(me.formData[attrName])
+                  if (me.formData[attrName]) {
+                    me.attr[attrName].skipChanged = true
+                  }
+                  break
+              }
+            }
+          })
+        } else if (me.employeeNumberID) {
+          UB.Repository('hr_employeePositionSR')
+            .attrs(['dictPositionID', 'dictFundSourceID', 'dictProgClassID', 'dictTarifCoeffID'])
+            .where('employeeNumberID', '=', me.employeeNumberID)
+            .where('dateTo', '>=', me.parentForm.attr.dateFrom.getValue())
+            .orderBy('dateFrom')
+            .selectSingle()
+            .then(employeePosition => {
+              if (employeePosition) {
+                const positions = me.gridSender.getData()
+                const mainPosition = positions.find(o => o.dictPositionID === employeePosition.dictPositionID)
+                if (mainPosition) { // Основна посада вже э у робочому місці
+                  me.attr.dictPositionID.setValue(null)
+                } else {
+                  me.attr.dictPositionID.setValueById(employeePosition.dictPositionID)
+                }
+                me.attr.dictFundSourceID.setValueById(employeePosition['dictFundSourceID'])
+                me.attr.dictProgClassID.setValueById(employeePosition['dictProgClassID'])
+                me.attr.dictTarifCoeffID.setValueById(employeePosition['dictTarifCoeffID'])
+                return mainPosition
+              }
+            }).then((mainPosition) => {
+            // if (!mainPosition) { // Основної посади ще нема у робочому місці
+              UB.Repository('hr_employeeEducation')
+                .attrs(['isMain', 'dictEducationLevelID'])
+                .where('employeeID', '=', me.employeeID)
+                .where('dictEducationLevelID', 'isNotNull')
+                .orderByDesc('isMain')
+                .selectSingle()
+                .then(education => {
+                  if (education) {
+                    me.attr.dictEducationLevelID.setValueById(education.dictEducationLevelID)
+                  }
+                })
+            // }
+            })
+        }
+
+        me.on('change', showSubject())
+        function showSubject () {
+          if (me.attr.dictPositionID.getValue()) {
+            UB.Repository('trf_dictPositionProps')
+              .attrs(['dictPositionID', 'subject'])
+              .where('dictPositionID', '=', me.attr.dictPositionID.getValue())
+              .selectSingle()
+              .then(result => {
+                if (result && (['1', '2'].includes(result.subject))) {
+                  me.attr.dictSubjectID.setAllowBlank(!(result && result.subject === '1'))
+                  me.attr.dictSubjectID.show()
+                } else {
+                  me.attr.dictSubjectID.setValue(null)
+                  me.attr.dictSubjectID.setAllowBlank(true)
+                  me.attr.dictSubjectID.hide()
+                }
+              })
+          }
+        }
+        function setWorkNorm (dictPositionID) {
+          if (dictPositionID) {
+            UB.Repository('hr_dictPosition')
+              .attrs(['workNormID'])
+              .where('ID', '=', dictPositionID)
+              .selectScalar()
+              .then(result => {
+                me.attr.workNormID.setValueById(result)
+              })
+          }
+        }
+
+        me.attr.dictPositionID.on('change', (ctrl, value) => {
+          if (ctrl.skipChanged) {
+            delete ctrl.skipChanged
+          } else {
+            setWorkNorm(value)
+            if (value) {
+              me.getDictTarifCoeff({
+                onDate: me.docDateFrom,
+                dictEducationLevelID: me.attr.dictEducationLevelID.getFieldValue('ID'),
+                dictStaffSubCatID: me.attr.dictPositionID.getFieldValue('dictStaffSubCatID'),
+                dictQualificationID: me.attr.dictQualificationID.getFieldValue('ID')
+              }).then((mParams) => {
+                const dictTarifCoeff = JSON.parse(mParams.resultData)
+                if (dictTarifCoeff.ID) {
+                  me.attr.dictTarifCoeffID.setValueById(dictTarifCoeff.ID)
+                }
+              })
+            }
+          }
+          const accCategory = me.getAccCategory(me)
+          if (accCategory === '2') {
+            UB.Repository('hr_publServRang')
+              .attrs(['dictRankID'])
+              .where('employeeID', '=', me.employeeID)
+              .where('dateTo', '>=', me.parentForm.attr.dateFrom.getValue())
+              .where('dateFrom', '<=', me.parentForm.attr.dateFrom.getValue())
+              .orderBy('dateFrom')
+              .selectSingle()
+              .then(result => {
+                if (result) {
+                  me.attr.dictRankID.setValueById(result.dictRankID)
+                }
+              })
+          }
+          me.attr.dictRankID[accCategory === '2' ? 'show' : 'hide']()
+          me.attr.dictTarifCoeffID[accCategory === '2' ? 'hide' : 'show']()
+          me.attr.dictEducationRankID[accCategory === '2' ? 'hide' : 'show']()
+          me.attr.dictEducationLevelID[accCategory === '2' ? 'hide' : 'show']()
+          me.attr.dictQualificationID[accCategory === '2' ? 'hide' : 'show']()
+          me.attr.workNormID[accCategory === '2' ? 'hide' : 'show']()
+          showSubject()
+        })
+
+        me.attr.dictEducationLevelID.on('change', (ctrl, value) => {
+          if (ctrl.skipChanged) {
+            delete ctrl.skipChanged
+          } else {
+            if (value) {
+              me.getDictTarifCoeff({
+                onDate: me.docDateFrom,
+                dictEducationLevelID: value,
+                dictStaffSubCatID: me.attr.dictPositionID.getFieldValue('dictStaffSubCatID'),
+                dictQualificationID: me.attr.dictQualificationID.getFieldValue('ID')
+              }).then((mParams) => {
+                const dictTarifCoeff = JSON.parse(mParams.resultData)
+                if (dictTarifCoeff.ID) {
+                  me.attr.dictTarifCoeffID.setValueById(dictTarifCoeff.ID)
+                }
+              })
+            }
+          }
+        })
+
+        me.attr.dictQualificationID.on('change', (ctrl, value) => {
+          if (ctrl.skipChanged) {
+            delete ctrl.skipChanged
+          } else {
+            if (value) {
+              me.getDictTarifCoeff({
+                onDate: me.docDateFrom,
+                dictEducationLevelID: me.attr.dictEducationLevelID.getFieldValue('ID'),
+                dictStaffSubCatID: me.attr.dictPositionID.getFieldValue('dictStaffSubCatID'),
+                dictQualificationID: value
+              }).then((mParams) => {
+                const dictTarifCoeff = JSON.parse(mParams.resultData)
+                if (dictTarifCoeff.ID) {
+                  me.attr.dictTarifCoeffID.setValueById(dictTarifCoeff.ID)
+                }
+              })
+            }
+          }
+        })
+      }, me)
+    me.callParent(arguments)
+  },
+  createToolbarButtons: function (me) {
+    let tb = me.down('toolbar')
+    tb.insert(tb.items.length - 2, {
+      xtype: 'button',
+      scale: 'medium',
+      name: 'saveAndClose',
+      iconCls: 'fas fa-share-square',
+      tooltip: UB.i18n('saveAndClose') + me.hotKeys[me.actionId.save].text,
+      cls: 'save-action',
+      handler: function () {
+        me.onButtonSave(me)
+      }
+    })
+  },
+  setIsDirty: function (action) {
+
+  },
+  onButtonSave: function (me) {
+    if (me.isValid()) {
+      const formData = {}
+      formData.dictPositionID = me.attr.dictPositionID.getValue()
+      formData['dictPositionID.caption'] = me.attr.dictPositionID.getFieldValue('caption')
+      formData.dictSubjectID = me.attr.dictSubjectID.getValue()
+      formData['dictSubjectID.description'] = me.attr.dictSubjectID.getFieldValue('description')
+      formData.dictTarifCoeffID = me.attr.dictTarifCoeffID.getValue()
+      formData['dictTarifCoeffID.name'] = me.attr.dictTarifCoeffID.getFieldValue('name')
+      formData.dictFundSourceID = me.attr.dictFundSourceID.getValue()
+      formData['dictFundSourceID.name'] = me.attr.dictFundSourceID.getFieldValue('name')
+      formData.dictProgClassID = me.attr.dictProgClassID.getValue()
+      formData['dictProgClassID.description'] = me.attr.dictProgClassID.getFieldValue('description')
+      formData.workNormID = me.attr.workNormID.getValue()
+      formData['workNormID.weekHours'] = me.attr.workNormID.getFieldValue('weekHours')
+      formData.dictEducationRankID = me.attr.dictEducationRankID.getValue()
+      formData['dictEducationRankID.description'] = me.attr.dictEducationRankID.getFieldValue('description')
+      formData.rate = me.attr.rate.getValue()
+      formData.dictEducationLevelID = me.attr.dictEducationLevelID.getValue()
+      formData.dictQualificationID = me.attr.dictQualificationID.getValue()
+      formData['dictRankID.description'] = me.attr.dictRankID.getFieldValue('description')
+      formData.dictRankID = me.attr.dictRankID.getValue()
+      formData.accrual = (me.formData && me.formData.accrual) ? me.formData.accrual : []
+      formData.posIndex = me.attr.posIndex.getValue()
+      formData.dictPartID = me.attr.dictPartID.getValue()
+      formData['dictPartID.name'] = me.attr.dictPartID.getFieldValue('name')
+      if (me.formData && me.formData.ID) {
+        formData.ID = me.formData.ID
+      }
+      if (me.formData && me.formData.mi_modifyDate) {
+        formData.mi_modifyDate = me.formData.mi_modifyDate
+      }
+      me.onSave(me.parentForm, me.gridSender, me.gridRecord, formData)
+      me.up().close()
+    } else {
+      me.getForm().getFields().each(function (item) {
+        if (!item.isValid()) {
+          UB.toast({
+            entityTitle: UB.i18n('Проводка'),
+            fieldLabel: item.fieldLabel,
+            callback: function () {
+              if (me) {
+                let wnd = me.getFormWin()
+                if (wnd) wnd.toFront()
+                Ext.callback(item.focus, item, [], 100)
+              }
+            }
+          })
+          item.focus()
+        }
+      }, me)
+    }
+  },
+  getAccCategory (me) {
+    const hrStaffCatByPosition = AC.settings.get('hrStaffCatByPosition', appAC.globalOrganization())
+    return (hrStaffCatByPosition
+      ? appHR.getAccCategoryByPositionType(me.attr.dictPositionID.getFieldValue('positionType'))
+      : me.attr.dictPositionID.getFieldValue('dictStaffCatID.accCategory')) || '1'
+  },
+  getDictTarifCoeff (params) {
+    return $App.connection.run({
+      entity: 'trf_tariffSheetDt',
+      method: 'getDictTarifCoeff',
+      params: JSON.stringify(params)
+    })
+  }
+})

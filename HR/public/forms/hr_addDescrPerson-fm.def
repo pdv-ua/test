@@ -1,0 +1,45 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['organizationID', 'dictFilter'],
+  autoScroll: true,
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    defaults: { labelWidth: 130 }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    { name: 'orgName', labelWidth: 130, readOnly: true, xtype: 'ubtextfield', fieldLabel: UB.i18n('Організація') },
+    {
+      layout: 'hbox',
+      defaults: { labelWidth: 130 },
+      items: [
+        { attributeName: 'idxNum', width: 250 }
+      ]
+    },
+    { attributeName: 'value' },
+    { attributeName: 'name' },
+    {
+      xtype: 'ubcombobox',
+      fieldLabel: UB.i18n('Відібрати'),
+      hidden: true,
+      name: 'dictFilter',
+      ubRequest: {
+        entity: 'cdn_contacttype',
+        method: 'select',
+        fieldList: ['ID', 'name']
+      },
+      listeners: {
+        change: function (ctrl, value) {
+          const me = ctrl.up('form')
+          me.record.set('dictFilter', value)
+        }
+      }
+    }
+  ]
+}

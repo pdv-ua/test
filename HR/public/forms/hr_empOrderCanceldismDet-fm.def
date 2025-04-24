@@ -1,0 +1,176 @@
+/* global UB */
+
+exports.formDef = (function () {
+  return {
+    customParams: {
+      empOrderType: 'APPOINT'
+    },
+    requiredFields: ['orderID', 'empOrderType', 'organizationID', 'employeePositionID', 'employeeNumberID', 'positionID', 'departmentID'],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    defaults: {
+      layout: 'fit'
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [{
+        title: UB.i18n('Загальне'),
+        ubID: 'tabMain',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [{
+          layout: {
+            type: 'hbox'
+          },
+          items: [{
+            flex: 1,
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            defaults: { labelWidth: 130 },
+            items: [{
+              attributeName: 'employeeID',
+              margin: '10 25 0 15',
+              fieldList: ['ID', 'fullFIO'],
+              whereList: {
+                exist: {
+                  expression: '',
+                  condition: 'subquery',
+                  subQueryType: 'Exists',
+                  value: {
+                    entity: 'ac_employeeOrg',
+                    fieldList: [],
+                    method: 'select',
+                    whereList: {
+                      cond: {
+                        expression: '[employeeID]=[{master}.ID]',
+                        condition: 'custom'
+                      },
+                      mi_deleteDate: {
+                        condition: 'equal',
+                        expression: '[mi_deleteDate]',
+                        value: '#maxdate'
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              xtype: 'ubfieldset',
+              title: UB.i18n('Наказ про звільнення'),
+              border: true,
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              margin: '5 10 10 10',
+              defaults: { labelWidth: 120 },
+              items: [{
+                attributeName: 'dismParaID',
+                fieldList: ['ID', 'descriptionExt', 'orderID', 'dateFrom', 'orderID.orderDate', 'orderID.orderNumber',
+                  'orderID.dictEmpOrderIndexID', 'employeeID', 'employeePositionID', 'employeeNumberID', 'positionID', 'departmentID'],
+                valueField: 'ID',
+                displayField: 'descriptionExt',
+                fieldLabel: UB.i18n('Наказ про звільнення'),
+                whereList: {
+                  isPosted: {
+                    expression: '[orderID.orderState]',
+                    condition: 'in',
+                    value: ['POSTED', 'PROCESSED']
+                  },
+                  notExists: {
+                    expression: '',
+                    condition: 'subquery',
+                    subQueryType: 'notExists',
+                    value: {
+                      entity: 'hr_empOrderCanceldismDet',
+                      fieldList: [],
+                      method: 'select',
+                      whereList: {
+                        cond: {
+                          expression: '[dismParaID]=[{master}.ID]',
+                          condition: 'custom'
+                        },
+                        orderState: {
+                          condition: 'in',
+                          expression: '[orderID.orderState]',
+                          value: ['POSTED', 'PROCESSED']
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                layout: {
+                  type: 'hbox',
+                  align: 'middle'
+                },
+                items: [{
+                  attributeName: 'dismParaID.orderID.orderNumber',
+                  fieldLabel: UB.i18n('Номер/Індекс наказу'),
+                  allowBlank: true,
+                  readOnly: true,
+                  labelWidth: 120,
+                  width: 240
+                },
+                {
+                  attributeName: 'dismParaID.orderID.dictEmpOrderIndexID',
+                  allowBlank: true,
+                  readOnly: true,
+                  fieldLabel: '',
+                  labelWidth: 120,
+                  width: 240
+                }]
+              },
+              {
+                layout: {
+                  type: 'hbox',
+                  align: 'middle'
+                },
+                items: [{
+                  attributeName: 'dismParaID.orderID.orderDate',
+                  allowBlank: true,
+                  readOnly: true,
+                  fieldLabel: UB.i18n('Дата наказу'),
+                  labelWidth: 120,
+                  width: 240
+                },
+                {
+                  attributeName: 'dismParaID.dateFrom',
+                  allowBlank: true,
+                  readOnly: true,
+                  fieldLabel: UB.i18n('Дата звільнення'),
+                  labelWidth: 120,
+                  width: 240
+                }
+                ]
+              }
+              ]
+            },
+            {
+              attributeName: 'dateFrom',
+              vtype: 'renewDate',
+              fieldLabel: UB.i18n('Дата поновлення')
+            }
+            ]
+          }
+          ]
+        }]
+      }]
+    }]
+  }
+})()

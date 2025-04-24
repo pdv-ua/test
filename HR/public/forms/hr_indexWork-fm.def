@@ -1,0 +1,91 @@
+/* global appHR */
+
+exports.formDef = {
+  parentConfig: {
+    layout: {
+      type: 'vbox'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      attributeName: 'employeePositionID',
+      fieldList: ['ID', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'dateFrom', 'dateTo',
+        'employeeNumberID.dateFrom', 'employeeNumberID.dateTo', 'employeeID.fullFIO', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+      orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+      xtype: 'empPositionCombobox',
+      labelWidth: 140,
+      width: 550,
+      displayField: 'employeeID.fullFIO',
+      listeners: {
+        beforeQuerySend: function () {
+          const me = this.up('form')
+          me.setEmployeeFilter()
+        }
+      },
+      addWorkPlace: true
+    },
+    {
+      attributeName: 'employeeID',
+      hidden: true
+    },
+    {
+      layout: {
+        type: 'hbox'
+      },
+      items: [
+        {
+          attributeName: 'periodID',
+          labelWidth: 140,
+          hideEntityItemInContext: true,
+          selectOnFocus: true,
+          pageSize: 50,
+          width: 550,
+          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+          orderList: {
+            orderBy: {
+              expression: 'dateFrom',
+              order: 'desc'
+            }
+          },
+          listeners: {
+            expand: appHR.periodExpand
+          }
+        }
+      ]
+    },
+    {
+      layout: {
+        type: 'hbox'
+      },
+      items: [
+        {
+          attributeName: 'dateFrom',
+          labelWidth: 140
+        },
+        {
+          attributeName: 'dateTo',
+          labelWidth: 140
+        }
+      ]
+    },
+    {
+      layout: {
+        type: 'hbox'
+      },
+      items: [
+        {
+          xtype: 'numberfield',
+          attributeName: 'rateIndexYes',
+          decimalPrecision: 2,
+          allowExponential: false,
+          labelWidth: 430,
+          width: 550
+        }
+      ]
+    }
+  ]
+}

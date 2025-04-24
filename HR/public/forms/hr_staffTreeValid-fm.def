@@ -1,0 +1,493 @@
+/* global Ext appAC $App UB AC */
+exports.formDef = 'HR.staffTreeValid'
+
+Ext.define(exports.formDef, {
+  extend: 'Ext.panel.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  width: 1100,
+  height: 600,
+  initComponent: function () {
+    const me = this
+    me.dockedItems = [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        ubID: 'mainToolbar',
+        enableOverflow: true,
+        items: [
+          {
+            name: 'reload',
+            tooltip: UB.i18n('Перечитати дочірні'),
+            iconCls: 'u-icon-refresh',
+            handler: () => {
+              me.staffTreeControl.reload()
+            }
+          },
+          {
+            actionId: 'print',
+            iconCls: 'fas fa-print',
+            cls: 'blue-action',
+            menu: [
+              {
+                text: UB.i18n('Структура'),
+                iconCls: 'iconDoc',
+                handler: function () {
+                  $App.doCommand({
+                    cmdType: 'showReport',
+                    caption: UB.i18n('Структура та чисельність штатних одиниць'),
+                    tabId: 'printDocument_hr_staffTreeValid_' + Date.now(),
+                    target: $App.getViewport().centralPanel,
+                    cmdData: {
+                      reportCode: 'hr_orgcounts',
+                      reportParams: {
+                        organizationID: appAC.globalOrganization() || 0,
+                        onDate: appAC.globalApplicationDate(),
+                        dontSumChildPos: true
+                      },
+                      reportOptions: {
+                        allowExportToExcel: true,
+                        isModal: false
+                      }
+                    }
+                  })
+                }
+              },
+              {
+                text: UB.i18n('Штатний розпис'),
+                iconCls: 'iconDoc',
+                handler: function () {
+                  $App.doCommand({
+                    cmdType: 'showReport',
+                    caption: UB.i18n('Штатний розпис'),
+                    tabId: 'printDocument_hr_staffTreeValid_' + Date.now(),
+                    target: $App.getViewport().centralPanel,
+                    cmdData: {
+                      reportCode: 'hr_orgstruct',
+                      reportParams: {
+                        organizationID: appAC.globalOrganization() || 0,
+                        onDate: appAC.globalApplicationDate(),
+                        groupPos: false,
+                        dictFundSourceID: me.attr.dictFundSource.getValue()
+                      },
+                      reportOptions: {
+                        allowExportToExcel: true,
+                        isModal: false
+                      }
+                    }
+                  })
+                }
+              },
+              {
+                text: UB.i18n('Штатний розпис з нарахуваннями'),
+                iconCls: 'iconDoc',
+                handler: function () {
+                  $App.doCommand({
+                    cmdType: 'showReport',
+                    caption: UB.i18n('Штатний розпис з нарахуваннями'),
+                    tabId: 'printDocument_hr_staffTreeValid_' + Date.now(),
+                    target: $App.getViewport().centralPanel,
+                    cmdData: {
+                      reportCode: 'hr_orgstructWithAccrual',
+                      reportParams: {
+                        organizationID: appAC.globalOrganization() || 0,
+                        onDate: appAC.globalApplicationDate(),
+                        groupPos: false,
+                        dictFundSourceID: me.attr.dictFundSource.getValue()
+                      },
+                      reportOptions: {
+                        allowExportToExcel: true,
+                        isModal: false,
+                        showParamForm: true
+                      }
+                    }
+                  })
+                }
+              },
+              {
+                text: UB.i18n('Зведений штатний розпис'),
+                iconCls: 'iconDoc',
+                handler: function () {
+                  $App.doCommand({
+                    cmdType: 'showReport',
+                    caption: UB.i18n('Зведений штатний розпис'),
+                    tabId: 'printDocument_hr_staffTreeValid_' + Date.now(),
+                    target: $App.getViewport().centralPanel,
+                    cmdData: {
+                      reportCode: 'hr_orgstructConsolidated',
+                      reportParams: {
+                        organizationID: appAC.globalOrganization() || 0,
+                        onDate: appAC.globalApplicationDate(),
+                        dictFundSourceID: me.attr.dictFundSource.getValue()
+                      },
+                      reportOptions: {
+                        allowExportToExcel: true,
+                        isModal: false,
+                        showParamForm: true
+                      }
+                    }
+                  })
+                }
+              },
+              {
+                text: UB.i18n('Зведений штатний розпис з доплатами та надбавками'),
+                iconCls: 'iconDoc',
+                handler: function () {
+                  $App.doCommand({
+                    cmdType: 'showReport',
+                    caption: UB.i18n('Зведений штатний розпис з доплатами та надбавками'),
+                    tabId: 'printDocument_hr_staffTreeValid_' + Date.now(),
+                    target: $App.getViewport().centralPanel,
+                    cmdData: {
+                      reportCode: 'hr_orgstructConsolidatedAccrual',
+                      reportParams: {
+                        organizationID: appAC.globalOrganization() || 0,
+                        onDate: appAC.globalApplicationDate(),
+                        dictFundSourceID: me.attr.dictFundSource.getValue()
+                      },
+                      reportOptions: {
+                        allowExportToExcel: true,
+                        isModal: false,
+                        showParamForm: true
+                      }
+                    }
+                  })
+                }
+              },
+              {
+                text: UB.i18n('Зведений штатний розпис ВС'),
+                iconCls: 'iconDoc',
+                handler: function () {
+                  $App.doCommand({
+                    cmdType: 'showReport',
+                    caption: UB.i18n('Зведений штатний розпис ВС'),
+                    tabId: 'printDocument_hr_staffTreeValid_' + Date.now(),
+                    target: $App.getViewport().centralPanel,
+                    cmdData: {
+                      reportCode: 'hr_orgstructConsolidatedMilitary',
+                      reportParams: {
+                        organizationID: appAC.globalOrganization() || 0,
+                        onDate: appAC.globalApplicationDate(),
+                        dictFundSourceID: me.attr.dictFundSource.getValue()
+                      },
+                      reportOptions: {
+                        allowExportToExcel: true,
+                        isModal: false,
+                        showParamForm: true
+                      }
+                    }
+                  })
+                }
+              },
+              {
+                text: UB.i18n('Штатно-посадовий список'),
+                iconCls: 'iconDoc',
+                handler: function () {
+                  $App.doCommand({
+                    cmdType: 'showReport',
+                    caption: UB.i18n('Штатно-посадовий список'),
+                    tabId: 'printDocument_hr_staffTreeValid_' + Date.now(),
+                    target: $App.getViewport().centralPanel,
+                    cmdData: {
+                      reportCode: 'hr_orgpos',
+                      reportParams: {
+                        organizationID: appAC.globalOrganization() || 0,
+                        onDate: appAC.globalApplicationDate(),
+                        dictFundSourceID: me.attr.dictFundSource.getValue()
+                      },
+                      reportOptions: {
+                        allowExportToExcel: true,
+                        isModal: false,
+                        showParamForm: true
+                      }
+                    }
+                  })
+                }
+              },
+              {
+                text: UB.i18n('Розширений штатно-посадовий список'),
+                iconCls: 'iconDoc',
+                handler: function () {
+                  $App.doCommand({
+                    cmdType: 'showReport',
+                    caption: UB.i18n('Розширений штатно-посадовий список'),
+                    tabId: 'printDocument_hr_staffTreeValid_' + Date.now(),
+                    target: $App.getViewport().centralPanel,
+                    cmdData: {
+                      reportCode: 'hr_orgposExpanded',
+                      reportParams: {
+                        organizationID: appAC.globalOrganization() || 0,
+                        onDate: appAC.globalApplicationDate(),
+                        dictFundSourceID: me.attr.dictFundSource.getValue()
+                      },
+                      reportOptions: {
+                        allowExportToExcel: true,
+                        isModal: false,
+                        showParamForm: true
+                      }
+                    }
+                  })
+                }
+              },
+              {
+                text: UB.i18n('Кількісний склад за категоріями посад'),
+                iconCls: 'iconDoc',
+                handler: function () {
+                  $App.doCommand({
+                    cmdType: 'showReport',
+                    caption: UB.i18n('Кількісний склад за категоріями посад'),
+                    tabId: 'printDocument_hr_staffTreeValid_' + Date.now(),
+                    target: $App.getViewport().centralPanel,
+                    cmdData: {
+                      reportCode: 'hr_reportEmpCountPositionByCategory',
+                      reportParams: {
+                        organizationID: appAC.globalOrganization() || 0,
+                        onDate: appAC.globalApplicationDate()
+                      },
+                      reportOptions: {
+                        allowExportToExcel: true,
+                        isModal: false
+                      }
+                    }
+                  })
+                }
+              }
+            ]
+          },
+          {
+            xtype: 'textfield',
+            maxSize: 200,
+            width: 400,
+            name: 'searchText',
+            emptyText: UB.i18n('Введіть рядок для пошуку, Enter - шукати'),
+            enableKeyEvents: true,
+            listeners: {
+              keydown: (ctrl, ev) => {
+                if (ev.keyCode === 13) {
+                  ctrl.up('[formCode]').doSearch()
+                }
+              }
+            }
+          },
+          {
+            actionId: 'search',
+            iconCls: 'fas fa-search',
+            cls: 'blue-action',
+            handler: btn => {
+              btn.up('[formCode]').doSearch()
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictFundSource',
+            fieldLabel: UB.i18n('Джерело фінансування'),
+            labelWidth: 160,
+            width: 500,
+            hideEntityItemInContext: true,
+            valueField: 'ID',
+            displayField: 'description',
+            ubRequest: {
+              entity: 'ac_fundSource',
+              method: 'selectByOrg',
+              fieldList: ['ID', 'description']
+            },
+            listeners: {
+              change: function (ctrl, value) {
+                me.staffTreeControl.dictFundSourceID = value
+                me.fullReload()
+              }
+            }
+          }
+        ]
+      }
+    ]
+    me.staffTreeControl = Ext.widget('staffTreeControl', {
+      xtype: 'staffTreeControl',
+      readOnly: true,
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_staffTreeValid_staffTreeControl'),
+      flex: 2,
+      onDate: appAC.globalApplicationDate(),
+      organization: appAC.globalOrganization(),
+      allowJoinFundSource: true,
+      allowModifyEntity: AC.entityUtils.verifyRightsMethod('hr_staffUnit', 'allowModifyEntity'),
+      allowCreateEmpOrder: AC.entityUtils.verifyRightsMethod('hr_staffUnit', 'allowCreateEmpOrder'),
+      fields: [
+        {
+          name: 'ID',
+          type: 'number'
+        },
+        {
+          name: 'text',
+          type: 'string'
+        },
+        {
+          name: 'description',
+          type: 'string'
+        },
+        {
+          name: 'state',
+          type: 'string'
+        },
+        {
+          name: 'quantity',
+          type: 'string'
+        },
+        {
+          name: 'accrualSum',
+          type: 'string'
+        },
+        {
+          name: 'dateFrom',
+          type: 'string'
+        },
+        {
+          name: 'dateTo',
+          type: 'string'
+        },
+        {
+          name: 'staffOrder',
+          type: 'string'
+        },
+        {
+          name: 'stateCode',
+          type: 'string'
+        },
+        {
+          name: 'vacancyRate',
+          type: 'string'
+        },
+        {
+          name: 'mi_data_id',
+          type: 'number'
+        },
+        {
+          name: 'mi_dateFrom',
+          type: 'date'
+        },
+        {
+          name: 'addDescrPosition',
+          type: 'string'
+        }
+      ],
+      columns: [
+        {
+          xtype: 'treecolumn',
+          flex: 1,
+          minWidth: 150,
+          sortable: false,
+          dataIndex: 'text'
+        },
+        {
+          text: UB.i18n('Додаткова інформація'),
+          width: 140,
+          dataIndex: 'addDescrPosition',
+          renderer: function (value, meta, record) {
+            meta.tdAttr = 'data-qtip="' + (record.data.addDescrPosition || '').split('; ').join('<br />') + '"'
+            return value
+          }
+        },
+        {
+          text: UB.i18n('Кількість'),
+          width: 100,
+          align: 'center',
+          dataIndex: 'quantity'
+        },
+        {
+          text: UB.i18n('Оклад'),
+          width: 100,
+          dataIndex: 'accrualSum'
+        },
+        {
+          text: UB.i18n('Вакантно'),
+          width: 140,
+          align: 'center',
+          dataIndex: 'vacancyRate'
+        },
+        {
+          text: UB.i18n('Дата початку'),
+          width: 120,
+          align: 'center',
+          dataIndex: 'dateFrom',
+          hidden: true
+        },
+        {
+          text: UB.i18n('Дата закінчення'),
+          width: 120,
+          align: 'center',
+          dataIndex: 'dateTo',
+          hidden: true
+        }
+      ],
+      hideToolbar: true
+    })
+    me.treeSearchControl = Ext.widget('treeSearchControl', {
+      xtype: 'treeSearchControl',
+      flex: 1,
+      staffTreeControl: me.staffTreeControl
+    })
+    me.items = [
+      me.staffTreeControl,
+      { xtype: 'splitter' },
+      me.treeSearchControl
+    ]
+    me.doSearch = function (isSilence) {
+      const treeSearchControl = me.treeSearchControl
+      const searchText = (me.down('[name=searchText]').getValue() || '').trim()
+      if (searchText.length < 4) {
+        !isSilence && AC.viewUtils.showToast(UB.i18n('Пошуковий рядок має містити не менше, ніж 4 символи'))
+        return
+      }
+      treeSearchControl.search({
+        onDate: me.staffTreeControl.onDate,
+        startID: appAC.globalOrganization(),
+        dictFundSourceID: me.attr.dictFundSource.getValue(),
+        search: searchText
+      }).then(() => {
+        treeSearchControl.show()
+        Ext.defer(() => {
+          treeSearchControl.down('[name=searchResult]').getView().focus()
+        }, 100)
+      })
+    }
+
+    const changeGlobal = () => {
+      const node = me.staffTreeControl.tree.store.getRootNode()
+      if (node) {
+        me.staffTreeControl.onDate = appAC.globalApplicationDate()
+        me.staffTreeControl.clearTree(node)
+        me.staffTreeControl.orgIDs = [appAC.globalOrganization()]
+        me.staffTreeControl.appendItems([appAC.globalOrganization()], node)
+        me.treeSearchControl.clearSearchResult()
+      }
+    }
+
+    me.fullReload = function () {
+      changeGlobal()
+    }
+
+    me.on('afterrender', () => {
+      let orgID = appAC.globalOrganization()
+      me.staffTreeControl.orgIDs = [orgID]
+      $App.on('ac:app:organizationChanged', changeGlobal)
+      $App.on('ac:app:operationDateChanged', changeGlobal)
+      me.attr = {
+        dictFundSource: me.down('[name=dictFundSource]')
+      }
+      const isFundSourceAccounting = AC.settings.get('hrFundSourceAccounting', appAC.globalOrganization())
+      if (isFundSourceAccounting === 'STAFF') {
+        me.attr.dictFundSource.store.ubRequest.orgID = orgID
+      } else {
+        me.attr.dictFundSource.hide()
+      }
+    }, me)
+
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', changeGlobal)
+      $App.un('ac:app:operationDateChanged', changeGlobal)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

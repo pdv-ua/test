@@ -1,0 +1,304 @@
+/* global AC appAC appHR $App HR UB Ext */
+
+exports.formDef = {
+  requiredFields: ['orderID', 'empOrderType', 'organizationID', 'isGroup', 'organizationID.mi_data_id'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: []
+    }
+  ],
+  items: [{
+    xtype: 'tabpanel',
+    region: 'center',
+    items: [
+      {
+        title: UB.i18n('Загальне'),
+        ubID: 'tabMain',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            layout: {
+              type: 'hbox',
+              align: 'middle'
+            },
+            items: [
+              {
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                flex: 2,
+                items: [
+                  {
+                    attributeName: 'payElID',
+                    fieldLabel: UB.i18n('Вид оплати'),
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion', 'codeSort'],
+                    displayField: 'description',
+                    gridFieldList: ['description'],
+                    fieldList: ['ID', 'description', 'dictTimeCostID'],
+                    flex: 2,
+                    labelWidth: 130,
+                    margin: '10 15 5 15',
+                    orderList: {
+                      orderBy: {
+                        expression: 'codeSort'
+                      }
+                    },
+                    whereList: {
+                      isSalary: {
+                        expression: '[methodID.code]',
+                        condition: 'equal',
+                        value: '44'
+                      }
+                    }
+                  },
+                  {
+                    attributeName: 'dictTimeCostID',
+                    gridFieldList: ['nameSmall'],
+                    labelWidth: 130,
+                    fieldList: ['nameSmall'],
+                    displayField: 'nameSmall',
+                    readOnly: true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            layout: {
+              type: 'hbox',
+              align: 'middle'
+            },
+            name: 'orderWordPanel',
+            items: [
+              {
+                attributeName: 'orderWord',
+                labelWidth: 130,
+                flex: 1,
+                rows: 3
+              },
+              {
+                xtype: 'button',
+                cls: 'list-icon',
+                name: 'orderWordButton',
+                tooltip: UB.i18n('Вибрати'),
+                width: 35,
+                height: 35,
+                margin: '0 13 0 -45',
+                handler: btn => btn.up('form').getField('orderWord').selectHandler(btn)
+              }
+            ]
+          },
+          {
+            xtype: 'tabpanel',
+            region: 'center',
+            layout: 'fit',
+            flex: 1,
+            items: [{
+              title: UB.i18n('Працівники'),
+              name: 'hr_empOrderEmployeeDet',
+              xtype: 'ubdetailgrid',
+              paraGrid: true,
+              autoScroll: true,
+              rowEditing: true,
+              notWriteChanges: true,
+              hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_empOrderEmployeeDet',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'employeePositionID.description',
+                    description: UB.i18n('Працівник'),
+                    visibility: true,
+                    simpleFilter: true,
+                    editor: {
+                      fieldList: ['ID', 'description', 'employeeID', 'employeeID.fullFIO'],
+                      gridFieldList: ['description'],
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                    },
+                    config: { width: 350 }
+                  },
+                  {
+                    name: 'dateFrom',
+                    config: { width: 250 },
+                    editor: {
+                      allowBlank: false
+                    }
+                  },
+                  {
+                    name: 'dateTo',
+                    config: { width: 250 },
+                    editor: {
+                      allowBlank: false
+                    }
+                  },
+                  {
+                    name: 'employeeID',
+                    visibility: false
+                  },
+                  {
+                    name: 'description',
+                    visibility: false
+                  }
+                ]
+              },
+              masterFields: ['ID', 'orderID'],
+              detailFields: ['paraID', 'orderID'],
+              onBeforeEdit: function (rowEditor, context) {
+                let editor = rowEditor.editor
+                let me = editor.up('form')
+                if (context.grid.isEditDisabled) {
+                  return false
+                }
+                me.setIsDirty(true)
+                let employeePositionCtrl = editor.query(`[name=employeePositionID.description]`)[0]
+                let dateFromCtrl = editor.query(`[name=dateFrom]`)[0]
+                let dateToCtrl = editor.query(`[name=dateTo]`)[0]
+
+                me.orderForm.filterEmployeePosition(me, {
+                  ctrlToFilter: employeePositionCtrl,
+                  onDate: appAC.globalApplicationDate()
+                })
+
+                dateFromCtrl.on('change', ctrl => {
+                  if (ctrl.getValue()) {
+                    dateToCtrl.setValue(ctrl.getValue())
+                    dateToCtrl.setMinValue(ctrl.getValue())
+                  }
+                })
+
+                employeePositionCtrl.on('change', ctrl => {
+                  context.record.set('employeeID', ctrl.getFieldValue('employeeID'))
+                  context.record.set('description', ctrl.getFieldValue('description'))
+                })
+              },
+              onValidateEdit: (editor, context) => {
+                const store = context.grid.getStore()
+                if (store.getCount() > 0) {
+                  let hasError = false
+                  const employeePositionID = editor.editor.form.findField('employeePositionID.description').getFieldValue('ID')
+                  const dateFrom = AC.dateService.truncTimeToUtcNull(editor.editor.form.findField('dateFrom').getValue())
+                  const dateTo = AC.dateService.truncTimeToUtcNull(editor.editor.form.findField('dateTo').getValue())
+                  store.each(record => {
+                    if (context.record.data.ID === record.get('ID')) return
+                    if (!hasError && record.get('employeePositionID') === employeePositionID) {
+                      const recordDateFrom = AC.dateService.truncTimeToUtcNull(record.get('dateFrom'))
+                      const recordDateTo = AC.dateService.truncTimeToUtcNull(record.get('dateTo'))
+                      if (dateFrom <= recordDateTo && dateTo >= recordDateFrom) {
+                        hasError = true
+                      }
+                    }
+                  })
+                  if (hasError) {
+                    const errorMessage = UB.i18n(`Періоди перетинаються. Виправіть перед збереженням`)
+                    $App.dialogInfo(errorMessage)
+                    return false
+                  }
+                }
+                return true
+              },
+              customActions: [
+                {
+                  iconCls: 'fas fa-angle-double-down',
+                  cls: 'fill-action',
+                  text: UB.i18n('Вибрати працівників'),
+                  actionId: 'fillData',
+                  handler: async function (btn) {
+                    const me = btn.up('form')
+                    if (me.isReadOnly) {
+                      return
+                    }
+                    const gridEmp = me.down('[name=hr_empOrderEmployeeDet]')
+                    const store = gridEmp.getStore()
+                    HR.orderManager.empOrderEmployeeSearch({
+                      selected: store.data.items.map(o => o.get('employeePositionID')),
+                      orgID: me.record.get('organizationID'),
+                      onDate: AC.dateService.truncTimeToUtcNull(me.orderForm.record.get('orderDate') || me.orderForm.record.get('entryDate')),
+                      entityID: me.instanceID,
+                      workPlace: [],
+                      onSelectData: function (data, isDelete) {
+                        me.loadEmployeers(data, isDelete)
+                      }
+                    })
+                  }
+                },
+                {
+                  name: 'importList',
+                  iconCls: 'el-icon-download',
+                  cls: 'fill-action',
+                  scale: 'medium',
+                  text: UB.i18n('Завантажити з файлу'),
+                  handler: function (btn) {
+                    const me = btn.up('form')
+                    if (me.isReadOnly) {
+                      return
+                    }
+                    me.saveForm().then(result => {
+                      if (result !== -1) {
+                        me.loadCsv(btn)
+                      }
+                    })
+                  }
+                },
+                {
+                  name: 'dexportList',
+                  iconCls: 'el-icon-upload2',
+                  cls: 'fill-action',
+                  scale: 'medium',
+                  text: UB.i18n('Вивантажити шаблон CSV'),
+                  tooltip: UB.i18n('Вивантажити шаблон CSV'),
+                  handler: function (btn) {
+                    const me = btn.up('form')
+                    me.exportCSVTemplate()
+                  }
+                }
+              ],
+              cmpInitConfig: {
+                customInit: function () {
+                  let grid = this
+                  let oldOnDel = grid.onDel
+                  let newOnDel = function () {
+                    let me = grid.up('form')
+                    if (['POSTED', 'PROCESSED'].includes(me.record.get('orderState'))) {
+                      AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Неможливо видалити запис з проведеного наказу'))
+                      return
+                    }
+                    oldOnDel.call(grid)
+                    me.setIsDirty(true)
+                  }
+                  AC.gridUtils.replaceListener(grid, 'del', oldOnDel, newOnDel)
+                  let _doOnEdit = grid.doOnEdit
+                  AC.gridUtils.tuneGridColumns(grid, {})
+                  grid.doOnEdit = function () {
+                    grid.isEditMode = true
+                    _doOnEdit.call(grid)
+                  }
+                },
+                optimizeColumnWidth: function () {
+                  /!* do nothing for manual column width tunning *!/
+                }
+              }
+            }]
+          }
+        ]
+      }
+    ]
+  }]
+}

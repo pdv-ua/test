@@ -1,0 +1,442 @@
+/* global appAC appHR UB Ext $App AC */
+
+exports.formDef = 'HR.orderPayRollSelect'
+
+Ext.define('HR.orderPayRollSelect', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: { type: 'border' },
+  /**
+   * @cfg {UBS.UBReport} report
+   */
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        defaults: {
+          labelWidth: 160,
+          width: 400
+        },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            name: 'payElID',
+            fieldLabel: UB.i18n('Вид оплати'),
+            allowBlank: false,
+            hideEntityItemInContext: true,
+            ubRequest: {
+              entity: 'hr_payEl',
+              fieldList: ['ID', 'description', 'code', 'methodID.methodGroupID.code', 'methodID.code', 'codeSort', 'name'],
+              whereList: {
+                groupCode: {
+                  expression: '[methodID.methodGroupID.code]',
+                  condition: 'in',
+                  value: [128, 129, 130]
+                },
+                methodCode: {
+                  expression: '[methodID.code]',
+                  condition: '!=',
+                  value: '32'
+                }
+              },
+              orderList: { orderBy: { expression: 'codeSort' } }
+            },
+            listeners: {
+              change: () => {
+                me.setDescription()
+              }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'paymentMethod',
+            fieldLabel: UB.i18n('Спосіб виплати'),
+            allowBlank: false,
+            hideEntityItemInContext: true,
+            enumGroupFilter: 'HR_PAYMENT_METHOD',
+            valueField: 'code',
+            displayField: 'name',
+            ubRequest: {
+              entity: 'ubm_enum',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+              whereList: {
+                eGroup: {
+                  expression: '[eGroup]',
+                  condition: 'equal',
+                  value: 'HR_PAYMENT_METHOD'
+                },
+                code: {
+                  expression: '[code]',
+                  condition: 'in',
+                  value: ['1', '2']
+                }
+              }
+            },
+            listeners: {
+              change: () => {
+                me.setDescription()
+              }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'periodID',
+            fieldLabel: UB.i18n('За період'),
+            allowBlank: false,
+            hideEntityItemInContext: true,
+            pageSize: 50,
+            ubRequest: {
+              entity: 'hr_dictPeriod',
+              fieldList: ['ID', 'description', 'name', 'dateFrom', 'dateTo', 'orgID'],
+              orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+            },
+            listeners: {
+              expand: appHR.periodExpand,
+              change: () => {
+                let dateFrom = me.attr.periodID.getFieldValue('dateFrom')
+                let dateTo = me.attr.periodID.getFieldValue('dateTo')
+                const payElStore = me.attr.payElID.getStore()
+                me.attr.payElID.setValue()
+                if (dateFrom && dateTo) {
+                  AC.viewUtils.setFilterValue(me.attr.payElID, {
+                    dateFrom: { value: dateTo, condition: '<=' },
+                    dateTo: { value: dateFrom, condition: '>=' }
+                  }, ['clearValue'])
+                  payElStore.load()
+                } else {
+                  if (payElStore.ubRequest.whereList.dateFrom) delete payElStore.ubRequest.whereList.dateFrom
+                  if (payElStore.ubRequest.whereList.dateTo) delete payElStore.ubRequest.whereList.dateTo
+                }
+                me.setDescription()
+              }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'periodCalcID',
+            fieldLabel: UB.i18n('У періоді'),
+            hideEntityItemInContext: true,
+            pageSize: 50,
+            ubRequest: {
+              entity: 'hr_dictPeriod',
+              fieldList: ['ID', 'description', 'name', 'dateFrom', 'dateTo', 'orgID'],
+              orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+            },
+            listeners: {
+              expand: appHR.periodExpand
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'payOutID',
+            fieldLabel: UB.i18n('Шаблон виплати'),
+            hideEntityItemInContext: true,
+            hidden: true,
+            ubRequest: {
+              entity: 'hr_payOut',
+              fieldList: ['ID', 'name', 'organizationID']
+            }
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'ubcombobox',
+                name: 'dictMultiGroupID',
+                flex: 1,
+                hidden: true,
+                labelWidth: 160,
+                fieldLabel: UB.i18n('Група підрозділів'),
+                valueField: 'ID',
+                displayField: 'name',
+                ubRequest: {
+                  entity: 'hr_dictMultiGroup',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['ID', 'name'],
+                  __mip_ondate: appAC.globalApplicationDate(),
+                  whereList: {
+                    orgID: {
+                      expression: '[orgID]',
+                      condition: '=',
+                      value: appAC.globalOrganization()
+                    },
+                    isClose: {
+                      expression: '[isClose]',
+                      condition: '=',
+                      value: false
+                    }
+                  }
+                },
+                listeners: {
+                  change: (ctrl, value) => {
+                    me.attr.includeSubDepGroup.setValue(false)
+                    me.attr.includeSubDepGroup.setReadOnly(!value)
+                    if (value) {
+                      me.attr.departmentID.setValueById()
+                    }
+                    me.setDescription()
+                  }
+                }
+              },
+              {
+                xtype: 'checkbox',
+                width: 120,
+                name: 'includeSubDepGroup',
+                boxLabel: UB.i18n('з підлеглими'),
+                boxLabelAlign: 'after',
+                labelWidth: 80,
+                readOnly: true,
+                hidden: true,
+                listeners: {
+                  change: () => {
+                    me.setDescription()
+                  }
+                }
+              }
+            ]
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'ubcombobox',
+                name: 'departmentID',
+                fieldLabel: UB.i18n('Підрозділ'),
+                flex: 1,
+                hidden: true,
+                labelWidth: 160,
+                hideEntityItemInContext: true,
+                valueField: 'mi_data_id',
+                displayField: 'caption',
+                ubRequest: {
+                  entity: 'hr_department',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['mi_data_id', 'caption', 'parentUnitID', 'orgID', 'name'],
+                  whereList: { state: { expression: '[state]', condition: '=', value: 'ACTIVE' } }
+                },
+                listeners: {
+                  change: (ctrl, value) => {
+                    me.attr.includeSubDep.setValue(false)
+                    me.attr.includeSubDep.setReadOnly(!value)
+                    if (value) {
+                      me.attr.dictMultiGroupID.setValueById()
+                    }
+                    me.setDescription()
+                  }
+                }
+              },
+              {
+                xtype: 'checkbox',
+                width: 120,
+                name: 'includeSubDep',
+                boxLabel: UB.i18n('з підлеглими'),
+                boxLabelAlign: 'after',
+                labelWidth: 80,
+                readOnly: true,
+                hidden: true,
+                listeners: {
+                  change: () => {
+                    me.setDescription()
+                  }
+                }
+              }
+            ]
+          },
+
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'textfield',
+                name: 'orderNumber',
+                fieldLabel: UB.i18n('Номер'),
+                flex: 1,
+                labelWidth: 160
+              },
+              {
+                xtype: 'ubdatefield',
+                name: 'orderDate',
+                allowBlank: false,
+                fieldLabel: UB.i18n('Дата'),
+                labelWidth: 50
+              }
+            ]
+          },
+          {
+            xtype: 'textfield',
+            name: 'description',
+            fieldLabel: UB.i18n('Назва')
+          }
+        ]
+      },
+      {
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Продовжити'),
+            width: 110,
+            height: 30,
+            margin: '10 20 10 0',
+            handler: function (btn) {
+              if (!me.attr.periodID.getFieldValue('dateFrom')) {
+                return
+              }
+              if (!me.attr.orderNumber.getValue()) {
+                $App.connection.run({
+                  entity: 'hr_payRoll',
+                  method: 'getOrderNum',
+                  organizationID: appAC.globalOrganization(),
+                  onDate: me.attr.periodID.getFieldValue('dateFrom')
+                }).then((result) => {
+                  me.attr.orderNumber.setValue(result.orderNumber)
+                  me.createDocument()
+                })
+              } else {
+                me.createDocument()
+              }
+            }
+          }
+        ]
+      }
+    ]
+    me.setDescription = () => {
+      const attrNames = ['dictMultiGroupID', 'includeSubDepGroup', 'departmentID', 'includeSubDep', 'payOutID']
+      attrNames.forEach(attrName => {
+        if (['28', '29', '30', '75'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+          me.attr[attrName].show()
+        } else {
+          me.attr[attrName].hide()
+          me.attr[attrName][me.attr[attrName].setValueById ? 'setValueById' : 'setValue'](me.attr[attrName].setValueById ? null : false)
+        }
+      })
+      if (['28', '30', '53'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+        me.attr.periodCalcID.show()
+        me.attr.periodCalcID.setAllowBlank(false)
+        if (!me.attr.periodCalcID.getValue()) {
+          me.attr.periodCalcID.setValueById(me.attr.periodID.getValue())
+        }
+      } else {
+        me.attr.periodCalcID.hide()
+        me.attr.periodCalcID.setAllowBlank(true)
+        me.attr.periodCalcID.setValueById(null)
+      }
+      me.attr.description.setValue(`${UB.i18n(me.attr.payElID.getFieldValue('name')) || ''}${me.attr.periodID.getValue()
+        ? ` за ${me.attr.periodID.getFieldValue('name')}` : ''}${me.attr.dictMultiGroupID.getValue()
+        ? `, ${UB.i18n('Група підрозділів')}: ${me.attr.dictMultiGroupID.getFieldValue('name') + (me.attr.includeSubDepGroup.getValue() ? `, ${UB.i18n('з підлеглими')}` : '')}` : ''}${me.attr.departmentID.getValue()
+        ? `, ${UB.i18n('Підрозділ')}: ${me.attr.departmentID.getFieldValue('name') + (me.attr.includeSubDep.getValue() ? `, ${UB.i18n('з підлеглими')}` : '')}` : ''}`)
+      if (me.attr.payElID.getFieldValue('methodID.code') === '53') {
+        me.attr.payOutID.setValueById()
+      }
+    }
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        payElID: me.down('[name=payElID]'),
+        paymentMethod: me.down('[name=paymentMethod]'),
+        periodID: me.down('[name=periodID]'),
+        periodCalcID: me.down('[name=periodCalcID]'),
+        payOutID: me.down('[name=payOutID]'),
+        dictMultiGroupID: me.down('[name=dictMultiGroupID]'),
+        includeSubDepGroup: me.down('[name=includeSubDepGroup]'),
+        departmentID: me.down('[name=departmentID]'),
+        includeSubDep: me.down('[name=includeSubDep]'),
+        orderNumber: me.down('[name=orderNumber]'),
+        orderDate: me.down('[name=orderDate]'),
+        description: me.down('[name=description]')
+      }
+      me.attr.paymentMethod.setValueById('1')
+      me.attr.orderDate.setValue(AC.dateService.todayDate())
+      const globalOrganization = appAC.globalOrganization()
+      me.attr.departmentID.store.ubRequest.__mip_ondate = appAC.globalApplicationDate()
+      AC.viewUtils.setFilterValue(me.attr.departmentID, { orgID: globalOrganization })
+      AC.viewUtils.setFilterValue(me.attr.dictMultiGroupID, { orgID: globalOrganization })
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization }, ['setDisabled'])
+      AC.viewUtils.setFilterValue(me.attr.periodCalcID, { orgID: globalOrganization })
+      appHR.getPayOutList(globalOrganization).then(payOutList => {
+        AC.viewUtils.setFilterValue(me.attr.payOutID, { ID: payOutList })
+      })
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        if (me.defaultValues && me.defaultValues.periodID) {
+          me.attr.periodID.setValueById(me.defaultValues.periodID)
+          me.attr.periodCalcID.setValueById(me.defaultValues.periodID)
+        } else {
+          me.attr.periodID.setValueById(response.ID)
+          me.attr.periodCalcID.setValueById(response.ID)
+        }
+        me.currentPeriod = response
+      })
+    }, me)
+
+    me.createDocument = () => {
+      if (!me.isValid()) {
+        return
+      }
+      let orderType = ''
+      switch (me.attr.payElID.getFieldValue('methodID.code')) {
+        case '28':
+        case '29':
+        case '31':
+        case '61':
+        case '62': {
+          orderType = me.attr.paymentMethod.getValue() === '1' ? 'hr_payRollBank' : me.attr.paymentMethod.getValue() === '2' ? 'hr_payRollCash' : 'hr_payRollPost'
+          break
+        }
+        case '30':
+          orderType = me.attr.paymentMethod.getValue() === '1' ? 'hr_payRollWithinBank' : me.attr.paymentMethod.getValue() === '2' ? 'hr_payRollWithinCash' : null
+          break
+        case '53':
+          orderType = 'hr_payFSSBank'
+          break
+        case '75':
+          orderType = 'hr_payFundSourceBank'
+          break
+      }
+      if (orderType) {
+        $App.doCommand({
+          cmdType: 'showForm',
+          formCode: orderType,
+          entity: 'hr_payRoll',
+          isModal: false,
+          tabId: 'hr_payRoll' + Date.now(),
+          target: $App.getViewport().centralPanel,
+          // sender: me.sender,
+          // store: me.store,
+          cmpInitConfig: {
+            defaultValues: {
+              description: me.attr.description.getValue(),
+              orderNumber: me.attr.orderNumber.getValue(),
+              orderDate: me.attr.orderDate.getValue(),
+              periodCalcID: me.attr.periodCalcID.getValue() || (AC.dateService.shiftDate(me.attr.periodID.getFieldValue('dateFrom')) > me.currentPeriod.dateFrom ? me.attr.periodID.getValue() : me.currentPeriod.ID),
+              periodSalaryID: me.attr.periodID.getValue(),
+              organizationID: appAC.globalOrganization(),
+              paymentMethod: me.attr.paymentMethod.getValue(),
+              payElID: me.attr.payElID.getValue(),
+              'payElID.code': me.attr.payElID.getFieldValue('code'),
+              'payElID.methodID.code': me.attr.payElID.getFieldValue('methodID.code'),
+              payOutID: me.attr.payOutID.getValue(),
+              dictMultiGroupID: me.attr.dictMultiGroupID.getValue(),
+              includeSubDepGroup: me.attr.includeSubDepGroup.getValue(),
+              departmentID: me.attr.departmentID.getValue(),
+              includeSubDep: me.attr.includeSubDep.getValue(),
+              orderType: orderType,
+              filterParams: JSON.stringify({
+                organizationID: appAC.globalOrganization()
+              }),
+              applyRetention: true,
+              percentPay: 100
+            }
+          }
+        })
+      }
+      me.up('window') ? me.up('window').close() : me.close()
+    }
+
+    me.callParent(arguments)
+  }
+})

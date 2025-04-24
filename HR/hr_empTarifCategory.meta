@@ -1,0 +1,83 @@
+{
+  "caption": "Тарифний розряд працівника",
+  "description": "Тарифний розряд працівника",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dictTarifCoeffID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTarifCoeff",
+      "caption": "Тарифний розряд",
+      "description": "Тарифний розряд",
+      "documentation": "Тарифний розряд",
+      "allowNull": false
+    },
+    {
+      "name": "orderCause",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Підстава надання",
+      "description": "Підстава надання",
+      "documentation": "Підстава надання"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата присвоєння",
+      "description": "Дата присвоєння",
+      "documentation": "Дата присвоєння",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії"
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "empOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

@@ -1,0 +1,189 @@
+/* global $App UB AC HR appAC */
+exports.formDef = {
+  requiredFields: ['organizationID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1200,
+    height: 700
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 150 },
+      items: [
+        {
+          xtype: 'ubtextfield',
+          attributeName: 'name'
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'chiefID',
+              fieldList: ['ID', 'description', 'tabNum'],
+              orderList: { orderBy: { expression: 'description' } },
+              displayField: 'description',
+              labelWidth: 150,
+              flex: 1,
+              whereList: {
+                orgID: {
+                  expression: '[orgID]',
+                  condition: '=',
+                  value: appAC.globalOrganization()
+                }
+              }
+            },
+            {
+              labelWidth: 160,
+              attributeName: 'dateFrom'
+            }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'accessibleToChief',
+              labelWidth: 150,
+              flex: 1
+            },
+            {
+              labelWidth: 160,
+              attributeName: 'dateToEmpty'
+            }
+          ]
+        },
+        {
+          attributeName: 'isAllEmployees',
+          labelWidth: 150
+        },
+        {
+          attributeName: 'description'
+        }
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      name: 'gridEmployee',
+      rowEditing: true,
+      flex: 1,
+      entityConfig: {
+        entity: 'hr_employeeGroupDet',
+        method: 'select',
+        fieldList: [
+          { name: 'employeeNumberID.description', config: { width: 600 }, description: UB.i18n('Учасник'), simpleFilter: true },
+          { name: 'employeeNumberID.employeeID.fullFIO', visibility: false },
+          { name: 'workPlace', config: { width: 200 }, editor: { readOnly: true } },
+          { name: 'dateFrom', config: { align: 'center', width: 120 }, description: UB.i18n('Дата початку') },
+          { name: 'dateToEmpty', config: { align: 'center', width: 130 }, description: UB.i18n('Дата закінчення') }
+        ],
+        orderList: {
+          dateFrom: {
+            'expression': 'employeeNumberID.description'
+          }
+        }
+      },
+      masterFields: ['ID'],
+      detailFields: ['employeeGroupID'],
+      onBeforeEdit: function (rowEditor, context) {
+        if (context.grid.isEditDisabled) {
+          return false
+        }
+        const editor = rowEditor.editor
+        const me = editor.up('form')
+        const reco = context.record
+
+        let onDate = appAC.globalApplicationDate()
+        AC.viewUtils.setWhereListProperty(editor.query(`[name=employeeNumberID.description]`)[0], [
+          ['orgID', '=', appAC.globalOrganization()],
+          ['dateFrom', '<=', onDate],
+          ['dateTo', '>=', onDate]
+        ])
+
+        if (!reco.get('dateFrom')) {
+          reco.set('dateFrom', me.record.get('dateFrom'))
+        }
+        editor.query(`[name=dateFrom]`)[0].setMinValue(me.record.get('dateFrom'))
+        editor.query(`[name=dateToEmpty]`)[0].setMinValue(me.record.get('dateFrom'))
+      },
+      onValidateEdit: function (rowEditor, context) {
+        const editor = rowEditor.editor
+        const dateFromCtrl = editor.query(`[name=dateFrom]`)[0]
+        const dateToCtrl = editor.query(`[name=dateToEmpty]`)[0]
+        if (dateToCtrl.getValue() && dateFromCtrl.getValue() > dateToCtrl.getValue()) {
+          AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n(`Дата закінчення не може бути меншою за дату початку`))
+          return false
+        }
+        return true
+      },
+      customActions: [
+        {
+          actionId: 'fillPersons',
+          text: UB.i18n('Вибрати учасників'),
+          iconCls: 'fas fa-angle-double-down',
+          cls: 'fill-action',
+          handler: async function (btn) {
+            const me = btn.up('form')
+            let valueDateFrom = me.attr.dateFrom.getValue()
+            let valueChiefID = me.attr.chiefID.getValue()
+            let valueName = me.attr.name.getValue()
+            if (!valueDateFrom || !valueChiefID || !valueName) {
+              $App.dialogError('Не заповнені обов\'язкові поля!')
+            } else {
+              me.saveForm().then(result => {
+                if (result !== -1) {
+                  const gridEmp = me.down('[name=gridEmployee]')
+                  const store = gridEmp.getStore()
+                  let onDate = AC.dateService.truncTimeToUtcNull(me.record.get('dateFrom') || appAC.globalApplicationDate())
+                  HR.orderManager.empOrderEmployeeSearch({
+                    selected: store.data.items.map(o => o.get('employeeNumberID')),
+                    field: 'employeeNumberID',
+                    orgID: me.record.get('organizationID'),
+                    onDate: onDate,
+                    entityID: me.instanceID,
+                    onSelectData: function (data, isDelete) {
+                      me.loadEmployees(data, isDelete)
+                    }
+                  })
+                }
+              })
+            }
+          }
+        },
+        {
+          actionId: 'clearPersons',
+          text: UB.i18n('Очистити учасників'),
+          iconCls: 'fas fa-eraser',
+          cls: 'fill-action',
+          handler: (btn) => {
+            $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Очистити список учасників?'))
+              .then(function (choice) {
+                if (choice) {
+                  const me = btn.up('form')
+                  me.clearEmployees()
+                }
+              })
+          }
+        }
+      ],
+      cmpInitConfig: {
+        customInit: function () {
+          AC.gridUtils.tuneGridColumns(this, {
+            workPlace: {
+              renderer: function (value) {
+                return value ? UB.i18n('Постійний') : ''
+              }
+            }
+          })
+        },
+        optimizeColumnWidth: function () {
+          // eslint-disable-next-line no-unused-expressions
+          /!* do nothing for manual column width tunning *!/
+        }
+      }
+    }
+  ]
+}

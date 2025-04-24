@@ -1,0 +1,74 @@
+// @isModal true
+/* global $App Ext UB */
+
+exports.formDef = 'HR.staffTableStructure'
+
+Ext.define('HR.staffTableStructure', {
+  extend: 'Ext.form.Panel',
+  width: 600,
+  height: 100,
+  layout: { type: 'vbox', align: 'stretch' },
+  alias: 'widget.staffTableStructure',
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'ubcombobox',
+        name: 'orgStructureID',
+        fieldLabel: UB.i18n('Структура'),
+        allowBlank: false,
+        ubRequest: {
+          entity: 'hr_staffTableOrgStructure',
+          fieldList: ['ID', 'description'],
+          whereList: {
+            orderState: { expression: '[orderState]', condition: 'equal', value: 'POSTED' },
+            orgID: { expression: '[orgID]', condition: 'equal', value: me.customParams.orgID }
+          }
+        }
+      },
+      {
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Продовжити'),
+            width: 110,
+            height: 30,
+            margin: '10 20 10 0',
+            handler: function (btn) {
+              $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Всі раніше внесені зміни до штатного розпису будуть видалені. Продовжити?'))
+                .then(isAgree => {
+                  if (isAgree) {
+                    me.setLoading(true)
+                    $App.connection.run({
+                      entity: 'hr_staffTable',
+                      method: 'applyOrgStructure',
+                      orgStructureID: me.attr.orgStructureID.getValue(),
+                      staffTableID: me.customParams.sender.instanceID
+                    }).then(function () {
+                      me.setLoading(false)
+                      me.customParams.sender.onRefresh()
+                      me.up('window') ? me.up('window').close() : me.close()
+                    }, err => {
+                      me.setLoading(false)
+                      throw err
+                    })
+                  }
+                })
+            }
+          }
+        ]
+      }
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        orgStructureID: me.down('[name=orgStructureID]')
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

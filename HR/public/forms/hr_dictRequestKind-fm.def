@@ -1,0 +1,246 @@
+/* global AC UB appAC $App */
+exports.formDef = {
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          autoScroll: true,
+          items: [
+            { attributeName: 'name' },
+            {
+              attributeName: 'organizationID',
+              fieldList: ['mi_data_id', 'description', 'ID'],
+              valueField: 'mi_data_id',
+              displayField: 'description',
+              fieldLabel: UB.i18n('Організація'),
+              __mip_recordhistory_all: true,
+              whereList: {
+                state: {
+                  expression: '[state]',
+                  condition: 'equal',
+                  values: {
+                    state: 'ACTIVE'
+                  }
+                },
+                dateFrom: {
+                  expression: '[mi_dateFrom]',
+                  condition: 'lessEqual',
+                  value: appAC.globalApplicationDate()
+                },
+                dateTo: {
+                  expression: '[mi_dateTo]',
+                  condition: 'moreEqual',
+                  value: appAC.globalApplicationDate()
+                }
+              }
+            },
+            { attributeName: 'requestType' },
+            { attributeName: 'description' },
+            { attributeName: 'isDateFrom' },
+            { attributeName: 'isDateTo' },
+            {
+              attributeName: 'dictTimeCostID',
+              fieldList: ['ID', 'nameSmall']
+            },
+            {
+              attributeName: 'requestText',
+              xtype: 'textarea',
+              height: 400
+            },
+            {
+              xtype: 'panel',
+              name: 'requestTextInfoPanel',
+              layout: { type: 'vbox', align: 'stretch' },
+              title: 'Пояснення до тексту заяви',
+              collapsible: true,
+              collapsed: true,
+              cls: 'panel-bordered',
+              header: {
+                style: 'background-color: #e7e7e7;'
+              },
+              margin: '0 15 10 15',
+              items: [
+                {
+                  xtype: 'label',
+                  name: 'requestTextInfoLabel',
+                  html: '',
+                  cls: 'field-label-blue',
+                  padding: '5 5 5 5',
+                  flex: 1
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'interval', width: 200, decimalPrecision: 2 },
+                { attributeName: 'countRows', labelWidth: 200, width: 290 }
+              ]
+            },
+            { attributeName: 'explainText' },
+            { attributeName: 'procRule' },
+            {
+              xtype: 'ubboxselect',
+              attributeName: 'employeeNumberList',
+              fieldLabel: 'Адресат',
+              displayField: 'description',
+              valueField: 'ID',
+              multiSelect: true,
+              ubRequest: {
+                entity: 'hr_employeeNumber',
+                method: UB.core.UBCommand.methodName.SELECT,
+                fieldList: ['ID', 'description'],
+                whereList: {},
+                orderList: { orderBy: { expression: 'tabNumSort' } }
+              }
+            },
+            { attributeName: 'isRoutUser' }
+          ]
+        },
+        {
+          title: UB.i18n('Погодження'),
+          xtype: 'ubdetailgrid',
+          autoScroll: true,
+          flex: 1,
+          rowEditing: true,
+          disableSearchBar: true,
+          hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+          entityConfig: {
+            entity: 'hr_dictRequestRecStage',
+            method: 'select',
+            fieldList: [
+              {
+                name: 'itemIdx',
+                description: UB.i18n('№'),
+                visibility: true,
+                config: { width: 50 }
+              },
+              {
+                name: 'stageKind',
+                config: { width: 250 }
+              },
+              {
+                name: 'appRoute',
+                config: { width: 250 }
+              },
+              {
+                name: 'respPositionID.description',
+                description: UB.i18n('Посада'),
+                config: { width: 300 },
+                editor: {
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                  whereList: {
+                    state: {
+                      expression: '[state]',
+                      condition: '=',
+                      value: 'ACTIVE'
+                    }
+                  }
+                }
+              },
+              {
+                name: 'respEmployeePositionID.description',
+                description: UB.i18n('Відповідальний на маршруті'),
+                config: { flex: 1 }
+              }
+            ],
+            orderList: {
+              orderBy: { expression: 'itemIdx', order: 'asc' }
+            },
+            whereList: {}
+          },
+          masterFields: ['ID'],
+          detailFields: ['dictRequestKindID'],
+          onBeforeEdit: function (rowEditor, context) {
+            const editor = rowEditor.editor
+            const me = editor.up('form')
+            const reco = context.record
+            const itemIdxCrtl = editor.query(`[name=itemIdx]`)[0]
+            if (!reco.get('itemIdx')) {
+              let lastItemIdx = 0
+              context.store.data.items.forEach(row => {
+                if (row.get('itemIdx') && lastItemIdx < row.get('itemIdx')) lastItemIdx = row.get('itemIdx')
+              })
+              reco.set('itemIdx', lastItemIdx + 1)
+              const lastAddRow = context.store.data.items[lastItemIdx === 0 ? 0 : lastItemIdx - 1]
+              reco.set('stageKind', lastAddRow.data.stageKind)
+            }
+
+            let stageKindCtrl = editor.query(`[name=stageKind]`)[0]
+            stageKindCtrl.store.filter({
+              filterFn: function (item) { return ['SIGN', 'VISA', 'ONLAW'].includes(item.get('code')) }
+            })
+            let respPositionCtrl = editor.query(`[name=respPositionID.description]`)[0]
+            AC.viewUtils.setWhereListProperty(respPositionCtrl, [
+              ['orgID', 'equal', me.record.get('organizationID') || appAC.globalOrganization()],
+              ['state', 'equal', 'ACTIVE']
+            ])
+            respPositionCtrl.store.ubRequest.__mip_ondate = appAC.globalApplicationDate()
+
+            let respEmployeePositionCtrl = editor.query(`[name=respEmployeePositionID.description]`)[0]
+            AC.viewUtils.setWhereListProperty(respEmployeePositionCtrl, [
+              ['organizationID', 'equal', me.record.get('organizationID') || appAC.globalOrganization()],
+              ['dateFrom', '<=', appAC.globalApplicationDate()],
+              ['dateTo', '>=', appAC.globalApplicationDate()],
+              ['employeeID.mi_deleteDate', '>=', '#maxdate']
+            ])
+            let appRouteCtrl = editor.query(`[name=appRoute]`)[0]
+            appRouteCtrl.on('change', (ctrl, value) => {
+              if (value === 'EMPLOYEE') {
+                respEmployeePositionCtrl.setReadOnly(false)
+              } else {
+                respEmployeePositionCtrl.setReadOnly(true)
+                respEmployeePositionCtrl.setValue()
+              }
+              if (value === 'POSITION') {
+                respPositionCtrl.setReadOnly(false)
+              } else {
+                respPositionCtrl.setReadOnly(true)
+                respPositionCtrl.setValue()
+              }
+            })
+            respPositionCtrl.setReadOnly(reco.get('appRoute') !== 'POSITION')
+            respEmployeePositionCtrl.setReadOnly(reco.get('appRoute') !== 'EMPLOYEE')
+            rowEditor.on('validateedit', function (edit, ctx) {
+              if (!appRouteCtrl.getValue() || !itemIdxCrtl.getValue() || !stageKindCtrl.getValue()) {
+                let firstParticle = !appRouteCtrl.getValue() && (!itemIdxCrtl.getValue() || !stageKindCtrl.getValue()) ? 'Заповніть поля: ' : 'Заповніть поле: '
+                const appRouteCtrlHeader = appRouteCtrl.column.initialConfig.header
+                const itemIdxCrtlHeader = itemIdxCrtl.column.initialConfig.header
+                const stageKindCtrlHeader = stageKindCtrl.column.initialConfig.header
+                if (!itemIdxCrtl.getValue()) {
+                  firstParticle += itemIdxCrtlHeader + (!stageKindCtrl.getValue() || !appRouteCtrl.getValue() ? ', ' : '')
+                }
+                if (!stageKindCtrl.getValue()) {
+                  firstParticle += stageKindCtrlHeader + (!appRouteCtrl.getValue() ? ', ' : '')
+                }
+                if (!appRouteCtrl.getValue()) {
+                  firstParticle += appRouteCtrlHeader
+                }
+                $App.dialogInfo(UB.i18n(firstParticle))
+                return false
+              }
+              return true
+            })
+            return true
+          }
+        }
+      ]
+    }
+  ]
+}

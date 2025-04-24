@@ -1,0 +1,733 @@
+/* global UB _ Ext AC */
+
+exports.formDef = {
+  requiredFields: ['documentID', 'state', 'documentID.orgID', 'documentID.docNumber', 'documentID.dateFrom', 'documentID.dateTo', 'documentID.docDate', 'documentID.name', 'description', 'documentID.type'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1300,
+    height: 1000
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'empNumAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'rlAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'calcWorkPlaceAction'
+        },
+        {
+          orderId: 7,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 8,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 9,
+          actionId: 'printAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: false,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          defaults: { labelWidth: 120 },
+          items: [
+            {
+              xtype: 'empNumComboBox',
+              attributeName: 'employeeNumberID',
+              fieldLabel: UB.i18n('Робоче місце'),
+              fieldList: ['ID', 'description', 'orgID', 'dateFrom', 'dateTo', 'workPlaceCode', 'posName', 'employeeID', 'mainEmpNumberID'],
+              orderList: { orderBy: { expression: 'tabNumSort' } },
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              gridFieldList: ['description', 'posName'],
+              emptyText: UB.i18n('Вакансія'),
+              addDateTo: true,
+              addPlural: true,
+              addPosName: true,
+              selectOnFocus: true
+            },
+            {
+              attributeName: 'departmentID',
+              fieldLabel: UB.i18n('Підрозділ'),
+              selectOnFocus: true,
+              fieldList: ['mi_data_id', 'caption', 'orgID', 'codeSort'],
+              valueField: 'mi_data_id',
+              displayField: 'caption',
+              __mip_recordhistory_all: false,
+              listeners: {
+                beforeQuerySend: function () {
+                  const me = this
+                  const rawValue = me.rawValue
+                  if (rawValue && rawValue.length > 0 && Number(rawValue[0])) {
+                    me.store.ubRequest.orderList = { orderBy: { expression: 'codeSort' } }
+                  } else {
+                    me.store.ubRequest.orderList = { orderBy: { expression: 'name' } }
+                  }
+                }
+              },
+              whereList: {
+                state: {
+                  expression: '[state]',
+                  condition: '=',
+                  values: {
+                    state: 'ACTIVE'
+                  }
+                }
+              }
+            },
+            {
+              attributeName: 'dictPositionID',
+              fieldLabel: UB.i18n('Посада'),
+              selectOnFocus: true,
+              fieldList: ['caption', 'positionType', 'dictStaffCatID.accCategory'],
+              displayField: 'caption',
+              listeners: {
+                beforeQuerySend: function () {
+                  const me = this
+                  const rawValue = me.rawValue
+                  if (rawValue && rawValue.length > 0 && Number(rawValue[0])) {
+                    me.store.ubRequest.orderList = { orderBy: { expression: 'codeSort' } }
+                  } else {
+                    me.store.ubRequest.orderList = { orderBy: { expression: 'name' } }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 90 },
+          flex: 1,
+          items: [
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 90, width: 220 },
+              items: [
+                {
+                  attributeName: 'dateFrom',
+                  fieldLabel: UB.i18n('Початок'),
+                  selectOnFocus: true,
+                  enableKeyEvents: true
+                },
+                {
+                  attributeName: 'dateToEmpty',
+                  selectOnFocus: true,
+                  fieldLabel: UB.i18n('Кінець')
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 90, width: 220 },
+              items: [
+                {
+                  attributeName: 'orderNumber',
+                  fieldLabel: UB.i18n('Наказ №'),
+                  selectOnFocus: true
+                },
+                {
+                  attributeName: 'orderDate',
+                  selectOnFocus: true,
+                  fieldLabel: UB.i18n('Дата наказу')
+                }
+              ]
+            },
+            {
+              xtype: 'textfield',
+              name: 'employeeExperience',
+              fieldLabel: UB.i18n('Стаж'),
+              readOnly: true,
+              listeners: {
+                change: function updateTipBody (ctrl) {
+                  ctrl.getEl() && ctrl.getEl().set({ 'data-qtip': ctrl.getValue() })
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      layout: { type: 'border' },
+      items: [
+        {
+          region: 'north',
+          split: true,
+          xtype: 'acGrid',
+          name: 'position',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('trf_workPlacePosition'),
+          height: 200,
+          autoScroll: true,
+          entity: 'trf_position',
+          formCode: 'trf_positionEdit',
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          summary: { rate: 'sum', accrualSum: 'sum' },
+          summaryDataOnClient: true,
+          hideActions: ['addNewByCurrent'],
+          ignoreAttrNewByCurrent: ['accrual'],
+          includeCustomReadOnly: ['copyBtn', 'delBtn'],
+          ignoreAttr: ['comment', 'change'],
+          viewConfig: {
+            markDirty: false
+          },
+          customToolBarActions: [
+            {
+              xtype: 'button',
+              name: 'copyBtn',
+              tooltip: UB.i18n('Copy'),
+              iconCls: 'u-icon-copy',
+              cls: 'blue-action',
+              scale: 'medium',
+              handler: function (btn) {
+                const me = btn.up('form')
+                if (me.attr.position.selectedRecord) {
+                  const data = _.cloneDeep(me.attr.position.selectedRecord.data)
+                  data.posIndex = null
+                  delete data.ID
+                  delete data.mi_modifyDate
+                  if (!data.accrual) {
+                    data.accrual = []
+                  }
+                  data.accrual.forEach(acc => {
+                    delete acc.ID
+                    delete acc.mi_modifyDate
+                  })
+                  me.attr.position.openForm(data)
+                }
+              }
+            },
+            {
+              xtype: 'button',
+              name: 'delBtn',
+              tooltip: UB.i18n('Видалити обраний запис'),
+              iconCls: 'u-icon-delete',
+              cls: 'grey-action',
+              disabled: false,
+              handler: function (btn) {
+                const me = btn.up('form')
+                const grid = btn.up('acGrid')
+                const selectedItems = grid.getSelectionModel().selected.items
+                if (!selectedItems.length) {
+                  return
+                }
+                Ext.suspendLayouts()
+                grid.suspendEvents()
+                grid.getStore().suspendEvents()
+                grid.getStore().remove(selectedItems)
+                grid.getStore().removed = grid.getStore().removed.concat(selectedItems.map(row => row.getData()).filter(row => row.ID))
+                grid.down('[name=delBtn]').setDisabled(grid.getSelectionModel().selected.length === 0)
+                grid.resumeEvents()
+                grid.getStore().resumeEvents()
+                Ext.resumeLayouts(true)
+                grid.getView().refreshView()
+                grid.GridSummary.dataBind()
+                me.setIsDirty(true)
+              }
+            },
+            { xtype: 'button',
+              name: 'moveUpBtn',
+              tooltip: UB.i18n('Перемістити вгору'),
+              iconCls: 'fas fa-arrow-up',
+              cls: 'blue-action',
+              scale: 'medium',
+              handler: function (btn) {
+                const me = btn.up('form')
+                if (me.record.get('state') !== 'POSTED') {
+                  if (me.attr.position.selectedRecord) {
+                    let posIndex = me.attr.position.selectedRecord.data.posIndex
+                    if (posIndex > 1) {
+                      posIndex--
+                      me.attr.position.getStore().data.items.forEach(o => {
+                        const rec = me.attr.position.getStore().getByInternalId(o.internalId)
+                        if (rec) {
+                          const recPosIndex = rec.get('posIndex')
+                          if (recPosIndex >= posIndex) {
+                            rec.set('posIndex', recPosIndex + 1)
+                          }
+                        }
+                      })
+                      me.attr.position.selectedRecord.set('posIndex', posIndex)
+                      me.setIsDirty(true)
+                      me.saveForm().then(() => {
+                        me.attr.position.setLocalStoreData(me.sortPositions(me.attr.position.getData(), null))
+                        me.calcWorkPlace(me)
+                      })
+                    }
+                  }
+                }
+              }
+            },
+            { xtype: 'button',
+              name: 'moveDownBtn',
+              tooltip: UB.i18n('Перемістити вниз'),
+              iconCls: 'fas fa-arrow-down',
+              cls: 'blue-action',
+              scale: 'medium',
+              handler: function (btn) {
+                const me = btn.up('form')
+                if (me.record.get('state') !== 'POSTED') {
+                  if (me.attr.position.selectedRecord) {
+                    let posIndex = me.attr.position.selectedRecord.data.posIndex
+                    posIndex++
+                    me.attr.position.getStore().data.items.forEach(o => {
+                      const rec = me.attr.position.getStore().getByInternalId(o.internalId)
+                      if (rec) {
+                        const recPosIndex = rec.get('posIndex')
+                        if (recPosIndex >= posIndex) {
+                          if (recPosIndex > 1) {
+                            rec.set('posIndex', recPosIndex - 1)
+                          }
+                        }
+                      }
+                    })
+                    me.attr.position.selectedRecord.set('posIndex', posIndex)
+                    me.setIsDirty(true)
+                    me.saveForm().then(() => {
+                      me.attr.position.setLocalStoreData(me.sortPositions(me.attr.position.getData(), null))
+                      me.calcWorkPlace(me)
+                    })
+                  }
+                }
+              }
+            }
+          ],
+          onSelectionChange: function (grid, selectionModel, selected) {
+            const me = grid.up('form')
+            const data = selected.length ? selected[0].get('accrual') : []
+            grid.selectedRecord = selected.length ? selected[0] : null
+            me.attr.accrual.selectedParentRecord = grid.selectedRecord
+            me.attr.accrual.setLocalStoreData(data)
+            me.sortAccrual(me.attr.accrual.getData(), me)
+            if (grid.selectedRecord) {
+              me.accrualGridColumns(me)
+            }
+          },
+          onSaveEditData: function (me, grid, record, formData) {
+            me.setPositionData(me, grid, record, formData)
+          },
+          getRowClass: function (record) {
+            // const dictPositionID = record.get('dictPositionID')
+            // const me = this.up('form')
+            // return dictPositionID === me.attr.dictPositionID.getValue() ? 'grd-bold' : ''
+            return record.get('posIndex') === 1 ? 'grd-bold' : ''
+          },
+          fields: [
+            { name: 'ID' },
+            { name: 'dictPositionID.code' },
+            { name: 'mi_modifyDate' },
+            { name: 'accrual' },
+            { name: 'change' },
+            { name: 'dictEducationLevelID' },
+            { name: 'dictEducationRankID' },
+            { name: 'dictQualificationID' },
+            {
+              name: 'posIndex',
+              columnConfig: {
+                hidden: true,
+                sortable: true,
+                text: UB.i18n('Порядковий номер'),
+                flex: 1,
+                dataType: 'Int',
+                sortBy: 'Number'
+              }
+            },
+            {
+              name: 'dictPositionID.caption',
+              columnConfig: {
+                text: UB.i18n('Посадове місце'),
+                flex: 1
+              }
+            },
+            {
+              name: 'dictEducationRankID.description',
+              columnConfig: {
+                text: UB.i18n('Звання'),
+                flex: 1
+              }
+            },
+            { name: 'dictPositionID' },
+            {
+              name: 'dictSubjectID.description',
+              columnConfig: {
+                hidden: true,
+                text: UB.i18n('Предмет'),
+                flex: 1
+              }
+            },
+            { name: 'dictSubjectID' },
+            {
+              name: 'dictTarifCoeffID.name',
+              columnConfig: {
+                text: UB.i18n('Розряд'),
+                flex: 1
+              }
+            },
+            {
+              name: 'dictRankID.description',
+              columnConfig: {
+                text: UB.i18n('Ранг'),
+                flex: 1
+              }
+            },
+            { name: 'dictRankID' },
+
+            { name: 'dictTarifCoeffID' },
+            {
+              name: 'dictFundSourceID.name',
+              columnConfig: {
+                text: UB.i18n('Фінансування'),
+                flex: 1
+              }
+            },
+            { name: 'dictFundSourceID' },
+            { name: 'dictProgClassID' },
+            {
+              name: 'dictProgClassID.description',
+              columnConfig: {
+                text: UB.i18n('КПК'),
+                flex: 1
+              }
+            },
+            { name: 'workNormID' },
+            {
+              name: 'workNormID.weekHours',
+              columnConfig: {
+                text: UB.i18n('Норма'),
+                flex: 1
+              }
+            },
+            {
+              name: 'rate',
+              columnConfig: {
+                text: UB.i18n('Кількість ставок'),
+                width: 100,
+                floatFormat: 4,
+                align: 'right'
+              }
+            },
+            {
+              name: 'accrualSum',
+              columnConfig: {
+                text: UB.i18n('Cума'),
+                width: 150,
+                floatFormat: 2,
+                align: 'right'
+              }
+            },
+            { name: 'dictPartID' },
+            {
+              name: 'dictPartID.name',
+              columnConfig: {
+                text: UB.i18n('Розділ'),
+                flex: 1
+              }
+            },
+            {
+              name: 'comment',
+              columnConfig: {
+                text: UB.i18n('Примітка'),
+                width: 150,
+                renderer: (value, meta, record) => {
+                  const accrual = record.get('accrual')
+                  if (accrual && accrual.length) {
+                    const flagsFix = accrual.reduce((t, { flagsFix }) => t | flagsFix, 0)
+                    let comment = (flagsFix & 1 << 4) ? UB.i18n('Виправлено') : ''
+                    if (flagsFix & 1 << 5) {
+                      if (comment.length) comment += ', '
+                      comment += UB.i18n('Максимальна кількість ставок')
+                    }
+                    return comment
+                  } else {
+                    return null
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          region: 'center',
+          xtype: 'acGrid',
+          name: 'accrual',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('trf_workPlaceAccrual'),
+          flex: 1,
+          autoScroll: true,
+          entity: 'trf_accrual',
+          formCode: 'trf_accrualEdit',
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          summary: {
+            accrualSum: (store, dataIndex) => {
+              const allRecord = store.snapshot || store.data
+              return allRecord.items.reduce((sum, row) => sum + (['143', '144', '145', '152'].includes(row.get('payElID.methodID.code')) ? 0 : Number(row.get(dataIndex) || 0)), 0)
+            }
+          },
+          summaryDataOnClient: true,
+          hideActions: ['addNewByCurrent'],
+          includeCustomReadOnly: ['fillBtn', 'delBtn'],
+          ignoreAttr: ['payElID.methodID.code'],
+          viewConfig: {
+            markDirty: false
+          },
+          cellEditing: true,
+          onBeforeEdit: function (ctrl, context) {
+            context.column.field.prevValue = context.value
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null // prevent remove grid's record, added automatically
+            }
+          },
+          edit: function (control, context) {
+            if (context.column.field.prevValue !== context.value) {
+              const me = context.grid.up('form')
+              context.record.set(context.field, context.column.field.value)
+              me.onGridEdit(me, 'accrual', context, control)
+              me.setAccrualData(me, me.attr.position.selectedRecord, me.attr.accrual.getData())
+              me.setIsDirty(true)
+            }
+            return true
+          },
+          getRowClass: function (record) {
+            const code = record.get('payElID.methodID.code')
+            return ['14', '57', '140', '15'].includes(code)
+              ? 'grd-color-red'
+              : record.get('accrualSum') === 0
+                ? 'grd-color-grey'
+                : code === '143'
+                  ? 'grd-color-purple'
+                  : ['144', '145', '152'].includes(code)
+                    ? 'grd-color-blue'
+                    : ['1', '146', '147', '156'].includes(code)
+                      ? 'grd-color-brown'
+                      : ['148', '154', '155'].includes(code) ? 'grd-color-green' : ''
+          },
+          customToolBarActions: [
+            {
+              xtype: 'button',
+              name: 'fillBtn',
+              tooltip: UB.i18n('Заповнити'),
+              iconCls: 'fas fa-angle-double-down',
+              cls: 'fill-action',
+              scale: 'medium',
+              handler: function (btn) {
+                const me = btn.up('form')
+                me.showListAccrualByPosition(me)
+              }
+            },
+            {
+              xtype: 'button',
+              name: 'delBtn',
+              tooltip: UB.i18n('Видалити обраний запис'),
+              iconCls: 'u-icon-delete',
+              cls: 'grey-action',
+              disabled: false,
+              handler: function (btn) {
+                const me = btn.up('form')
+                const grid = btn.up('acGrid')
+                const selectedItems = grid.getSelectionModel().selected.items
+                if (!selectedItems.length) {
+                  return
+                }
+                Ext.suspendLayouts()
+                grid.suspendEvents()
+                grid.getStore().suspendEvents()
+                grid.getStore().remove(selectedItems)
+                grid.getStore().removed = grid.getStore().removed.concat(selectedItems.map(row => row.getData()).filter(row => row.ID))
+                grid.down('[name=delBtn]').setDisabled(grid.getSelectionModel().selected.length === 0)
+                grid.resumeEvents()
+                grid.getStore().resumeEvents()
+                Ext.resumeLayouts(true)
+                grid.getView().refreshView()
+                grid.GridSummary.dataBind()
+                me.setAccrualData(me, me.attr.position.selectedRecord, me.attr.accrual.getData())
+                me.setIsDirty(true)
+              }
+            }
+
+          ],
+          onSaveEditData: function (me, currentPositionRow, recalcAccrual) {
+            me.setAccrualData(me, currentPositionRow, recalcAccrual)
+          },
+          fields: [
+            { name: 'ID' },
+            { name: 'mi_modifyDate' },
+            { name: 'flagsFix' },
+            { name: 'experienceYears' },
+            { name: 'experienceMonths' },
+            { name: 'accrualRate' },
+            { name: 'priority' },
+            { name: 'payElID.methodID.code' },
+            { name: 'employeeAccrualID' },
+            { name: 'employeeAccrualID.dateFrom' },
+            { name: 'employeeAccrualID.dateTo' },
+            {
+              name: 'payElID.description',
+              columnConfig: {
+                text: UB.i18n('Нарахування'),
+                flex: 1
+              }
+            },
+            {
+              name: 'dictPupilID.name',
+              columnConfig: {
+                text: UB.i18n('Категорія учнів'),
+                width: 150,
+                flex: 1,
+                hidden: true,
+                editor: {
+                  dataType: 'Entity',
+                  associatedEntity: 'trf_dictPupil',
+                  hideEntityItemInContext: true,
+                  selectOnFocus: true,
+                  storeAttributeValueField: 'dictPupilID',
+                  fieldList: ['ID', 'name'],
+                  flagsFix: 1 << 6
+                }
+              }
+            },
+            {
+              name: 'leadingClass',
+              columnConfig: {
+                text: UB.i18n('Керівний клас'),
+                width: 150,
+                flex: 1,
+                hidden: true,
+                editor: {
+                  dataType: 'String',
+                  selectOnFocus: true,
+                  maxLength: 15
+                }
+              }
+            },
+            { name: 'payElID' },
+            { name: 'dictPupilID' },
+            {
+              name: 'baseSum',
+              columnConfig: {
+                hidden: true,
+                text: UB.i18n('Сума для розрахунку'),
+                width: 150,
+                align: 'right',
+                floatFormat: 4
+              }
+            },
+            {
+              name: 'hours',
+              columnConfig: {
+                text: UB.i18n('Години'),
+                width: 100,
+                floatFormat: 2,
+                align: 'right',
+                editor: {
+                  dataType: 'Currency',
+                  decimalPrecision: 2,
+                  selectOnFocus: true,
+                  allowExponential: false,
+                  allowBlank: false,
+                  invalidText: UB.i18n('Невірний формат'),
+                  flagsFix: 1 << 3,
+                  listeners: {
+                    afterrender: function (cmp) {
+                      cmp.inputEl.set({
+                        autocomplete: 'off'
+                      })
+                    }
+                  }
+                }
+              }
+            },
+            {
+              name: 'rate',
+              columnConfig: {
+                text: '%',
+                width: 100,
+                floatFormat: 2,
+                align: 'right'
+              }
+            },
+            {
+              name: 'accrualSum',
+              columnConfig: {
+                text: UB.i18n('Сума'),
+                width: 150,
+                floatFormat: 2,
+                align: 'right',
+                editor: {
+                  dataType: 'Currency',
+                  decimalPrecision: 2,
+                  selectOnFocus: true,
+                  allowExponential: false,
+                  allowBlank: false,
+                  invalidText: UB.i18n('Невірний формат'),
+                  flagsFix: 1 << 4,
+                  listeners: {
+                    afterrender: function (cmp) {
+                      cmp.inputEl.set({
+                        autocomplete: 'off'
+                      })
+                    }
+                  }
+                }
+              }
+            },
+            {
+              name: 'flagsFix',
+              columnConfig: {
+                text: UB.i18n('Примітка'),
+                width: 250,
+                renderer: (value, meta, record) => {
+                  let comment = (value & 1 << 4) ? UB.i18n('Виправлено') : ''
+                  if (value & 1 << 5) {
+                    if (comment.length) comment += ', '
+                    comment += UB.i18n('Максимальна кількість ставок')
+                  }
+                  if (record.data['employeeAccrualID.dateFrom']) {
+                    if (comment.length) comment += ', '
+                    comment += AC.dateService.formatDate(record.data['employeeAccrualID.dateFrom'])
+                    comment += ' - '
+                    comment += AC.dateService.formatDate(record.data['employeeAccrualID.dateTo'])
+                  }
+                  return comment
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

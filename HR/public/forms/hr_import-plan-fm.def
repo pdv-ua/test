@@ -1,0 +1,510 @@
+// @isModal true
+/* global Ext $App appAC UB */
+exports.formDef = 'HR.import-plan'
+
+Ext.define(exports.formDef, {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_import-plan',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        ubID: 'mainToolbar',
+        enableOverflow: true,
+        items: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Оновити'),
+            iconCls: 'u-icon-refresh',
+            handler: function () {
+              me.getData()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Імпортувати'),
+            text: UB.i18n('Імпортувати'),
+            iconCls: 'fas fa-cloud-download-alt',
+            cls: 'fill-action',
+            handler: function () {
+              me.import()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Таблиця відповідності'),
+            text: UB.i18n('Таблиця відповідності'),
+            iconCls: 'fas fa-map-signs',
+            cls: 'blue-action',
+            handler: function () {
+              me.importMap()
+            }
+          },
+          {
+            xtype: 'combo',
+            labelWidth: 180,
+            editable: false,
+            name: 'encoding',
+            fieldLabel: UB.i18n('Тип кодування файлів'),
+            allowBlank: false,
+            width: 300,
+            store: Ext.create('Ext.data.Store', { fields: ['text', 'value'],
+              data: [
+                { text: 'win1251', value: 'win1251' },
+                { text: 'utf8', value: 'utf8' }
+              ]
+            })
+          },
+          {
+            text: UB.i18n('Параметри'),
+            tooltip: UB.i18n('Параметри'),
+            iconCls: 'u-icon-edit-alt',
+            scale: 'medium',
+            cls: 'fill-action',
+            handler: function () {
+              $App.doCommand({
+                cmdType: 'showForm',
+                formCode: 'hr_importParams',
+                isModal: true
+              })
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Сформувати підсумки'),
+            text: UB.i18n('Сформувати підсумки'),
+            iconCls: 'far fa-calendar-alt',
+            cls: 'green-action',
+            hidden: true,
+            handler: function () {
+              me.setTimeSheet()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Протокол'),
+            text: UB.i18n('Протокол'),
+            iconCls: 'fa fa-list-ol',
+            cls: 'red-action',
+            hidden: true,
+            handler: function () {
+              $App.doCommand({
+                cmdType: 'showList',
+                isModal: true,
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew', 'itemSelect'],
+                cmdData: {
+                  params: [
+                    {
+                      entity: 'hr_importProtocol',
+                      method: 'select',
+                      fieldList: [
+                        { name: 'ID', visibility: false },
+                        { name: 'description', config: { width: 250 } },
+                        { name: 'employeeNumberID.description', description: UB.i18n('Працівник'), config: { width: 250 } },
+                        { name: 'periodID.description', description: UB.i18n('Період') },
+                        { name: 'normDayPay' },
+                        { name: 'normDaySheet' },
+                        { name: 'normHourPay' },
+                        { name: 'normHourSheet' },
+                        { name: 'dayPay' },
+                        { name: 'daySheet' },
+                        { name: 'hourPay' },
+                        { name: 'hourSheet' }
+                      ],
+                      whereList: {
+                        orgID: {
+                          expression: '[orgID]',
+                          condition: '=',
+                          value: appAC.globalOrganization()
+                        }
+                      },
+                      orderList: { orderBy: { expression: 'employeeNumberID.description', order: 'asc' } }
+                    }
+                  ]
+                },
+                cmpInitConfig: {
+                  customActions: [
+                    {
+                      xtype: 'button',
+                      scale: 'medium',
+                      iconCls: 'fas fa-file-excel',
+                      tooltip: UB.i18n('Сформувати'),
+                      cls: 'green-action',
+                      handler: (btn) => {
+                        const grid = btn.up('entitygridpanel')
+                        grid.onExportXls()
+                      }
+                    }
+                  ]
+                }
+              })
+            }
+          }
+        ]
+      }
+    ]
+
+    me.items = [
+      {
+        xtype: 'acGrid',
+        name: 'planGrid',
+        flex: 1,
+        autoScroll: true,
+        region: 'center',
+        storeType: 'local',
+        disablePaging: true,
+        notWriteChanges: true,
+        showToolBar: false,
+        useCheckBoxColumn: true,
+        getRowClass: function (record) {
+          if (['1', '3'].includes(record.get('state'))) {
+            return 'grd-color-red'
+          } else if (['2', '4'].includes(record.get('state'))) {
+            return 'grd-color-blue'
+          } else {}
+        },
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        onRowUnchecked: (grid, record) => {
+          $App.connection.run({
+            entity: 'hr_importPlan',
+            method: 'update',
+            execParams: {
+              ID: record.get('ID'),
+              makeImport: 0
+            }
+          })
+        },
+        onRowChecked: (grid, record) => {
+          $App.connection.run({
+            entity: 'hr_importPlan',
+            method: 'update',
+            execParams: {
+              ID: record.get('ID'),
+              makeImport: 1
+            }
+          })
+        },
+        fields: [
+          { name: 'ID' },
+          { name: 'entityName' },
+          { name: 'impEntityName' },
+          { name: 'makeImport' },
+          { name: 'mapNullCount' },
+          { name: 'logCount' },
+          { name: 'entityDescription', columnConfig: { text: UB.i18n('Назва таблиці'), width: 320, sortable: false } },
+          { name: 'download',
+            columnConfig: {
+              xtype: 'actioncolumn',
+              sortable: false,
+              text: '',
+              width: 50,
+              items: [
+                {
+                  scale: 'small',
+                  icon: $App.getImagePath('download.png'),
+                  tooltip: UB.i18n('Завантажити'),
+                  handler: function (grid, rowIndex) {
+                    me.fileLoad(rowIndex)
+                  }
+                }
+              ]
+            }
+          },
+          { name: 'fileName', columnConfig: { text: UB.i18n('Файл'), width: 320, sortable: false } },
+          { name: 'view',
+            columnConfig: {
+              xtype: 'actioncolumn',
+              text: '',
+              width: 50,
+              items: [
+                {
+                  scale: 'small',
+                  icon: $App.getImagePath('doc.png'),
+                  tooltip: UB.i18n('Завантажені дані'),
+                  handler: function (grid, rowIndex) {
+                    const record = me.attr.planGrid.getStore().getAt(rowIndex)
+                    $App.doCommand({
+                      entity: record.get('impEntityName'),
+                      cmdType: 'showList',
+                      description: record.get('entityDescription'),
+                      isModal: true,
+                      hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew', 'itemSelect'],
+                      cmdData: {
+                        params: [{
+                          entity: record.get('impEntityName'),
+                          method: 'select',
+                          fieldList: ['*'],
+                          whereList: {
+                            orgID: {
+                              expression: '[orgID]',
+                              condition: 'equal',
+                              value: appAC.globalOrganization()
+                            }
+                          }
+                        }]
+                      },
+                      cmpInitConfig: {
+                        customActions: [
+                          {
+                            xtype: 'button',
+                            scale: 'medium',
+                            iconCls: 'fas fa-file-excel',
+                            tooltip: UB.i18n('Сформувати'),
+                            cls: 'green-action',
+                            handler: (btn) => {
+                              const grid = btn.up('entitygridpanel')
+                              grid.onExportXls()
+                            }
+                          }
+                        ]
+                      }
+                    })
+                  }
+                }
+              ]
+            }
+          },
+          {
+            name: 'state',
+            columnConfig: {
+              text: UB.i18n('Стан'),
+              width: 350,
+              sortable: false,
+              enumGroup: 'HR_IMPORT_STATE',
+              renderer: (value, meta, record) => { return value ? `${value}${record.get('logCount') > 0 ? `, ${record.get('logCount')} зауважень` : ''}` : value }
+            }
+          },
+          {
+            name: 'log',
+            columnConfig: {
+              xtype: 'actioncolumn',
+              text: '',
+              sortable: false,
+              width: 50,
+              items: [
+                {
+                  scale: 'small',
+                  icon: $App.getImagePath('table_edit.png'),
+                  tooltip: UB.i18n('Зауваження'),
+                  handler: function (grid, rowIndex) {
+                    const record = me.attr.planGrid.getStore().getAt(rowIndex)
+                    $App.doCommand({
+                      entity: 'hr_importLog',
+                      cmdType: 'showList',
+                      description: UB.i18n('Зауваження'),
+                      isModal: true,
+                      hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew', 'itemSelect'],
+                      cmdData: {
+                        params: [{
+                          entity: 'hr_importLog',
+                          method: 'select',
+                          fieldList: ['description'],
+                          whereList: {
+                            orgID: {
+                              expression: '[orgID]',
+                              condition: 'equal',
+                              value: appAC.globalOrganization()
+                            },
+                            entityName: {
+                              expression: '[entityName]',
+                              condition: 'equal',
+                              value: record.get('entityName')
+                            }
+                          }
+                        }]
+                      },
+                      cmpInitConfig: {
+                        customActions: [
+                          {
+                            xtype: 'button',
+                            scale: 'medium',
+                            iconCls: 'fas fa-file-excel',
+                            tooltip: UB.i18n('Сформувати'),
+                            cls: 'green-action',
+                            handler: (btn) => {
+                              const grid = btn.up('entitygridpanel')
+                              grid.onExportXls()
+                            }
+                          }
+                        ]
+                      }
+                    })
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+
+    ]
+
+    me.getData = () => {
+      if (appAC.globalOrganization()) {
+        $App.connection.run({
+          entity: 'hr_importPlan',
+          method: 'getImportPlan',
+          orgID: appAC.globalOrganization(),
+          appCode: 'HR'
+        }).then(response => {
+          const resultData = JSON.parse(response.resultData)
+          me.attr.planGrid.setLocalStoreData(resultData)
+          const selectionModel = me.attr.planGrid.getSelectionModel()
+          me.attr.planGrid.getStore().each(record => {
+            if (record.get('makeImport')) {
+              selectionModel.select(record, true, false)
+            } else {
+              selectionModel.deselect(record, false)
+            }
+          })
+        })
+      }
+    }
+
+    me.changeGlobal = () => {
+      me.getData()
+    }
+    me.importMap = () => {
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: 'hr_importMap',
+        isModal: true,
+        cmpInitConfig: {
+          planData: me.attr.planGrid.getData(),
+          orgID: appAC.globalOrganization()
+        },
+        customParams: {
+          appCode: 'HR'
+        }
+      })
+    }
+    me.setTimeSheet = () => {
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: 'hr_importPlanFinal',
+        isModal: true
+      })
+    }
+    me.import = () => {
+      const selection = me.attr.planGrid.getSelectionModel().getSelection()
+
+      const importPlan = []
+      selection.forEach(record => {
+        if (record.get('fileName')) {
+          importPlan.push({ planID: record.get('ID') })
+          record.set('state', '6')
+        }
+      })
+      if (importPlan.length) {
+        me.setLoading(UB.i18n('Виконується імпорт даних'))
+        $App.connection.run({
+          entity: 'hr_importPlan',
+          method: 'doImport',
+          importPlan: JSON.stringify(importPlan),
+          orgID: appAC.globalOrganization(),
+          appCode: 'HR'
+
+        }).then(response => {
+          me.setLoading(false)
+          const resultData = JSON.parse(response.resultData)
+          selection.forEach(record => {
+            const data = resultData.find(o => o.planID === record.get('ID'))
+            if (data) {
+              record.set('logCount', data.logCount || 0)
+              record.set('state', data.state || '3')
+            }
+          })
+        }, (err) => {
+          me.setLoading(false)
+          if (err.config && err.config.timeout) {
+            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+          } else {
+            throw err
+          }
+        })
+      }
+    }
+    me.fileLoad = (rowIndex) => {
+      const record = me.attr.planGrid.getStore().getAt(rowIndex)
+      if (!me.attr.encoding.getValue()) {
+        $App.dialogInfo(UB.i18n('Оберіть кодування файлу для завантаження'))
+        return
+      }
+      Ext.create('UB.view.UploadFileAjax', {
+        scope: this,
+        listeners: {
+          afterrender: function (cmp) {
+            this.fieldFile.fileInputEl.set({
+              accept: '.csv'
+            })
+          }
+        },
+        upLoad: function (btn) {
+          record.set('fileName', null)
+          record.set('state', '5')
+          me.setLoading(UB.i18n('Виконується завантаження даних'))
+          const dialogWindow = btn.up('window')
+          const inputDom = this.fieldFile.fileInputEl.dom
+          if (inputDom.files.length === 0) {
+            return
+          }
+          const file = inputDom.files[0]
+          if (file.name.indexOf('.csv', file.name.length - 4) === -1) {
+            $App.dialogInfo(UB.i18n('Невірний формат файлу, для завантаження використовується формат csv'))
+            me.setLoading(false)
+            return
+          }
+          btn.disable()
+
+          UB.connection.post('loadImportData', file, {
+            params: {
+              entityName: record.get('entityName'),
+              orgID: appAC.globalOrganization(),
+              encoding: me.attr.encoding.getValue(),
+              fileName: file.name,
+              appCode: 'HR'
+            },
+            headers: { 'Content-Type': 'application/octet-stream' }
+          }).then(response => {
+            me.setLoading(false)
+            record.set('logCount', response.data.logCount || 0)
+            record.set('fileName', file.name)
+            record.set('state', response.data.state || '1')
+          }, (err) => {
+            me.setLoading(false)
+            if (err.config && err.config.timeout) {
+              $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+            } else {
+              throw err
+            }
+          }).finally(() => {
+            me.setLoading(false)
+          })
+          dialogWindow.close()
+        }
+      })
+    }
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+
+    me.on('afterrender', () => {
+      const me = this
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+      me.attr = {
+        planGrid: me.down('[name=planGrid]'),
+        encoding: me.down('[name=encoding]')
+      }
+      me.attr.encoding.setValue('utf8')
+
+      me.getData()
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

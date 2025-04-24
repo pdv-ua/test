@@ -1,0 +1,151 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+
+/* global appHR, AC */
+exports.formDef = {
+  requiredFields: ['orderID', 'empOrderType', 'organizationID', 'departmentID', 'isGroup'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'panel',
+      region: 'north',
+      items: [
+        {
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              attributeName: 'departmentID',
+              fieldList: ['ID', 'mi_treePath', 'description', 'state', 'orgID'],
+              gridFieldList: ['description', 'state', 'orgID'],
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink'],
+              disableModifyEntity: true,
+              valueField: 'ID',
+              displayField: 'description',
+              labelWidth: 180,
+              whereList: {
+                orgID: {
+                  expression: '[orgID]',
+                  condition: 'equal',
+                  value: appAC.globalOrganization()
+                },
+                state: {
+                  expression: '[state]',
+                  condition: '=',
+                  values: {
+                    state: 'ACTIVE'
+                  }
+                }
+              }
+            },
+            {
+              attributeName: 'needGroupReq',
+              labelWidth: 180
+            },
+            {
+              attributeName: 'isAllPosition',
+              fieldLabel: UB.i18n('Всі посади (не тільки вакантні)'),
+              labelWidth: 180,
+              listeners: {
+                change: ctrl => ctrl.up('form').fillPosList()
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      layout: 'fit',
+      title: UB.i18n('Посади'),
+      flex: 1,
+      items: [
+        {
+          name: 'hr_empOrderCompetitionadPosDet',
+          xtype: 'ubdetailgrid',
+          rowEditing: true,
+          sortableColumns: false,
+          paraGrid: true,
+          autoScroll: true,
+          disableSearchBar: true,
+          hideActions: [],
+          flex: 1,
+          entityConfig: {
+            entity: 'hr_empOrderCompetitionadPosDet',
+            method: 'select',
+            fieldList: [
+              {
+                name: 'departmentID.description',
+                description: UB.i18n('Підрозділ'),
+                visibility: true,
+                editor: {
+                  fieldList: ['ID', 'description', 'mi_data_id', 'mi_treePath'],
+                  gridFieldList: ['description', 'state', 'orgID'],
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink']
+                }
+              },
+              {
+                name: 'departmentID.mi_data_id',
+                visibility: false
+              },
+              {
+                name: 'departmentID.mi_treePath',
+                visibility: false
+              },
+              {
+                name: 'positionID.name',
+                description: UB.i18n('Вакантна посада'),
+                visibility: true,
+                editor: {
+                  fieldList: ['ID', 'description', 'positionCategory', 'accrualSum'],
+                  gridFieldList: [{ name: 'ID', visibility: false }, 'description', 'positionCategory'],
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink']
+                }
+              },
+              {
+                name: 'organizationID',
+                visibility: false
+              }
+            ]
+          },
+          masterFields: ['ID', 'orderID'],
+          detailFields: ['paraID', 'orderID'],
+          onBeforeEdit: function (rowEditor, context) {
+            if (context.grid.isEditDisabled) {
+              return false
+            }
+            context.grid.optimizeColumnWidth(true)
+            const editor = rowEditor.editor
+            const me = editor.up('form')
+            me.onBeforeGridEdit(editor, context)
+            return true
+          },
+          cmpInitConfig: {
+            notRefreshAfterSave: false,
+            customInit: function () {
+              const grid = this
+              const _doOnEdit = grid.doOnEdit
+              AC.gridUtils.tuneGridColumns(grid, {})
+              grid.doOnEdit = function () {
+                grid.isEditMode = true
+                _doOnEdit.call(grid)
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,420 @@
+/* global Ext _ UB AC appHR */
+
+exports.formDef = {
+  requiredFields: ['description', 'orderRegistryID', 'orderRegistryID.organizationID', 'orderRegistryID.periodID',
+    'orderRegistryID.periodID.dateFrom', 'flagsRec', 'flagsFix', 'orderState', 'empOrderID', 'empOrderID.description'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'calcSupAvgEarn'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 130 },
+          flex: 1,
+          items: [
+            { attributeName: 'employeeID', hidden: true },
+            { attributeName: 'employeeNumberID', hidden: true },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'employeePositionID',
+                  fieldList: ['ID', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'dateFrom', 'dateTo',
+                    'employeeNumberID.dateFrom', 'employeeNumberID.dateTo', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+                  orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                  addWorkPlace: true,
+                  addDateTo: true,
+                  xtype: 'empPositionCombobox',
+                  flex: 1
+                },
+                {
+                  attributeName: 'workPlaceOnly',
+                  fieldLabel: UB.i18n('Посадові місця'),
+                  labelWidth: 150,
+                  width: 170
+                }
+              ]
+            },
+            {
+              attributeName: 'payElID',
+              fieldList: ['ID', 'description', 'methodID.code', 'methodID.dayAccumCondition', 'calcProportion'],
+              orderList: { orderBy: { expression: 'codeSort' } }
+            },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'orderNumber',
+                  readOnly: false,
+                  allowBlank: true,
+                  width: 250
+                },
+                {
+                  attributeName: 'orderDate',
+                  width: 250
+                }
+              ]
+            },
+            {
+              fieldLabel: UB.i18n('Документ-підстава'),
+              xtype: 'textfield',
+              name: 'orderDescription',
+              fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+              flex: 1,
+              hidden: true,
+              readOnly: true
+            }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 140 },
+          items: [
+            {
+              attributeName: 'dateFrom',
+              enableKeyEvents: true,
+              width: 260
+            },
+            {
+              attributeName: 'calendarDayCount',
+              fieldLabel: UB.i18n('Календарні дні'),
+              minValue: 1,
+              maxValue: 180,
+              enableKeyEvents: true,
+              allowBlank: false,
+              width: 260
+            },
+            {
+              attributeName: 'dateTo',
+              enableKeyEvents: true,
+              width: 260
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Середній заробіток'),
+          layout: { type: 'border' },
+          items: [
+            {
+              xtype: 'panel',
+              region: 'west',
+              split: true,
+              width: 400,
+              margin: '0 5 0 0',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  attributeName: 'avgCalcType',
+                  width: 500,
+                  enableKeyEvents: true
+                },
+                {
+                  attributeName: 'dateFromAvg',
+                  flagsFix: 1 << 10,
+                  enableKeyEvents: true
+                },
+                {
+                  attributeName: 'dateToAvg',
+                  flagsFix: 1 << 11,
+                  enableKeyEvents: true
+                },
+                {
+                  attributeName: 'avgSum',
+                  flagsFix: 1 << 0,
+                  enableKeyEvents: true,
+                  dataType: 'Currency',
+                  decimalPrecision: 2
+                }
+              ]
+            },
+            {
+              layout: { type: 'border' },
+              region: 'center',
+              items: [
+                {
+                  region: 'north',
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      xtype: 'button',
+                      name: 'avgDimension',
+                      iconCls: 'u-icon-layers',
+                      cls: 'blue-action',
+                      tooltip: UB.i18n('Коригування сум за аналітиками'),
+                      handler: function (btn) {
+                        const me = btn.up('form')
+                        appHR.setAvgDimensionEdit(me, 'accrualAvg', 143553, 'calcSupAvgEarn')
+                      }
+                    }
+                  ]
+                },
+                {
+                  xtype: 'acGrid',
+                  title: '',
+                  name: 'accrualAvg',
+                  stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_docRegSupAvgEarn_accrualAvg'),
+                  stateHiddenColumn: false,
+                  region: 'center',
+                  flex: 1,
+                  autoScroll: true,
+                  cellEditing: true,
+                  notWriteChanges: true,
+                  storeType: 'local',
+                  showToolBar: false,
+                  disablePaging: true,
+                  loadMaskMessage: UB.i18n('Завантаження даних...'),
+                  summary: { opSum: 'sum', opDays: 'sum', baseSum: 'sum' },
+                  summaryDataOnClient: true,
+                  ignoreAttr: ['posName', 'depName'],
+                  hideActions: ['addNew', 'del', 'addNewByCurrent'],
+                  includeContextMenuReadOnly: [],
+                  onBeforeEdit: (control, context) => {
+                    if (context.record.phantom && context.record.dirtySave !== null) {
+                      context.record.dirtySave = null
+                    }
+                    context.column.field.prevValue = context.value
+                  },
+                  edit: (control, context) => {
+                    const me = context.grid.up('form')
+                    me.onGridEdit(me, 'orderRegistryDt', context, control)
+                    me.setIsDirty(true)
+                  },
+                  fields: [
+                    { name: 'ID' },
+                    { name: 'dateFrom' },
+                    { name: 'dateTo' },
+                    { name: 'orderID' },
+                    { name: 'periodID' },
+                    { name: 'flagsFix' },
+                    { name: 'accrualDt' },
+                    {
+                      name: 'periodID.name',
+                      columnConfig: {
+                        text: UB.i18n('Місяць'),
+                        sortable: false,
+                        flex: 1
+                      }
+                    },
+                    {
+                      name: 'opDays',
+                      columnConfig: {
+                        text: UB.i18n('Днів'),
+                        sortable: false,
+                        flex: 1,
+                        align: 'right',
+                        dataType: 'Int',
+                        renderer: (value, meta, record) => {
+                          if (record.get('flagsFix') & 1 << 6) {
+                            meta.tdCls = 'grd-color-blue'
+                          }
+                          return value
+                        },
+                        editor: {
+                          dataType: 'Int',
+                          minValue: 0,
+                          flagsFix: 1 << 6
+                        }
+                      }
+                    },
+                    {
+                      name: 'baseSum',
+                      columnConfig: {
+                        text: UB.i18n('Заробіток, що індексується'),
+                        sortable: false,
+                        flex: 1,
+                        align: 'right',
+                        floatFormat: 2,
+                        renderer: (value, meta, record) => {
+                          if (record.get('flagsFix') & 1) {
+                            meta.tdCls = 'grd-color-blue'
+                          }
+                          if (_.isNumber(value)) {
+                            return Ext.util.Format.currency(value, '', 2).replace(/ /g, '')
+                          } else return value
+                        },
+                        editor: {
+                          dataType: 'Currency',
+                          decimalPrecision: 2,
+                          minValue: 0,
+                          flagsFix: 1
+                        }
+                      }
+                    },
+                    {
+                      name: 'opKoef',
+                      columnConfig: {
+                        text: UB.i18n('Коеф. індексації'),
+                        sortable: false,
+                        flex: 1,
+                        align: 'right',
+                        floatFormat: 6,
+                        renderer: (value, meta, record) => {
+                          if (record.get('flagsFix') & 1 << 12) {
+                            meta.tdCls = 'grd-color-blue'
+                          }
+                          if (_.isNumber(value)) {
+                            return Ext.util.Format.currency(value, '', 6).replace(/ /g, '')
+                          } else return value
+                        },
+                        editor: {
+                          dataType: 'Float',
+                          decimalPrecision: 6,
+                          minValue: 0,
+                          flagsFix: 1 << 12
+                        }
+                      }
+                    },
+                    {
+                      name: 'baseSumNotIndex',
+                      columnConfig: {
+                        text: UB.i18n('Заробіток, що не індексується'),
+                        flex: 1,
+                        align: 'right',
+                        sortable: false,
+                        floatFormat: 2,
+                        renderer: (value, meta, record) => {
+                          if (record.get('flagsFix') & 1 << 13) {
+                            meta.tdCls = 'grd-color-blue'
+                          }
+                          if (_.isNumber(value)) {
+                            return Ext.util.Format.currency(value, '', 2).replace(/ /g, '')
+                          } else return value
+                        },
+                        editor: {
+                          dataType: 'Currency',
+                          sortable: false,
+                          decimalPrecision: 2,
+                          minValue: 0,
+                          flagsFix: 1 << 13
+                        }
+                      }
+                    },
+                    {
+                      name: 'opSum',
+                      columnConfig: {
+                        text: UB.i18n('Сума до розрахунку'),
+                        flex: 1,
+                        sortable: false,
+                        align: 'right',
+                        floatFormat: 2
+                      }
+                    }
+                  ],
+                  customPopupMenuItems: [
+                    {
+                      text: UB.i18n('Розрахунковий лист'),
+                      iconCls: 'el-icon-tickets',
+                      ubID: 'itemShowRl',
+                      handler: function (context) {
+                        const grid = context.up('').grid
+                        const me = grid.up('form')
+                        const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                        if (record) {
+                          appHR.showRl(me.attr.employeeNumberID.getValue(), record.get('periodID'))
+                        }
+                      }
+                    },
+                    {
+                      text: UB.i18n('Аналітика'),
+                      iconCls: 'el-icon-notebook-2',
+                      name: 'dimension',
+                      cls: 'blue-action',
+                      handler: (context) => {
+                        const grid = context.up('').grid
+                        const me = grid.up('form')
+                        appHR.showtAvgDimensinEdit(me, context.up('').record || AC.gridUtils.getCurrentRecord(grid), 12481, 'calcSupAvgEarn')
+                      }
+                    },
+                    {
+                      text: UB.i18n('Коригування сум за аналітиками'),
+                      name: 'avgDimensionRow',
+                      iconCls: 'u-icon-layers',
+                      cls: 'blue-action',
+                      handler: function (context) {
+                        const grid = context.up('').grid
+                        const me = grid.up('form')
+                        appHR.setAvgDimensionRowEdit(me, context.up('').record || AC.gridUtils.getCurrentRecord(grid), 143553, 'calcSupAvgEarn')
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додаткові параметри'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'dictFundSourceID',
+              hideEntityItemInContext: true
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додатки'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'docAttachment',
+              entity: 'hr_orderAttachment',
+              detailFields: 'documentID',
+              masterFields: 'ID',
+              showOriginal: true,
+              minHeight: 55,
+              maxHeight: 140,
+              height: 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

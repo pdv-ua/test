@@ -1,0 +1,199 @@
+/* global Ext _ UB */
+/* global AC HR $App UB Ext _ */
+
+exports.formDef = 'HR.settingsTimeCostConf'
+
+Ext.define('HR.settingsTimeCostConf', {
+  extend: 'Ext.panel.Panel',
+  width: 600,
+  height: 100,
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  actionId: {
+    save: 'save'
+  },
+  eventId: {
+    save: 'save'
+  },
+  hotKeys: {
+    save: {
+      key: Ext.EventObject.ENTER,
+      shift: false,
+      ctrl: true,
+      text: ' (Ctrl+Enter)'
+    }
+  },
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [],
+      ubID: 'mainToolbar',
+      enableOverflow: true
+    }]
+    me.items = [
+      {
+        xtype: 'ubcombobox',
+        fieldLabel: UB.i18n('Елемент обліку'),
+        name: 'dictTimeCostID',
+        hideEntityItemInContext: true,
+        allowBlank: false,
+        selectOnFocus: true,
+        ubRequest: {
+          entity: 'hr_dictTimeCost',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['ID', 'name']
+        }
+      }
+    ]
+
+    me.createToolbarButtons = (me) => {
+      let tb = me.down('toolbar')
+      tb.insert(tb.items.length - 2, {
+        xtype: 'button',
+        scale: 'medium',
+        iconCls: 'fas fa-share-square',
+        tooltip: UB.i18n('saveAndClose') + me.hotKeys[me.actionId.save].text,
+        cls: 'save-action',
+        handler: async function (btn) {
+          let commandList = []
+          let dictTimeCostID = me.attr.dictTimeCostID.getValue()
+          let dictTimeCostName = me.down('[name=dictTimeCostID]')
+          if (dictTimeCostID) {
+            const hr_dictTimeCostInt1 = await UB.Repository('hr_dictTimeCostInt')
+              .attrs(['ID', 'dictTimeCost1ID', 'dictTimeCost2ID', 'priorityType', 'dateFrom', 'dateFromEmpty', 'dateToEmpty', 'isCrossInfo'])
+              .where('dictTimeCost1ID', '=', dictTimeCostID)
+              .where('dictTimeCost2ID', '<>', me.data.ID)
+              .selectAsObject()
+            const hr_dictTimeCostInt2 = await UB.Repository('hr_dictTimeCostInt')
+              .attrs(['ID', 'dictTimeCost1ID', 'dictTimeCost2ID', 'priorityType', 'dateFrom', 'dateFromEmpty', 'dateToEmpty', 'isCrossInfo'])
+              .where('dictTimeCost1ID', '<>', me.data.ID)
+              .where('dictTimeCost2ID', '=', dictTimeCostID)
+              .selectAsObject()
+            const hr_dictTimeCostIntMe1 = await UB.Repository('hr_dictTimeCostInt')
+              .attrs(['ID', 'dictTimeCost1ID', 'dictTimeCost2ID', 'priorityType', 'dateFrom', 'dateFromEmpty', 'dateToEmpty', 'isCrossInfo'])
+              .where('dictTimeCost1ID', '=', me.data.ID)
+              .where('dictTimeCost2ID', 'isNotNull')
+              .selectAsObject()
+            hr_dictTimeCostIntMe1.forEach(row => {
+              const eldel1 = hr_dictTimeCostInt1.find(o => o.dictTimeCost2ID === row.dictTimeCost2ID)
+              if (!eldel1) {
+                commandList.push({
+                  entity: 'hr_dictTimeCostInt',
+                  method: 'delete',
+                  execParams: {
+                    ID: row.ID
+                  }
+                })
+              }
+              if (eldel1) {
+                commandList.push({
+                  entity: 'hr_dictTimeCostInt',
+                  method: 'update',
+                  __skipOptimisticLock: true,
+                  execParams: {
+                    ID: row.ID,
+                    dictTimeCost1ID: row.dictTimeCost1ID,
+                    dictTimeCost2ID: row.dictTimeCost2ID,
+                    priorityType: eldel1.priorityType,
+                    dateFromEmpty: eldel1.dateFromEmpty,
+                    dateToEmpty: eldel1.dateToEmpty,
+                    isCrossInfo: eldel1.isCrossInfo
+                  }
+                })
+              }
+            })
+            const hr_dictTimeCostIntMe2 = await UB.Repository('hr_dictTimeCostInt')
+              .attrs(['ID', 'dictTimeCost1ID', 'dictTimeCost2ID', 'priorityType', 'dateFrom', 'dateFromEmpty', 'dateToEmpty', 'isCrossInfo'])
+              .where('dictTimeCost1ID', 'isNotNull')
+              .where('dictTimeCost2ID', '=', me.data.ID)
+              .selectAsObject()
+            hr_dictTimeCostIntMe2.forEach(row => {
+              const eldel2 = hr_dictTimeCostInt2.find(o => o.dictTimeCost1ID === row.dictTimeCost1ID)
+              if (!eldel2) {
+                commandList.push({
+                  entity: 'hr_dictTimeCostInt',
+                  method: 'delete',
+                  execParams: {
+                    ID: row.ID
+                  }
+                })
+              }
+              if (eldel2) {
+                commandList.push({
+                  entity: 'hr_dictTimeCostInt',
+                  method: 'update',
+                  __skipOptimisticLock: true,
+                  execParams: {
+                    ID: row.ID,
+                    dictTimeCost1ID: row.dictTimeCost1ID,
+                    dictTimeCost2ID: row.dictTimeCost2ID,
+                    priorityType: eldel2.priorityType,
+                    dateFromEmpty: eldel2.dateFromEmpty,
+                    dateToEmpty: eldel2.dateToEmpty,
+                    isCrossInfo: eldel2.isCrossInfo
+                  }
+                })
+              }
+            })
+            hr_dictTimeCostInt1.forEach(row => {
+              const el1 = hr_dictTimeCostIntMe1.find(o => o.dictTimeCost2ID === row.dictTimeCost2ID)
+              if (!el1) {
+                commandList.push({
+                  entity: 'hr_dictTimeCostInt',
+                  method: 'insert',
+                  execParams: {
+                    dictTimeCost1ID: me.data.ID,
+                    dictTimeCost2ID: row.dictTimeCost2ID,
+                    priorityType: row.priorityType,
+                    dateFromEmpty: row.dateFromEmpty,
+                    dateToEmpty: row.dateToEmpty,
+                    isCrossInfo: row.isCrossInfo
+                  }
+                })
+              }
+            })
+            hr_dictTimeCostInt2.forEach(row => {
+              const el2 = hr_dictTimeCostIntMe2.find(o => o.dictTimeCost1ID === row.dictTimeCost1ID)
+              if (!el2) {
+                commandList.push({
+                  entity: 'hr_dictTimeCostInt',
+                  method: 'insert',
+                  execParams: {
+                    dictTimeCost1ID: row.dictTimeCost1ID,
+                    dictTimeCost2ID: me.data.ID,
+                    priorityType: row.priorityType,
+                    dateFromEmpty: row.dateFromEmpty,
+                    dateToEmpty: row.dateToEmpty,
+                    isCrossInfo: row.isCrossInfo
+                  }
+                })
+              }
+            })
+          }
+          if (commandList.length) {
+            const dialog = await $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n(`Ви дійсно бажаєте налаштувати елемент обліку "${me.data.nameDictTimeCost}" так само, як елемент облику "${dictTimeCostName.rawValue}"`))
+            if (dialog) {
+              me.setLoading(true)
+              await $App.connection.runTrans(commandList)
+              me.setLoading(false)
+              me.sender.loadData()
+              me.up('window').close()
+            }
+          }
+        }
+      })
+    }
+    me.on('afterrender', async function () {
+      const me = this
+      me.createToolbarButtons(me)
+      me.attr = {
+        dictTimeCostID: me.down('[name=dictTimeCostID]')
+      }
+    })
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,158 @@
+/* global UB */
+
+exports.formDef = {
+  requiredFields: ['typeFile', 'orgID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  isModal: true,
+  items: [
+    {
+      region: 'north',
+
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        { attributeName: 'name' },
+        { attributeName: 'shortName' },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'nameFile' },
+            { attributeName: 'isActive' }
+          ]
+        }
+      ]
+    },
+    {
+      name: 'fieldGrid',
+      xtype: 'ubdetailgrid',
+      region: 'center',
+      autoScroll: true,
+      flex: 2,
+      rowEditing: true,
+      sortableColumns: false,
+      masterFields: ['ID'],
+      detailFields: ['exportMethodID'],
+      onBeforeEdit: function (editor, context) {
+        const me = context.grid.up('form')
+        me.beforeGridEdit(me, 'fieldGrid', context)
+      },
+      entityConfig: {
+        entity: 'hr_exportMethodFields',
+        method: 'select',
+        fieldList: [
+          {
+            name: 'indexNom',
+            editor: {
+              xtype: 'numberfield'
+            }
+          },
+          {
+            name: 'name',
+            description: UB.i18n('Назва поля'),
+            editor: {
+              xtype: 'textfield',
+              allowBlank: false
+            }
+          },
+          {
+            name: 'exportFieldsID.description',
+            description: UB.i18n('Значення, що розраховується'),
+            editor: {
+              fieldList: ['ID', 'description', 'type', 'code'],
+              hideEntityItemInContext: true,
+              allowBlank: false,
+              whereList: {
+                type: {
+                  expression: '[type]',
+                  condition: '=',
+                  value: 'filePay'
+                }
+              }
+            }
+          },
+          {
+            name: 'fixValue',
+            config: { width: 300 },
+            editor: {
+              xtype: 'textfield'
+            }
+          },
+          {
+            name: 'size',
+            description: UB.i18n('Розмір колонки'),
+            editor: {
+              xtype: 'numberfield',
+              allowBlank: false
+            }
+          },
+          {
+            name: 'typeColumn',
+            description: UB.i18n('Тип колонки'),
+            editor: {
+              allowBlank: false
+            }
+          }
+        ]
+      },
+      cmpInitConfig: {
+        customActions: [
+          {
+            xtype: 'button',
+            name: 'fillBtn',
+            tooltip: UB.i18n('Заповнити'),
+            iconCls: 'fas fa-angle-double-down',
+            cls: 'fill-action',
+            menu: [
+              {
+                text: UB.i18n('Приват 24'),
+                handler: function (btn) {
+                  const me = btn.up('form')
+                  me.setDefaultFields(me, 'privat')
+                }
+              },
+              {
+                text: UB.i18n('Ощадбанк'),
+                handler: function (btn) {
+                  const me = btn.up('form')
+                  me.setDefaultFields(me, 'oschad')
+                }
+              },
+              {
+                text: UB.i18n('Укргазбанк'),
+                handler: function (btn) {
+                  const me = btn.up('form')
+                  me.setDefaultFields(me, 'gaz')
+                }
+              },
+              {
+                text: UB.i18n('Райфайзенбанк'),
+                handler: function (btn) {
+                  const me = btn.up('form')
+                  me.setDefaultFields(me, 'raiffeisen')
+                }
+              },
+              {
+                text: UB.i18n('УкрСиббанк'),
+                handler: function (btn) {
+                  const me = btn.up('form')
+                  me.setDefaultFields(me, 'ukrsib')
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

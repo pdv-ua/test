@@ -1,0 +1,241 @@
+/* global Ext, HR, AC, appAC UB */
+exports.formDef = 'HR.empListAudit'
+
+Ext.define('HR.empListAudit', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empListAudit',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'vbox', align: 'stretch' },
+            collapsed: false,
+            items: [
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'ubdatefield',
+                    labelWidth: 160,
+                    name: 'dateFrom',
+                    fieldLabel: UB.i18n('Дата контролю з'),
+                    allowBlank: false
+                  },
+                  {
+                    xtype: 'ubdatefield',
+                    labelWidth: 30,
+                    name: 'dateTo',
+                    fieldLabel: UB.i18n('по'),
+                    allowBlank: false
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'auditOrganization',
+                    recordValue: 'auditOrganization',
+                    fieldLabel: UB.i18n('Орган перевірки'),
+                    displayField: 'name',
+                    flex: 1,
+                    valueField: 'ID',
+                    gridFieldList: ['name'],
+                    formParams: true,
+                    labelWidth: 120,
+                    maxLength: 300,
+                    ubRequest: {
+                      entity: 'ac_contractor',
+                      fieldList: ['ID', 'name'],
+                      whereList: {
+                        exists: {
+                          expression: '',
+                          condition: 'subquery',
+                          subQueryType: 'Exists',
+                          value: {
+                            entity: 'hr_dictAuditOrg',
+                            fieldList: [],
+                            method: 'select',
+                            whereList: {
+                              cond: {
+                                expression: '[contractorID]=[{master}.ID]',
+                                condition: 'custom'
+                              },
+                              mi_deleteDate: {
+                                condition: 'equal',
+                                expression: '[mi_deleteDate]',
+                                value: '#maxdate'
+                              }
+                            }
+                          }
+                        }
+                      },
+                      orderList: { orderBy: { expression: 'name', order: 'asc' } }
+                    },
+                    isFormField: true,
+                    allowCustomText: true,
+                    triggerCls: 'hr-list-trigger',
+                    listeners: {
+                      focus: ctrl => {
+                        ctrl.inputEl.dom.setAttribute('maxlength', 300)
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Шукати'),
+                    iconCls: 'fas fa-search',
+                    width: 30,
+                    cls: 'green-action',
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.searchEmployee()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Очистити'),
+                    iconCls: 'fas fa-eraser',
+                    width: 30,
+                    cls: 'fill-action',
+                    margin: '5 0 0 0',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.clearSearch()
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'empListAuditGrid',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink',
+          'commandLink', 'showDetail', 'audit'],
+        cmdData: {
+          params: [{
+            entity: 'hr_empListAudit',
+            method: 'search',
+            fieldList: [
+              { name: 'employeeID', visibility: false },
+              { name: 'employeeNumberID', visibility: false },
+              { name: 'resultFactCode', visibility: false },
+              'lastName',
+              { name: 'firstName', description: UB.i18n('Iм\'я') },
+              'middleName',
+              'auditType',
+              { name: 'auditOrganization', description: UB.i18n('Орган перевірки') },
+              { name: 'ingoingDate', description: UB.i18n('Вхідна дата') },
+              { name: 'ingoingNumber', description: UB.i18n('Вхідний номер') },
+              { name: 'controlDate', description: UB.i18n('Вхідна дата контролю') },
+              { name: 'outgoingDate', description: UB.i18n('Вихідна дата') },
+              { name: 'resultDate', description: UB.i18n('Дата відповіді') },
+              { name: 'outgoingNumber', description: UB.i18n('Вихідний номер') },
+              { name: 'resultFactName', description: UB.i18n('Неправдива iнформацiя') }
+            ]
+          }]
+        },
+        cmpInitConfig: {
+          onDeterminateForm: HR.employeeTabs.onDeterminateCard,
+          listeners: {
+            render: (grid) => {
+              grid.menu.removeAll()
+              grid.menu.add([HR.employeeTabs.getEmpCardMenu(grid)])
+            }
+          },
+          getRowClass: ({ data }) => {
+            const { resultFactCode } = data
+            switch (resultFactCode) {
+              case '1': return 'ub-row-green'
+              case '2': return 'ub-row-red'
+              default: return 'ub-row-lightgrey'
+            }
+          }
+        }
+      }
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=empListAuditGrid]'),
+        dateFrom: me.down('[name=dateFrom]'),
+        dateTo: me.down('[name=dateTo]'),
+        auditOrganization: me.down('[name=auditOrganization]')
+      }
+      me.setDefaultValues()
+    }, me)
+
+    me.setDefaultValues = function () {
+      me.attr.dateFrom.setValue(AC.dateService.firstDayOfMonth(new Date()))
+      me.attr.dateTo.setValue(new Date())
+      me.attr.auditOrganization.clearValue()
+    }
+
+    me.searchEmployee = function () {
+      const isValid = me.validate()
+      if (!isValid) return
+      const store = me.attr.grid.getStore()
+      let req = store.ubRequest
+
+      req.dateFrom = AC.dateService.shiftDate(me.attr.dateFrom.getValue())
+      req.dateTo = AC.dateService.shiftDate(me.attr.dateTo.getValue())
+      req.onDate = appAC.globalApplicationDate()
+      req.orgID = appAC.globalOrganization()
+      req.auditOrganizationName = me.attr.auditOrganization.rawValue
+
+      store.load()
+    }
+
+    me.clearSearch = function () {
+      me.setDefaultValues()
+    }
+
+    me.validate = () => {
+      const dateFrom = me.attr.dateFrom
+      const dateTo = me.attr.dateTo
+
+      const isValid = dateFrom.getValue() <= dateTo.getValue()
+
+      if (!isValid) {
+        const dateFromLabel = AC.viewUtils.formatFieldLabel(`"${dateFrom.getFieldLabel()}"`)
+        const dateToLabel = AC.viewUtils.formatFieldLabel(`"${dateTo.getFieldLabel()}"`)
+
+        const errorText = UB.i18n(`Дата {0} не може перевищувати дату {1}`, dateFromLabel, dateToLabel)
+
+        AC.viewUtils.showToast(UB.i18n('Інформація'), errorText)
+      }
+      return isValid
+    }
+
+    me.callParent(arguments)
+  }
+})

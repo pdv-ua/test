@@ -1,0 +1,101 @@
+/* global Ext AC $App UB */
+
+exports.formDef = 'HR.payFundList'
+
+Ext.define('HR.payFundList', {
+  extend: 'Ext.panel.Panel',
+  height: 600,
+  width: 800,
+  layout: 'border',
+  alias: 'widget.payFundList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      Ext.widget('panel', {
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        layout: 'fit',
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            autoScroll: true,
+            flex: 1,
+            hideActions: ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+            stateful: true,
+            stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_payFundList_grid'),
+            cmdType: 'showList',
+            entity: 'hr_payFund',
+            cmdData: {
+              params: [{
+                entity: 'hr_payFund',
+                method: 'select',
+                fieldList: [
+                  { name: 'ID', visibility: false },
+                  { name: 'code' },
+                  { name: 'name' },
+                  { name: 'payFundMethodID', description: UB.i18n('Методи розрахунку') },
+                  { name: 'dateFromEmpty' },
+                  { name: 'dateToEmpty' }
+                ],
+                orderList: {
+                  orderBy: { expression: 'code', order: 'asc' }
+                }
+              }]
+            },
+            customActions: [
+              {
+                text: UB.i18n('Додати як'),
+                iconCls: 'u-icon-copy',
+                cls: 'add-new-action',
+                handler: function () {
+                  const record = AC.gridUtils.getCurrentRecord(me.attr.grid)
+                  me.copyRecord(record)
+                }
+              }
+            ]
+          }
+        ]
+      })
+    ]
+
+    me.copyRecord = function (record) {
+      if (!record) return
+      const ID = record.get('ID')
+      $App.connection.run({
+        entity: 'hr_payFund',
+        method: 'copyRecord',
+        ID: ID
+      }).then((mParams) => {
+        me.attr.grid.onRefresh()
+        $App.doCommand({
+          cmdType: 'showForm',
+          entity: 'hr_payFund',
+          formCode: 'hr_payFund',
+          instanceID: mParams.newID,
+          tabId: 'hr_payFund_copyRecord' + Date.now(),
+          target: $App.getViewport().centralPanel,
+          cmpInitConfig: {
+            method: 'copyRecord',
+            sourceGrid: me.attr.grid
+          }
+        })
+      })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[entityName=hr_payFund]')
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,85 @@
+/* global UB */
+
+exports.formDef = {
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 140 },
+      items: [
+        { attributeName: 'name' },
+        { attributeName: 'organizationID', readOnly: true },
+        {
+          attributeName: 'orgAccountID',
+          fieldList: ['ID', 'description', 'currencyID', 'organizationID']
+        },
+        { attributeName: 'contractorID' },
+        {
+          attributeName: 'contrAccountID',
+          fieldList: ['ID', 'description', 'currencyID', 'organizationID']
+        },
+        {
+          attributeName: 'isDefault',
+          boxLabel: UB.i18n('Основний шаблон для виплати зарплати'),
+          fieldLabel: '',
+          margin: '0 0 5 160'
+        },
+        {
+          attributeName: 'subOrg',
+          boxLabel: UB.i18n('Доступний для виплати у підпорядкованих організаціях'),
+          fieldLabel: '',
+          margin: '0 0 5 160',
+          hidden: true
+        },
+        {
+          xtype: 'panel',
+          title: UB.i18n('Оплата комісії за розрахунково-касове обслуговування'),
+          collapsed: false,
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 140 },
+          items: [
+            {
+              attributeName: 'rateCommission',
+              fieldLabel: UB.i18n('Ставка'),
+              vtype: 'floatValidator',
+              decimalPrecision: 2,
+              allowExponential: false,
+              minValue: 0
+            },
+            {
+              attributeName: 'commissionOrgAccID',
+              fieldLabel: UB.i18n('Р/р платника'),
+              fieldList: ['ID', 'description', 'currencyID', 'organizationID']
+            },
+            {
+              attributeName: 'commissionContrAccID',
+              fieldLabel: UB.i18n('Р/р отримувача'),
+              fieldList: ['ID', 'description', 'currencyID', 'organizationID']
+            }
+          ]
+        },
+        {
+          xtype: 'panel',
+          title: UB.i18n('Експорт у систему Клієнт-банк'),
+          collapsed: false,
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 140 },
+          items: [
+            { attributeName: 'exportMethodID' },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 136 },
+              items: [
+                { attributeName: 'branchCode' },
+                { attributeName: 'projectCode' }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

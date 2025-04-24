@@ -1,0 +1,91 @@
+{
+  "caption": "Завдання працівнику, деталь",
+  "description": "Завдання працівнику, деталь",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeTaskID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeTask",
+      "caption": "Завдання",
+      "description": "Завдання",
+      "documentation": "Завдання",
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник"
+    },
+    {
+      "name": "taskDtState",
+      "dataType": "Enum",
+      "enumGroup": "HR_TASK_DT_STATE",
+      "caption": "Стан виконання",
+      "documentation": "Стан виконання",
+      "description": "Стан виконання",
+      "defaultValue": "NEW",
+      "allowNull": false
+    },
+    {
+      "name": "answer",
+      "dataType": "Enum",
+      "enumGroup": "HR_TASK_ANSWER",
+      "caption": "Результат",
+      "documentation": "Результат",
+      "description": "Результат"
+    },
+    {
+      "name": "commentDt",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Коментар",
+      "description": "Коментар",
+      "documentation": "Коментар"
+    },
+    {
+      "name": "executionDate",
+      "dataType": "Date",
+      "caption": "Дата виконання",
+      "description": "Дата виконання",
+      "documentation": "Дата виконання"
+    },
+    {
+      "name": "document",
+      "dataType": "Document",
+      "caption": "Вкладення",
+      "description": "Вкладення"
+    },
+    {
+      "name": "hasAttachment",
+      "dataType": "Boolean",
+      "caption": "Вкладення",
+      "documentation": "Вкладення",
+      "description": "Вкладення",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select case when document IS NULL then 0 else 1 end from hr_employeeTaskDt ad where ad.ID = {self}.id and ad.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "unity": {
+      "entity": "hr_attachEntity",
+      "attributeList": [],
+      "defaults": {
+        "entityName": "hr_employeeTaskDt"
+      }
+    }
+  }
+}

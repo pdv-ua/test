@@ -1,0 +1,94 @@
+{
+  "caption": "Наказ про продовження відпустки. Працівники, яким продовжено час перебування на посаді",
+  "description": "Наказ про продовження відпустки. Працівники, яким продовжено час перебування на посаді",
+  "descriptionAttribute": "orderID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ про продовження відпустки",
+      "description": "Наказ про продовження відпустки",
+      "documentation": "Наказ про продовження відпустки",
+      "allowNull": false
+    },
+    {
+      "name": "paraID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Деталь групового наказу",
+      "description": "Деталь групового наказу",
+      "documentation": "Деталь групового наказу",
+      "allowNull": false
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Призначення",
+      "description": "Призначення",
+      "documentation": "Призначення",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата з",
+      "description": "Дата з",
+      "documentation": "Дата з",
+      "allowNull": false
+    },
+    {
+      "name": "dictContractKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictContractKind",
+      "caption": "Вид договору",
+      "description": "Вид договору",
+      "documentation": "Вид договору",
+      "allowNull": true
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата по",
+      "description": "Дата по",
+      "documentation": "Дата по",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "note",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Дія поточного призначення",
+      "description": "Дія поточного призначення",
+      "documentation": "Дія поточного призначення",
+      "allowNull": true
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

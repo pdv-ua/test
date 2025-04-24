@@ -1,0 +1,87 @@
+/* global UB AC */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'organizationID', 'empOrderType', 'lastName', 'firstName', 'middleName'],
+    parentConfig: {
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 140 }
+    },
+    size: {
+      width: 1100,
+      height: 700
+    },
+    items: [
+      {
+        attributeName: 'employeePositionID',
+        gridFieldList: ['description'],
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+        fieldLabel: UB.i18n('Працівник'),
+        fieldList: ['ID', 'description', 'employeeID.firstName', 'employeeID.lastName', 'employeeID.middleName',
+          'employeeID', 'employeeNumberID', 'departmentID', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+        xtype: 'empPositionCombobox',
+        addWorkPlace: true,
+        listeners: {
+          select: ctrl => {
+            let reco = AC.gridUtils.getCurrentRecord(ctrl)
+            let me = ctrl.up('form')
+            if (reco) {
+              me.record.set('firstName', reco.get('employeeID.firstName'))
+              me.record.set('lastName', reco.get('employeeID.lastName'))
+              me.record.set('middleName', reco.get('employeeID.middleName'))
+            } else {
+              me.record.set('firstName', null)
+              me.record.set('lastName', null)
+              me.record.set('middleName', null)
+            }
+          }
+        }
+      },
+      {
+        attributeName: 'dictPenaltyID',
+        whereList: {
+          state: {
+            expression: '[isActive]',
+            condition: 'equal',
+            values: {
+              state: true
+            }
+          }
+        }
+      },
+      {
+        attributeName: 'dictPenaltyReasonID',
+        fieldList: ['ID', 'name', 'name4Rep'],
+        gridFieldList: ['name', 'name4Rep'],
+        displayField: 'name'
+      },
+      { attributeName: 'penaltyReason4Rep' },
+      { attributeName: 'docDescription' },
+      {
+        xtype: 'ubfieldset',
+        border: 1,
+        title: UB.i18n('Додаткова інформація'),
+        margin: '0 15 0 15',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        defaults: { labelWidth: 120 },
+        items: [
+          { attributeName: 'comment' },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              { attributeName: 'comissionOrderNumber', labelWidth: 120, width: 240 },
+              { attributeName: 'comissionOrderDate', fieldLabel: UB.i18n('від'), labelWidth: 50, margin: '10 0 0 0' }
+            ]
+          },
+          { attributeName: 'comission', fieldLabel: UB.i18n('Комісія') },
+          { attributeName: 'protocol' },
+          { attributeName: 'conditionUp' },
+          { attributeName: 'conditionDown' }
+        ]
+      }
+
+    ]
+  }
+})()

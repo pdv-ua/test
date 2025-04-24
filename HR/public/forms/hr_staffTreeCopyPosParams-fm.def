@@ -1,0 +1,234 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+/* global UB $App Ext appAC AC _ */
+
+exports.formDef = 'HR.staffTreeCopyPosParams'
+
+Ext.define(exports.formDef, {
+  ident: 'staffTreeCopyPosParams',
+  extend: 'Ext.panel.Panel',
+  layout: 'border',
+  isModal: true,
+  listeners: {
+    render: function () {
+      let me = this
+      let win = me.window
+      if (win) {
+        if (!win.height) {
+          win.height = 300
+        }
+        if (!win.width) {
+          win.width = 600
+        }
+        win.center()
+      }
+    }
+  },
+  items: [
+    {
+      xtype: 'panel',
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'center',
+      items: [
+        {
+          xtype: 'ubcombobox',
+          name: 'departmentID',
+          fieldLabel: UB.i18n('Підрозділ'),
+          labelWidth: 125,
+          gridFieldList: [{ name: 'mi_data_id', visibility: false }, 'code', 'name', { name: 'parentUnitID.name', description: UB.i18n('Підпорядкування') }],
+          valueField: 'mi_data_id',
+          displayField: 'description',
+          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+          disableModifyEntity: true,
+          ubRequest: {
+            entity: 'hr_department',
+            fieldList: ['mi_data_id', 'name', 'description', 'mi_treePath'],
+            whereList: {
+              stateActive: {
+                expression: '[state]',
+                condition: '=',
+                values: {
+                  value: 'ACTIVE'
+                }
+              },
+              stateNew: {
+                expression: '[state]',
+                condition: '=',
+                values: {
+                  value: 'NEW'
+                }
+              },
+              staffOrder: {
+                expression: '[staffOrderID]',
+                condition: '=',
+                values: {
+                  value: 0
+                }
+              },
+              orgID: {
+                expression: '[orgID]',
+                condition: '=',
+                values: {
+                  value: appAC.globalOrganization()
+                }
+              },
+              miTreePath: {
+                expression: '[mi_treePath]',
+                condition: 'like',
+                value: `%/${appAC.globalOrganization()}/%`
+              }
+            },
+            logicalPredicates: ['([orgID] AND ([stateActive] OR ([stateNew] AND [staffOrder])))'],
+            orderList: { orderBy: { expression: 'name' } },
+            __mip_ondate: appAC.globalApplicationDate()
+          }
+        },
+        {
+          layout: 'hbox',
+          items: [
+            {
+              xtype: 'numberfield',
+              vtype: 'numberValidator',
+              name: 'copyNumber',
+              fieldLabel: UB.i18n('Кількість посад:'),
+              labelWidth: 125,
+              width: 220,
+              minValue: 1,
+              maxValue: 99,
+              value: 1
+            }
+          ]
+        },
+        {
+          xtype: 'checkbox',
+          name: 'withAccruals',
+          fieldLabel: UB.i18n('Разом з нарахуваннями'),
+          labelWidth: 200,
+          value: 1
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      layout: { type: 'hbox', pack: 'end' },
+      region: 'south',
+      style: 'border-top: 1px solid #BFBFBF',
+      items: [
+        {
+          xtype: 'button',
+          text: UB.i18n('cancel'),
+          width: 120,
+          height: 30,
+          margin: '10 10 10 0',
+          handler: function () {
+            this.up('window').close()
+          }
+        },
+        {
+          xtype: 'button',
+          text: UB.i18n('Продовжити'),
+          width: 120,
+          height: 30,
+          margin: '10 10 10 0',
+          handler: function () {
+            const me = this.up('[ident=staffTreeCopyPosParams]')
+            const copyNumber = me.attr.copyNumber.getValue()
+            if (copyNumber > 99) {
+              AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Кількість не може перевищувати 99!'))
+              return
+            }
+            let parentUnitID = me.attr.departmentID.getValue()
+            if (!parentUnitID && me.sender && me.sender.tree) {
+              parentUnitID = me.sender.tree.getRootNode().firstChild.get('mi_data_id')
+            }
+            if (!parentUnitID) {
+              AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не знайдено підрозділ!'))
+              return
+            }
+            me.setLoading(true)
+            $App.connection.run({
+              entity: 'hr_position',
+              method: 'copyPosition',
+              sourceID: me.defaultValues.sourceID,
+              onDate: AC.dateService.shiftDate(me.defaultValues.onDate),
+              staffTableID: me.defaultValues.staffTableID,
+              parentUnitID: parentUnitID,
+              copyNumber: copyNumber,
+              withAccruals: me.attr.withAccruals.getValue()
+            }).then(async () => {
+              const me = this.up('[ident=staffTreeCopyPosParams]')
+              me.setLoading(false)
+              const treeControl = me.sender
+              const path = me.attr.departmentID.getFieldValue('mi_treePath')
+
+              let ids = path ? _.compact(path.split('/')) : []
+              ids.push(parentUnitID)
+              let result = null
+              for (let i = 0, len = ids.length; i < len; ++i) {
+                result = await me.findNode(treeControl.tree, result, Number(ids[i]), treeControl)
+              }
+              treeControl.reloadNode(result)
+              if (result) {
+                treeControl.tree.getSelectionModel().select(result)
+              }
+              this.up('window').close()
+            })
+          }
+        }
+      ]
+    }
+  ],
+  initComponent: function () {
+    let me = this
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        departmentID: me.down('[name=departmentID]'),
+        copyNumber: me.down('[name=copyNumber]'),
+        withAccruals: me.down('[name=withAccruals]')
+      }
+      const store = me.attr.departmentID.getStore()
+      store.ubRequest.whereList.staffOrder = {
+        expression: '[staffOrderID]',
+        condition: '=',
+        value: me.defaultValues.staffTableID
+      }
+      store.ubRequest.whereList.orgID = {
+        expression: '[orgID]',
+        condition: '=',
+        value: appAC.globalOrganization()
+      }
+      me.attr.departmentID.setValueById(me.defaultValues.parentID)
+      if (me.defaultValues && me.defaultValues.rootID) {
+        store.ubRequest.whereList.miTreePath = {
+          expression: '[mi_treePath]',
+          condition: 'like',
+          value: `%/${me.defaultValues.rootID}/%`
+        }
+      }
+    }, me)
+    me.findNode = function (tree, parent, miDataID, treeControl) {
+      if (!parent) {
+        parent = tree.getStore().getRootNode().firstChild
+      }
+      let promise = parent.firstChild ? Promise.resolve(true) : treeControl.appendItems(parent.raw.mi_data_id, parent)
+      return promise.then(() => {
+        let result = null
+        if (parent.raw.mi_data_id === miDataID) {
+          result = parent
+        } else {
+          parent.expand()
+          parent.eachChild(node => {
+            if ((node.raw.mi_data_id !== undefined && node.raw.mi_data_id === miDataID) || node.raw.employeeID === miDataID) {
+              result = node
+              return false
+            }
+          })
+        }
+        return result
+      })
+    }
+
+    me.callParent(arguments)
+  }
+})

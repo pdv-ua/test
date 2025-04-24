@@ -1,0 +1,93 @@
+/* global UB AC Ext HR $App appAC */
+exports.formDef = {
+  size: {
+    width: 600,
+    height: 400
+  },
+  requiredFields: ['orderID', 'orderID.respEmployeeNumberID'],
+  parentConfig: {
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  defaults: { labelWidth: 280 },
+  items: [
+    {
+      layout: { type: 'hbox', align: 'stretch' },
+      items: [
+        {
+          type: 'hbox',
+          align: 'stretch',
+          flex: 1,
+          items: [
+            {
+              xtype: 'button',
+              text: UB.i18n('Роздрукувати'),
+              width: 150,
+              height: 30,
+              margin: '10 10 10 0',
+              handler: function () {
+
+              }
+            },
+            {
+              xtype: 'button',
+              text: UB.i18n('Відправити сповіщення'),
+              width: 250,
+              height: 30,
+              margin: '10 10 10 0',
+              handler: function () {
+
+              }
+            }
+          ]
+        },
+        {
+          layaout: {
+            type: 'vbox'
+          },
+          flex: 0.5,
+          items: [
+            { attributeName: 'printed' },
+            { attributeName: 'sent' }
+          ]
+        }
+      ]
+    },
+    {
+      layout: { type: 'hbox' },
+      defaults: { labelWidth: 280 },
+      items: [
+        { attributeName: 'messageNumber', description: UB.i18n('№ повідомлення'), labelWidth: 140, width: 240 },
+        { attributeName: 'date', labelWidth: 60 }
+      ]
+    },
+    {
+      attributeName: 'orderID',
+      labelWidth: 140,
+      fieldList: ['ID', 'description', 'respEmployeeNumID'],
+      whereList: {
+        empOrderType: {
+          expression: '[empOrderType]',
+          condition: 'equal',
+          value: 'VACATION'
+        },
+        postedOnly: {
+          expression: '[orderState]',
+          condition: 'in',
+          value: ['POSTED', 'PROCESSED']
+        },
+        organizationID: {
+          expression: '[organizationID.mi_data_id]',
+          condition: 'equal',
+          value: appAC.globalOrganization()
+        }
+      },
+      orderList: { orderBy: { expression: 'orderDate', order: 'desc' } }
+    },
+    {
+      attributeName: 'employeeNumberID',
+      labelWidth: 140,
+      fieldList: ['ID', 'description']
+    },
+    { attributeName: 'signer', labelWidth: 140 }
+  ]
+}

@@ -1,0 +1,124 @@
+{
+  "caption": "Баланс резерву відпусток",
+  "description": "Баланс резерву відпусток",
+  "descriptionAttribute": "employeeNumberID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "allowNull": false
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ підстава",
+      "description": "Наказ підстава"
+    },
+    {
+      "name": "orderDtID",
+      "dataType": "BigInt",
+      "caption": "Наказ деталь",
+      "description": "Наказ деталь"
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "allowNull": false
+    },
+    {
+      "name": "periodCalcID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Розрахунковий період",
+      "description": "Розрахунковий період",
+      "allowNull": false
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати",
+      "description": "Вид оплати"
+    },
+    {
+      "name": "payFundID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payFund",
+      "caption": "Нарахування на ЗП",
+      "description": "Нарахування на ЗП"
+    },
+    {
+      "name": "rate",
+      "dataType": "Float",
+      "caption": "Відсоток",
+      "description": "Відсоток"
+    },
+    {
+      "name": "sumFrom",
+      "dataType": "Float",
+      "caption": "Баланс на початок",
+      "description": "Баланс на початок",
+      "allowNull": false
+    },
+    {
+      "name": "accrualDt",
+      "dataType": "Json",
+      "caption": "Деталізація записів Розрахункового листа",
+      "description": "Деталізація записів Розрахункового листа"
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_BALANCEVACATION_ORGEMP": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeeNumberID": {
+            "sort": "ASC"
+          },
+          "orgID": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_BALANCEVACATION_PERIOD": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeeNumberID": {
+            "sort": "ASC"
+          },
+          "periodCalcID": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mapping":[{
+    "name": "AnsiSQL",
+    "selectName": "hr_balanceVacation",
+    "execName": "hr_balanceVacation",
+    "pkGenerator": "S_HR_BALANCEVACATION"
+  }],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": false,
+      "safeDelete": false
+    },
+    "audit": {
+      "enabled": false
+    }
+  }
+}

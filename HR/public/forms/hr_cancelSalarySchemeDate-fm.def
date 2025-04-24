@@ -1,0 +1,70 @@
+/* global Ext UB $App AC */
+
+exports.formDef = 'HR.cancelSalarySchemeDate'
+
+Ext.define('HR.cancelSalarySchemeDate', {
+  extend: 'Ext.form.Panel',
+  height: 200,
+  width: 500,
+  alias: 'widget.cancelSalarySchemeDate',
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        xtype: 'panel',
+        layout: { type: 'vbox' },
+        region: 'center',
+        items: [
+          {
+            name: 'dateFrom',
+            xtype: 'ubdatefield',
+            margin: '40 0 0 20',
+            labelWidth: 250,
+            fieldLabel: UB.i18n('Вкажіть дату початку дії рівнів, які потрібно скасувати'),
+            allowBlank: false
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 150,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.commandConfig.deferred.resolve(null)
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Скасувати зміни'),
+            width: 150,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              const dateFromCtrl = me.down('[name=dateFrom]')
+              if (!dateFromCtrl.getValue()) {
+                dateFromCtrl.markInvalid(UB.i18n(dateFromCtrl.blankText))
+                AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказана дата скасування'))
+                return
+              }
+              me.commandConfig.deferred.resolve({ dateFrom: dateFromCtrl.getValue() })
+              me.up('window').close()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.callParent(arguments)
+  }
+})

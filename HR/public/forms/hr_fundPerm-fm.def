@@ -1,0 +1,662 @@
+/* global HR UB */
+
+exports.formDef = {
+  requiredFields: ['d0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9',
+    'd0Value', 'd1Value', 'd2Value', 'd3Value', 'd4Value', 'd5Value', 'd6Value', 'd7Value', 'd8Value', 'd9Value',
+    'accountID.code', 'accountID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              layout: { type: 'vbox' },
+              defaults: {
+                labelWidth: 170
+              },
+              flex: 1,
+              items: [
+                {
+                  attributeName: 'payFundID',
+                  width: '100%',
+                  fieldList: ['ID', 'description', 'codeSort'],
+                  orderList: { orderBy: { expression: 'codeSort' } }
+                },
+                { attributeName: 'dateFromEmpty' },
+                { attributeName: 'dateToEmpty' }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              defaults: {
+                labelWidth: 170
+              },
+              items: [
+                {
+                  attributeName: 'dictFundSourceID',
+                  fieldList: ['ID', 'name'],
+                  hidden: true
+                },
+                {
+                  xtype: 'accountDimensionsControl',
+                  name: 'dimControl',
+                  fieldLabel: UB.i18n('Рахунок витрат'),
+                  accountDisplayField: 'description',
+                  allowBlank: true,
+                  allowBlankDims: true,
+                  hidden: true,
+                  getDefaultDimension: HR.accrualService.getDefaultDimension
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Організації'),
+          layout: { type: 'border' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludeOrg'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'organization',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_fundPermDt',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'orgID.description',
+                    description: UB.i18n('Організація'),
+                    simpleFilter: true
+                  }
+                ],
+                whereList: {
+                  orgID: {
+                    expression: '[orgID.state]',
+                    condition: 'equal',
+                    value: 'ACTIVE'
+                  },
+                  permType: {
+                    expression: '[permType]',
+                    condition: 'equal',
+                    value: '1'
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['fundPermID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeGridValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeGridValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeGridValue(form, grid.ownerCt)
+                },
+                onDeterminateForm: function () {
+                  return {
+                    cmpInitConfig: {
+                      defaultValues: { permType: '1' }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Підрозділи'),
+          layout: { type: 'border' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludeDepartment'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'department',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_fundPermDt',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'departmentID.code',
+                    description: UB.i18n('Код'),
+                    simpleFilter: true
+                  },
+                  {
+                    name: 'departmentID.name',
+                    description: UB.i18n('Назва'),
+                    simpleFilter: true
+                  }
+                ],
+                whereList: {
+                  orgID: {
+                    expression: '[departmentID.state]',
+                    condition: 'equal',
+                    value: 'ACTIVE'
+                  },
+                  permType: {
+                    expression: '[permType]',
+                    condition: 'equal',
+                    value: '4'
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['fundPermID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeGridValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeGridValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeGridValue(form, grid.ownerCt)
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Посади'),
+          layout: { type: 'border' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludePosition'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'position',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_fundPermDt',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'dictPositionID.description',
+                    description: UB.i18n('Посада'),
+                    simpleFilter: true
+                  }
+                ],
+                whereList: {
+                  permType: {
+                    expression: '[permType]',
+                    condition: 'equal',
+                    values: { 'permType': '3' }
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['fundPermID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeGridValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeGridValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeGridValue(form, grid.ownerCt)
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Категорії персоналу'),
+          layout: { type: 'border' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludeStaff'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'dictStaffCat',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_fundPermDt',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'dictStaffCatID.name',
+                    description: UB.i18n('Категорія персоналу')
+                  }
+                ],
+                whereList: {
+                  permType: {
+                    expression: '[permType]',
+                    condition: 'equal',
+                    values: { 'permType': '2' }
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['fundPermID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeGridValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeGridValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeGridValue(form, grid.ownerCt)
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Місце роботи'),
+          layout: { type: 'border' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludeWorkPlace'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'workPlace',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_fundPermDt',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'workPlace',
+                    description: UB.i18n('Місце роботи')
+                  }
+                ],
+                whereList: {
+                  permType: {
+                    expression: '[permType]',
+                    condition: 'equal',
+                    values: { 'permType': '5' }
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['fundPermID'],
+              customActions: [
+                {
+                  text: UB.i18n('Редагувати'),
+                  iconCls: 'u-icon-edit-alt',
+                  cls: 'fill-action',
+                  scale: 'medium',
+                  handler: function (btn) {
+                    const grid = btn.up('grid')
+                    const form = grid.up('form')
+                    if (form.isNewInstance) {
+                      form.saveForm().then(result => {
+                        if (result !== -1) {
+                          form.changeGridValue(form, grid)
+                        }
+                      })
+                    } else {
+                      form.changeGridValue(form, grid)
+                    }
+                  }
+                }
+              ],
+              onItemDblClick: function (grid) {
+                const form = grid.up('form')
+                form.changeGridValue(form, grid.ownerCt)
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Форма зайнятості'),
+          layout: { type: 'border' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludeWorkerType'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'workerType',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_fundPermDt',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'workerType',
+                    description: UB.i18n('Форма зайнятості')
+                  }
+                ],
+                whereList: {
+                  permType: {
+                    expression: '[permType]',
+                    condition: 'equal',
+                    values: { 'permType': '6' }
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['fundPermID'],
+              customActions: [
+                {
+                  text: UB.i18n('Редагувати'),
+                  iconCls: 'u-icon-edit-alt',
+                  cls: 'fill-action',
+                  scale: 'medium',
+                  handler: function (btn) {
+                    const grid = btn.up('grid')
+                    const form = grid.up('form')
+                    if (form.isNewInstance) {
+                      form.saveForm().then(result => {
+                        if (result !== -1) {
+                          form.changeGridValue(form, grid)
+                        }
+                      })
+                    } else {
+                      form.changeGridValue(form, grid)
+                    }
+                  }
+                }
+              ],
+              onItemDblClick: function (grid) {
+                const form = grid.up('form')
+                form.changeGridValue(form, grid.ownerCt)
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Кваліфікаційні категорії'),
+          layout: { type: 'border' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludeEmpCategory'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'dictEmpCategory',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_fundPermDt',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'dictEmpCategoryID.name',
+                    description: UB.i18n('Кваліфікаційна категорія')
+                  }
+                ],
+                whereList: {
+                  permType: {
+                    expression: '[permType]',
+                    condition: 'equal',
+                    values: { 'permType': '11' }
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['fundPermID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeGridValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeGridValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeGridValue(form, grid.ownerCt)
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Табельні номери'),
+          layout: { type: 'border' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludeTabNum'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'tabnum',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_fundPermDt',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'tabNumID.orgID.description',
+                    description: UB.i18n('Організація')
+                  },
+                  {
+                    name: 'tabNumID.employeeID.description',
+                    description: UB.i18n('Працівник')
+                  },
+                  {
+                    name: 'tabNumID.description',
+                    description: UB.i18n('Табельний №')
+                  }
+                ],
+                whereList: {
+                  permType: {
+                    expression: '[permType]',
+                    condition: 'equal',
+                    values: { 'permType': '7' }
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['fundPermID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeGridValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeGridValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeGridValue(form, grid.ownerCt)
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+
+  ]
+}

@@ -1,0 +1,161 @@
+/* global Ext AC UB appAC $App appHR */
+
+exports.formDef = 'HR.empOrderSicknessLoad'
+
+Ext.define('HR.empOrderSicknessLoad', {
+  extend: 'Ext.panel.Panel',
+  width: 400,
+  height: 400,
+  layout: 'border',
+  alias: 'widget.empOrderSicknessLoad',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'displayfield',
+            name: 'rowCount',
+            fieldLabel: UB.i18n('Всього записів у файлі'),
+            labelWidth: 300,
+            width: 400
+          },
+          {
+            xtype: 'displayfield',
+            name: 'recordCount',
+            fieldLabel: UB.i18n('Завантажено записів'),
+            labelWidth: 300,
+            width: 400
+          },
+          {
+            xtype: 'displayfield',
+            name: 'prevDownloaded',
+            fieldLabel: UB.i18n('Раніше завантажено'),
+            labelWidth: 300,
+            width: 400
+          },
+          {
+            xtype: 'displayfield',
+            name: 'noPayTimeCount',
+            fieldLabel: UB.i18n('Не завантажено, бо не прийшов час сплати'),
+            labelWidth: 300,
+            width: 400
+          },
+          {
+            xtype: 'displayfield',
+            name: 'rowWithError',
+            fieldLabel: UB.i18n('Не завантажено через помилки'),
+            labelWidth: 300,
+            width: 400
+          },
+          {
+            xtype: 'displayfield',
+            name: 'totalError',
+            fieldLabel: UB.i18n('Всього помилок'),
+            labelWidth: 300,
+            width: 400
+          },
+          {
+            xtype: 'displayfield',
+            name: 'totalComments',
+            fieldLabel: UB.i18n('Всього зауважень'),
+            labelWidth: 300,
+            width: 400
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відкрити список помилок'),
+            width: 200,
+            height: 30,
+            margin: '10 10 20 0',
+            handler: function () {
+              $App.doCommand({
+                entity: 'hr_sicknessLog',
+                cmdType: 'showList',
+                description: UB.i18n('Помилки'),
+                isModal: true,
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew', 'itemSelect'],
+                cmdData: {
+                  params: [{
+                    entity: 'hr_sicknessLog',
+                    method: 'select',
+                    fieldList: [
+                      { name: 'loadDate' },
+                      { name: 'msgType' },
+                      { name: 'periodCalcID.name', description: UB.i18n('Розрахунковий період завантаження') },
+                      { name: 'orderDescription', description: UB.i18n('Лікарняний') },
+                      { name: 'employee' },
+                      { name: 'description' },
+                      { name: 'empOrderSicknessID.description', description: UB.i18n('Лист непрацездатності') },
+                      { name: 'userID.name', description: UB.i18n('Користувач') }
+                    ],
+                    whereList: {
+                      orgID: {
+                        expression: '[orgID]',
+                        condition: 'equal',
+                        value: appAC.globalOrganization()
+                      }
+                    },
+                    orderList: {
+                      loadDate: { expression: '[loadDate]', order: 'DESC' },
+                      msgType: { expression: '[msgType]', order: 'ASC' },
+                      employee: { expression: '[employee]', order: 'ASC' },
+                      description: { expression: '[description]', order: 'ASC' }
+                    }
+                  }]
+                }
+              })
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Так'),
+            width: 100,
+            height: 30,
+            margin: '10 10 20 0',
+            handler: function () {
+              me.up('window').close()
+            }
+          }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      me.attr = {
+        rowCount: me.down('[name=rowCount]'),
+        recordCount: me.down('[name=recordCount]'),
+        prevDownloaded: me.down('[name=prevDownloaded]'),
+        noPayTimeCount: me.down('[name=noPayTimeCount]'),
+        rowWithError: me.down('[name=rowWithError]'),
+        totalError: me.down('[name=totalError]'),
+        totalComments: me.down('[name=totalComments]')
+      }
+      me.attr.rowCount.setValue(me.resultData.rowCount)
+      me.attr.recordCount.setValue(me.resultData.recordCount)
+      me.attr.prevDownloaded.setValue(me.resultData.prevDownloaded)
+      me.attr.noPayTimeCount.setValue(me.resultData.noPayTimeCount)
+      me.attr.rowWithError.setValue(me.resultData.rowWithError)
+      me.attr.totalError.setValue(me.resultData.totalError)
+      me.attr.totalComments.setValue(me.resultData.totalComments)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

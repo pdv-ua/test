@@ -1,0 +1,83 @@
+{
+  "caption": "Види робіт",
+  "description": "Види робіт",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 32,
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код",
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Повна назва",
+      "description": "Повна назва",
+      "documentation": "Повна назва",
+      "allowNull": false
+    },
+    {
+      "name": "shortName",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Скорочена назва",
+      "description": "Скорочена назва",
+      "documentation": "Скорочена назва",
+      "allowNull": false
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати",
+      "description": "Вид оплати",
+      "documentation": "Вид оплати",
+      "allowNull": false
+    },
+    {
+      "name": "tariffSum",
+      "dataType": "Currency",
+      "caption": "Тариф",
+      "description": "Тариф",
+      "documentation": "Тариф",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select TOP 1 det.tariffSum from hr_dictWorkTypeTariff det where det.dictWorkTypeID = {self}.ID and det.mi_deleteDate >= '9999-12-31' order by dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select det.tariffSum from hr_dictWorkTypeTariff det where det.dictWorkTypeID = {self}.ID and det.mi_deleteDate >= '9999-12-31' order by dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["code","shortName"],
+        "compositeSeparator": " "
+      }
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

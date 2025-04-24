@@ -1,0 +1,768 @@
+{
+  "caption": "Організація",
+  "description": "Організація",
+  "descriptionAttribute": "name",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 16,
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код",
+      "allowNull": false
+    },
+    {
+      "name": "doNotTransfer",
+      "dataType": "Boolean",
+      "caption": "Не передавати структуру до Порталу",
+      "documentation": "Не передавати структуру до Порталу",
+      "description": "Не передавати структуру до Порталу",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "nameEng",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Назва (англ)",
+      "description": "Назва англійською",
+      "documentation": "Назва англійською",
+      "allowNull": true
+    },
+    {
+      "name": "fullName",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Повна назва",
+      "description": "Повна назва",
+      "documentation": "Повна назва",
+      "allowNull": false
+    },
+    {
+      "name": "mi_data_id",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "mi_data_id",
+      "allowNull": false
+    },
+    {
+      "name": "mi_treePath",
+      "dataType": "String",
+      "size": 450,
+      "caption": "mi_treePath",
+      "allowNull": false
+    },
+    {
+      "name": "mi_dateFrom",
+      "dataType": "DateTime",
+      "caption": "mi_dateFrom",
+      "allowNull": false
+    },
+    {
+      "name": "webAddress",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Адреса офіційного сайту",
+      "allowNull": true
+    },
+    {
+      "name": "mi_dateTo",
+      "dataType": "DateTime",
+      "caption": "mi_dateTo",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.mi_dateTo) WHEN 9999 THEN null ELSE {self}.mi_dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.mi_dateTo) WHEN 9999 THEN null ELSE {self}.mi_dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "parentUnitID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffUnit",
+      "associationAttr": "mi_data_id",
+      "caption": "Підпорядкування",
+      "description": "Підпорядкування",
+      "documentation": "Підпорядкування"
+    },
+    {
+      "name": "linkToSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffUnit",
+      "caption": "Джерело створення",
+      "description": "Джерело створення",
+      "documentation": "Джерело створення"
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "documentation": "Організаційна одиниця",
+      "allowNull": false
+    },
+    {
+      "name": "dictGovernmTypeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictGovernmType",
+      "caption": "Тип організації",
+      "description": "Тип організації",
+      "documentation": "Тип організації",
+      "allowNull": true
+    },
+    {
+      "name": "state",
+      "dataType": "Enum",
+      "enumGroup": "HR_STATE",
+      "caption": "Стан",
+      "documentation": "Стан",
+      "description": "Стан",
+      "allowNull": false,
+      "defaultValue": "NEW"
+    },
+    {
+      "name": "tarifGroupID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTariffGroup",
+      "caption": "Тарифна група",
+      "description": "Тарифна група",
+      "documentation": "Тарифна група"
+    },
+    {
+      "name": "jurisdiction",
+      "dataType": "Enum",
+      "enumGroup": "HR_JURISDICTION",
+      "caption": "Юрисдикція держоргану",
+      "documentation": "Юрисдикція держоргану",
+      "description": "Юрисдикція держоргану"
+    },
+    {
+      "name": "EDRPOUCode",
+      "dataType": "String",
+      "size": 16,
+      "caption": "ЄДРПОУ",
+      "description": "ЄДРПОУ",
+      "documentation": "ЄДРПОУ"
+    },
+    {
+      "name": "taxCode",
+      "dataType": "String",
+      "size": 32,
+      "caption": "Податковий номер",
+      "description": "Податковий номер",
+      "documentation": "Податковий номер"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["code","name"],
+        "compositeSeparator": " "
+      }
+    },
+    {
+      "name": "priorID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "Попередній",
+      "description": "Вузол попередній",
+      "defaultView": true
+    },
+    {
+      "name": "nextID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "Наступний",
+      "description": "Вузол наступний"
+    },
+    {
+      "name": "staffOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Підстава внесення змін",
+      "description": "Підстава внесення змін",
+      "documentation": "Підстава внесення змін",
+      "allowNull": false
+    },
+    {
+      "name": "changeStaffOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Змінено наказом",
+      "description": "Змінено наказом",
+      "documentation": "Змінено наказом"
+    },
+    {
+      "name": "entryOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ вступу в дію",
+      "description": "Наказ вступу в дію",
+      "documentation": "Наказ вступу в дію"
+    },
+    {
+      "name": "idxNum",
+      "dataType": "Int",
+      "caption": "Номер за порядком",
+      "description": "Номер за порядком",
+      "documentation": "Номер за порядком"
+    },
+    {
+      "name": "parentUnitTypeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictParentUnitType",
+      "caption": "Тип підпорядкування",
+      "description": "Тип підпорядкування",
+      "documentation": "Тип підпорядкування"
+    },
+    {
+      "name": "nameNom",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Назва. Називний (хто, що)",
+      "description": "Назва в називному відмінку",
+      "documentation": "Назва в називному відмінку"
+    },
+    {
+      "name": "nameGen",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Назва. Родовий (кого, чого)",
+      "description": "Назва в род. відмінку",
+      "documentation": "Назва в род. відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "nameDat",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Назва. Давальний (кому, чому)",
+      "description": "Назва в дав. відмінку",
+      "documentation": "Назва в дав. відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "nameAcc",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Назва. Знахідний (кого, що)",
+      "description": "Назва в знах. відмінку",
+      "documentation": "Назва в знах. відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "nameOr",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Назва, Орудний (ким, чим)",
+      "description": "Назва в оруд. відмінку",
+      "documentation": "Назва в оруд. відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "nameLoc",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Назва. Місцевий (на кому, на чому)",
+      "description": "Назва в місц. відмінку",
+      "documentation": "Назва в місц. відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "nameVoc",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Назва. Кличний",
+      "description": "Назва. Кличний",
+      "documentation": "Назва. Кличний"
+    },
+    {
+      "name": "fullNameNom",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Повна назва. Називний (хто, що)",
+      "description": "Повна назва в род. відмінку",
+      "documentation": "Повна назва в род. відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "fullNameGen",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Повна назва. Родовий (кого, чого)",
+      "description": "Повна назва в род. відмінку",
+      "documentation": "Повна назва в род. відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "fullNameDat",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Повна назва. Давальний (кому, чому)",
+      "description": "Повна назва в дав. відмінку",
+      "documentation": "Повна назва в дав. відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "fullNameAcc",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Повна назва. Знахідний (кого, що)",
+      "description": "Повна назва в знах. відмінку",
+      "documentation": "Повна назва в знах. відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "fullNameOr",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Повна назва. Орудний (ким, чим)",
+      "description": "Повна назва в оруд. відмінку",
+      "documentation": "Повна назва в оруд. відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "fullNameLoc",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Повна назва. Місцевий (на кому, на чому)",
+      "description": "Повна назва в місц. відмінку",
+      "documentation": "Повна назва в місц. відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "fullNameVoc",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Повна назва. Кличний",
+      "description": "Повна назва. Кличний",
+      "documentation": "Повна назва. Кличний",
+      "allowNull": true
+    },
+    {
+      "name": "liquidate",
+      "dataType": "Boolean",
+      "caption": "Ліквідувати",
+      "description": "Ліквідувати",
+      "documentation": "Ліквідувати",
+      "defaultValue": "0",
+      "defaultView": false
+    },
+    {
+      "name": "dictAreasActivityID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictAreasActivity",
+      "caption": "Напрям діяльності",
+      "description": "Напрям діяльності",
+      "documentation": "Напрям діяльності",
+      "allowNull": true
+    },
+    {
+      "name": "powerBranch",
+      "dataType": "Enum",
+      "enumGroup": "HR_POWERBRANCH",
+      "caption": "Гілка влади",
+      "description": "Гілка влади",
+      "documentation": "Гілка влади"
+    },
+    {
+      "name": "impID",
+      "dataType": "Bigint",
+      "caption": "Зовнішній ID при імпорті",
+      "description": "Зовнішній ID при імпорті",
+      "documentation": "Зовнішній ID при імпорті"
+    },
+    {
+      "name": "impSourceID",
+      "dataType": "Bigint",
+      "caption": "Код джерела",
+      "description": "Код джерела даних імпорту",
+      "documentation": "Код джерела даних імпорту",
+      "allowNull": true
+    },
+    {
+      "name": "limitEmpDocBasis",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Документ-підстава",
+      "description": "Документ-підстава",
+      "documentation": "Документ-підстава",
+      "allowNull": true
+    },
+    {
+      "name": "limitEmpCivServ",
+      "dataType": "Currency",
+      "caption": "Держслужбовців",
+      "description": "Держслужбовців",
+      "documentation": "Держслужбовців",
+      "allowNull": true
+    },
+    {
+      "name": "limitEmpNum",
+      "dataType": "Currency",
+      "caption": "Всього працівників",
+      "description": "Всього працівників",
+      "documentation": "Всього працівників",
+      "allowNull": true
+    },
+    {
+      "name": "quantity",
+      "dataType": "Currency",
+      "caption": "Гранична чисельність",
+      "documentation": "Гранична чисельність",
+      "description": "Гранична чисельність"
+    },
+    {
+      "name": "hkved",
+      "dataType": "String",
+      "size": 10,
+      "caption": "Код КВЕД",
+      "documentation": "Код КВЕД",
+      "description": "Код КВЕД"
+    },
+    {
+      "name": "classRisk",
+      "dataType": "String",
+      "size": 3,
+      "caption": "Клас ризику",
+      "documentation": "Клас ризику",
+      "description": "Клас ризику"
+    },
+    {
+      "name": "ECBCode",
+      "dataType": "String",
+      "size": 16,
+      "caption": "Реєстраційний номер платника єдиного внеску",
+      "documentation": "Реєстраційний номер платника єдиного внеску",
+      "description": "Реєстраційний номер платника єдиного внеску"
+    },
+    {
+      "name": "hkvedS",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Вид економічної діяльності",
+      "documentation": "Вид економічної діяльності",
+      "description": "Вид економічної діяльності"
+    },
+    {
+      "name": "hkoatuu",
+      "dataType": "String",
+      "size": 15,
+      "caption": "Код КОАТУУ",
+      "documentation": "Код КОАТУУ",
+      "description": "Код КОАТУУ"
+    },
+    {
+      "name": "hkoatuuS",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Територія",
+      "documentation": "Територія",
+      "description": "Територія"
+    },
+    {
+      "name": "hkopfg",
+      "dataType": "String",
+      "size": 15,
+      "caption": "Код КОПФГ",
+      "documentation": "Код КОПФГ",
+      "description": "Код КОПФГ"
+    },
+    {
+      "name": "hkopfgS",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Організаційно-правова форма господарювання",
+      "documentation": "Організаційно-правова форма господарювання",
+      "description": "Організаційно-правова форма господарювання"
+    },
+    {
+      "name": "hkou",
+      "dataType": "String",
+      "size": 15,
+      "caption": "Код КОДУ",
+      "documentation": "Код КОДУ",
+      "description": "Код КОДУ"
+    },
+    {
+      "name": "hkouS",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Орган державного управління",
+      "documentation": "Орган державного управління",
+      "description": "Орган державного управління"
+    },
+    {
+      "name": "dgoznNpr",
+      "dataType": "String",
+      "size": 15,
+      "caption": "Ознака неприбутковості",
+      "documentation": "Ознака неприбутковості",
+      "description": "Ознака неприбутковості"
+    },
+    {
+      "name": "kpol",
+      "dataType": "String",
+      "size": 6,
+      "caption": "Код відповідно до мережі",
+      "documentation": "Код відповідно до мережі",
+      "description": "Код відповідно до мережі"
+    },
+    {
+      "name": "riv",
+      "dataType": "Int",
+      "caption": "Рівень розпорядника (одержувача)",
+      "documentation": "Рівень розпорядника (одержувача)",
+      "description": "Рівень розпорядника (одержувача)"
+    },
+    {
+      "name": "decisionDate",
+      "dataType": "Date",
+      "caption": "Дата рішення",
+      "description": "Дата рішення"
+    },
+    {
+      "name": "decisionNumber",
+      "dataType": "String",
+      "size": 32,
+      "caption": "Номер рішення",
+      "description": "Номер рішення"
+    },
+    {
+      "name": "dictDksuID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictDksu",
+      "caption": "ДКСУ",
+      "documentation": "ДКСУ",
+      "description": "ДКСУ"
+    },
+    {
+      "name": "dictSprStiID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictSprSti",
+      "caption": "ДПІ",
+      "documentation": "ДПІ",
+      "description": "ДПІ"
+    },
+    {
+      "name": "FCCUCode",
+      "dataType": "String",
+      "size": 5,
+      "caption": "Код СС",
+      "documentation": "Код СС",
+      "description": "Код СС"
+    },
+    {
+      "name": "FCCUName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Назва робочого органу виконавчої дирекції СС",
+      "documentation": "Назва робочого органу виконавчої дирекції СС",
+      "description": "Назва робочого органу виконавчої дирекції СС"
+    },
+    {
+      "name": "FSZIAddress",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Адреса ФСЗІ",
+      "documentation": "Адреса ФСЗІ",
+      "description": "Адреса ФСЗІ"
+    },
+    {
+      "name": "hkatottg",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictHkatottg",
+      "caption": "Код КАТОТТГ",
+      "documentation": "Код КАТОТТГ",
+      "description": "Код КАТОТТГ"
+    },
+    {
+      "name": "treePath",
+      "dataType": "String",
+      "size": 400,
+      "caption": "treePath",
+      "documentation": "treePath",
+      "description": "treePath"
+    },
+    {
+      "name": "depClassExpID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_depClassExp",
+      "caption": "Відомча класифікація видатків",
+      "documentation": "Відомча класифікація видатків",
+      "description": "Відомча класифікація видатків",
+      "allowNull": true
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_fundSource",
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування",
+      "documentation": "Джерело фінансування",
+      "allowNull": true
+    },
+    {
+      "name": "shortName",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Скорочена назва",
+      "description": "Скорочена назва",
+      "documentation": "Скорочена назва",
+      "allowNull": true
+    },
+    {
+      "name": "conditionalName",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Умовна назва",
+      "description": "Умовна назва",
+      "documentation": "Умовна назва",
+      "allowNull": true
+    },
+    {
+      "name": "showGlobal",
+      "dataType": "Boolean",
+      "caption": "Показувати організацію на \"Стартовому робочому столі\"",
+      "description": "Показувати організацію на \"Стартовому робочому столі\"",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "isSecondaryChanges",
+      "dataType": "Int",
+      "caption": "Другорядні зміни",
+      "description": "Другорядні зміни",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT null)"
+        }
+      ]
+    },
+    {
+      "name": "mi_maxDateTo",
+      "dataType": "DateTime",
+      "caption": "mi_maxDateTo",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT MAX(o.mi_dateTo) FROM hr_organization o WHERE o.mi_data_id = {self}.mi_data_id and o.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "dictOrgGroupId",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictOrgGroup",
+      "caption": "Група організації",
+      "description": "Група організації",
+      "documentation": "Група організації",
+      "allowNull": true
+    }
+  ],
+  "dbExtensions": {
+    "UIDX_HR_ORGANIZATION_HIST": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "mi_dateFrom": {
+            "sort": "ASC"
+          },
+          "mi_data_id": {
+            "sort": "ASC"
+          },
+          "mi_deleteDate": {
+            "sort": "ASC"
+          },
+          "staffOrderID": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": true
+      }
+    },
+    "IDX_HR_ORGANIZATION_DATES": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "mi_dateFrom": {
+            "sort": "ASC"
+          },
+          "mi_dateTo": {
+            "sort": "ASC"
+          },
+          "state": {
+            "sort": "ASC"
+          },
+          "orgID": {
+            "sort": "ASC"
+          },
+          "mi_deleteDate": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_ORGANIZATION_MIDATAID": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "mi_data_id": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "dataHistory": {},
+    "unity": {
+      "entity": "hr_staffUnit",
+      "attributeList": ["orgID", "code", "name", "fullName", "state", "description", "staffOrderID",
+        "changeStaffOrderID", "entryOrderID", "mi_dateFrom", "mi_dateTo", "mi_treePath", "parentUnitID",
+        "mi_data_id", "idxNum", "liquidate", "treePath", "quantity", "linkToSourceID"]
+    }
+  }
+}

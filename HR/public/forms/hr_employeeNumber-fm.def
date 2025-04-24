@@ -1,0 +1,1480 @@
+/* global UB AC appAC $App */
+
+exports.formDef = {
+  requiredFields: ['dateFrom', 'dateTo', 'mi_deleteUser', 'employeeID.fullFIO', 'description', 'mi_deleteUser', 'mainEmpNumberID', 'empWorkPlace', 'empDictPositionID'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  parentConfig: {
+    layout: {
+      type: 'hbox',
+      align: 'stretch'
+    },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+
+        {
+          orderId: 4,
+          actionId: 'rlAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'timeSheetAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'printAction'
+        },
+        {
+          xtype: 'tbtext',
+          text: '',
+          orderId: 7,
+          ubID: 'personInfo',
+          style: {
+            'font-style': 'bold',
+            'color': '#2196f3',
+            'font-size': '20px',
+            'margin-left': '0px'
+          }
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      width: '100%',
+      layout: { type: 'hbox', align: 'stretch' },
+      items: [
+        {
+          xtype: 'panel',
+          collapsible: true,
+          ubId: 'menuPanel',
+          flex: 1.5,
+          style: { border: 'solid 1px lightgray' },
+          animate: true,
+          collapseDirection: 'left',
+          layout: 'fit',
+          activateTab: function (nodeId, me) {
+            me.activateTab(nodeId, me)
+          },
+          layoutConfig: {
+            titleCollapse: true,
+            animate: true,
+            activeOnTop: false
+          },
+          items: [
+            {
+              collapsed: false,
+              xtype: 'treepanel',
+              rootVisible: false,
+              multiSelect: false,
+              hideCollapseTool: true,
+              lines: false,
+              hideHeaders: true,
+              hideIcons: true,
+              ubID: 'treeInfo',
+              listeners: {
+                render: function (tree) {
+                  const me = tree.view.up('form')
+                  me.checkNodeSelection(tree, me)
+                },
+                select: function (tree, record) {
+                  const me = tree.view.up('form')
+                  me.treepanelSelect(tree, record)
+                }
+              },
+              findNodeId: function (nodeId) {
+                let rootNode = this.getRootNode()
+                return rootNode.findChildBy(function (node) {
+                  return node.raw.nodeId === nodeId
+                }, null, true)
+              },
+              filters: [],
+              addFilterRemoveNodeId: function (nodeId) {
+                const me = this
+                me.filters.push(nodeId)
+              },
+              clearFilter: function () {
+                const me = this
+                while (me.filters.length) {
+                  me.filters.pop()
+                }
+              },
+              updateNodes: function () {
+                const me = this
+                let rootNode = me.getRootInitial()
+                let filters = me.filters
+
+                let deleteNodeId = function (rootNode, nodeId) {
+                  if (rootNode.children) {
+                    let removeItems = []
+                    rootNode.children.forEach(node => {
+                      if (node.nodeId === nodeId) {
+                        removeItems.push(node)
+                      } else {
+                        deleteNodeId(node, nodeId)
+                      }
+                    })
+                    removeItems.forEach(item => {
+                      let index = rootNode.children.indexOf(item)
+                      rootNode.children.splice(index, 1)
+                    })
+                  }
+                }
+                filters.forEach(item => {
+                  deleteNodeId(rootNode, item)
+                })
+
+                me.setRootNode(rootNode)
+              },
+              getRootInitial: function () {
+                return {
+                  expanded: true,
+                  text: UB.i18n('Розділи'),
+                  children: [
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Основні відомості</span>'),
+                      nodeId: 'hr_basicInfo',
+                      expanded: true,
+                      children: [
+                        { text: UB.i18n('Пільги лікарняних'), leaf: true, nodeId: 'hr_employeeSickLimit' },
+                        { text: UB.i18n('Пільги ПДФО'), leaf: true, nodeId: 'hr_employeeTaxLimit' },
+                        { text: UB.i18n('Інвалідність'), leaf: true, nodeId: 'hr_employeeDisability' }
+                      ]
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Призначення</span>'),
+                      nodeId: 'hr_employeeNumberPositionEdit',
+                      expanded: true,
+                      children: []
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Інші особові рахунки</span>'),
+                      nodeId: 'hr_employeeNumber',
+                      expanded: true,
+                      children: []
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Неявки</span>'),
+                      nodeId: 'hr_orderRegistryDt',
+                      expanded: true,
+                      children: []
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Відпустки</span>'),
+                      expanded: true,
+                      nodeId: 'grpVac',
+                      children: [
+                        {
+                          text: UB.i18n('Право на відпустки, відгули'),
+                          leaf: true,
+                          nodeId: 'hr_empVacationPlan'
+                        },
+                        {
+                          text: UB.i18n('Відпустки'),
+                          leaf: true,
+                          nodeId: 'hr_employeeVacation'
+                        },
+                        {
+                          text: UB.i18n('Довготривала відсутність'),
+                          leaf: true,
+                          nodeId: 'hr_empLongTermAbsc'
+                        }
+                      ]
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Тарифікація</span>'),
+                      nodeId: 'trf_position',
+                      expanded: true,
+                      children: []
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">KPI</span>'),
+                      nodeId: 'hr_employeeKpi',
+                      expanded: true,
+                      children: []
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Заробітна плата</span>'),
+                      nodeId: 'hr_accrualBalance',
+                      expanded: true,
+                      children: [
+                        { text: UB.i18n('Постійні нарахування'), leaf: true, nodeId: 'hr_employeeAccrualEdit' },
+                        { text: UB.i18n('Постійні утримання'), leaf: true, nodeId: 'hr_payRetention' },
+                        { text: UB.i18n('Виплата зарплати'), leaf: true, nodeId: 'hr_payOut' }
+                      ]
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Накази</span>'),
+                      nodeId: 'hr_empOrder',
+                      expanded: true,
+                      children: []
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Договори ЦПХ</span>'),
+                      nodeId: 'hr_employeeCPH',
+                      expanded: true,
+                      children: []
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Стаж роботи</span>'),
+                      nodeId: 'hr_employeeExperience',
+                      expanded: true,
+                      children: [
+                        { text: UB.i18n('Трудова книжка'), leaf: true, nodeId: 'hr_employeeWorkbook' }
+                      ]
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Державна служба</span>'),
+                      nodeId: 'hr_employeeNumberServ',
+                      expanded: true,
+                      children: []
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Дипломатична служба</span>'),
+                      nodeId: 'hr_employeeNumberDipl',
+                      expanded: true,
+                      children: []
+                    },
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Додаткові відомості</span>'),
+                      nodeId: 'hr_employeeExtra',
+                      expanded: true,
+                      children: [
+                        { text: UB.i18n('Зміна облікових даних'), leaf: true, nodeId: 'hr_employeeCgh' },
+                        { text: UB.i18n('Додаткові гарантії працевлаштування'), leaf: true, nodeId: 'hr_empAddGuarantees' },
+                        { text: UB.i18n('Контакти'), leaf: true, nodeId: 'hr_employeeNumberContactAddress' },
+                        { text: UB.i18n('Документи'), leaf: true, nodeId: 'hr_employeeDocs' },
+                        { text: UB.i18n('Члени сім\'ї'), leaf: true, nodeId: 'hr_employeeFamily' }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          xtype: 'tabpanel',
+          flex: 5,
+          plain: true,
+          tabPosition: 'top',
+          items: [
+            {
+              title: UB.i18n('Основні відомості'),
+              nodeId: 'hr_basicInfo',
+              hidden: true,
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              overflowX: false,
+              overflowY: true,
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      layout: { type: 'vbox', align: 'stretch' },
+                      defaults: { labelWidth: 145 },
+                      flex: 1,
+                      items: [
+                        { attributeName: 'orgID', hidden: true },
+                        {
+                          layout: {
+                            type: 'hbox'
+                          },
+                          items: [
+                            {
+                              xtype: 'ubcombobox',
+                              name: 'empTaxCodeType',
+                              recordValue: 'employeeID.empTaxCodeType',
+                              width: 120,
+                              formParams: true,
+                              hideLabel: true,
+                              hideEntityItemInContext: true,
+                              enumGroupFilter: 'HR_EMPTAXCODE_TYPE',
+                              allowBlank: false,
+                              valueField: 'code',
+                              displayField: 'name',
+                              ubRequest: {
+                                entity: 'ubm_enum',
+                                method: UB.core.UBCommand.methodName.SELECT,
+                                fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                                whereList: {
+                                  eGroup: {
+                                    expression: '[eGroup]',
+                                    condition: 'equal',
+                                    values: { 'eGroup': 'HR_EMPTAXCODE_TYPE' }
+                                  }
+                                }
+                              },
+                              listeners: {
+                                change: function (ctrl) {
+                                  let me = ctrl.up('form')
+                                  me.down('[name=taxCode]').isValid()
+                                }
+                              }
+                            },
+                            {
+                              xtype: 'ubtextfield',
+                              name: 'taxCode',
+                              recordValue: 'employeeID.taxCode',
+                              hideLabel: true,
+                              flex: 1,
+                              allowBlank: false,
+                              formParams: true,
+                              vtype: 'taxCodeValidator'
+                            }
+                          ]
+                        },
+                        {
+                          attributeName: 'employeeID',
+                          fieldLabel: UB.i18n('Прізвище І. Б.'),
+                          fieldList: ['ID', 'fullFIO', 'taxCode', 'sexType', 'birthDate', 'citizenshipID', 'empTaxCodeType'],
+                          whereList: {
+                            exist: {
+                              expression: '',
+                              condition: 'subquery',
+                              subQueryType: 'Exists',
+                              value: {
+                                entity: 'ac_employeeOrg',
+                                fieldList: [],
+                                method: 'select',
+                                whereList: {
+                                  cond: {
+                                    expression: '[employeeID]=[{master}.ID]',
+                                    condition: 'custom'
+                                  },
+                                  mi_deleteDate: {
+                                    condition: 'equal',
+                                    expression: '[mi_deleteDate]',
+                                    value: '#maxdate'
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          valueField: 'ID',
+                          displayField: 'fullFIO',
+                          allowBlank: true,
+                          allowCustomText: true,
+                          triggerCls: 'hr-list-trigger'
+                        },
+                        {
+                          layout: { type: 'hbox' },
+                          defaults: { labelWidth: 145 },
+                          items: [
+                            {
+                              attributeName: 'tabNum',
+                              flex: 1
+                            },
+                            {
+                              xtype: 'button',
+                              scale: 'small',
+                              name: 'generateTabNumButton',
+                              iconCls: 'fas fa-angle-double-left',
+                              margin: '4 15 0 0',
+                              width: 30,
+                              visibility: false,
+                              tooltip: UB.i18n('Згенерувати'),
+                              cls: 'add-new-action',
+                              handler: function (btn) {
+                                const me = btn.up('form')
+                                me.generateTabNum(me)
+                              }
+                            }
+                          ]
+                        },
+                        { xtype: 'label', text: '', name: 'factPositionLabel', margin: '10 0 0 15', cls: 'x-form-item-label' }
+                      ]
+                    },
+                    {
+                      layout: { type: 'vbox', align: 'stretch' },
+                      defaults: { labelWidth: 125 },
+                      flex: 1,
+                      items: [
+                        {
+                          layout: { type: 'hbox' },
+                          defaults: { labelWidth: 125 },
+                          items: [
+                            {
+                              xtype: 'ubdatefield',
+                              attributeName: 'dateFrom',
+                              recordValue: 'dateFrom',
+                              allowBlank: false,
+                              fieldLabel: UB.i18n('Дата прийому')
+                            },
+                            {
+                              labelWidth: 160,
+                              hidden: true,
+                              attributeName: 'limitedAccess'
+                            }
+                          ]
+                        },
+                        {
+                          attributeName: 'testDateTo'
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'dictAppointKindID',
+                          recordValue: 'positionID.dictAppointKindID',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Підстава'),
+                          valueField: 'ID',
+                          displayField: 'caption',
+                          ubRequest: {
+                            entity: 'hr_dictAppointKind',
+                            fieldList: ['ID', 'caption'],
+                            orderList: { orderBy: { expression: 'caption', order: 'asc' } }
+                          }
+                        },
+                        {
+                          layout: { type: 'hbox' },
+                          defaults: { labelWidth: 125 },
+                          items: [
+                            {
+                              xtype: 'ubtextfield',
+                              name: 'appointOrderNumber',
+                              recordValue: 'positionID.appointOrderNumber',
+                              formParams: true,
+                              fieldLabel: UB.i18n('Наказ №'),
+                              flex: 1
+                            },
+                            {
+                              xtype: 'ubdatefield',
+                              name: 'appointOrderDate',
+                              recordValue: 'positionID.appointOrderDate',
+                              formParams: true,
+                              labelWidth: 70,
+                              fieldLabel: UB.i18n('дата')
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                { layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px'
+                },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      layout: { type: 'vbox', align: 'stretch' },
+                      defaults: { labelWidth: 145 },
+                      flex: 1,
+                      items: [
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'dictStaffCatID',
+                          recordValue: 'positionID.dictStaffCatID',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Категорія персоналу'),
+                          valueField: 'ID',
+                          displayField: 'caption',
+                          ubRequest: {
+                            entity: 'hr_dictStaffCat',
+                            fieldList: ['ID', 'caption', 'accCategory'],
+                            orderList: { orderBy: { expression: 'caption', order: 'asc' } }
+                          },
+                          useForGridEdit: true,
+                          listeners: {
+                            beforeQuerySend: (ctrl) => {
+                              ctrl.combo.store.totalCount = 0
+                              ctrl.combo.store.currentPage = 1
+                            }
+                          }
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'workPlace',
+                          recordValue: 'positionID.workPlace',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Місце роботи'),
+                          hideEntityItemInContext: true,
+                          enumGroupFilter: 'HR_WORKER_PLACE',
+                          valueField: 'code',
+                          displayField: 'shortName',
+                          ubRequest: {
+                            entity: 'ubm_enum',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['code', 'shortName', 'eGroup', 'sortOrder'],
+                            whereList: {
+                              eGroup: {
+                                expression: '[eGroup]',
+                                condition: 'equal',
+                                values: { 'eGroup': 'HR_WORKER_PLACE' }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'workerType',
+                          recordValue: 'positionID.workerType',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Форма зайнятості'),
+                          hideEntityItemInContext: true,
+                          enumGroupFilter: 'HR_WORKER_TYPE',
+                          valueField: 'code',
+                          displayField: 'shortName',
+                          ubRequest: {
+                            entity: 'ubm_enum',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['code', 'shortName', 'eGroup', 'sortOrder'],
+                            whereList: {
+                              eGroup: {
+                                expression: '[eGroup]',
+                                condition: 'equal',
+                                values: { 'eGroup': 'HR_WORKER_TYPE' }
+                              }
+                            }
+                          }
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'departmentID',
+                          recordValue: 'positionID.departmentID',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Підрозділ'),
+                          hideEntityItemInContext: true,
+                          valueField: 'mi_data_id',
+                          displayField: 'caption',
+                          ubRequest: {
+                            entity: 'hr_department',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['mi_data_id', 'caption', 'parentUnitID', 'orgID', 'mi_treePath', 'state'],
+                            __mip_recordhistory_all: true,
+                            whereList: { state: { expression: '[state]', condition: 'in', value: ['ACTIVE', 'CHANGES'] } },
+                            orderList: { orderBy: { expression: 'mi_dateTo', order: 'desc' } }
+                          },
+                          useForGridEdit: true,
+                          listeners: {
+                            beforeQuerySend: (ctrl) => {
+                              ctrl.combo.store.totalCount = 0
+                              ctrl.combo.store.currentPage = 1
+                            }
+                          }
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'positionID',
+                          recordValue: 'positionID.positionID',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Штатна посада'),
+                          valueField: 'mi_data_id',
+                          displayField: 'caption',
+                          hideEntityItemInContext: true,
+                          ubRequest: {
+                            entity: 'hr_position',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['mi_data_id', 'caption', 'state', 'orgID', 'parentUnitID', 'dictPositionID', 'mi_dateTo', 'ID'],
+                            __mip_recordhistory_all: true,
+                            whereList: { state: { expression: '[state]', condition: 'in', value: ['ACTIVE', 'CHANGES'] } },
+                            orderList: { orderBy: { expression: 'mi_dateTo', order: 'desc' } }
+                          },
+                          useForGridEdit: true,
+                          listeners: {
+                            beforeQuerySend: (ctrl) => {
+                              ctrl.combo.store.totalCount = 0
+                              ctrl.combo.store.currentPage = 1
+                            }
+                          }
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'dictPositionID',
+                          recordValue: 'positionID.dictPositionID',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Посада'),
+                          valueField: 'ID',
+                          displayField: 'caption',
+                          ubRequest: {
+                            entity: 'hr_dictPosition',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['ID', 'caption', 'positionType'],
+                            orderList: { orderBy: { expression: 'caption', order: 'asc' } }
+                          },
+                          useForGridEdit: true,
+                          listeners: {
+                            beforeQuerySend: (ctrl) => {
+                              ctrl.combo.store.totalCount = 0
+                              ctrl.combo.store.currentPage = 1
+                            }
+                          }
+                        },
+                        {
+                          xtype: 'ubtextfield',
+                          name: 'posNameAddition',
+                          recordValue: 'positionID.posNameAddition',
+                          formParams: true,
+                          hidden: true,
+                          fieldLabel: UB.i18n('Доповнення до назви посади'),
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'dictTarifCoeffID',
+                          recordValue: 'positionID.dictTarifCoeffID',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Розряд'),
+                          valueField: 'ID',
+                          displayField: 'name',
+                          width: '100%',
+                          ubRequest: {
+                            entity: 'hr_dictTarifCoeff',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['ID', 'name']
+                          },
+                          useForGridEdit: true,
+                          listeners: {
+                            beforeQuerySend: (ctrl) => {
+                              ctrl.combo.store.totalCount = 0
+                              ctrl.combo.store.currentPage = 1
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      layout: { type: 'vbox', align: 'stretch' },
+                      defaults: { labelWidth: 125 },
+                      flex: 1,
+                      items: [
+                        {
+                          attributeName: 'planDateTo'
+                        },
+                        {
+                          xtype: 'ubdatefield',
+                          name: 'dateTo',
+                          recordValue: 'dateTo',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Дата звільнення'),
+                          enableKeyEvents: true,
+                          listeners: {
+                            blur: function (ctrl) {
+                              let me = ctrl.up('form')
+                              me.checkDismFieldState(ctrl)
+                            },
+                            keypress: function (ctrl, e) {
+                              if (e.getKey() === e.ENTER) {
+                                let me = ctrl.up('form')
+                                me.checkDismFieldState(ctrl)
+                              }
+                            }
+                          }
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'reasonDismID',
+                          recordValue: 'positionID.reasonDismID',
+                          hideEntityItemInContext: true,
+                          formParams: true,
+                          fieldLabel: UB.i18n('Підстава'),
+                          valueField: 'ID',
+                          displayField: 'caption',
+                          ubRequest: {
+                            entity: 'hr_dictReasonDism',
+                            fieldList: ['ID', 'caption'],
+                            orderList: { orderBy: { expression: 'caption' } }
+                          },
+                          useForGridEdit: true,
+                          listeners: {
+                            beforeQuerySend: (ctrl) => {
+                              ctrl.combo.store.totalCount = 0
+                              ctrl.combo.store.currentPage = 1
+                            }
+                          }
+                        },
+                        {
+                          layout: { type: 'hbox' },
+                          defaults: { labelWidth: 125 },
+                          items: [
+                            {
+                              xtype: 'ubtextfield',
+                              name: 'dismissOrderNumber',
+                              recordValue: 'positionID.dismissOrderNumber',
+                              formParams: true,
+                              fieldLabel: UB.i18n('Наказ №'),
+                              flex: 1
+                            },
+                            {
+                              xtype: 'ubdatefield',
+                              name: 'dismissOrderDate',
+                              recordValue: 'positionID.dismissOrderDate',
+                              formParams: true,
+                              labelWidth: 70,
+                              fieldLabel: UB.i18n('дата')
+                            }
+                          ]
+                        },
+                        { name: 'rank-margin', layout: { type: 'hbox' }, style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px' },
+                        {
+                          layout: { type: 'hbox' },
+                          defaults: { labelWidth: 125 },
+                          items: [
+                            {
+                              xtype: 'ubcombobox',
+                              name: 'dictRankID',
+                              recordValue: 'rankID.dictRankID',
+                              formParams: true,
+                              fieldLabel: UB.i18n('Ранг'),
+                              valueField: 'ID',
+                              displayField: 'name',
+                              flex: 1,
+                              ubRequest: {
+                                entity: 'hr_dictRank',
+                                fieldList: ['ID', 'name'],
+                                orderList: { orderBy: { expression: 'name' } }
+                              },
+                              useForGridEdit: true,
+                              listeners: {
+                                beforeQuerySend: (ctrl) => {
+                                  ctrl.combo.store.totalCount = 0
+                                  ctrl.combo.store.currentPage = 1
+                                }
+                              }
+                            },
+                            {
+                              xtype: 'ubdatefield',
+                              name: 'rankDateFrom',
+                              recordValue: 'rankID.rankDateFrom',
+                              formParams: true,
+                              labelWidth: 70,
+                              fieldLabel: UB.i18n('з')
+                            }
+                          ]
+                        },
+                        {
+                          layout: { type: 'hbox' },
+                          defaults: { labelWidth: 125 },
+                          items: [
+                            {
+                              xtype: 'ubtextfield',
+                              name: 'rankOrderNumber',
+                              recordValue: 'kangID.rankOrderNumber',
+                              formParams: true,
+                              fieldLabel: UB.i18n('Наказ №'),
+                              flex: 1
+                            },
+                            {
+                              xtype: 'ubdatefield',
+                              name: 'rankOrderDate',
+                              recordValue: 'rankID.rankOrderDate',
+                              formParams: true,
+                              labelWidth: 70,
+                              fieldLabel: UB.i18n('дата')
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px'
+                },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      layout: { type: 'vbox' },
+                      flex: 1,
+                      defaults: { labelWidth: 145 },
+                      items: [
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'workScheduleID',
+                          recordValue: 'positionID.workScheduleID',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Графік роботи'),
+                          valueField: 'ID',
+                          displayField: 'caption',
+                          width: '100%',
+                          ubRequest: {
+                            entity: 'hr_workSchedule',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['ID', 'caption', 'isOnlyForPositions']
+                          },
+                          useForGridEdit: true,
+                          listeners: {
+                            beforeQuerySend: (ctrl) => {
+                              ctrl.combo.store.totalCount = 0
+                              ctrl.combo.store.currentPage = 1
+                            }
+                          }
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'payElID',
+                          recordValue: 'positionID.payElID',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Система оплати'),
+                          valueField: 'ID',
+                          displayField: 'description',
+                          width: '100%',
+                          ubRequest: {
+                            entity: 'hr_payEl',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['ID', 'description', 'methodID.methodGroupID.code', 'methodID.code', 'codeSort'],
+                            orderList: { orderBy: { expression: 'codeSort' } },
+                            whereList: {
+                              isSalary: {
+                                expression: '[methodID.methodGroupID.code]',
+                                condition: 'equal',
+                                value: 1
+                              },
+                              tariff: {
+                                expression: '[methodID.code]',
+                                condition: 'notIn',
+                                value: ['143', '144', '145', '146', '147', '156']
+                              }
+                            }
+                          },
+                          useForGridEdit: true,
+                          listeners: {
+                            beforeQuerySend: (ctrl) => {
+                              ctrl.combo.store.totalCount = 0
+                              ctrl.combo.store.currentPage = 1
+                            }
+                          }
+                        },
+                        {
+                          xtype: 'numberfield',
+                          name: 'mtCount',
+                          recordValue: 'positionID.mtCount',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Кількість ставок'),
+                          vtype: 'floatValidator',
+                          decimalPrecision: 6,
+                          width: 300,
+                          hideTrigger: true,
+                          minValue: 0
+                        },
+                        {
+                          xtype: 'numberfield',
+                          name: 'accrualSum',
+                          recordValue: 'positionID.accrualSum',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Оклад'),
+                          vtype: 'floatValidator',
+                          width: 300,
+                          maskRe: AC.validators.maskRe('currency'),
+                          valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                          minValue: 0,
+                          hideTrigger: true
+                        },
+                        {
+                          layout: { type: 'hbox' },
+                          defaults: { labelWidth: 145 },
+                          items: [
+                            {
+                              xtype: 'ubdatefield',
+                              name: 'raiseSalary',
+                              recordValue: 'positionID.raiseSalary',
+                              formParams: true,
+                              flex: 1,
+                              fieldLabel: UB.i18n('Місяць підвищення доходу для індексації')
+                            }
+                          ]
+                        },
+                        {
+                          layout: { type: 'hbox' },
+                          defaults: { labelWidth: 145 },
+                          items: [
+                            {
+                              xtype: 'checkboxfield',
+                              name: 'isIndex',
+                              recordValue: 'positionID.isIndex',
+                              formParams: true,
+                              flex: 1,
+                              fieldLabel: UB.i18n('Індексувати середній заробіток відповідно підвищення окладу')
+                            },
+                            {
+                              xtype: 'checkboxfield',
+                              name: 'isFactWorkSchedule',
+                              recordValue: 'positionID.isFactWorkSchedule',
+                              formParams: true,
+                              flex: 1,
+                              fieldLabel: UB.i18n('Відключити автоматичне табелювання факту')
+                            }
+                          ]
+                        }
+
+                      ]
+                    },
+                    {
+                      layout: { type: 'vbox', align: 'stretch' },
+                      flex: 1,
+                      defaults: { labelWidth: 125 },
+                      items: [
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'dictEmpCategoryID',
+                          recordValue: 'positionID.dictEmpCategoryID',
+                          formParams: true,
+                          allowBlank: true,
+                          hidden: true,
+                          fieldLabel: UB.i18n('Кваліфікаційна категорія'),
+                          valueField: 'ID',
+                          displayField: 'description',
+                          width: '100%',
+                          ubRequest: {
+                            entity: 'hr_dictEmpCategory',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['ID', 'description']
+                          },
+                          useForGridEdit: true,
+                          listeners: {
+                            beforeQuerySend: (ctrl) => {
+                              ctrl.combo.store.totalCount = 0
+                              ctrl.combo.store.currentPage = 1
+                            }
+                          }
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'dictQualificationID',
+                          recordValue: 'positionID.dictQualificationID',
+                          formParams: true,
+                          allowBlank: true,
+                          hidden: true,
+                          fieldLabel: UB.i18n('Кваліфікація'),
+                          valueField: 'ID',
+                          displayField: 'description',
+                          width: '100%',
+                          ubRequest: {
+                            entity: 'trf_dictQualification',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['ID', 'description']
+                          },
+                          useForGridEdit: true,
+                          listeners: {
+                            beforeQuerySend: (ctrl) => {
+                              ctrl.combo.store.totalCount = 0
+                              ctrl.combo.store.currentPage = 1
+                            }
+                          }
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'dictCategoryECBID',
+                          recordValue: 'positionID.dictCategoryECBID',
+                          formParams: true,
+                          allowBlank: false,
+                          fieldLabel: UB.i18n('Категорія застрахованої особи'),
+                          valueField: 'ID',
+                          displayField: 'caption',
+                          width: '100%',
+                          ubRequest: {
+                            entity: 'hr_dictCategoryECB',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['ID', 'caption']
+                          },
+                          useForGridEdit: true,
+                          listeners: {
+                            beforeQuerySend: (ctrl) => {
+                              ctrl.combo.store.totalCount = 0
+                              ctrl.combo.store.currentPage = 1
+                            }
+                          }
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'dictProgClassID',
+                          recordValue: 'positionID.dictProgClassID',
+                          formParams: true,
+                          fieldLabel: UB.i18n('КПК'),
+                          valueField: 'ID',
+                          displayField: 'description',
+                          width: '100%',
+                          ubRequest: {
+                            entity: 'ac_dictProgClass',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['ID', 'description']
+                          }
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'dictCostTypeID',
+                          recordValue: 'positionID.dictCostTypeID',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Місце виникнення виробничих витрат'),
+                          valueField: 'ID',
+                          displayField: 'description',
+                          width: '100%',
+                          ubRequest: {
+                            entity: 'ac_dictCostType',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['ID', 'description', 'accountID']
+                          }
+                        },
+                        {
+                          xtype: 'ubcombobox',
+                          name: 'accountID',
+                          recordValue: 'positionID.accountID',
+                          formParams: true,
+                          fieldLabel: UB.i18n('Рахунок витрат'),
+                          valueField: 'ID',
+                          displayField: 'code',
+                          width: '100%',
+                          ubRequest: {
+                            entity: 'gl_account',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['ID', 'code']
+                          },
+                          useForGridEdit: true,
+                          listeners: {
+                            beforeQuerySend: (ctrl) => {
+                              ctrl.combo.store.totalCount = 0
+                              ctrl.combo.store.currentPage = 1
+                            }
+                          }
+                        },
+                        {
+                          layout: { type: 'vbox', align: 'stretch' },
+                          flex: 1,
+                          margin: '5 15 5 15',
+                          padding: '0 0 0 0',
+                          cls: 'x-fieldset',
+                          name: 'fundSourcePanel',
+                          items: [
+                            {
+                              xtype: 'acGrid',
+                              name: 'positionFundSourceDt',
+                              height: 180,
+                              autoScroll: true,
+                              hideActions: [],
+                              flex: 1,
+                              storeType: 'local',
+                              disablePaging: true,
+                              showToolBar: true,
+                              cellEditing: true,
+                              pageSize: 10000,
+                              hidePagingBar: true,
+                              summary: { mtCount: 'sum' },
+                              summaryDataOnClient: true,
+                              onBeforeEdit: function (control, context) {
+                                const me = context.grid.up('form')
+                                if (context.column.dataIndex === 'dictFundSourceID.description') {
+                                  context.column.field.store.ubRequest.method = 'selectByOrg'
+                                  context.column.field.store.ubRequest.orgID = me.record.get('organizationID') || appAC.globalOrganization()
+                                }
+                                if (!context.record.get('employeeNumberID')) context.record.set('employeeNumberID', me.instanceID)
+                              },
+                              fields: [
+                                { name: 'ID' },
+                                { name: 'dictFundSourceID' },
+                                { name: 'dictProjectID' },
+                                { name: 'dictProgClassID' },
+                                { name: 'employeeNumberID' },
+                                { name: 'mi_modifyDate' },
+                                { name: 'dictFundSourceID.mi_deleteUser' },
+                                {
+                                  name: 'dictFundSourceID.description',
+                                  columnConfig: {
+                                    text: UB.i18n('Джерело фінансування'),
+                                    flex: 3,
+                                    renderer: (value, meta, record) => {
+                                      if (record.get('dictFundSourceID.mi_deleteUser')) {
+                                        meta.tdCls = 'grd-line-through'
+                                        meta.tdAttr = 'data-qtip="' + 'Джерело фінансування видалене' + '"'
+                                      }
+                                      return value
+                                    },
+                                    editor: {
+                                      dataType: 'Entity',
+                                      hideEntityItemInContext: true,
+                                      associatedEntity: 'ac_fundSource',
+                                      allowBlank: false,
+                                      disableContextMenu: true,
+                                      storeAttributeValueField: 'dictFundSourceID',
+                                      fieldList: ['ID', 'description']
+                                    }
+                                  }
+                                },
+                                {
+                                  name: 'dictProgClassID.description',
+                                  columnConfig: {
+                                    text: UB.i18n('КПК'),
+                                    flex: 3,
+                                    editor: {
+                                      dataType: 'Entity',
+                                      hideEntityItemInContext: true,
+                                      associatedEntity: 'ac_dictProgClass',
+                                      allowBlank: false,
+                                      disableContextMenu: true,
+                                      storeAttributeValueField: 'dictProgClassID',
+                                      fieldList: ['ID', 'description']
+                                    }
+                                  }
+                                },
+                                {
+                                  name: 'dictProjectID.description',
+                                  columnConfig: {
+                                    text: UB.i18n('Проєкт'),
+                                    flex: 3,
+                                    editor: {
+                                      dataType: 'Entity',
+                                      hideEntityItemInContext: true,
+                                      associatedEntity: 'ac_dictProject',
+                                      allowBlank: false,
+                                      disableContextMenu: true,
+                                      storeAttributeValueField: 'dictProjectID',
+                                      fieldList: ['ID', 'description']
+                                    }
+                                  }
+                                },
+                                {
+                                  name: 'mtCount',
+                                  columnConfig: {
+                                    text: UB.i18n('Кількість ставок'),
+                                    flex: 1,
+                                    summaryType: 'sum',
+                                    floatFormat: 6,
+                                    editor: {
+                                      dataType: 'Float',
+                                      decimalPrecision: 6,
+                                      minValue: 0,
+                                      allowBlank: false
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Виплата зарплати'),
+              nodeId: 'hr_payOut',
+              hidden: true,
+              autoScroll: true,
+              flex: 1,
+              layout: 'border',
+              items: [
+                {
+                  region: 'north',
+                  layout: { type: 'vbox', align: 'stretch' },
+                  items: [
+                    {
+                      xtype: 'toolbar',
+                      dock: 'top',
+                      ubID: 'mainToolbar',
+                      enableOverflow: true,
+                      items: [
+                        {
+                          xtype: 'button',
+                          tooltip: UB.i18n('Заповнити банківськи атрибути'),
+                          name: 'employeePayrollTemplates',
+                          iconCls: 'fas fa-angle-double-down',
+                          cls: 'fill-action',
+                          handler: function (btn) {
+                            const me = btn.up('form')
+                            const organizationID = appAC.globalOrganization()
+                            const employeePayrollTemplates = AC.settings.get('employeePayrollTemplates', organizationID)
+                            UB.Repository('hr_employeeNumber')
+                              .attrs('ID', 'payOutID', 'payOutID.name', 'personalAccount', 'bankSubAccount', 'tabNum', 'dateFrom', 'orgID')
+                              .where('employeeID', '=', me.record.data.employeeID)
+                              .where('ID', '<>', me.instanceID)
+                              .where('payOutID', 'isNotNull', undefined, 'w1')
+                              .where('personalAccount', 'isNotNull', undefined, 'w2')
+                              .where('bankSubAccount', 'isNotNull', undefined, 'w3')
+                              .logic('(([w1]) or ([w2]) or ([w3]))')
+                              .orderByDesc('dateFrom')
+                              .selectAsObject().then(result => {
+                                if (!result.length) {
+                                  AC.viewUtils.showToast(UB.i18n('Відсутній іншій особовий рахунок з заповненими банковськими атрибутами!'))
+                                  return
+                                }
+                                let empPayroll = result.filter(o => o.orgID === organizationID)
+                                if (empPayroll.length && !employeePayrollTemplates) {
+                                  empPayroll = result[0]
+                                  $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n(`Знайдено особовий рахунок {0} з банківськими атрибутами Шаблон виплати = {1} Номер особового рахунку = {2}, Номер субрахунку = {3}. Замінити?`, empPayroll.tabNum, empPayroll['payOutID.name'], empPayroll.personalAccount, empPayroll.bankSubAccount))
+                                    .then(function (choice) {
+                                      if (choice) {
+                                        me.attr.payOutID.setValue(empPayroll.payOutID)
+                                        me.attr.personalAccount.setValue(empPayroll.personalAccount)
+                                        me.attr.bankSubAccount.setValue(empPayroll.bankSubAccount)
+                                      }
+                                    })
+                                } else {
+                                  if (employeePayrollTemplates) {
+                                    empPayroll = result.find(o => o.ID > 0)
+                                    $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n(`Знайдено особовий рахунок {0} з банківськими атрибутами Шаблон виплати = {1} Номер особового рахунку = {2}, Номер субрахунку = {3}. Замінити?`, empPayroll.tabNum, empPayroll['payOutID.name'], empPayroll.personalAccount, empPayroll.bankSubAccount))
+                                      .then(function (choice) {
+                                        if (choice) {
+                                          UB.Repository('hr_payOut')
+                                            .attrs('ID')
+                                            .where('organizationID', '=', organizationID)
+                                            .where('name', 'like', `${empPayroll['payOutID.name']}`)
+                                            .selectSingle().then(payOutID => {
+                                              payOutID ? me.attr.payOutID.setValue(payOutID.ID) : me.attr.payOutID.setValue(null)
+                                            })
+                                          me.attr.personalAccount.setValue(empPayroll.personalAccount)
+                                          me.attr.bankSubAccount.setValue(empPayroll.bankSubAccount)
+                                        }
+                                      })
+                                  } else {
+                                    AC.viewUtils.showToast(UB.i18n('Відсутній іншій особовий рахунок з заповненими банковськими атрибутами!'))
+                                  }
+                                }
+                              })
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      attributeName: 'payOutID',
+                      fieldList: ['ID', 'name', 'organizationID']
+                    },
+                    {
+                      attributeName: 'personalAccount'
+                    },
+                    {
+                      attributeName: 'bankSubAccount'
+                    }
+                  ]
+                },
+                AC.gridUtils.getDefaultGridConfig({
+                  title: UB.i18n('Інші способи виплати зарплати'),
+                  region: 'center',
+                  flex: 1,
+                  entityName: 'hr_employeePayOut',
+                  fieldList: [
+                    { name: 'dateFromEmpty', description: UB.i18n('Початок') },
+                    { name: 'dateToEmpty', description: UB.i18n('Кінець') },
+                    { name: 'paymentMethod' },
+                    { name: 'bankAccount', description: UB.i18n('Номер р/р') },
+                    { name: 'personalAccount', description: UB.i18n('Номер о/р') },
+                    { name: 'personalSubAccount', description: UB.i18n('Номер c/р') },
+                    { name: 'bankID.name', description: UB.i18n('Банк') },
+                    { name: 'employeeNumberID', visibility: false },
+                    { name: 'isDefault', visibility: false }
+                  ],
+                  masterEntityName: 'hr_employeeNumber',
+                  masterFields: ['ID'],
+                  detailFields: ['employeeNumberID'],
+                  cmpInitConfig: {
+                    getRowClass: function (record) {
+                      return record.get('isDefault') ? 'grd-color-green' : ''
+                    }
+                  }
+                })
+              ]
+            },
+            {
+              title: UB.i18n('Державна служба'),
+              nodeId: 'hr_employeeNumberServ',
+              hidden: true,
+              autoScroll: true,
+              flex: 1,
+              layout: 'border',
+              items: [
+                {
+                  region: 'north',
+                  layout: { type: 'vbox', align: 'stretch' },
+                  defaults: { labelWidth: 260 },
+                  items: [
+                    {
+                      xtype: 'ubdatefield',
+                      name: 'oathDate',
+                      recordValue: 'employeeID.oathDate',
+                      formParams: true,
+                      fieldLabel: UB.i18n('Дата присяги держслужбовця')
+                    },
+                    {
+                      xtype: 'checkboxfield',
+                      name: 'isCitizen',
+                      recordValue: 'employeeID.isCitizen',
+                      formParams: true,
+                      fieldLabel: UB.i18n('Не є громадянином іншої держави')
+                    },
+                    {
+                      xtype: 'ubtextfield',
+                      name: 'deputy',
+                      recordValue: 'employeeID.deputy',
+                      formParams: true,
+                      fieldLabel: UB.i18n('Депутат ради')
+                    },
+                    {
+                      xtype: 'ubtextarea',
+                      name: 'scientificWorks',
+                      recordValue: 'employeeID.scientificWorks',
+                      formParams: true,
+                      fieldLabel: UB.i18n('Наукові праці та винаходи')
+                    },
+                    {
+                      xtype: 'ubtextarea',
+                      name: 'civilOther',
+                      recordValue: 'employeeID.civilOther',
+                      formParams: true,
+                      fieldLabel: UB.i18n('Інші відомості')
+                    },
+                    {
+                      xtype: 'checkboxfield',
+                      name: 'isInitiated',
+                      recordValue: 'employeeID.isInitiated',
+                      formParams: true,
+                      fieldLabel: UB.i18n('З вимогами і обмеженнями проходження держслужби ознайомлений')
+                    }
+                  ]
+                },
+                AC.gridUtils.getDefaultGridConfig({
+                  title: UB.i18n('Ранг держслужбовця'),
+                  region: 'center',
+                  flex: 1,
+                  entityName: 'hr_publServRang',
+                  fieldList: [
+                    { name: 'dictRankID' },
+                    { name: 'dateFrom' },
+                    { name: 'dateNext' },
+                    { name: 'orderNumber' },
+                    { name: 'orderDate' }
+                  ],
+                  masterEntityName: 'hr_employeeNumber',
+                  masterFields: ['employeeID'],
+                  detailFields: ['employeeID'],
+                  cmpInitConfig: {
+                    onDeterminateForm: function (grid) {
+                      const me = grid.up('form')
+                      return {
+                        entityName: 'hr_publServRang',
+                        formCode: 'hr_publServRang',
+                        cmpInitConfig: {
+                          defaultValues: { employeeID: me.record.get('employeeID') }
+                        }
+                      }
+                    }
+                  }
+                })
+              ]
+            },
+            {
+              title: UB.i18n('Дипломатична служба'),
+              nodeId: 'hr_employeeNumberDipl',
+              hidden: true,
+              autoScroll: true,
+              flex: 1,
+              layout: 'border',
+              items: []
+            },
+            {
+              title: UB.i18n('Додаткові відомості'),
+              nodeId: 'hr_employeeExtra',
+              hidden: true,
+              flex: 1,
+              autoScroll: true,
+              items: [
+                {
+                  layout: { type: 'vbox' },
+                  defaults: {
+                    labelWidth: 155,
+                    width: 370
+                  },
+                  flex: 1,
+                  items: [
+                    {
+                      xtype: 'ubcombobox',
+                      name: 'sexType',
+                      fieldLabel: UB.i18n('Стать'),
+                      recordValue: 'employeeID.sexType',
+                      formParams: true,
+                      hideEntityItemInContext: true,
+                      enumGroupFilter: 'HR_SEX_TYPE',
+                      valueField: 'code',
+                      displayField: 'name',
+                      ubRequest: {
+                        entity: 'ubm_enum',
+                        method: UB.core.UBCommand.methodName.SELECT,
+                        fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                        whereList: {
+                          eGroup: {
+                            expression: '[eGroup]',
+                            condition: 'equal',
+                            values: { 'eGroup': 'HR_SEX_TYPE' }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      xtype: 'ubdatefield',
+                      name: 'birthDate',
+                      recordValue: 'employeeID.birthDate',
+                      formParams: true,
+                      fieldLabel: UB.i18n('Дата народження')
+                    },
+                    {
+                      xtype: 'numberfield',
+                      name: 'employeeAge',
+                      readOnly: true,
+                      fieldLabel: UB.i18n('Вік'),
+                      width: 215
+                    },
+                    {
+                      xtype: 'ubcombobox',
+                      name: 'citizenshipID',
+                      recordValue: 'employeeID.citizenshipID',
+                      formParams: true,
+                      fieldLabel: UB.i18n('Громадянство'),
+                      valueField: 'ID',
+                      displayField: 'name',
+                      ubRequest: {
+                        entity: 'cdn_country',
+                        method: UB.core.UBCommand.methodName.SELECT,
+                        fieldList: ['ID', 'name']
+                      },
+                      allowBlank: true
+                    },
+                    {
+                      xtype: 'empNumComboBox',
+                      entityName: 'hr_employeeNumberSR',
+                      attributeName: 'mainEmpNumberID',
+                      fieldList: ['ID', 'description', 'employeeID', 'dateTo', 'orgID', 'orgName'],
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                      gridFieldList: ['description', 'posName'],
+                      width: '100%',
+                      addDateTo: true,
+                      addOrgName: true
+                    },
+                    {
+                      xtype: 'empNumComboBox',
+                      entityName: 'hr_employeeNumberSR',
+                      attributeName: 'parentEmpNumberID',
+                      fieldList: ['ID', 'description', 'employeeID', 'dateTo', 'orgID', 'orgName'],
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                      gridFieldList: ['description', 'posName'],
+                      width: '100%',
+                      addDateTo: true,
+                      addOrgName: true
+                    },
+                    {
+                      xtype: 'textfield',
+                      name: 'employeePrevOrg',
+                      readOnly: true,
+                      fieldLabel: UB.i18n('Попередня організація'),
+                      width: '100%'
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

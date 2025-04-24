@@ -1,0 +1,109 @@
+/* global _ UB, HR  $App appAC */
+
+exports.formDef = {
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'fieldset',
+      layout: {
+        type: 'vbox',
+        align: 'stretch',
+        region: 'center'
+      },
+      items: [
+        { attributeName: 'code' },
+        { attributeName: 'name' },
+        { attributeName: 'type', disableContextMenu: false, hideEntityItemInContext: true },
+        { attributeName: 'sort' },
+        { attributeName: 'composition', disableContextMenu: false, hideEntityItemInContext: true },
+        { attributeName: 'dictMilitaryRanksCategoryID' },
+        { attributeName: 'dictMilitaryRanksAdditionID' },
+        { attributeName: 'nextMilitaryRanksID' },
+        { attributeName: 'isMilitaryRank' },
+        { attributeName: 'basicService' },
+        { attributeName: 'ageLimit' }
+      ]
+    },
+    AC.viewUtils.getCollapsiblePanel(
+      (() => {
+        /**
+         * Generates function which will take the content string as a param
+         *
+         * @param {string} tagName Tag name
+         * @param {array<string>} styles Array of styles without semicolon
+         * @return {function(string): string}
+         */
+        const createHtmlEl = (tagName, styles) => {
+          return (content) => `
+                        <${tagName}
+                          style="${styles.join('; ')}"
+                        >
+                          ${content}
+                        </${tagName}>
+                      `
+        }
+        /**
+         * Generates html condition by field name
+         *
+         * @param {string} field Field name
+         * @return {string}
+         */
+        const buildCondition = (field) => 'get("' + field + '") === ""'
+        const fields = ['genName', 'datName', 'accName', 'insName']
+        const container = createHtmlEl('div', ['white-space: normal', 'color: #818181'])
+        const isEmpty = fields.map(buildCondition).join(' && ')
+        const emptyText = '<div style="${' + isEmpty + ' ? "" : "display: none"}">${UB.i18n("Відмінки")}</div>'
+        const rows = fields.map((field) => {
+          const row = createHtmlEl('div', ['${' + buildCondition(field) + ' ? "display: none;" : ""}'])
+          const labelContent = '${UB.i18n("hr_dictMilitaryRank.' + field + '")}'
+          const label = createHtmlEl('span', ['color: rgba(33, 150, 243, 0.8)', ' padding-left: 15px'])(labelContent)
+          const value = '${' + field + '}'
+
+          return row(label + value)
+        }).join('')
+        return container(rows + emptyText)
+      })(),
+      {
+        expandTitle: UB.i18n('Відмінки'),
+        margin: '5 15 5 15',
+        layout: {
+          type: 'hbox'
+        },
+        items: [
+          {
+            flex: 1,
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            items: [
+              {
+                attributeName: 'genName',
+                xtype: 'textfield'
+              },
+              {
+                attributeName: 'datName',
+                xtype: 'textfield'
+              },
+              {
+                attributeName: 'accName',
+                xtype: 'textfield'
+              },
+              {
+                attributeName: 'insName',
+                xtype: 'textfield'
+              }
+            ]
+          }
+        ]
+      }
+    )
+  ]
+}

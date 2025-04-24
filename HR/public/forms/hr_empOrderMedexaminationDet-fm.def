@@ -1,0 +1,201 @@
+/* global AC HR UB */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'empOrderType', 'organizationID', 'isGroup'],
+  parentConfig: {
+    layout: { type: 'border' }
+  },
+  size: {
+    width: 1100,
+    height: 700
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          ubID: 'tabMain',
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 150 },
+          items: [
+            {
+              attributeName: 'dictTimeCostID',
+              labelWidth: 150
+            },
+            {
+              attributeName: 'payElID',
+              fieldList: ['ID', 'name', 'description', 'dictFundSourceID'],
+              labelWidth: 150
+            },
+            {
+              attributeName: 'dictVacationKindID',
+              fieldLabel: UB.i18n('Вид відпустки (компенсація)'),
+              labelWidth: 150
+            },
+            {
+              attributeName: 'empMedExText',
+              labelWidth: 150
+            },
+            {
+              attributeName: 'dictCheckMedicalID',
+              fieldList: ['ID', 'name', 'periodicityYears'],
+              labelWidth: 150
+            },
+            {
+              xtype: 'tabpanel',
+              region: 'center',
+              layout: 'fit',
+              flex: 1,
+              items: [
+                {
+                  title: UB.i18n('Дні проходження медогляду'),
+                  name: 'empOrderMedexaminationListDet',
+                  xtype: 'ubdetailgrid',
+                  paraGrid: true,
+                  autoScroll: true,
+                  rowEditing: true,
+                  notWriteChanges: true,
+                  sortableColumns: false,
+                  disableSearchBar: false,
+                  hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit',
+                    'history', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_empOrderMedexaminationListDet',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'employeePositionID.description',
+                        description: UB.i18n('Працівник'),
+                        config: { width: 400 },
+                        editor: {
+                          fieldList: ['ID', 'description', 'employeeID'],
+                          gridFieldList: ['description'],
+                          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion']
+                        }
+                      },
+                      {
+                        name: 'dateFrom',
+                        xtype: 'ubdatefield',
+                        config: { width: 150 },
+                        description: UB.i18n('Дата початку')
+                      },
+                      {
+                        name: 'dateTo',
+                        format: 'd.m.Y',
+                        config: { width: 150 },
+                        description: UB.i18n('Дата закінчення')
+                      },
+                      {
+                        name: 'employeeDocID.description',
+                        description: UB.i18n('Документ'),
+                        config: { width: 400 },
+                        editor: {
+                          fieldList: ['ID', 'description', 'employeeID'],
+                          gridFieldList: ['description'],
+                          hideActions: ['addNewByCurrent', 'edit', 'newVersion']
+                        }
+                      },
+                      {
+                        name: 'dateNextMedEx',
+                        format: 'd.m.Y',
+                        config: { width: 150 },
+                        description: UB.i18n('Дата наступного медогляду')
+                      },
+                      { name: 'employeeDocID.employeeID', visibility: false },
+                      { name: 'employeePositionID', visibility: false },
+                      { name: 'itemIdx', visibility: false },
+                      { name: 'empOrderType', visibility: false },
+                      { name: 'organizationID', visibility: false },
+                      { name: 'orderID', visibility: false },
+                      { name: 'paraID', visibility: false },
+                      { name: 'posName', visibility: false },
+                      { name: 'depName', visibility: false },
+                      { name: 'employeePositionID.positionID', visibility: false }
+                    ]
+                  },
+                  masterFields: ['ID', 'orderID'],
+                  detailFields: ['paraID', 'orderID'],
+                  onBeforeEdit: function (rowEditor, context) {
+                    const editor = rowEditor.editor
+                    const me = editor.up('form')
+                    const reco = context.record
+                    const empOrderType = me.customParams.empOrderType
+                    const employeePositionCtrl = editor.query(`[name=employeePositionID.description]`)[0]
+                    let toSetDefaultValues = !!context.record.phantom
+                    let docDescription = editor.query(`[name=employeeDocID.description]`)[0]
+
+                    if (toSetDefaultValues) {
+                      reco.set('itemIdx', context.grid.getStore().getCount())
+                      reco.set('empOrderType', empOrderType)
+                      reco.set('organizationID', me.record.get('organizationID'))
+                      reco.set('orderID', me.record.get('orderID'))
+                      reco.set('paraID', me.instanceID)
+                      AC.viewUtils.setWhereListProperty(docDescription, [['employeeID', '=', -1]])
+                    }
+
+                    me.filterEmployeePosition(employeePositionCtrl)
+                    employeePositionCtrl.on('change', (ctrl) => {
+                      const docEmpID = reco.get('employeeDocID.employeeID')
+                      if (docEmpID !== ctrl.getFieldValue('employeeID')) {
+                        docDescription.setValue(null)
+                      }
+                      AC.viewUtils.setWhereListProperty(docDescription, [['employeeID', '=', ctrl.getFieldValue('employeeID') || -1]])
+                      reco.set('employeeDocID.employeeID', ctrl.getFieldValue('employeeID'))
+
+                      UB.Repository('hr_employeePositionS')
+                        .attrs('posName', 'depName', 'workPlace')
+                        .selectById(ctrl.getFieldValue('ID'))
+                        .then(data => {
+                          if (editor.form.getRecord().data) {
+                            editor.form.getRecord().data.posName = data.posName
+                            editor.form.getRecord().data.depName = data.depName
+                          }
+                        })
+                    })
+                    editor.query('[name=dateFrom]')[0].on('change', ctrl => {
+                      const ctrlDateTo = editor.query('[name=dateTo]')[0]
+                      const ctrldateNextMedEx = editor.query('[name=dateNextMedEx]')[0]
+                      const ctrldateFrom = editor.query('[name=dateFrom]')[0]
+                      const { dictCheckMedicalID } = me.attr
+                      if (dictCheckMedicalID.getValue()) {
+                        if (dictCheckMedicalID.valueModels[0].data.periodicityYears) {
+                          ctrldateNextMedEx.setValue(new Date(ctrldateFrom.getValue().setFullYear(ctrldateFrom.getValue().getFullYear() + dictCheckMedicalID.valueModels[0].data.periodicityYears)))
+                        } else {
+                          ctrldateNextMedEx.setValue(new Date(ctrldateFrom.getValue().setFullYear(ctrldateFrom.getValue().getFullYear() + 3)))
+                        }
+                      }
+
+                      if (!ctrlDateTo.getValue() && ctrl.getValue()) {
+                        ctrlDateTo.setValue(ctrl.getValue())
+                      }
+                    })
+                  },
+                  optimizeColumnWidth: function () {
+                    /* do nothing for manual column width tunning */
+                  },
+                  customActions: [
+                  ],
+                  cmpInitConfig: {
+                    customInit: function () {
+                      const grid = this
+                      HR.controlService.setValidateEditPromise(grid, (rowEditor, context) => {
+                        const form = context.grid.up('form')
+                        return Promise.resolve(form.validateEmployeeInput(rowEditor.editor, context))
+                      })
+                      grid.on('changeData', (grd, event) => {
+                        const me = grd.up('form')
+                        HR.orderManager.setIsDirty(me, true)
+                      })
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

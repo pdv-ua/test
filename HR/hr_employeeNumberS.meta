@@ -1,0 +1,1038 @@
+{
+  "caption": "Працівники",
+  "description": "Працівники",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "allowNull": false
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "documentation": "Організаційна одиниця",
+      "allowNull": false
+    },
+    {
+      "name": "tabNum",
+      "dataType": "String",
+      "size": 15,
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "allowNull": false
+    },
+    {
+      "name": "tabNumSort",
+      "dataType": "Float",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер"
+    },
+    {
+      "name": "tabNumMain",
+      "dataType": "BigInt",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер"
+    },
+    {
+      "name": "tabNumIndex",
+      "dataType": "BigInt",
+      "caption": "Табельний номер (індекс)",
+      "description": "Табельний номер (індекс)",
+      "documentation": "Табельний номер (індекс)"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата прийому на роботу",
+      "description": "Дата прийому на роботу",
+      "documentation": "Дата прийому на роботу",
+      "allowNull": false
+    },
+    {
+      "name": "testDateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення випробувального строку",
+      "description": "Дата закінчення випробувального строку",
+      "documentation": "Дата закінчення випробувального строку"
+    },
+    {
+      "name": "planDateTo",
+      "dataType": "Date",
+      "caption": "Планова дата звільнення",
+      "description": "Планова дата звільнення",
+      "documentation": "Планова дата звільнення"
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата звільнення",
+      "description": "Дата звільнення",
+      "documentation": "Дата звільнення"
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата звільнення",
+      "description": "Дата звільнення",
+      "documentation": "Дата звільнення",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "appointmentDate",
+      "dataType": "Date",
+      "caption": "Дата призначення на поточну посаду",
+      "description": "Дата призначення на поточну посаду",
+      "documentation": "Дата призначення на поточну посаду"
+    },
+    {
+      "name": "appointmentOrderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу призначення на поточну посаду",
+      "description": "Дата наказу  призначення на поточну посаду",
+      "documentation": "Дата наказу  призначення на поточну посаду"
+    },
+    {
+      "name": "appointmentOrderNumber",
+      "dataType": "String",
+      "size": 100,
+      "caption": "№ наказу призначення на поточну посаду",
+      "description": "№ наказу призначення на поточну посаду",
+      "documentation": "№ наказу призначення на поточну посаду"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "payOutID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payOut",
+      "caption": "Шаблон виплати",
+      "description": "Шаблон виплати",
+      "documentation": "Шаблон виплати"
+    },
+    {
+      "name": "personalAccount",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер особового рахунку",
+      "description": "Номер особового рахунку",
+      "documentation": "Номер особового рахунку"
+    },
+    {
+      "name": "parentEmpNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Попередній особовий рахунок",
+      "description": "Попередній особовий рахунок"
+    },
+    {
+      "name": "mainEmpNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberSR",
+      "caption": "Основний особовий рахунок",
+      "description": "Основний особовий рахунок"
+    },
+    {
+      "name": "childEmpNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Наступний особовий рахунок",
+      "description": "Наступний особовий рахунок",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 n.ID from hr_employeeNumber n where n.parentEmpNumberID = {self}.ID AND n.mi_deleteDate >= '9999-12-31' order by n.dateFrom)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select n.ID from hr_employeeNumber n where n.parentEmpNumberID = {self}.ID AND n.mi_deleteDate >= '9999-12-31' order by n.dateFrom LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "bankSubAccount",
+      "dataType": "String",
+      "size": 256,
+      "caption": "Номер субрахунку",
+      "description": "Номер субрахунку",
+      "documentation": "Номер субрахунку"
+    },
+    {
+      "name": "posName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Посада",
+      "description": "Посада",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 (case when pos.name IS NOT NULL then pos.name else dp.name end) from hr_employeePosition ep left join hr_position pos on pos.mi_data_id = ep.positionID and pos.orgID = ep.organizationID and pos.state = 'ACTIVE' and pos.mi_dateFrom <= ep.dateTo and pos.mi_deleteDate >= '9999-12-31' left join hr_dictPosition dp ON dp.ID = ep.dictPositionID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, pos.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select (case when pos.name IS NOT NULL then pos.name else dp.name end) from hr_employeePosition ep left join hr_position pos on pos.mi_data_id = ep.positionID and pos.orgID = ep.organizationID and pos.state = 'ACTIVE' and pos.mi_dateFrom <= ep.dateTo and pos.mi_deleteDate >= '9999-12-31' left join hr_dictPosition dp ON dp.ID = ep.dictPositionID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, pos.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "positionName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Штатна посада",
+      "description": "Штатна посада",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pos.name from hr_employeePosition ep left join hr_position pos on pos.mi_data_id = ep.positionID and pos.orgID = ep.organizationID and pos.state = 'ACTIVE' and pos.mi_dateFrom <= ep.dateTo and pos.mi_deleteDate >= '9999-12-31' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, pos.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pos.name from hr_employeePosition ep left join hr_position pos on pos.mi_data_id = ep.positionID and pos.orgID = ep.organizationID and pos.state = 'ACTIVE' and pos.mi_dateFrom <= ep.dateTo and pos.mi_deleteDate >= '9999-12-31' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, pos.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "dictPositionName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Посада з довідника посад",
+      "description": "Посада з довідника посад",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 dp.name from hr_employeePosition ep left join hr_dictPosition dp ON dp.ID = ep.dictPositionID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dp.name from hr_employeePosition ep left join hr_dictPosition dp ON dp.ID = ep.dictPositionID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "descriptionExt",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Опис",
+      "description": "Опис",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "({self}.description + ' ' + coalesce((select top 1 (case when pos.ID IS NOT NULL then pos.caption else dp.caption end) from hr_employeePosition ep left join hr_position pos on pos.mi_data_id = ep.positionID and pos.orgID = ep.organizationID and pos.state = 'ACTIVE' and pos.mi_dateFrom <= ep.dateTo and pos.mi_deleteDate >= '9999-12-31' left join hr_dictPosition dp ON dp.ID = ep.dictPositionID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, pos.mi_dateTo desc), ''))"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CONCAT({self}.description, ' ', coalesce((select (case when pos.ID IS NOT NULL then pos.caption else dp.caption end) from hr_employeePosition ep left join hr_position pos on pos.mi_data_id = ep.positionID and pos.orgID = ep.organizationID and pos.state = 'ACTIVE' and pos.mi_dateFrom <= ep.dateTo and pos.mi_deleteDate >= '9999-12-31' left join hr_dictPosition dp ON dp.ID = ep.dictPositionID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, pos.mi_dateTo desc LIMIT 1), '')))"
+        }
+      ]
+    },
+    {
+      "name": "posCaption",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Посада",
+      "description": "Посада",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 (case when pos.ID IS NOT NULL then pos.caption else dp.caption end) from hr_employeePosition ep left join hr_position pos on pos.mi_data_id = ep.positionID and pos.orgID = ep.organizationID and pos.state = 'ACTIVE' and pos.mi_dateFrom <= ep.dateTo and pos.mi_deleteDate >= '9999-12-31' left join hr_dictPosition dp ON dp.ID = ep.dictPositionID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, pos.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select (case when pos.ID IS NOT NULL then pos.caption else dp.caption end) from hr_employeePosition ep left join hr_position pos on pos.mi_data_id = ep.positionID and pos.orgID = ep.organizationID and pos.state = 'ACTIVE' and pos.mi_dateFrom <= ep.dateTo and pos.mi_deleteDate >= '9999-12-31' left join hr_dictPosition dp ON dp.ID = ep.dictPositionID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, pos.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "posCategoryName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Категорія посади",
+      "description": "Категорія посади",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 (case when pos.positionCategory IS NOT NULL OR pos.psCategory IS NOT NULL  then COALESCE(pos.positionCategory, pos.psCategory) else COALESCE(dp.positionCategory, pos.psCategory) end) from hr_employeePosition ep left join hr_position pos on pos.mi_data_id = ep.positionID and pos.orgID = ep.organizationID and pos.state = 'ACTIVE' and pos.mi_dateFrom <= ep.dateTo and pos.mi_deleteDate >= '9999-12-31' left join hr_dictPosition dp ON dp.ID = ep.dictPositionID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, pos.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select (case when pos.positionCategory IS NOT NULL OR pos.psCategory IS NOT NULL  then COALESCE(pos.positionCategory, pos.psCategory) else COALESCE(dp.positionCategory, pos.psCategory) end) from hr_employeePosition ep left join hr_position pos on pos.mi_data_id = ep.positionID and pos.orgID = ep.organizationID and pos.state = 'ACTIVE' and pos.mi_dateFrom <= ep.dateTo and pos.mi_deleteDate >= '9999-12-31' left join hr_dictPosition dp ON dp.ID = ep.dictPositionID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, pos.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "posOrderID",
+      "dataType": "BigInt",
+      "caption": "Наказ про призначення чи переміщення на посаду",
+      "description": "Останній наказ про призначення чи переміщення на посаду",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 ep.orderID from hr_employeePosition ep left join hr_empOrder eo on eo.ID = ep.orderID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select ep.orderID from hr_employeePosition ep left join hr_empOrder eo on eo.ID = ep.orderID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "appointOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ про призначення на посаду",
+      "description": "Останній наказ про призначення на посаду",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 ep.orderID from hr_employeePosition ep left join hr_empOrder eo on eo.ID = ep.orderID and eo.empOrderType = 'APPOINT' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select ep.orderID from hr_employeePosition ep left join hr_empOrder eo on eo.ID = ep.orderID and eo.empOrderType = 'APPOINT' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "appointOrderDetID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Пункт наказу про призначення на посаду",
+      "description": "Останній пункт наказу про призначення на посаду",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 od.ID from hr_employeePosition ep left join hr_empOrder eo on eo.ID = ep.orderID and eo.empOrderType = 'APPOINT' join hr_empOrderDet od on od.orderID = eo.ID and od.mi_deleteDate >= '9999-12-31' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' and od.employeeNumberID = {self}.ID order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select od.ID from hr_employeePosition ep left join hr_empOrder eo on eo.ID = ep.orderID and eo.empOrderType = 'APPOINT' join hr_empOrderDet od on od.orderID = eo.ID and od.mi_deleteDate >= '9999-12-31' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' and od.employeeNumberID = {self}.ID order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "depName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 dep.name from hr_employeePosition ep left join hr_department dep on dep.mi_data_id = ep.departmentID and dep.orgID = ep.organizationID and dep.state = 'ACTIVE' and dep.mi_dateFrom <= ep.dateTo and dep.mi_deleteDate >= '9999-12-31' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, dep.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dep.name from hr_employeePosition ep left join hr_department dep on dep.mi_data_id = ep.departmentID and dep.orgID = ep.organizationID and dep.state = 'ACTIVE' and dep.mi_dateFrom <= ep.dateTo and dep.mi_deleteDate >= '9999-12-31' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, dep.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "depCaption",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 dep.caption from hr_employeePosition ep left join hr_department dep on dep.mi_data_id = ep.departmentID and dep.orgID = ep.organizationID and dep.state = 'ACTIVE' and dep.mi_dateFrom <= ep.dateTo and dep.mi_deleteDate >= '9999-12-31' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, dep.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dep.caption from hr_employeePosition ep left join hr_department dep on dep.mi_data_id = ep.departmentID and dep.orgID = ep.organizationID and dep.state = 'ACTIVE' and dep.mi_dateFrom <= ep.dateTo and dep.mi_deleteDate >= '9999-12-31' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, dep.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "depID",
+      "dataType": "BigInt",
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 dep.mi_data_id from hr_employeePosition ep left join hr_department dep on dep.mi_data_id = ep.departmentID and dep.orgID = ep.organizationID and dep.state = 'ACTIVE' and dep.mi_dateFrom <= ep.dateTo and dep.mi_deleteDate >= '9999-12-31' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, dep.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dep.mi_data_id from hr_employeePosition ep left join hr_department dep on dep.mi_data_id = ep.departmentID and dep.orgID = ep.organizationID and  dep.state = 'ACTIVE' and dep.mi_dateFrom <= ep.dateTo and dep.mi_deleteDate >= '9999-12-31' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by  ep.dateTo desc, dep.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "parentUnitDepName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Підпорядкування підрозділу",
+      "description": "Підпорядкування підрозділу",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select TOP 1 dep2.name from hr_department dep2 where dep2.mi_data_id = (SELECT TOP 1 dep.parentUnitID FROM hr_employeePosition ep LEFT JOIN hr_department dep ON dep.mi_data_id = ep.departmentID AND dep.orgID = ep.organizationID AND dep.state = 'ACTIVE' AND dep.mi_dateFrom <= ep.dateTo AND dep.mi_deleteDate >= '9999-12-31' WHERE ep.employeeNumberID = {self}.ID AND ep.isActive = 1 AND ep.mi_deleteDate >= '9999-12-31' ORDER BY ep.dateTo DESC, dep.mi_dateTo DESC) and dep2.state = 'ACTIVE' ORDER BY dep2.mi_dateTo DESC)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dep2.name from hr_department dep2 where dep2.mi_data_id = (SELECT dep.parentUnitID FROM hr_employeePosition ep LEFT JOIN hr_department dep ON dep.mi_data_id = ep.departmentID AND dep.orgID = ep.organizationID AND dep.state = 'ACTIVE' AND dep.mi_dateFrom <= ep.dateTo AND dep.mi_deleteDate >= '9999-12-31' WHERE ep.employeeNumberID = {self}.ID AND ep.isActive = 1 AND ep.mi_deleteDate >= '9999-12-31' ORDER BY ep.dateTo DESC, dep.mi_dateTo DESC LIMIT 1) and dep2.state = 'ACTIVE' ORDER BY dep2.mi_dateTo DESC LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "orgName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Організація",
+      "description": "Організація",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 org.name from hr_organization org where org.mi_data_id = {self}.orgID and org.state = 'ACTIVE' and org.mi_deleteDate >= '9999-12-31' order by org.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select org.name from hr_organization org where org.mi_data_id = {self}.orgID and org.state = 'ACTIVE' and org.mi_deleteDate >= '9999-12-31' order by org.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "mtCount",
+      "dataType": "Float",
+      "caption": "Кількість ставок",
+      "description": "Кількість ставок",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 ep.mtCount from hr_employeePosition ep where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select ep.mtCount from hr_employeePosition ep where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "workerType",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Форма зайнятості",
+      "description": "Форма зайнятості",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 en.name from hr_employeePosition ep left join ubm_enum en on en.code = ep.workerType and en.eGroup = 'HR_WORKER_TYPE' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select en.name from hr_employeePosition ep left join ubm_enum en on en.code = ep.workerType and en.eGroup = 'HR_WORKER_TYPE' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "workPlace",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Місце роботи",
+      "description": "Місце роботи",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 en.name from hr_employeePosition ep left join ubm_enum en on en.code = ep.workPlace and en.eGroup = 'HR_WORKER_PLACE' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select en.name from hr_employeePosition ep left join ubm_enum en on en.code = ep.workPlace and en.eGroup = 'HR_WORKER_PLACE' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "workPlaceCode",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Місце роботи. Код",
+      "description": "Місце роботи. Код",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 en.code from hr_employeePosition ep left join ubm_enum en on en.code = ep.workPlace and en.eGroup = 'HR_WORKER_PLACE' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select en.code from hr_employeePosition ep left join ubm_enum en on en.code = ep.workPlace and en.eGroup = 'HR_WORKER_PLACE' where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "workSchedule",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Графік роботи",
+      "description": "Графік роботи",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 ws.name from hr_employeePosition ep left join hr_workSchedule ws on ws.ID = ep.workScheduleID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select ws.name from hr_employeePosition ep left join hr_workSchedule ws on ws.ID = ep.workScheduleID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "accrualSum",
+      "dataType": "Currency",
+      "caption": "Оклад",
+      "description": "Оклад",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 ep.accrualSum from hr_employeePosition ep left join hr_payEl pe on pe.ID = ep.payElID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select ep.accrualSum from hr_employeePosition ep left join hr_payEl pe on pe.ID = ep.payElID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Призначення",
+      "description": "Призначення",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 ep.ID from hr_employeePosition ep where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select ep.ID from hr_employeePosition ep where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "factPosition",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Фактична посада",
+      "description": "Фактична посада",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 ep.factPosition from hr_employeePosition ep where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select ep.factPosition from hr_employeePosition ep where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "payElName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Система оплати",
+      "description": "Система оплати",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 el.name from hr_employeePosition ep left join hr_payEl el ON el.ID = ep.payElID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select el.name from hr_employeePosition ep left join hr_payEl el ON el.ID = ep.payElID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "workScheduleName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Графік роботи",
+      "description": "Графік роботи",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 wh.name from hr_employeePosition ep left join hr_workSchedule wh ON wh.ID = ep.payElID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select wh.name from hr_employeePosition ep left join hr_workSchedule wh ON wh.ID = ep.payElID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "dictCategoryECBID",
+      "dataType": "BigInt",
+      "caption": "Категорія застрахованої особи",
+      "description": "Категорія застрахованої особи",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 ep.dictCategoryECBID from hr_employeePosition ep where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select ep.dictCategoryECBID from hr_employeePosition ep where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "dictCategoryECBName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Категорія застрахованої особи",
+      "description": "Категорія застрахованої особи",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pe.name from hr_employeePosition ep left join hr_dictCategoryECB pe on pe.ID = ep.dictCategoryECBID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pe.name from hr_employeePosition ep left join hr_dictCategoryECB pe on pe.ID = ep.dictCategoryECBID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "dictEmpCategoryName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Кваліфікаційна категорія",
+      "description": "Кваліфікаційна категорія",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pe.name from hr_employeePosition ep left join hr_dictEmpCategory pe on pe.ID = ep.dictEmpCategoryID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pe.name from hr_employeePosition ep left join hr_dictEmpCategory pe on pe.ID = ep.dictEmpCategoryID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "dictStaffCatID",
+      "dataType": "BigInt",
+      "caption": "Категорія персоналу",
+      "description": "Категорія персоналу",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 ep.dictStaffCatID from hr_employeePosition ep where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select ep.dictStaffCatID from hr_employeePosition ep where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "dictStaffCatName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Категорія персоналу",
+      "description": "Категорія персоналу",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pe.name from hr_employeePosition ep left join hr_dictStaffCat pe on pe.ID = ep.dictStaffCatID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pe.name from hr_employeePosition ep left join hr_dictStaffCat pe on pe.ID = ep.dictStaffCatID where ep.employeeNumberID = {self}.ID and ep.isActive = 1  and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pe.name from hr_employeePosition ep left join ac_fundSource pe on pe.ID = ep.dictFundSourceID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and  ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pe.name from hr_employeePosition ep left join ac_fundSource pe on pe.ID = ep.dictFundSourceID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and  ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "accountID",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Рахунок витрат",
+      "description": "Рахунок витрат",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pe.name from hr_employeePosition ep left join gl_account pe on pe.ID = ep.accountID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pe.name from hr_employeePosition ep left join gl_account pe on pe.ID = ep.accountID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "raiseSalary",
+      "dataType": "Date",
+      "size": 4000,
+      "caption": "Місяць підвищення доходу для індексації",
+      "description": "Місяць підвищення доходу для індексації",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 ep.raiseSalary from hr_employeePosition ep left join hr_payEl pe on pe.ID = ep.payElID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and  ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select ep.raiseSalary from hr_employeePosition ep left join hr_payEl pe on pe.ID = ep.payElID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and  ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "appointDateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку призначення",
+      "description": "Дата початку призначення",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 ep.dateFrom from hr_employeePosition ep left join hr_order o on o.ID = ep.orderID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' and o.empOrderType in ('APPOINT', 'APPOINT_MOVE', 'APPOINT_LIQ', 'MOVE', 'PLURALIST', 'CANCELDISM') order by ep.dateFrom desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select ep.dateFrom from hr_employeePosition ep left join hr_order o on o.ID = ep.orderID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' and o.empOrderType in ('APPOINT', 'APPOINT_MOVE', 'APPOINT_LIQ', 'MOVE', 'PLURALIST', 'CANCELDISM') order by ep.dateFrom desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "appointDateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 case year(ep.dateTo) when 9999 then null else ep.dateTo end from hr_employeePosition ep where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select (case Extract(YEAR from ep.dateTo) when 9999 then null else ep.dateTo end) from hr_employeePosition ep where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "dictTarifCoeffName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Розряд",
+      "description": "Розряд",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 tc.name from hr_employeePosition ep left join hr_dictTarifCoeff tc ON tc.ID = ep.dictTarifCoeffID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select tc.name from hr_employeePosition ep left join hr_dictTarifCoeff tc ON tc.ID = ep.dictTarifCoeffID where ep.employeeNumberID = {self}.ID and ep.isActive = 1 and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "orgEDRPOUCode",
+      "dataType": "String",
+      "size": 16,
+      "caption": "ЄДРПОУ Організації",
+      "description": "ЄДРПОУ Організації",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 org.EDRPOUCode from hr_organization org where org.mi_data_id = {self}.orgID and org.state = 'ACTIVE' and org.mi_deleteDate >= '9999-12-31' order by org.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select org.EDRPOUCode from hr_organization org where org.mi_data_id = {self}.orgID and org.state = 'ACTIVE' and org.mi_deleteDate >= '9999-12-31' order by org.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "isLock",
+      "dataType": "Int",
+      "caption": "Перегляд",
+      "description": "Перегляд",
+      "documentation": "Тільки перегляд картки",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "changeOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Змінено наказом",
+      "description": "Змінено наказом",
+      "documentation": "Змінено наказом"
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ"
+    },
+    {
+      "name": "paraID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Пункт наказу про призначення",
+      "description": "Пункт наказу про призначення",
+      "documentation": "Пункт наказу про призначення"
+    },
+    {
+      "name": "changeParaID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Пункт наказу про звільнення",
+      "description": "Пункт наказу про звільнення",
+      "documentation": "Пункт наказу про звільнення"
+    },
+    {
+      "name": "limitedAccess",
+      "dataType": "Boolean",
+      "caption": "Обмежений доступ",
+      "description": "Обмежений доступ",
+      "defaultValue": "0"
+    },
+    {
+      "name": "selfStructDepName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Самостійний структурний підрозділ",
+      "description": "Самостійний структурний підрозділ",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(SELECT top 1 d.name from hr_department d where d.orgID = {self}.orgID and d.parentUnitID = {self}.orgID and state = 'ACTIVE' and (select top 1 dep.mi_treePath from hr_employeePosition ep  left join hr_department dep on dep.mi_data_id = ep.departmentID  and dep.orgID = ep.organizationID and dep.state = 'ACTIVE'  and dep.mi_dateFrom <= ep.dateTo and dep.mi_deleteDate >= '9999-12-31'  where ep.employeeNumberID = {self}.ID and ep.isActive = 1   and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, dep.mi_dateTo desc) LIKE CONCAT('%',d.mi_treePath,'%') order by d.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT        d.name from hr_department d where d.orgID = {self}.orgID and d.parentUnitID = {self}.orgID and state = 'ACTIVE' and (select dep.mi_treePath from hr_employeePosition ep  left join hr_department dep on dep.mi_data_id = ep.departmentID  and dep.orgID = ep.organizationID and dep.state = 'ACTIVE'  and dep.mi_dateFrom <= ep.dateTo and dep.mi_deleteDate >= '9999-12-31'  where ep.employeeNumberID = {self}.ID and ep.isActive = 1   and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, dep.mi_dateTo desc LIMIT 1) LIKE CONCAT('%',d.mi_treePath,'%') order by d.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "selfStructDepID",
+      "dataType": "BigInt",
+      "caption": "Самостійний структурний підрозділ",
+      "description": "Самостійний структурний підрозділ",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(SELECT top 1 d.ID from hr_department d where d.orgID = {self}.orgID and d.parentUnitID = {self}.orgID and state = 'ACTIVE' and (select top 1 dep.mi_treePath from hr_employeePosition ep  left join hr_department dep on dep.mi_data_id = ep.departmentID  and dep.orgID = ep.organizationID and dep.state = 'ACTIVE'  and dep.mi_dateFrom <= ep.dateTo and dep.mi_deleteDate >= '9999-12-31'  where ep.employeeNumberID = {self}.ID and ep.isActive = 1   and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, dep.mi_dateTo desc) LIKE CONCAT('%',d.mi_treePath,'%') order by d.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT        d.ID from hr_department d where d.orgID = {self}.orgID and d.parentUnitID = {self}.orgID and state = 'ACTIVE' and (select dep.mi_treePath from hr_employeePosition ep  left join hr_department dep on dep.mi_data_id = ep.departmentID  and dep.orgID = ep.organizationID and dep.state = 'ACTIVE'  and dep.mi_dateFrom <= ep.dateTo and dep.mi_deleteDate >= '9999-12-31'  where ep.employeeNumberID = {self}.ID and ep.isActive = 1   and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo desc, dep.mi_dateTo desc LIMIT 1) LIKE CONCAT('%',d.mi_treePath,'%') order by d.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "addDescrPerson",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Додаткова інформація",
+      "description": "Додаткова інформація",
+      "documentation": "Додаткова інформація"
+    },
+    {
+      "name": "kind",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMP_KIND",
+      "caption": "Тип",
+      "description": "Тип",
+      "defaultValue": "WORK"
+    },
+    {
+      "name": "empWorkPlace",
+      "dataType": "Enum",
+      "enumGroup": "HR_WORKER_PLACE",
+      "caption": "Місце роботи",
+      "description": "Місце роботи"
+    },
+    {
+      "name": "empDictPositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPosition",
+      "caption": "Посада",
+      "description": "Посада"
+    }
+  ],
+  "mapping":[{
+    "name": "AnsiSQL",
+    "selectName": "hr_employeeNumber"
+  }],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

@@ -1,0 +1,104 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+/* global UB $App Ext appAC AC _ */
+
+exports.formDef = 'HR.addSalaryChangesFromStaffTariffing'
+
+Ext.define(exports.formDef, {
+  ident: 'addSalaryChangesFromStaffTable',
+  extend: 'Ext.form.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  isModal: true,
+  listeners: {
+    render: function () {
+      let me = this
+      let win = me.window
+      if (win) {
+        if (!win.height) {
+          win.height = 350
+        }
+        if (!win.width) {
+          win.width = 800
+        }
+        win.center()
+      }
+    }
+  },
+  bbar: {
+    layout: {
+      pack: 'end'
+    },
+    items: [
+      {
+        xtype: 'button',
+        text: UB.i18n('Відмінити'),
+        width: 100,
+        height: 30,
+        margin: '10 10 20 0',
+        handler: function (btn) {
+          btn.up('window').close()
+        }
+      },
+      {
+        xtype: 'button',
+        text: UB.i18n('Вибрати'),
+        width: 100,
+        height: 30,
+        margin: '10 10 20 0',
+        handler: function (btn) {
+          const me = this.up('[ident=addSalaryChangesFromStaffTable]')
+          if (me.onSelect) {
+            me.onSelect({
+              staffTariffingID: me.attr.staffTariffingID.getValue()
+            })
+          }
+          btn.up('window').close()
+        }
+      }
+    ]
+  },
+  items: [
+    {
+      xtype: 'ubcombobox',
+      name: 'staffTariffingID',
+      fieldLabel: UB.i18n('Тарифікаційний список'),
+      displayField: 'description',
+      fieldList: ['ID', 'description', 'entryDate'],
+      margin: '30 15 10 15',
+      labelWidth: 200,
+      ubRequest: {
+        entity: 'hr_staffTariffing',
+        method: UB.core.UBCommand.methodName.SELECT,
+        fieldList: ['ID', 'description', 'entryDate']
+      }
+    }
+  ],
+  initComponent: function () {
+    let me = this
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        staffTariffingID: me.down('[name=staffTariffingID]')
+      }
+      const store = me.attr.staffTariffingID.getStore()
+      store.ubRequest.whereList = {
+        orderState: {
+          expression: '[orderState]',
+          condition: '=',
+          value: 'POSTED'
+        },
+        orgID: {
+          expression: '[orgID]',
+          condition: '=',
+          value: me.organizationID || appAC.globalOrganization()
+        }
+      }
+      me.attr.staffTariffingID.setValueById(me.staffTariffingID)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

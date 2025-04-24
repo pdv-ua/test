@@ -1,0 +1,112 @@
+{
+  "caption": "Умови використання стажу",
+  "description": "Умови використання стажу",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "dictExperienceID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictExperience",
+      "caption": "Вид стажу",
+      "description": "Вид стажу",
+      "documentation": "Вид стажу",
+      "allowNull": false
+    },
+    {
+      "name": "conditionType",
+      "dataType": "Enum",
+      "enumGroup": "HR_CONDITION_TYPE",
+      "caption": "Умова застосування",
+      "description": "Умова застосування",
+      "documentation": "Умова застосування",
+      "defaultValue": "1",
+      "allowNull": false
+    },
+    {
+      "name": "dictStaffCatID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStaffCat",
+      "caption": "Категорія персоналу",
+      "description": "Категорія персоналу",
+      "documentation": "Категорія персоналу"
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація"
+    },
+    {
+      "name": "dictPositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPosition",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "defaultView": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "defaultView": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+
+}

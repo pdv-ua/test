@@ -1,0 +1,136 @@
+/* global UB Ext */
+
+exports.formDef = {
+  requiredFields: ['typeFile', 'orgID', 'nameFile'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        { attributeName: 'name' },
+        { attributeName: 'shortName' },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              name: 'nameFile',
+              xtype: 'combobox',
+              editable: false,
+              valueField: 'value',
+              fieldLabel: 'Файл експорту',
+              allowBlank: false,
+              flex: 2,
+              displayField: 'name',
+              store: new Ext.data.ArrayStore({
+                fields: ['value', 'name'],
+                data: [
+                  ['ZEX', 'Нарахування, утримання, виплати для розрахунка ЗП'],
+                  ['PZP', 'Проведення по заробітної платі']
+                ]
+              }),
+              listeners: {
+                change: function (ctrl, newValue) {
+                  const me = ctrl.up('form')
+                  me.record.set('nameFile', newValue)
+                }
+              }
+            },
+            { attributeName: 'isActive', flex: 1, labelWidth: 200 }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          name: 'fieldGrid',
+          title: UB.i18n('Налаштування'),
+          xtype: 'ubdetailgrid',
+          region: 'center',
+          autoScroll: true,
+          flex: 2,
+          forceDataLoad: true,
+          disableAutoLoadStore: true,
+          rowEditing: true,
+          hideActions: ['addNew', 'addNewByCurrent', 'del', 'newVersion'],
+          sortableColumns: false,
+          entityConfig: {
+            entity: 'hr_valuesParam',
+            method: 'select',
+            fieldList: [
+              {
+                name: 'listParamID.fullName',
+                description: UB.i18n('Назва параметра'),
+                config: { width: 300 },
+                editor: {
+                  readOnly: true
+                }
+              },
+              {
+                name: 'valuesString',
+                description: UB.i18n('Значення'),
+                config: { width: 300 },
+                editor: {
+                  xtype: 'textfield'
+                }
+              }
+            ],
+            whereList: {
+              orgID: {
+                expression: '[orgID]',
+                condition: '=',
+                value: appAC.globalOrganization()
+              },
+              listParamID: {
+                expression: '[listParamID]',
+                condition: 'in',
+                value: [0]
+              }
+            },
+            orderList: { orderBy: { expression: 'orderN' } }
+          }
+        },
+        {
+          title: UB.i18n('Налаштування показників'),
+          xtype: 'panel',
+          region: 'center',
+          layout: 'fit',
+          align: 'stretch',
+          border: 2,
+          layoutConfig: {
+            collapsible: true,
+            collapsed: true
+          },
+          name: 'paramPanel',
+          flex: 1,
+          items: [
+            {
+              xtype: 'panel',
+              hidden: true,
+              collapsed: false
+            },
+            {
+              xtype: 'reportparamcontrol',
+              collapsed: false,
+              readOnly: true,
+              reportCode: 'fileExpress',
+              orgAttrName: 'orgID'
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

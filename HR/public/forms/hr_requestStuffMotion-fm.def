@@ -1,0 +1,211 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+/* global HR */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['organizationID', 'empOrderType', 'orderState', 'orderDate', 'reportSettings', 'document'],
+    size: {
+      width: 1100,
+      height: 600
+    },
+    dockedItems: [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        items: [
+          {
+            orderId: 6,
+            actionId: 'printReports',
+            iconCls: 'fas fa-print',
+            cls: 'blue-action'
+          },
+          {
+            orderId: 5,
+            actionId: 'startReconciliation'
+          },
+          {
+            orderId: 6,
+            actionId: 'stopReconciliation'
+          },
+          {
+            orderId: 7,
+            actionId: 'toCompletion'
+          },
+          {
+            orderId: 8,
+            actionId: 'renewTask'
+          }
+        ]
+      }],
+    parentConfig: {
+      hideActions: ['docActiondocument'],
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    defaults: {
+      layout: 'fit'
+    },
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      listeners: {
+        tabchange: function (tabPanel, activeTab) {
+          let me = tabPanel.up('form')
+          if (activeTab.ubID === 'report') {
+            if (!me.isPdfCreated) {
+              if (!me.record.get('docText') && !['ON_RECONCILATION', 'RECONCILED', 'POSTED'].includes(me.record.get('orderState'))) {
+                HR.reportTab.editHtml(me)
+              } else {
+                HR.reportTab.setReportMode(me, 'view')
+              }
+              me.isPdfCreated = true
+            } else {
+              HR.reportTab.setReportMode(me, ['ON_RECONCILATION', 'RECONCILED', 'POSTED'].includes(me.record.get('orderState')) ? 'view' : 'edit')
+            }
+          } else if (me.isNewInstance) {
+            me.saveForm().then(result => {
+              if (result === -1) {
+                me.down('tabpanel').setActiveTab(0)
+              }
+            })
+          }
+        }
+      },
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          ubID: 'tabMain',
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [{
+            attributeName: 'requestForStuffID',
+            fieldList: ['ID', 'description', 'organizationID']
+          },
+          {
+            xtype: 'fieldset',
+            title: UB.i18n('Інформація про посаду'),
+            margin: '10 10 10 12',
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+
+            items: [{
+              xtype: 'textfield',
+              name: 'departmentID.name',
+              readOnly: true,
+              fieldLabel: UB.i18n('Підрозділ')
+            },
+            {
+              xtype: 'textfield',
+              name: 'positionID.name',
+              readOnly: true,
+              fieldLabel: UB.i18n('Посада')
+            },
+            {
+              xtype: 'textfield',
+              name: 'positionID.positionCategory.name',
+              readOnly: true,
+              fieldLabel: UB.i18n('Категорія')
+            }
+
+            ]
+          },
+          {
+            attributeName: 'requestStaffMotionGoal'
+          },
+          {
+            layout: {
+              type: 'hbox',
+              align: 'middle'
+            },
+            items: [{
+              attributeName: 'orderState',
+              allowBlank: true,
+              flex: 1
+            },
+            {
+              attributeName: 'orderCompetitionID',
+              flex: 3,
+              fieldList: ['ID', 'description', 'organizationID'],
+              readOnly: true,
+              whereList: {
+                empOrderType: {
+                  expression: '[empOrderType]',
+                  condition: 'equal',
+                  value: 'COMPETITIONAD'
+                }
+              }
+            }
+
+            ]
+
+          },
+          {
+            flex: 1,
+            xtype: 'tabpanel',
+            items: [
+              {
+                flex: 1,
+                xtype: 'ubdetailgrid',
+                title: UB.i18n('Експерти'),
+                rowEditing: true,
+                entity: 'hr_requestStuffExpert',
+                cmpInitConfig: {
+                  getRowClass: function (record, rowIndex, rowParams, store) {
+                    return record.get('isDelete') ? 'row_to_delete' : ''
+                  },
+                  stripeRows: false
+                },
+                entityConfig: {
+                  entity: 'hr_requestStuffExpert',
+                  method: 'select',
+                  fieldList: [
+                    {
+                      name: 'employeePositionID.description',
+                      description: UB.i18n('Працівник'),
+                      config: {
+                        text: UB.i18n('Експерт'),
+                        width: 800
+                      },
+                      editor: {
+                        fieldList: ['ID', 'description', 'organizationID'],
+                        gridFieldList: ['description'],
+                        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+
+                      }
+                    }
+                  ]
+                },
+                onBeforeEdit: function (rowEditor, context) {
+                  rowEditor.editor.up('form').onBeforeEditGrid(rowEditor, context)
+                },
+                masterFields: ['ID'],
+                detailFields: ['requestStuffMotionID']
+              }
+            ]
+          }
+          ]
+        },
+        HR.reportTab.getTabConfig({ repName: 'hr_requestStuffMotion', repTabIndex: 1 }),
+        {
+          title: UB.i18n('Маршрут'),
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          items: [
+            {
+              xtype: 'recpanel',
+              name: 'recpanel'
+            }
+          ]
+        }
+      ]
+    }]
+
+  }
+})()

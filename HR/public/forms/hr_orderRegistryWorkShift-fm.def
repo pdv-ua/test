@@ -1,0 +1,900 @@
+/* global $App AC appHR UB HR appAC */
+
+exports.formDef = {
+  requiredFields: ['description', 'filterParams', 'orderType', 'orderNumber', 'hasPosted', 'payElID.useDictTech'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'calcDocAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 7,
+          actionId: 'copyDocAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      // split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          layout: { type: 'hbox' },
+          flex: 1,
+          items: [
+            { attributeName: 'orderType', hidden: true, readOnly: false },
+            { attributeName: 'organizationID', hidden: true },
+            { attributeName: 'orderState', hidden: true },
+            {
+              attributeName: 'periodID',
+              hidden: true,
+              fieldList: ['ID', 'dateFrom', 'dateTo']
+            },
+            {
+              attributeName: 'periodSalaryID',
+              hidden: true,
+              fieldList: ['ID', 'dateFrom', 'dateTo']
+            },
+            {
+              attributeName: 'orderNumber',
+              fieldLabel: UB.i18n('Номер'),
+              allowBlank: false,
+              labelWidth: 80,
+              width: 200
+            },
+            {
+              attributeName: 'name',
+              xtype: 'ubtextfield',
+              fieldLabel: UB.i18n('Назва'),
+              flex: 1
+            }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'orderDate',
+              fieldLabel: UB.i18n('Дата'),
+              labelWidth: 80,
+              width: 200
+            },
+            {
+              attributeName: 'payElID',
+              fieldLabel: UB.i18n('Вид оплати'),
+              fieldList: ['ID', 'description', 'code', 'name', 'dateFrom', 'dateTo', 'methodID.code', 'useDictTech'],
+              pageSize: 50,
+              flex: 1,
+              allowBlank: false,
+              orderList: {
+                orderBy: {
+                  expression: 'dateFrom',
+                  order: 'desc'
+                }
+              },
+              listeners: {
+                expand: appHR.periodExpand
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      name: 'tabs',
+      region: 'center',
+      margin: '10 8 0 8',
+      items: [
+        {
+          title: UB.i18n('Продукція'),
+          hidden: true,
+          xtype: 'acGrid',
+          name: 'docRegNomenclature',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_orderRegistry_docRegNomenclature'),
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          cellEditing: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження...'),
+          summary: { paySum: 'sum' },
+          enableMultifilter: false,
+          hideActions: ['addNewByCurrent'],
+          includeContextMenuReadOnly: [],
+          onBeforeEdit: (control, context) => {
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null
+            }
+            context.column.field.prevValue = context.value
+            const me = context.grid.up('form')
+            return me.beforeGridEditNomenclature(me, context)
+          },
+          edit: function (control, context) {
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null
+            }
+            const me = context.grid.up('form')
+            return me.onGridEditNomenclature(me, context)
+          },
+          // customContextActions: [
+          //   HR.orderManager.getOrderRegistryRlAction(null),
+          //   HR.orderManager.getOrderRegistryEmployeeAction(null),
+          //   {
+          //     text: UB.i18n('Аналітика'),
+          //     iconCls: 'el-icon-notebook-2',
+          //     name: 'dimension',
+          //     cls: 'blue-action',
+          //     handler: (context) => {
+          //       const me = context.up('').grid.up('form')
+          //       let record = context.up('').record || AC.gridUtils.getCurrentRecord(me.attr.orderRegistryDt)
+          //       me.getDimension(me, record)
+          //     }
+          //   }
+          // ],
+          getRowClass: function (row) {
+            return (row.get('planQuantity') || 0) > (row.get('quantity') || 0) ? 'grd-color-red' : row.get('flagsFix') ? 'grd-color-green' : ''
+          },
+          viewConfig: {
+            markDirty: false
+          },
+          customToolBarActions: [
+            {
+              name: 'addList',
+              iconCls: 'fas fa-angle-double-down',
+              cls: 'add-new-action',
+              scale: 'medium',
+              tooltip: UB.i18n('Додати списком'),
+              handler: function (btn) {
+                const me = btn.up('form')
+                me.setNomenclatureList(me)
+              }
+            },
+            {
+              name: 'deleteAllNomenclature',
+              iconCls: 'fa fa-eraser',
+              cls: 'red-action',
+              scale: 'medium',
+              tooltip: UB.i18n('Видалити всі записи'),
+              actionId: 'deleteAllNomenclature',
+              handler: function (btn) {
+                const grid = btn.up('[name=docRegNomenclature]')
+                let me = grid.up('form')
+                $App.dialogYesNo('Увага', 'Видалити всі записи?').then(result => {
+                  if (result) {
+                    me.attr.docRegNomenclature.removeAll()
+                    me.setIsDirty(true)
+                  }
+                })
+              }
+            }
+          ],
+          dockedItemsCreated: function (grid) {
+            const toolBarItems = grid.dockedItems[0].items
+            const oldIdx = toolBarItems.findIndex(item => item.name === 'addNew')
+            const newIdx = toolBarItems.findIndex(item => item.name === 'addList')
+            if (oldIdx >= 0 && newIdx >= 0) {
+              AC.dataService.arraymove(toolBarItems, oldIdx, newIdx)
+            }
+          },
+          fields: [
+            { name: 'ID', visibility: false },
+            { name: 'dictTechID', visibility: false },
+            {
+              name: 'dictTechID.description',
+              hidden: true,
+              columnConfig: {
+                text: UB.i18n('Технологічна карта'),
+                width: 300,
+                editor: {
+                  dataType: 'Entity',
+                  xtype: 'accombobox',
+                  associatedEntity: 'hr_dictTech',
+                  disableClearSelection: true,
+                  hideEntityItemInContext: true,
+                  disableContextMenu: true,
+                  storeAttributeValueField: 'dictTechID',
+                  allowBlank: false,
+                  fieldList: ['ID', 'description', 'nomenclatureID', 'nomenclatureID.description', 'quantity', 'nomenclatureID.dictMeasureID.symbolUkr'],
+                  selectOnFocus: true
+                }
+              }
+            },
+            { name: 'nomenclatureID', visibility: false },
+            {
+              name: 'nomenclatureID.description',
+              columnConfig: {
+                text: UB.i18n('Продукція'),
+                width: 300 // ,
+                // editor: {
+                //   dataType: 'Entity',
+                //   xtype: 'accombobox',
+                //   associatedEntity: 'ac_nomenclature',
+                //   disableClearSelection: true,
+                //   hideEntityItemInContext: true,
+                //   disableContextMenu: true,
+                //   storeAttributeValueField: 'nomenclatureID',
+                //   allowBlank: false,
+                //   fieldList: ['ID', 'description'],
+                //   selectOnFocus: true
+                // }
+              }
+            },
+            {
+              name: 'norm',
+              columnConfig: {
+                text: UB.i18n('Норма'),
+                hidden: true,
+                width: 120,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number' // ,
+                // editor: {
+                //   dataType: 'Float',
+                //   decimalPosition: 4,
+                //   minValue: 0,
+                //   flagsFix: 1 << 1,
+                //   sortBy: 'Number',
+                //   selectOnFocus: true
+                // }
+              }
+            },
+            {
+              name: 'planQuantity',
+              columnConfig: {
+                text: UB.i18n('План'),
+                width: 120,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number',
+                editor: {
+                  dataType: 'Float',
+                  decimalPosition: 4,
+                  minValue: 0,
+                  flagsFix: 1 << 2,
+                  sortBy: 'Number',
+                  selectOnFocus: true
+                }
+              }
+            },
+            {
+              name: 'quantity',
+              columnConfig: {
+                text: UB.i18n('Виробіток'),
+                width: 120,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number',
+                editor: {
+                  dataType: 'Float',
+                  decimalPosition: 4,
+                  minValue: 0,
+                  flagsFix: 1 << 0,
+                  sortBy: 'Number',
+                  selectOnFocus: true
+                }
+              }
+            },
+            { name: 'flagsFix', visibility: false },
+            // { name: 'nomenclatureID.dictMeasureID', visibility: false },
+            {
+              name: 'nomenclatureID.dictMeasureID.symbolUkr',
+              columnConfig: {
+                text: UB.i18n('Одиниця виміру'),
+                width: 180,
+                hidden: true // ,
+                // editor: {
+                //   dataType: 'Entity',
+                //   xtype: 'accombobox',
+                //   associatedEntity: 'ac_dictMeasure',
+                //   disableClearSelection: true,
+                //   hideEntityItemInContext: true,
+                //   disableContextMenu: true,
+                //   storeAttributeValueField: 'nomenclatureID.dictMeasureID',
+                //   allowBlank: false,
+                //   fieldList: ['ID', 'symbolUkr'],
+                //   selectOnFocus: true
+                // }
+              }
+            },
+            {
+              name: 'paySum',
+              columnConfig: {
+                text: UB.i18n('Заробіток'),
+                width: 120,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number' // ,
+                // editor: {
+                //   dataType: 'Currency',
+                //   minValue: 0,
+                //   flagsFix: 1 << 1,
+                //   sortBy: 'Number',
+                //   selectOnFocus: true
+                // }
+              }
+            },
+            { name: 'mi_createDate', description: UB.i18n('Дата створення'), tooltip: UB.i18n('Дата створення'), visibility: false },
+            // { name: 'mi_createUser.fullName', description: UB.i18n('Користувач, що створив'), tooltip: UB.i18n('Користувач, що створив'), visibility: false },
+            { name: 'mi_modifyDate', description: UB.i18n('Дата останнього коригування'), tooltip: UB.i18n('Дата останнього коригування'), visibility: false } // ,
+            // { name: 'mi_modifyUser.fullName', description: UB.i18n('Користувач, що останнім коригував'), tooltip: UB.i18n('Користувач, що останнім коригував'), visibility: false } // ,
+          ]
+        },
+        {
+          title: UB.i18n('Сировина'),
+          hidden: true,
+          xtype: 'acGrid',
+          name: 'docRegMaterial',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_orderRegistry_docRegMaterial'),
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          cellEditing: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження...'),
+          // summary: { norm: 'sum', planQuantity: 'sum', quantity: 'sum' },
+          enableMultifilter: false,
+          hideActions: ['addNewByCurrent'],
+          includeContextMenuReadOnly: [],
+          onBeforeEdit: (control, context) => {
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null
+            }
+            context.column.field.prevValue = context.value
+            const me = context.grid.up('form')
+            return me.beforeGridEditMaterial(me, context)
+          },
+          edit: function (control, context) {
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null
+            }
+            const me = context.grid.up('form')
+            return me.onGridEditMaterial(me, context)
+          },
+          // customContextActions: [
+          //   HR.orderManager.getOrderRegistryRlAction(null),
+          //   HR.orderManager.getOrderRegistryEmployeeAction(null),
+          //   {
+          //     text: UB.i18n('Аналітика'),
+          //     iconCls: 'el-icon-notebook-2',
+          //     name: 'dimension',
+          //     cls: 'blue-action',
+          //     handler: (context) => {
+          //       const me = context.up('').grid.up('form')
+          //       let record = context.up('').record || AC.gridUtils.getCurrentRecord(me.attr.orderRegistryDt)
+          //       me.getDimension(me, record)
+          //     }
+          //   }
+          // ],
+          getRowClass: function (row) {
+            return (row.get('planQuantity') || 0) < (row.get('quantity') || 0) ? 'grd-color-red' : row.get('flagsFix') ? 'grd-color-green' : ''
+          },
+          viewConfig: {
+            markDirty: false
+          },
+          customToolBarActions: [
+            {
+              name: 'addList',
+              iconCls: 'fas fa-angle-double-down',
+              cls: 'add-new-action',
+              scale: 'medium',
+              tooltip: UB.i18n('Додати списком'),
+              handler: function (btn) {
+                const me = btn.up('form')
+                me.setMaterialList(me)
+              }
+            },
+            {
+              name: 'deleteAllMaterial',
+              iconCls: 'fa fa-eraser',
+              cls: 'red-action',
+              scale: 'medium',
+              tooltip: UB.i18n('Видалити всі записи'),
+              actionId: 'deleteAllMaterial',
+              handler: function (btn) {
+                const grid = btn.up('[name=docRegMaterial]')
+                let me = grid.up('form')
+                $App.dialogYesNo('Увага', 'Видалити всі записи?').then(result => {
+                  if (result) {
+                    me.attr.docRegMaterial.removeAll()
+                    me.setIsDirty(true)
+                  }
+                })
+              }
+            }
+          ],
+          dockedItemsCreated: function (grid) {
+            const toolBarItems = grid.dockedItems[0].items
+            const oldIdx = toolBarItems.findIndex(item => item.name === 'addNew')
+            const newIdx = toolBarItems.findIndex(item => item.name === 'addList')
+            if (oldIdx >= 0 && newIdx >= 0) {
+              AC.dataService.arraymove(toolBarItems, oldIdx, newIdx)
+            }
+          },
+          fields: [
+            { name: 'ID', visibility: false },
+            { name: 'dictTechID', visibility: false },
+            {
+              name: 'dictTechID.description',
+              hidden: true,
+              columnConfig: {
+                text: UB.i18n('Технологічна карта'),
+                width: 300,
+                editor: {
+                  dataType: 'Entity',
+                  xtype: 'accombobox',
+                  associatedEntity: 'hr_dictTech',
+                  disableClearSelection: true,
+                  hideEntityItemInContext: true,
+                  disableContextMenu: true,
+                  storeAttributeValueField: 'dictTechID',
+                  allowBlank: false,
+                  fieldList: ['ID', 'description', 'nomenclatureID', 'nomenclatureID.description', 'quantity', 'nomenclatureID.dictMeasureID.symbolUkr'],
+                  selectOnFocus: true
+                }
+              }
+            },
+            { name: 'nomenclatureID', visibility: false },
+            {
+              name: 'nomenclatureID.description',
+              columnConfig: {
+                text: UB.i18n('Сировина'),
+                width: 300,
+                editor: {
+                  dataType: 'Entity',
+                  xtype: 'accombobox',
+                  associatedEntity: 'ac_nomenclature',
+                  disableClearSelection: true,
+                  hideEntityItemInContext: true,
+                  disableContextMenu: true,
+                  storeAttributeValueField: 'nomenclatureID',
+                  allowBlank: false,
+                  fieldList: ['ID', 'description'],
+                  selectOnFocus: true
+                }
+              }
+            },
+            {
+              name: 'norm',
+              columnConfig: {
+                text: UB.i18n('Норма'),
+                hidden: true,
+                width: 120,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number' // ,
+                // editor: {
+                //   dataType: 'Float',
+                //   decimalPosition: 4,
+                //   minValue: 0,
+                //   flagsFix: 1 << 1,
+                //   sortBy: 'Number',
+                //   selectOnFocus: true
+                // }
+              }
+            },
+            {
+              name: 'planQuantity',
+              columnConfig: {
+                text: UB.i18n('План'),
+                width: 120,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number',
+                editor: {
+                  dataType: 'Float',
+                  decimalPosition: 4,
+                  minValue: 0,
+                  flagsFix: 1 << 2,
+                  sortBy: 'Number',
+                  selectOnFocus: true
+                }
+              }
+            },
+            {
+              name: 'quantity',
+              columnConfig: {
+                text: UB.i18n('Витрачено'),
+                width: 120,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number',
+                editor: {
+                  dataType: 'Float',
+                  decimalPosition: 4,
+                  minValue: 0,
+                  flagsFix: 1 << 0,
+                  sortBy: 'Number',
+                  selectOnFocus: true
+                }
+              }
+            },
+            { name: 'flagsFix', visibility: false },
+            // { name: 'nomenclatureID.dictMeasureID', visibility: false },
+            {
+              name: 'nomenclatureID.dictMeasureID.symbolUkr',
+              columnConfig: {
+                text: UB.i18n('Одиниця виміру'),
+                width: 240,
+                hidden: true // ,
+                // editor: {
+                //   dataType: 'Entity',
+                //   xtype: 'accombobox',
+                //   associatedEntity: 'ac_dictMeasure',
+                //   disableClearSelection: true,
+                //   hideEntityItemInContext: true,
+                //   disableContextMenu: true,
+                //   storeAttributeValueField: 'nomenclatureID.dictMeasureID',
+                //   allowBlank: false,
+                //   fieldList: ['ID', 'symbolUkr'],
+                //   selectOnFocus: true
+                // }
+              }
+            },
+            { name: 'mi_createDate', description: UB.i18n('Дата створення'), tooltip: UB.i18n('Дата створення'), visibility: false },
+            // { name: 'mi_createUser.fullName', description: UB.i18n('Користувач, що створив'), tooltip: UB.i18n('Користувач, що створив'), visibility: false },
+            { name: 'mi_modifyDate', description: UB.i18n('Дата останнього коригування'), tooltip: UB.i18n('Дата останнього коригування'), visibility: false } // ,
+            // { name: 'mi_modifyUser.fullName', description: UB.i18n('Користувач, що останнім коригував'), tooltip: UB.i18n('Користувач, що останнім коригував'), visibility: false } // ,
+          ]
+        },
+        {
+          title: UB.i18n('Робота'),
+          xtype: 'acGrid',
+          name: 'orderRegistryDt',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_orderRegistryDt_orderRegistryWorkShift'),
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          cellEditing: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження...'),
+          summary: { paySum: 'sum' },
+          enableMultifilter: false,
+          hideActions: ['addNewByCurrent'],
+          includeContextMenuReadOnly: [],
+          onBeforeEdit: (control, context) => {
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null
+            }
+            context.column.field.prevValue = context.value
+            const me = context.grid.up('form')
+            return me.beforeGridEditWork(me, context)
+          },
+          edit: function (control, context) {
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null
+            }
+            const me = context.grid.up('form')
+            return me.onGridEditWork(me, context)
+          },
+          customContextActions: [
+            HR.orderManager.getOrderRegistryRlAction(null),
+            HR.orderManager.getOrderRegistryEmployeeAction(null),
+            {
+              text: UB.i18n('Аналітика'),
+              iconCls: 'el-icon-notebook-2',
+              name: 'dimension',
+              cls: 'blue-action',
+              handler: (context) => {
+                const me = context.up('').grid.up('form')
+                let record = context.up('').record || AC.gridUtils.getCurrentRecord(me.attr.orderRegistryDt)
+                me.getDimension(me, record)
+              }
+            }
+          ],
+          getRowClass: function (row) {
+            return (row.get('planQuantity') || 0) > (row.get('yield') || 0) ? 'grd-color-red' : row.get('flagsFix') ? 'grd-color-green' : ''
+          },
+          viewConfig: {
+            markDirty: false
+          },
+          customToolBarActions: [
+            {
+              name: 'addList',
+              iconCls: 'fas fa-angle-double-down',
+              cls: 'add-new-action',
+              scale: 'medium',
+              tooltip: UB.i18n('Додати списком'),
+              handler: function (btn) {
+                const me = btn.up('form')
+                me.setEmployeeNumbers(me)
+              }
+            },
+            {
+              name: 'deleteAll',
+              iconCls: 'fa fa-eraser',
+              cls: 'red-action',
+              scale: 'medium',
+              tooltip: UB.i18n('Видалити всі записи'),
+              actionId: 'deleteAll',
+              handler: function (btn) {
+                const grid = btn.up('acGrid')
+                let me = grid.up('form')
+                $App.dialogYesNo('Увага', 'Видалити всі записи?').then(result => {
+                  if (result) {
+                    me.attr.orderRegistryDt.removeAll()
+                    me.setIsDirty(true)
+                  }
+                })
+              }
+            }
+          ],
+          dockedItemsCreated: function (grid) {
+            const toolBarItems = grid.dockedItems[0].items
+            const oldIdx = toolBarItems.findIndex(item => item.name === 'addNew')
+            const newIdx = toolBarItems.findIndex(item => item.name === 'addList')
+            if (oldIdx >= 0 && newIdx >= 0) {
+              AC.dataService.arraymove(toolBarItems, oldIdx, newIdx)
+            }
+          },
+          fields: [
+            { name: 'ID' },
+            { name: 'dictTechID', visibility: false },
+            {
+              name: 'dictTechID.description',
+              hidden: true,
+              columnConfig: {
+                text: UB.i18n('Технологічна карта'),
+                width: 300,
+                editor: {
+                  dataType: 'Entity',
+                  xtype: 'accombobox',
+                  associatedEntity: 'hr_dictTech',
+                  disableClearSelection: true,
+                  hideEntityItemInContext: true,
+                  disableContextMenu: true,
+                  storeAttributeValueField: 'dictTechID',
+                  allowBlank: false,
+                  fieldList: ['ID', 'description', 'nomenclatureID', 'nomenclatureID.description', 'quantity', 'nomenclatureID.dictMeasureID.symbolUkr'],
+                  selectOnFocus: true
+                }
+              }
+            },
+            { name: 'dictWorkOperationID', visibility: false },
+            {
+              name: 'dictWorkOperationID.description',
+              columnConfig: {
+                text: UB.i18n('Вид робіт'),
+                width: 240,
+                editor: {
+                  dataType: 'Entity',
+                  xtype: 'accombobox',
+                  associatedEntity: 'hr_dictWorkOperation',
+                  disableClearSelection: true,
+                  hideEntityItemInContext: true,
+                  disableContextMenu: true,
+                  storeAttributeValueField: 'dictWorkOperationID',
+                  allowBlank: false,
+                  fieldList: ['ID', 'description'],
+                  selectOnFocus: true
+                }
+              }
+            },
+            { name: 'employeeNumberID' },
+            {
+              name: 'employeeNumberID.description',
+              columnConfig: {
+                text: UB.i18n('Працівник'),
+                width: 300,
+                editor: {
+                  dataType: 'Entity',
+                  xtype: 'accombobox',
+                  associatedEntity: 'hr_employeeNumber',
+                  disableClearSelection: true,
+                  hideEntityItemInContext: true,
+                  disableContextMenu: true,
+                  storeAttributeValueField: 'employeeNumberID',
+                  allowBlank: false,
+                  fieldList: ['ID', 'description'],
+                  whereList: {
+                    orgID: {
+                      expression: '[orgID]',
+                      condition: 'equal',
+                      value: appAC.globalOrganization()
+                    }
+                  },
+                  selectOnFocus: true
+                }
+              }
+            },
+            { name: 'payElID', visibility: false },
+            { name: 'payment', visibility: false },
+            {
+              name: 'payment.name',
+              columnConfig: {
+                text: UB.i18n('Форма оплати'),
+                width: 240,
+                hidden: true,
+                editor: {
+                  xtype: 'ubcombobox',
+                  dataType: 'Enum',
+                  enumGroup: 'PIECEWORK_PAYMENT',
+                  useForGridEdit: false,
+                  valueField: 'name',
+                  storeAttributeFieldName: 'code',
+                  storeAttributeValueField: 'payment',
+                  displayField: 'name',
+                  ubRequest: {
+                    entity: 'ubm_enum',
+                    method: UB.core.UBCommand.methodName.SELECT,
+                    fieldList: ['code', 'name', 'eGroup', 'sortOrder']
+                  },
+                  flagsFix: 1 << 10
+                }
+              }
+            },
+            // { name: 'dictMeasureID', visibility: false },
+            {
+              name: 'dictWorkOperationID.dictMeasureID.symbolUkr',
+              columnConfig: {
+                text: UB.i18n('Одиниця виміру'),
+                width: 180,
+                hidden: true // ,
+                // editor: {
+                //   dataType: 'Entity',
+                //   xtype: 'accombobox',
+                //   associatedEntity: 'ac_dictMeasure',
+                //   disableClearSelection: true,
+                //   hideEntityItemInContext: true,
+                //   disableContextMenu: true,
+                //   storeAttributeValueField: 'dictMeasureID',
+                //   allowBlank: false,
+                //   fieldList: ['ID', 'symbolUkr'],
+                //   selectOnFocus: true
+                // }
+              }
+            },
+            {
+              name: 'norm',
+              columnConfig: {
+                text: UB.i18n('Норма'),
+                hidden: true,
+                width: 120,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number' // ,
+                // editor: {
+                //   dataType: 'Float',
+                //   decimalPosition: 4,
+                //   minValue: 0,
+                //   flagsFix: 1 << 11,
+                //   sortBy: 'Number',
+                //   selectOnFocus: true
+                // }
+              }
+            },
+            {
+              name: 'planQuantity',
+              columnConfig: {
+                text: UB.i18n('План'),
+                width: 120,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number',
+                editor: {
+                  dataType: 'Float',
+                  decimalPosition: 4,
+                  minValue: 0,
+                  flagsFix: 1 << 18,
+                  sortBy: 'Number',
+                  selectOnFocus: true
+                }
+              }
+            },
+
+            {
+              name: 'yield',
+              columnConfig: {
+                text: UB.i18n('Виробіток'),
+                width: 120,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number',
+                editor: {
+                  dataType: 'Float',
+                  decimalPosition: 4,
+                  minValue: 0,
+                  flagsFix: 1 << 13,
+                  sortBy: 'Number',
+                  selectOnFocus: true
+                }
+              }
+            },
+            {
+              name: 'baseSum',
+              columnConfig: {
+                text: UB.i18n('Тариф/Розцінка'),
+                width: 160,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number',
+                editor: {
+                  dataType: 'Currency',
+                  minValue: 0,
+                  flagsFix: 1 << 0,
+                  sortBy: 'Number',
+                  selectOnFocus: true
+                }
+              }
+            },
+            {
+              name: 'paySum',
+              columnConfig: {
+                text: UB.i18n('Заробіток'),
+                width: 120,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number',
+                editor: {
+                  dataType: 'Currency',
+                  minValue: 0,
+                  flagsFix: 1 << 1,
+                  sortBy: 'Number',
+                  selectOnFocus: true
+                }
+              }
+            },
+            { name: 'periodCalcID' },
+            { name: 'periodCalc' },
+            { name: 'periodSalaryID' },
+            { name: 'periodSalary' },
+            { name: 'flagsFix' },
+            { name: 'flagsRec' },
+            { name: 'dateFrom' },
+            { name: 'dateTo' },
+            { name: 'mask' },
+            { name: 'days' },
+            { name: 'hours' },
+            { name: 'planHours' },
+            { name: 'planDays' },
+            { name: 'calcSum' },
+            { name: 'dictFundSourceID' },
+            { name: 'accrualDt' },
+            { name: 'posName', description: UB.i18n('Посада') },
+            { name: 'depName', description: UB.i18n('Підрозділ') },
+            { name: 'mi_createDate', description: UB.i18n('Дата створення'), tooltip: UB.i18n('Дата створення'), visibility: false },
+            { name: 'mi_createUser.fullName', description: UB.i18n('Користувач, що створив'), tooltip: UB.i18n('Користувач, що створив'), visibility: false },
+            { name: 'mi_modifyDate', description: UB.i18n('Дата останнього коригування'), tooltip: UB.i18n('Дата останнього коригування'), visibility: false },
+            { name: 'mi_modifyUser.fullName', description: UB.i18n('Користувач, що останнім коригував'), tooltip: UB.i18n('Користувач, що останнім коригував'), visibility: false }
+          ]
+        }
+      ]
+    }
+  ]
+}

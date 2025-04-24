@@ -1,0 +1,52 @@
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'organizationID', 'empOrderType', 'firstName', 'lastName', 'middleName', 'employeePositionID.employeeNumberID'],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      defaults: {
+        labelWidth: 150
+      }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [
+      {
+        attributeName: 'employeePositionID',
+        fieldLabel: UB.i18n('Працівник'),
+        allowBlank: false,
+        xtype: 'empPositionCombobox',
+        addWorkPlace: true,
+        fieldList: ['ID', 'description', 'workScheduleID', 'employeeNumberID', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+        orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+        gridFieldList: ['description'],
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+      },
+      {
+        attributeName: 'dateTo',
+        fieldLabel: UB.i18n('День донорства'),
+        allowBlank: false
+      },
+      {
+        attributeName: 'dateFrom',
+        fieldLabel: UB.i18n('День відпочинку')
+      },
+      {
+        attributeName: 'dictTimeCostID',
+        allowBlank: false,
+        fieldList: ['ID', 'displayField'],
+        displayField: 'displayField',
+        gridFieldList: ['displayField'],
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+      },
+      {
+        attributeName: 'payElID',
+        hideEntityItemInContext: true
+      }
+    ]
+  }
+})()

@@ -1,0 +1,181 @@
+{
+  "caption": "Елементи обліку робочого часу",
+  "description": "Елементи обліку робочого часу",
+  "descriptionAttribute": "name",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 32,
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код",
+      "allowNull": false,
+      "isUnique": true
+    },
+    {
+      "name": "dictTimePrintID",
+      "dataType": "String",
+      "size": 500,
+      "associatedEntity": "hr_dictTimePrint",
+      "caption": "Колонка для відображення у блоці \"Неявки\" друкованої форми",
+      "description": "Колонка для відображення у блоці \"Неявки\" друкованої форми"
+    },
+    {
+      "name": "dictTimePrintName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Колонка для відображення у блоці \"Неявки\" друкованої форми",
+      "description": "Колонка для відображення у блоці \"Неявки\" друкованої форми",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": " (STUFF((SELECT ', ' + p.name FROM hr_dictTimePrint p where [dictTimePrintID] like '%' + CAST(p.ID AS VARCHAR(15)) + '%' for xml path('')), 1, 1, ''))"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT STRING_AGG(p.name, ', ') FROM hr_dictTimePrint p where [dictTimePrintID] like CONCAT('%',p.ID,'%'))"
+        }
+      ]
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Назва",
+      "description": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "nameSmall",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Коротка назва",
+      "documentation": "Коротка назва",
+      "description": "Коротка назва",
+      "allowNull": false
+    },
+    {
+      "name": "nameShort",
+      "dataType": "String",
+      "size": 4,
+      "caption": "Позначення в табелі",
+      "documentation": "Позначення в табелі",
+      "description": "Позначення в табелі"
+    },
+    {
+      "name": "timeCostType",
+      "dataType": "Enum",
+      "enumGroup": "HR_TIMECOSTTYPE",
+      "caption": "Тип обліку",
+      "documentation": "Тип обліку",
+      "description": "Тип обліку",
+      "allowNull": false
+    },
+    {
+      "name": "timeColumns",
+      "dataType": "Enum",
+      "enumGroup": "HR_TIMECOLUMNS",
+      "caption": "Відображення неявки в табелі",
+      "documentation": "Відображення неявки в табелі",
+      "description": "Відображення неявки в табелі",
+      "defaultValue": "0",
+      "allowNull": false
+    },
+    {
+      "name": "orderClassID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_orderClass",
+      "caption": "Тип документа - підстави",
+      "description": "Тип документа - підстави",
+      "documentation": "Тип документа - підстави"
+    },
+    {
+      "name": "isClose",
+      "dataType": "Boolean",
+      "caption": "Не використовується",
+      "description": "Не використовується",
+      "documentation": "Не використовується",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isFactHour",
+      "dataType": "Boolean",
+      "caption": "Залишати фактичні години",
+      "description": "Залишати фактичні години",
+      "documentation": "Залишати фактичні години",
+      "defaultValue": "0"
+    },
+    {
+      "name": "colorCell",
+      "dataType": "String",
+      "size": 6,
+      "caption": "Колір відображення ячейки у табелі",
+      "description": "Колір відображення ячейки у табелі",
+      "documentation": "Колір відображення ячейки у табелі"
+    },
+    {
+      "name": "colorText",
+      "dataType": "String",
+      "size": 6,
+      "caption": "Колір позначення у табелі",
+      "description": "Колір позначення у табелі",
+      "documentation": "Колір позначення у табелі"
+    },
+    {
+      "name": "isShowWork",
+      "dataType": "Boolean",
+      "caption": "Відображати у блоці \"Відпрацьовано за місяць\" друкованої форми",
+      "description": "Відображати у блоці \"Відпрацьовано за місяць\" друкованої форми",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isExcludeExtraVac",
+      "dataType": "Boolean",
+      "caption": "Виключати з права на додаткову відпустку (ст.7,8)",
+      "description": "Виключати з права на додаткову відпустку (ст.7,8)",
+      "defaultValue": "0"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 1024,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["code", "name", "nameShort"],
+        "compositeSeparator": " "
+      }
+    },
+    {
+      "name": "displayField",
+      "dataType": "String",
+      "size": 1024,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(CONCAT('(',coalesce({self}.nameShort, ''),') ',{self}.name))"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

@@ -1,0 +1,197 @@
+/* global Ext UB */
+
+exports.formDef = 'HR.payElListSelect'
+
+Ext.define('HR.payElListSelect', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    const queryDelay = 500
+    let allGrid
+    let storeMain = Ext.create('Ext.data.Store', {
+      fields: [
+        { name: 'ID' },
+        { name: 'code' },
+        { name: 'description' },
+        { name: 'name' },
+        { name: 'isChecked' }
+      ],
+      data: []
+
+    })
+    function setFilter () {
+      storeMain.filter({
+        id: 'searchTask',
+        property: 'description',
+        condition: UB.core.UBCommand.condition.sqlecLike,
+        value: searchCtrl.getValue(),
+        anyMatch: true,
+        caseSensitive: false
+      })
+    }
+    function clearFilter () {
+      storeMain.filters.removeAtKey('searchTask')
+      storeMain.clearFilter()
+    }
+    let doQueryTask = new Ext.util.DelayedTask(function () {
+      let value = searchCtrl.getValue()
+      if (value === '') {
+        clearFilter()
+      } else {
+        setFilter()
+      }
+    }, me)
+    let searchCtrl = Ext.widget('textfield', {
+      labelWidth: 60,
+      fieldLabel: UB.i18n('filter')
+    })
+    searchCtrl.on('change', function () {
+      doQueryTask.delay(queryDelay)
+    })
+
+    me.items = [
+      allGrid = Ext.create('Ext.grid.Panel', {
+        xtype: 'grid',
+        store: storeMain,
+        viewConfig: {
+          markDirty: false
+        },
+        autoScroll: true,
+        flex: 1,
+        split: true,
+        region: 'center',
+        columnLines: true,
+        plugins: [Ext.create('Ext.grid.plugin.CellEditing', {
+          clicksToEdit: 1
+        })],
+        tbar: Ext.create('Ext.toolbar.Toolbar', {
+          height: 40,
+          items: [
+            {
+              xtype: 'button',
+              scale: 'medium',
+              iconCls: 'fas fa-share-square',
+              tooltip: UB.i18n('saveAndClose'),
+              cls: 'save-action',
+              handler: () => {
+                const result = {
+                  add: [],
+                  remove: [],
+                  selected: []
+                }
+                let allRecord = allGrid.getStore().snapshot || allGrid.getStore().data
+                allRecord.items.forEach(row => {
+                  const data = row.getData()
+                  const priv = me.selectData.find(o => o.value === data.ID)
+                  if (data.isChecked && !priv) {
+                    result.add.push(data.ID)
+                  } else if (!data.isChecked && priv) {
+                    result.remove.push(priv.ID)
+                  }
+                  if (data.isChecked) {
+                    result.selected.push({
+                      value: data.ID,
+                      description: data.description
+                    })
+                  }
+                })
+                const wnd = me.up('window')
+                if (me.onSelectData) {
+                  me.onSelectData(result, wnd)
+                }
+                if (!me.showAfterSave) wnd.close()
+              }
+            },
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Відмітити всі'),
+              iconCls: 'u-icon-check',
+              cls: 'green-action',
+              listeners: {
+                click: function () {
+                  const store = allGrid.getStore()
+                  Ext.suspendLayouts()
+                  allGrid.suspendEvents()
+                  store.suspendEvents()
+                  if (searchCtrl.getValue() !== '') {
+                    clearFilter()
+                  }
+                  allGrid.updatingRecords = true
+                  allGrid.getStore().each(rec => {
+                    rec.beginEdit()
+                    if (!rec.get('isChecked')) {
+                      rec.set('isChecked', true)
+                    }
+                    rec.endEdit(true)
+                  })
+                  allGrid.updatingRecords = false
+                  allGrid.resumeEvents()
+                  store.resumeEvents()
+                  Ext.resumeLayouts(true)
+                  allGrid.getView().refreshView()
+                }
+              }
+            },
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Виключити всі'),
+              iconCls: 'u-icon-close',
+              cls: 'red-action',
+              listeners: {
+                click: function () {
+                  const store = allGrid.getStore()
+                  Ext.suspendLayouts()
+                  allGrid.suspendEvents()
+                  store.suspendEvents()
+                  if (searchCtrl.getValue() !== '') {
+                    clearFilter()
+                  }
+                  allGrid.updatingRecords = true
+                  allGrid.getStore().each(rec => {
+                    rec.beginEdit()
+                    rec.set('isChecked', false)
+                    rec.endEdit(true)
+                  })
+                  allGrid.updatingRecords = false
+                  allGrid.resumeEvents()
+                  store.resumeEvents()
+                  Ext.resumeLayouts(true)
+                  allGrid.getView().refreshView()
+                }
+              }
+            },
+            searchCtrl
+          ]
+
+        }),
+        columns: [
+          { xtype: 'checkcolumn', dataIndex: 'isChecked' },
+          {
+            header: UB.i18n('Код'),
+            dataIndex: 'code',
+            width: 100
+          },
+          {
+            header: UB.i18n('Назва'),
+            dataIndex: 'name',
+            flex: 1
+          }
+        ]
+      })
+    ]
+    me.bbar = [
+      '->'
+    ]
+    me.allGrid = allGrid
+    me.on('afterrender', function () {
+      me.sourceData.forEach(row => {
+        row.isChecked = !!me.selectData.find(o => o.value === row.ID)
+      })
+      storeMain.loadData(me.sourceData.sort((a, b) => (Number(a.code) > Number(b.code)) ? 1 : ((Number(b.code) > Number(a.code)) ? -1 : 0)))
+    })
+    me.callParent(arguments)
+  }
+})

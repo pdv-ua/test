@@ -1,0 +1,567 @@
+/* global Ext $App appAC appHR AC UB */
+exports.formDef = 'HR.importParams'
+
+Ext.define('HR.importParams', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_importParams',
+  width: 800,
+  height: 800,
+  layout: 'border',
+  actionId: {
+    save: 'save'
+  },
+  eventId: {
+    save: 'save'
+  },
+  hotKeys: {
+    save: {
+      key: Ext.EventObject.ENTER,
+      shift: false,
+      ctrl: true,
+      text: ' (Ctrl+Enter)'
+    }
+  },
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [],
+      ubID: 'mainToolbar',
+      enableOverflow: true
+    }]
+    me.items = [
+      {
+        xtype: 'tabpanel',
+        region: 'center',
+        items: [
+          {
+            title: UB.i18n(`Загальне`),
+            xtype: 'panel',
+            layout: { type: 'vbox', align: 'stretch' },
+            flex: 1,
+            autoScroll: true,
+            items: [
+
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n(`Параметри імпорта`),
+                defaults: {
+                  labelWidth: 350
+                },
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                items: [
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'isAddNew',
+                    fieldLabel: UB.i18n('Додавати нові')
+                  },
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'isUpdate',
+                    fieldLabel: UB.i18n('Оновлювати існуючі')
+                  },
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'isOrgList',
+                    fieldLabel: UB.i18n('Розподіл за списком організацій')
+                  },
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'isOrgDelete',
+                    fieldLabel: UB.i18n('Видаляти тільки для поточної організації')
+                  },
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'isUseRegOriginal',
+                    fieldLabel: UB.i18n('Завантажувати прізвища осіб в оригінальному регістрі символів')
+                  }
+                ]
+              }
+
+            ]
+          },
+          {
+            title: UB.i18n('Призначення працівників'),
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: {
+              labelWidth: 350
+            },
+            flex: 1,
+            items: [
+              {
+                xtype: 'checkboxfield',
+                name: 'createStaffOrder',
+                fieldLabel: UB.i18n('Створювати кадрові накази для призначення')
+              },
+              {
+                xtype: 'checkboxfield',
+                name: 'updateByStaff',
+                fieldLabel: UB.i18n('Оновити кадровими призначеннями')
+              },
+              {
+                xtype: 'ubdatefield',
+                name: 'updateByStaffDate',
+                fieldLabel: UB.i18n('Залишити кадрові призначення з')
+              }
+            ]
+          },
+          {
+            title: UB.i18n('Розрахункові листи'),
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: {
+              labelWidth: 350
+            },
+            flex: 1,
+            items: [
+              {
+                xtype: 'checkboxfield',
+                name: 'fixedUser',
+                fieldLabel: UB.i18n('Проставляти позначку "Зафіксовано користувачем"')
+              },
+              {
+                xtype: 'checkboxfield',
+                name: 'notDeleteAccrual',
+                fieldLabel: UB.i18n('Не видаляти дані при завантаженні')
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n(`Завантажувати тільки періоди`),
+                defaults: {
+                  labelWidth: 60
+                },
+                layout: {
+                  type: 'hbox'
+                },
+                items: [
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'periodFromID',
+                    fieldLabel: UB.i18n('з'),
+                    hideEntityItemInContext: true,
+                    selectOnFocus: true,
+                    pageSize: 50,
+                    ubRequest: {
+                      entity: 'hr_dictPeriod',
+                      fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'priorPeriodID', 'nextPeriodID', 'isClosed'],
+                      orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                    },
+                    listeners: {
+                      expand: appHR.periodExpand
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'periodToID',
+                    fieldLabel: UB.i18n('по'),
+                    hideEntityItemInContext: true,
+                    selectOnFocus: true,
+                    pageSize: 50,
+                    ubRequest: {
+                      entity: 'hr_dictPeriod',
+                      fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'priorPeriodID', 'nextPeriodID', 'isClosed'],
+                      orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                    },
+                    listeners: {
+                      expand: appHR.periodExpand
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            title: UB.i18n('Формування табеля та сальдо'),
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: {
+              labelWidth: 250
+            },
+            flex: 1,
+            items: [
+              {
+                xtype: 'checkboxfield',
+                name: 'withSubOrg',
+                fieldLabel: UB.i18n('Разом з підпорядкованими')
+              },
+              {
+                xtype: 'checkboxfield',
+                name: 'addTimeSheet',
+                value: true,
+                fieldLabel: UB.i18n('Додавати записи табеля ')
+              },
+              {
+                xtype: 'checkboxfield',
+                name: 'notUpdateDays',
+                value: true,
+                fieldLabel: UB.i18n('Не коригувати дні')
+              },
+              {
+                xtype: 'checkboxfield',
+                name: 'notUpdateHour',
+                value: true,
+                fieldLabel: UB.i18n('Не коригувати години')
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'label',
+                    text: UB.i18n('За період'),
+                    cls: 'x-form-item-label',
+                    margin: '8 15 0 15',
+                    width: 205
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'periodTFromID',
+                    fieldLabel: UB.i18n('з'),
+                    labelWidth: 20,
+                    width: 250,
+                    selectOnFocus: true,
+                    ubRequest: {
+                      entity: 'hr_dictPeriod',
+                      fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name', 'isClosed'],
+                      whereList: {
+                        isClosed: {
+                          expression: '[isClosed]',
+                          condition: 'equal',
+                          value: true
+                        }
+                      },
+                      orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                    },
+                    pageSize: 50,
+                    listeners: {
+                      expand: appHR.periodExpand,
+                      change: function (ctrl, value) {
+                        if (value && me.attr.periodTToID.getValue() &&
+                          AC.dateService.shiftDate(me.attr.periodTFromID.getFieldValue('dateFrom')) > AC.dateService.shiftDate(me.attr.periodTToID.getFieldValue('dateFrom'))) {
+                          me.attr.periodTToID.setValueById(value)
+                        }
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'periodTToID',
+                    fieldLabel: UB.i18n('по'),
+                    labelWidth: 20,
+                    width: 250,
+                    selectOnFocus: true,
+                    ubRequest: {
+                      entity: 'hr_dictPeriod',
+                      fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name', 'isClosed'],
+                      whereList: {
+                        isClosed: {
+                          expression: '[isClosed]',
+                          condition: 'equal',
+                          value: true
+                        }
+                      },
+                      orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                    },
+                    pageSize: 50,
+                    listeners: {
+                      expand: appHR.periodExpand,
+                      change: function (ctrl, value) {
+                        if (value && me.attr.periodTFromID.getValue() &&
+                          AC.dateService.shiftDate(me.attr.periodTFromID.getFieldValue('dateFrom')) > AC.dateService.shiftDate(me.attr.periodTToID.getFieldValue('dateFrom'))) {
+                          me.attr.periodTFromID.setValueById(value)
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                hidden: true,
+                items: [
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'periodID',
+                    fieldLabel: UB.i18n('Період'),
+                    hideEntityItemInContext: true,
+                    selectOnFocus: true,
+                    pageSize: 50,
+                    hidden: true,
+                    ubRequest: {
+                      entity: 'hr_dictPeriod',
+                      fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'priorPeriodID', 'nextPeriodID', 'isClosed'],
+                      orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                    },
+                    listeners: {
+                      expand: appHR.periodExpand
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'textarea',
+                rows: 7,
+                name: 'tabNums',
+                fieldLabel: UB.i18n('Табельні номери (через кому)')
+              }
+            ]
+          },
+          {
+            title: UB.i18n('Очистка мапінгу'),
+            layout: { type: 'vbox', align: 'stretch' },
+            flex: 1,
+            items: [
+              {
+                layout: { type: 'hbox', pack: 'center' }
+              },
+              {
+                xtype: 'button',
+                margin: '5 0 5 15',
+                tooltip: UB.i18n('Архів розрахункових листів (hr_accrual)'),
+                text: UB.i18n('Архів розрахункових листів (hr_accrual)'),
+                handler: function () {
+                  me.setLoading(true)
+                  $App.connection.run({
+                    entity: 'hr_importParams',
+                    method: 'importMapDelete',
+                    orgID: appAC.globalOrganization(),
+                    entityName: 'hr_accrual'
+                  }).then(response => {
+                    AC.viewUtils.showToast(UB.i18n('Виконано'))
+                    me.setLoading(false)
+                  }, (err) => {
+                    me.setLoading(false)
+                    throw err
+                  })
+                }
+              },
+              {
+                xtype: 'button',
+                tooltip: UB.i18n('Деталізація записів розрахункового листа (hr_accrualDt)'),
+                text: UB.i18n('Деталізація записів розрахункового листа (hr_accrualDt)'),
+                margin: '5 0 5 15',
+                handler: function () {
+                  me.setLoading(true)
+                  $App.connection.run({
+                    entity: 'hr_importParams',
+                    method: 'importMapDelete',
+                    orgID: appAC.globalOrganization(),
+                    entityName: 'hr_accrualDt'
+                  }).then(response => {
+                    AC.viewUtils.showToast(UB.i18n('Виконано'))
+                    me.setLoading(false)
+                  }, (err) => {
+                    me.setLoading(false)
+                    throw err
+                  })
+                }
+              },
+              {
+                xtype: 'button',
+                tooltip: UB.i18n('Архів розрахунку нарахувань на зарплату (hr_accrualFund)'),
+                text: UB.i18n('Архів розрахунку нарахувань на зарплату (hr_accrualFund)'),
+                margin: '5 0 5 15',
+                handler: function () {
+                  me.setLoading(true)
+                  $App.connection.run({
+                    entity: 'hr_importParams',
+                    method: 'importMapDelete',
+                    orgID: appAC.globalOrganization(),
+                    entityName: 'hr_accrualFund'
+                  }).then(response => {
+                    AC.viewUtils.showToast(UB.i18n('Виконано'))
+                    me.setLoading(false)
+                  }, (err) => {
+                    me.setLoading(false)
+                    throw err
+                  })
+                }
+              },
+              {
+                xtype: 'button',
+                tooltip: UB.i18n('Деталізація записів Розрахунок нарахувань (hr_accrualFundDt)'),
+                text: UB.i18n('Деталізація записів Розрахунок нарахувань (hr_accrualFundDt)'),
+                margin: '5 0 5 15',
+                handler: function () {
+                  me.setLoading(true)
+                  $App.connection.run({
+                    entity: 'hr_importParams',
+                    method: 'importMapDelete',
+                    orgID: appAC.globalOrganization(),
+                    entityName: 'hr_accrualFundDt'
+                  }).then(response => {
+                    AC.viewUtils.showToast(UB.i18n('Виконано'))
+                    me.setLoading(false)
+                  }, (err) => {
+                    me.setLoading(false)
+                    throw err
+                  })
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.createToolbarButtons = (me) => {
+      let tb = me.down('toolbar')
+      tb.insert(tb.items.length - 2, {
+        xtype: 'button',
+        scale: 'medium',
+        iconCls: 'fas fa-share-square',
+        tooltip: UB.i18n('saveAndClose') + me.hotKeys[me.actionId.save].text,
+        cls: 'save-action',
+        handler: function (btn) {
+          me.onButtonSave(me)
+        }
+      })
+    }
+    me.onButtonSave = (me) => {
+      $App.connection.run({
+        entity: 'hr_importParams',
+        method: me.instanceID ? 'update' : 'insert',
+        execParams: {
+          ID: me.instanceID || null,
+          tabNums: me.attr.tabNums.getValue(),
+          isAddNew: me.attr.isAddNew.getValue(),
+          isUpdate: me.attr.isUpdate.getValue(),
+          isUseRegOriginal: me.attr.isUseRegOriginal.getValue(),
+          isOrgList: me.attr.isOrgList.getValue(),
+          isOrgDelete: me.attr.isOrgDelete.getValue(),
+          periodID: me.attr.periodID.getValue(),
+          createStaffOrder: me.attr.createStaffOrder.getValue(),
+          notUpdateDays: me.attr.notUpdateDays.getValue(),
+          notUpdateHour: me.attr.notUpdateHour.getValue(),
+          addTimeSheet: me.attr.addTimeSheet.getValue(),
+          withSubOrg: me.attr.withSubOrg.getValue(),
+          periodTFromID: me.attr.periodTFromID.getValue(),
+          periodTToID: me.attr.periodTToID.getValue(),
+          updateByStaff: me.attr.updateByStaff.getValue(),
+          fixedUser: me.attr.fixedUser.getValue(),
+          notDeleteAccrual: me.attr.notDeleteAccrual.getValue(),
+          periodFromID: me.attr.periodFromID.getValue(),
+          periodToID: me.attr.periodToID.getValue(),
+          updateByStaffDate: me.attr.updateByStaffDate.getValue() ? AC.dateService.unshiftDate(me.attr.updateByStaffDate.getValue()) : null,
+          orgID: appAC.globalOrganization()
+        }
+      }).then(() => {
+        me.up().close()
+      })
+    }
+    me.changeGlobal = () => {
+      const globalOrganization = appAC.globalOrganization()
+      me.attr.periodID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization })
+      me.attr.periodID.clearValue()
+      me.attr.periodFromID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodFromID, { orgID: globalOrganization })
+      me.attr.periodFromID.clearValue()
+      me.attr.periodToID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodToID, { orgID: globalOrganization })
+      me.attr.periodToID.clearValue()
+      me.attr.periodTFromID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodTFromID, { orgID: globalOrganization })
+      me.attr.periodTFromID.clearValue()
+      me.attr.periodTToID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodTToID, { orgID: globalOrganization })
+      me.attr.periodTToID.clearValue()
+      me.loadData()
+    }
+    me.loadData = () => {
+      UB.Repository('hr_importParams')
+        .attrs(['ID', 'orgID', 'isAddNew', 'isUpdate', 'isUseRegOriginal', 'periodID', 'tabNums', 'createStaffOrder', 'updateByStaffDate',
+          'updateByStaff', 'isOrgList', 'isOrgDelete', 'notUpdateDays', 'notUpdateHour', 'fixedUser', 'notDeleteAccrual',
+          'periodFromID', 'periodToID', 'addTimeSheet', 'withSubOrg', 'periodTFromID', 'periodTToID' ])
+        .where('orgID', '=', appAC.globalOrganization())
+        .selectSingle().then(responce => {
+          if (responce) {
+            me.instanceID = responce.ID
+            me.attr.tabNums.setValue(responce.tabNums)
+            me.attr.isAddNew.setValue(!!responce.isAddNew)
+            me.attr.isUpdate.setValue(!!responce.isUpdate)
+            me.attr.isUseRegOriginal.setValue(!!responce.isUseRegOriginal)
+            me.attr.isOrgList.setValue(!!responce.isOrgList)
+            me.attr.isOrgDelete.setValue(!!responce.isOrgDelete)
+            me.attr.createStaffOrder.setValue(!!responce.createStaffOrder)
+            me.attr.notUpdateDays.setValue(!!responce.notUpdateDays)
+            me.attr.notUpdateHour.setValue(!!responce.notUpdateHour)
+            me.attr.addTimeSheet.setValue(!!responce.addTimeSheet)
+            me.attr.withSubOrg.setValue(!!responce.withSubOrg)
+            me.attr.updateByStaff.setValue(!!responce.updateByStaff)
+            me.attr.fixedUser.setValue(!!responce.fixedUser)
+            me.attr.updateByStaffDate.setValue(responce.updateByStaffDate ? AC.dateService.unshiftDate(responce.updateByStaffDate) : null)
+            me.attr.notDeleteAccrual.setValue(!!responce.notDeleteAccrual)
+            me.attr.periodID.setValueById(responce.periodID)
+            me.attr.periodFromID.setValueById(responce.periodFromID)
+            me.attr.periodToID.setValueById(responce.periodToID)
+            me.attr.periodTFromID.setValueById(responce.periodTFromID)
+            me.attr.periodTToID.setValueById(responce.periodTToID)
+          } else {
+            me.instanceID = null
+            me.attr.tabNums.setValue('')
+            me.attr.isAddNew.setValue(true)
+            me.attr.isUpdate.setValue(true)
+            me.attr.isUseRegOriginal.setValue(false)
+            me.attr.isOrgList.setValue(false)
+            me.attr.isOrgDelete.setValue(false)
+            me.attr.createStaffOrder.setValue(false)
+            me.attr.notUpdateDays.setValue(true)
+            me.attr.notUpdateHour.setValue(true)
+            me.attr.addTimeSheet.setValue(true)
+            me.attr.withSubOrg.setValue(false)
+            me.attr.updateByStaff.setValue(false)
+            me.attr.fixedUser.setValue(false)
+            me.attr.updateByStaffDate.setValue(null)
+            me.attr.notDeleteAccrual.setValue(false)
+            me.attr.periodID.setValueById(null)
+            me.attr.periodFromID.setValueById(null)
+            me.attr.periodToID.setValueById(null)
+            me.attr.periodTFromID.setValueById(null)
+            me.attr.periodTToID.setValueById(null)
+          }
+        })
+    }
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+    me.on('afterrender', () => {
+      const me = this
+      me.createToolbarButtons(me)
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+      me.attr = {
+        tabNums: me.down('[name=tabNums]'),
+        isAddNew: me.down('[name=isAddNew]'),
+        isUpdate: me.down('[name=isUpdate]'),
+        isUseRegOriginal: me.down('[name=isUseRegOriginal]'),
+        isOrgList: me.down('[name=isOrgList]'),
+        isOrgDelete: me.down('[name=isOrgDelete]'),
+        periodID: me.down('[name=periodID]'),
+        periodFromID: me.down('[name=periodFromID]'),
+        periodToID: me.down('[name=periodToID]'),
+        createStaffOrder: me.down('[name=createStaffOrder]'),
+        notUpdateDays: me.down('[name=notUpdateDays]'),
+        notUpdateHour: me.down('[name=notUpdateHour]'),
+        updateByStaffDate: me.down('[name=updateByStaffDate]'),
+        updateByStaff: me.down('[name=updateByStaff]'),
+        addTimeSheet: me.down('[name=addTimeSheet]'),
+        withSubOrg: me.down('[name=withSubOrg]'),
+        fixedUser: me.down('[name=fixedUser]'),
+        notDeleteAccrual: me.down('[name=notDeleteAccrual]'),
+        periodTFromID: me.down('[name=periodTFromID]'),
+        periodTToID: me.down('[name=periodTToID]')
+      }
+      const globalOrganization = appAC.globalOrganization()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization })
+      AC.viewUtils.setFilterValue(me.attr.periodFromID, { orgID: globalOrganization })
+      AC.viewUtils.setFilterValue(me.attr.periodToID, { orgID: globalOrganization })
+      AC.viewUtils.setFilterValue(me.attr.periodTFromID, { orgID: globalOrganization })
+      AC.viewUtils.setFilterValue(me.attr.periodTToID, { orgID: globalOrganization })
+      me.loadData()
+    })
+    me.callParent(arguments)
+  }
+})

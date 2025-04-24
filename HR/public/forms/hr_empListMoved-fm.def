@@ -1,0 +1,583 @@
+/* global Ext AC appAC $App HR UB */
+exports.formDef = 'HR.empListMoved'
+const accMainReportsSubOrg = AC.entityUtils.verifyRightsMethod('ac_service', 'subOrg')
+
+Ext.define('HR.empListMoved', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empListMoved',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'hbox' },
+            autoScroll: true,
+            collapsed: false,
+            items: [
+              {
+                layout: { type: 'vbox' },
+                xtype: 'panel',
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getOrgCombo({
+                        labelWidth: 160,
+                        width: 700,
+                        flex: 1,
+                        readOnly: !accMainReportsSubOrg,
+                        ubRequest: {
+                          entity: 'hr_organization',
+                          fieldList: ['mi_data_id', 'description', 'mi_treePath'],
+                          whereList: {
+                            state: {
+                              expression: '[state]',
+                              condition: '=',
+                              values: {
+                                state: 'ACTIVE'
+                              }
+                            },
+                            path: {
+                              expression: accMainReportsSubOrg ? '[mi_treePath]' : '[mi_data_id]',
+                              condition: accMainReportsSubOrg ? 'like' : '=',
+                              values: {
+                                state: accMainReportsSubOrg ? `/${appAC.globalOrganization()}/` : appAC.globalOrganization()
+                              }
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'description' } },
+                          __mip_ondate: appAC.globalApplicationDate()
+                        },
+                        listeners: {
+                          change: function (ctrl) {
+                            const form = ctrl.up('form')
+                            HR.controlService.onChangeIncludeChildOrgs(form)
+                          }
+                        }
+                      }),
+                      HR.controlService.getIncludeChildOrgs(accMainReportsSubOrg, {
+                        listeners: {
+                          change: function (ctrl, value) {
+                            const form = ctrl.up('form')
+                            HR.controlService.onChangeIncludeChildOrgs(form)
+
+                            const typeOrg = form.down('[name=typeOrg]')
+                            const beFormedGroup = form.down('[name=beFormedGroup]')
+                            typeOrg.setDisabled(value || beFormedGroup.lastValue.beFormed === 'byWorkBook')
+                            if (value || beFormedGroup.lastValue.beFormed === 'byWorkBook') {
+                              typeOrg.setValue()
+                            }
+                          }
+                        }
+                      })
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getDepCombo({
+                        labelWidth: 160,
+                        width: 700,
+                        displayField: 'description',
+                        flex: 1,
+                        listeners: {
+                          change: function (ctrl, value) {
+                            const form = ctrl.up('form')
+                            form.down('[name=includeChildDepts]').setReadOnly(!value)
+                            if (!value) {
+                              form.down('[name=includeChildDepts]').setValue()
+                            }
+                          }
+                        }
+                      }),
+                      HR.controlService.getIncludeChildDepts()
+                    ]
+                  },
+                  {
+                    xtype: 'panel',
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'typeOrg',
+                        fieldLabel: UB.i18n('Враховувати міжорганізаційні накази'),
+                        labelWidth: 160,
+                        width: 295,
+                        checked: false
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'fullPosName',
+                        fieldLabel: UB.i18n('Повна назва посади'),
+                        labelWidth: 160,
+                        margin: '18 0 0 0',
+                        checked: false
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'panel',
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        labelWidth: 160,
+                        name: 'dateFrom',
+                        fieldLabel: UB.i18n('Переведені з'),
+                        allowBlank: false
+                      },
+                      {
+                        xtype: 'ubdatefield',
+                        labelWidth: 50,
+                        name: 'dateTo',
+                        fieldLabel: UB.i18n('по'),
+                        allowBlank: false
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      { xtype: 'label', text: UB.i18n('Формувати:'), cls: 'x-form-item-label', margin: '10 0 0 15', width: 155 },
+                      {
+                        xtype: 'radiogroup',
+                        name: 'beFormedGroup',
+                        columns: 3,
+                        margin: '5 0 0 8',
+                        vertical: false,
+                        items: [{
+                          margin: '0 0 0 0',
+                          width: 200,
+                          boxLabel: UB.i18n('За трудовою книжкою'),
+                          name: 'beFormed',
+                          inputValue: 'byWorkBook',
+                          checked: false
+                        },
+                        {
+                          margin: '0 0 0 0',
+                          width: 200,
+                          boxLabel: UB.i18n('За наказами'),
+                          name: 'beFormed',
+                          inputValue: 'byOrders',
+                          checked: true
+                        }
+                        ],
+                        listeners: {
+                          change: function (item, newVal, oldVal) {
+                            me.clearData()
+                            const colSelfStructDepName = AC.gridUtils.getColumnByIndex(me.attr.grid, 'selfStructDepName')
+                            const colDepName = AC.gridUtils.getColumnByIndex(me.attr.grid, 'depName')
+                            const colDepNameTo = AC.gridUtils.getColumnByIndex(me.attr.grid, 'depNameTo')
+                            const colPosName = AC.gridUtils.getColumnByIndex(me.attr.grid, 'posName')
+                            const colOrderNumberFull = AC.gridUtils.getColumnByIndex(me.attr.grid, 'orderNumberFull')
+                            const colOrderDate = AC.gridUtils.getColumnByIndex(me.attr.grid, 'orderDate')
+                            const colMoveOrder = AC.gridUtils.getColumnByIndex(me.attr.grid, 'moveOrder')
+                            const colReasonMovingKind = AC.gridUtils.getColumnByIndex(me.attr.grid, 'reasonMovingKind')
+                            const colDictStatePayName = AC.gridUtils.getColumnByIndex(me.attr.grid, 'dictStatePayName')
+                            const colOrgMasterName = AC.gridUtils.getColumnByIndex(me.attr.grid, 'orgMasterName')
+                            const colPersonDescr = AC.gridUtils.getColumnByIndex(me.attr.grid, 'addDescrPerson')
+                            const showAddDescrPerson = !!AC.settings.get('hrShowAddDescrPerson', appAC.globalOrganization())
+                            const useActualPositionName = !!AC.settings.get('hrOrderActualPositionName', appAC.globalOrganization())
+                            const colActualPositionName = AC.gridUtils.getColumnByIndex(me.attr.grid, 'actualPositionName')
+                            const colActualPositionNameTo = AC.gridUtils.getColumnByIndex(me.attr.grid, 'actualPositionNameTo')
+                            if (newVal.beFormed === 'byWorkBook') {
+                              me.attr.typeOrg.setValue()
+                              me.attr.typeOrg.setDisabled(true)
+                              me.attr.fullPosName.setValue()
+                              me.attr.fullPosName.setDisabled(true)
+                              me.attr.departmentID.setValue()
+                              me.attr.departmentID.setDisabled(true)
+                              me.attr.dictReasonMovingKindID.setValue()
+                              me.attr.dictReasonMovingKindID.setDisabled(true)
+                              colSelfStructDepName.setVisible(false)
+                              colDepName.setVisible(false)
+                              colDepNameTo.setVisible(false)
+                              colPosName.setVisible(false)
+                              colActualPositionName.setVisible(false)
+                              colActualPositionNameTo.setVisible(false)
+
+                              colOrderNumberFull.setVisible(false)
+                              colOrderDate.setVisible(false)
+                              colMoveOrder.setVisible(true)
+                              colReasonMovingKind.setVisible(false)
+                              colDictStatePayName.setVisible(false)
+                              colOrgMasterName.setVisible(false)
+                              colPersonDescr.setVisible(false)
+                            } else {
+                              me.attr.typeOrg.setValue()
+                              me.attr.typeOrg.setDisabled(me.attr.includeChildOrgs.getValue() || false)
+                              me.attr.fullPosName.setValue()
+                              me.attr.fullPosName.setDisabled(false)
+                              me.attr.departmentID.setValue()
+                              me.attr.departmentID.setDisabled(false)
+                              me.attr.dictReasonMovingKindID.setDisabled(false)
+                              colSelfStructDepName.setVisible(true)
+                              colDepName.setVisible(true)
+                              colDepNameTo.setVisible(true)
+                              colPosName.setVisible(true)
+                              colActualPositionName.setVisible(useActualPositionName)
+                              colActualPositionNameTo.setVisible(useActualPositionName)
+                              colOrderNumberFull.setVisible(true)
+                              colOrderDate.setVisible(true)
+                              colMoveOrder.setVisible(false)
+                              colReasonMovingKind.setVisible(true)
+                              colDictStatePayName.setVisible(true)
+                              colOrgMasterName.setVisible(true)
+                              colPersonDescr.setVisible(showAddDescrPerson)
+                            }
+                          }
+                        }
+
+                      }
+
+                    ]
+                  },
+                  {
+                    xtype: 'panel',
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'dictReasonMovingKindID',
+                        fieldLabel: UB.i18n('Причина переведення'),
+                        labelWidth: 160,
+                        width: 700,
+                        ubRequest: {
+                          entity: 'hr_dictReasonMoving',
+                          fieldList: ['ID', 'name']
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'panel',
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'workPlace',
+                        fieldLabel: UB.i18n('Місце роботи'),
+                        hideEntityItemInContext: true,
+                        enumGroupFilter: 'HR_WORKER_PLACE',
+                        valueField: 'code',
+                        displayField: 'name',
+                        labelWidth: 160,
+                        width: 700,
+                        flex: 1,
+                        ubRequest: {
+                          entity: 'ubm_enum',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                          whereList: {
+                            eGroup: {
+                              expression: '[eGroup]',
+                              condition: 'equal',
+                              values: { 'eGroup': 'HR_WORKER_PLACE' }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                margin: '60 0 0 0',
+                items: [
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Шукати'),
+                    iconCls: 'fas fa-search',
+                    width: 30,
+                    cls: 'green-action',
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.searchEmployee()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Очистити'),
+                    iconCls: 'fas fa-eraser',
+                    width: 30,
+                    cls: 'fill-action',
+                    margin: '5 0 0 0',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.clearSearch()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    iconCls: 'fas fa-print',
+                    width: 30,
+                    cls: 'blue-action',
+                    margin: '5 0 0 0',
+                    tooltip: UB.i18n('Друкувати'),
+                    handler: function () {
+                      me.doReport()
+                    }
+                  }
+
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'employeeNumberListGrid',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink',
+          'commandLink', 'showDetail', 'audit', 'refresh'],
+        cmdData: {
+          params: [{
+            entity: 'hr_empListMoved',
+            method: 'search',
+            fieldList: [
+              { name: 'tabNum' },
+              { name: 'employeeID', visibility: false },
+              { name: 'employeeNumberID', visibility: false },
+              { name: 'fullFIO', description: UB.i18n('ПIБ') },
+              { name: 'taxCode', description: UB.i18n('РНОКПП'), config: { align: 'center', width: 100 } },
+
+              { name: 'birthDate' },
+              { name: 'age' },
+
+              { name: 'sexType', config: { align: 'center', width: 100 } },
+              { name: 'addDescrPerson', description: UB.i18n('Додаткова інформація') },
+              { name: 'moveDate', description: UB.i18n('Дата переведення'), format: 'd.m.Y', config: { align: 'center', width: 100 } },
+
+              { name: 'dismDate', tooltip: UB.i18n('Дата звільнення з посади') },
+
+              { name: 'positionType' },
+              { name: 'dictStatePayName' },
+              { name: 'posName' },
+              { name: 'actualPositionName' },
+              { name: 'depName' },
+              { name: 'posNameTo' },
+              { name: 'actualPositionNameTo' },
+              { name: 'depNameTo' },
+
+              { name: 'numberOS', tooltip: UB.i18n('Номер особової справи') },
+              { name: 'posCategory' },
+              { name: 'rank' },
+              { name: 'workPlace' },
+              { name: 'orderNumberFull', tooltip: UB.i18n('Номер наказу про переведення') },
+              { name: 'orderDate', tooltip: UB.i18n('Дата наказу про переведення') },
+              { name: 'moveOrder', tooltip: UB.i18n('Наказ про переведення') },
+              { name: 'reasonMovingKind', tooltip: UB.i18n('Причина переведення') },
+              { name: 'moveReason', tooltip: UB.i18n('Підстава переведення') },
+              { name: 'orgMasterName', tooltip: UB.i18n('За наказом організації') },
+              { name: 'orgName', tooltip: UB.i18n('В організації') },
+              { name: 'selfStructDepName', description: UB.i18n('Самостійний структурний підрозділ') }
+            ]
+          }]
+        },
+        cmpInitConfig: {
+          afterInit: function () {
+            const me = this
+            const store = me.getStore()
+            store.autoLoad = false
+          },
+          customActions: [
+            {
+              text: UB.i18n('Оновити'),
+              iconCls: 'fa fa-refresh',
+              cls: 'add-new-action',
+              handler: function (btn) {
+                me.searchEmployee()
+              }
+            }
+          ],
+          onDeterminateForm: HR.employeeTabs.onDeterminateCard,
+          listeners: {
+            render: (grid) => {
+              grid.menu.removeAll()
+              grid.menu.add([HR.employeeTabs.getEmpCardMenu(grid)])
+              const showAddDescrPerson = !!AC.settings.get('hrShowAddDescrPerson', appAC.globalOrganization())
+              const colPersonDescr = AC.gridUtils.getColumnByIndex(grid, 'addDescrPerson')
+              colPersonDescr.setVisible(showAddDescrPerson)
+              const useActualPositionName = AC.settings.get('hrOrderActualPositionName', appAC.globalOrganization()) === true
+              let colActualPositionName = AC.gridUtils.getColumnByIndex(grid, 'actualPositionName')
+              colActualPositionName.setVisible(useActualPositionName)
+              colActualPositionName = AC.gridUtils.getColumnByIndex(grid, 'actualPositionNameTo')
+              colActualPositionName.setVisible(useActualPositionName)
+            }
+          }
+        },
+        getExportTitle: function () {
+          return UB.i18n('Працівники, переведені за період')
+        }
+      }
+    ]
+
+    me.clearData = function () {
+      const epmGrid = me.down('[name=employeeNumberListGrid]')
+      if (epmGrid && epmGrid.store && epmGrid.store.data) {
+        epmGrid.store.data.items = []
+        epmGrid.view.refresh()
+      }
+    }
+
+    me.setDefaultParams = (isInit) => {
+      const me = this
+      me.attr.dateFrom.setValue(AC.dateService.firstDayOfYear(appAC.globalApplicationDate()))
+      me.attr.dateTo.setValue(appAC.globalApplicationDate())
+      me.attr.dictReasonMovingKindID.setValue()
+      if (me.attr.beFormedGroup.getChecked()[0].inputValue === 'byOrders') AC.gridUtils.getColumnByIndex(me.attr.grid, 'moveOrder').setVisible(false)
+      me.attr.typeOrg.setValue()
+      me.attr.fullPosName.setValue()
+      me.attr.workPlace.setValue()
+      me.attr.organizationID.setValue(appAC.globalOrganization())
+      me.attr.includeChildOrgs.setValue()
+      me.attr.departmentID.setValue()
+      me.attr.includeChildDepts.setValue()
+    }
+
+    me.clearSearch = () => {
+      me.setDefaultParams(false)
+    }
+
+    me.searchEmployee = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+      const store = me.attr.grid.getStore()
+      let req = store.ubRequest
+      req.organizationID = me.attr.organizationID.getValue()
+      req.includeChildOrgs = me.attr.includeChildOrgs.getValue()
+      req.departmentID = me.attr.departmentID.getValue()
+      req.includeChildDepts = me.attr.includeChildDepts.getValue()
+      req.onDate = appAC.globalApplicationDate()
+      req.dateFrom = AC.dateService.shiftDate(me.attr.dateFrom.getValue())
+      req.dateTo = AC.dateService.shiftDate(me.attr.dateTo.getValue())
+      req.dictReasonMovingKindID = me.attr.dictReasonMovingKindID.getValue()
+      req.beFormedGroup = req.beFormedGroup = me.attr.beFormedGroup.getChecked()[0].inputValue
+      req.typeOrg = me.attr.typeOrg.getValue()
+      req.fullPosName = me.attr.fullPosName.getValue()
+      req.workPlace = me.attr.workPlace.getValue()
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=employeeNumberListGrid]'),
+        dateFrom: me.down('[name=dateFrom]'),
+        dateTo: me.down('[name=dateTo]'),
+        dictReasonMovingKindID: me.down('[name=dictReasonMovingKindID]'),
+        typeOrg: me.down('[name=typeOrg]'),
+        fullPosName: me.down('[name=fullPosName]'),
+        workPlace: me.down('[name=workPlace]'),
+        beFormedGroup: me.down('[name=beFormedGroup]'),
+        organizationID: me.down('[name=organizationID]'),
+        includeChildOrgs: me.down('[name=includeChildOrgs]'),
+        departmentID: me.down('[name=departmentID]'),
+        includeChildDepts: me.down('[name=includeChildDepts]')
+      }
+      me.setDefaultParams(true)
+    }, me)
+
+    me.validateParams = () => {
+      let res
+      let params = []
+      let dateFromCtrl = me.attr.dateFrom
+      let dateFrom = dateFromCtrl.getValue()
+      if (!dateFrom || !dateFromCtrl.isValid()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Переведені з"')))
+      }
+      let dateToCtrl = me.attr.dateTo
+      let dateTo = dateToCtrl.getValue()
+      if (!dateTo || !dateToCtrl.isValid()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"по"')))
+      }
+      if (!me.attr.organizationID.getValue()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Організація"')))
+      }
+      if (params.length) {
+        res = {
+          msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+        }
+      } else {
+        if (dateFrom > dateTo) {
+          res = {
+            msg: UB.i18n(`Дата {0} не може перевищувати дату {1}`, AC.viewUtils.formatFieldLabel('"Переведені з"'), AC.viewUtils.formatFieldLabel('"по"'))
+          }
+        }
+      }
+      return res
+    }
+
+    me.report_code = 'hr_empListMoved_1'
+    me.doReport = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+      let reportParams = {
+        organizationID: me.attr.organizationID.getValue(),
+        includeChildOrgs: me.attr.includeChildOrgs.getValue(),
+        departmentID: me.attr.departmentID.getValue(),
+        includeChildDepts: me.attr.includeChildDepts.getValue(),
+        onDate: AC.dateService.shiftDate(me.attr.dateTo.getValue()), // appAC.globalApplicationDate(),
+        dateFrom: AC.dateService.shiftDate(me.attr.dateFrom.getValue()),
+        dateTo: AC.dateService.shiftDate(me.attr.dateTo.getValue()),
+        dictReasonMovingKindID: me.attr.dictReasonMovingKindID.getValue(),
+        typeOrg: me.attr.typeOrg.getValue(),
+        fullPosName: me.attr.fullPosName.getValue(),
+        workPlace: me.attr.workPlace.getValue(),
+        beFormedGroup: me.attr.beFormedGroup.getChecked()[0].inputValue
+      }
+
+      $App.doCommand({
+        cmdType: 'showReport',
+        caption: UB.i18n('Друкована форма'),
+        tabId: 'printDocument' + me.report_code + Date.now(),
+        target: $App.getViewport().centralPanel,
+        cmdData: {
+          reportCode: me.report_code,
+          reportParams: reportParams,
+          reportOptions: {
+            allowExportToExcel: true,
+            isModal: false
+          }
+        }
+      })
+    }
+
+    me.callParent(arguments)
+  }
+})

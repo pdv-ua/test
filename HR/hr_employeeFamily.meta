@@ -1,0 +1,201 @@
+{
+  "caption": "Члени сімї",
+  "description": "Член сім'ї",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dictKinshipKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictKinshipKind",
+      "caption": "Ступінь споріднення",
+      "description": "Ступінь споріднення",
+      "documentation": "Ступінь споріднення"
+    },
+    {
+      "name": "peopleID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_people",
+      "caption": "ПІБ",
+      "description": "ПІБ",
+      "documentation": "ПІБ",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Припинення споріднення",
+      "description": "Припинення споріднення",
+      "documentation": "Припинення споріднення",
+      "defaultView": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Припинення споріднення",
+      "description": "Припинення споріднення",
+      "documentation": "Припинення споріднення",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "dictBenefitsKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictBenefitsKind",
+      "caption": "Пільга",
+      "description": "Пільга",
+      "documentation": "Пільга"
+    },
+    {
+      "name": "isDependent",
+      "dataType": "Boolean",
+      "caption": "Є утриманцем",
+      "description": "Є утриманцем",
+      "documentation": "Є утриманцем",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Примітки",
+      "description": "Примітки",
+      "documentation": "Примітки"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "customSettings": {
+        "compositeFields": [
+          "peopleID.birthDate",
+          "dictKinshipKindID.name",
+          "peopleID.fullFIO"
+        ],
+        "compositeSeparator": " "
+      }
+    },
+    {
+      "name": "impEmployeeID",
+      "dataType": "Bigint",
+      "caption": "Зовнішній ID особи при імпорті",
+      "description": "Зовнішній ID особи при імпорті",
+      "documentation": "Використовується тільки при імпорті"
+    },
+    {
+      "name": "taxCode",
+      "dataType": "String",
+      "size": 20,
+      "caption": "РНОКПП",
+      "description": "РНОКПП",
+      "documentation": "Використовується тільки при імпорті",
+      "allowNull": true,
+      "isUnique": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "fullFIO",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Повне ім'я особи",
+      "description": "Повне ім'я особи",
+      "documentation": "Використовується тільки при імпорті",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "birthDate",
+      "dataType": "Date",
+      "caption": "Дата народження",
+      "description": "Дата народження",
+      "documentation": "Використовується тільки при імпорті",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "impFullFIO",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Повне ім'я родича",
+      "description": "Повне ім'я родича",
+      "documentation": "Використовується тільки при імпорті",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "impBirthDate",
+      "dataType": "Date",
+      "caption": "Дата народження  родича",
+      "description": "Дата народження родича",
+      "documentation": "Використовується тільки при імпорті",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },{
+      "name": "impSourceID",
+      "dataType": "Bigint",
+      "caption": "Код джерела",
+      "description": "Код джерела даних імпорту",
+      "documentation": "Код джерела даних імпорту",
+      "allowNull": true
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

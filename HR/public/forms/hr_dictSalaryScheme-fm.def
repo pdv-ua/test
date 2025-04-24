@@ -1,0 +1,195 @@
+/* global UB AC HR appAC */
+exports.formDef = {
+  parentConfig: { layout: { type: 'border' } },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          attributeName: 'name'
+        },
+        {
+          attributeName: 'description'
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'schemeType',
+              width: 300
+            },
+            {
+              attributeName: 'setAccrualByMinValue',
+              labelWidth: 300
+            },
+            {
+              attributeName: 'roundUpTo',
+              width: 400
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Рівні'),
+          layout: 'fit',
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'gridSalarySchemeLevel',
+              autoScroll: true,
+              stateful: true,
+              stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_dictSalaryScheme_gridSalarySchemeLevel'),
+              hideActions: ['addNewByCurrent', 'newVersion'],
+              entityConfig: {
+                entity: 'hr_dictSalarySchemeLevel',
+                method: 'selectOnDate',
+                fieldList: [
+                  { name: 'code' },
+                  { name: 'sortNumber' },
+                  { name: 'name' },
+                  { name: 'accrualSumMin' },
+                  { name: 'accrualSumMax' },
+                  { name: 'accrualSumAvg', description: UB.i18n('Середнє значення') },
+                  { name: 'coefMin' },
+                  { name: 'coefMax' },
+                  { name: 'accDateFrom' },
+                  { name: 'accDateTo' },
+                  { name: 'isActive', config: { align: 'center' } }
+                ],
+                orderList: {
+                  orderBy: {
+                    expression: 'sortNumber',
+                    order: 'asc'
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['dictSalarySchemeID'],
+              cmpInitConfig: {
+                afterInit: function () {
+                  AC.gridUtils.tuneGridColumns(this, {
+                    accrualSumAvg: {
+                      renderer: function (value) {
+                        const me = this.up('form')
+                        return me.record.get('roundUpTo') ? HR.accrualService.roundSum(value, me.record.get('roundUpTo')).toFixed(2) : value
+                      }
+                    }
+                  })
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Базові суми'),
+          layout: 'fit',
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'gridSalarySchemeBase',
+              disableSearchBar: true,
+              autoScroll: true,
+              rowEditing: true,
+              hideActions: ['addNewByCurrent', 'newVersion'],
+              entityConfig: {
+                entity: 'hr_dictSalarySchemeBase',
+                method: 'select',
+                fieldList: [
+                  { name: 'dateFrom', config: { align: 'center', width: 130 } },
+                  { name: 'accrualSum', decimalPrecision: 2, config: { width: 130 } }
+                ],
+                orderList: { orderBy: { expression: 'dateFrom' } }
+              },
+              masterFields: ['ID'],
+              detailFields: ['dictSalarySchemeID'],
+              customActions: [
+                {
+                  text: UB.i18n('Перерахувати'),
+                  cls: 'fill-action',
+                  iconCls: 'fas fa-calculator',
+                  name: 'recalcSalarySchemeBtn',
+                  handler: btn => {
+                    const me = btn.up('form')
+                    me.doRecalcSalaryScheme()
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Організації'),
+          layout: 'fit',
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'gridSalarySchemeOrg',
+              disableSearchBar: true,
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              entityConfig: {
+                entity: 'hr_dictSalarySchemeOrg',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'orgID.description',
+                    description: UB.i18n('Організація'),
+                    simpleFilter: true
+                  }
+                ],
+                whereList: {
+                  orgID: {
+                    expression: '[orgID.state]',
+                    condition: 'equal',
+                    value: 'ACTIVE'
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['dictSalarySchemeID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    scale: 'medium',
+                    cls: 'fill-action',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeOrgValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeOrgValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeOrgValue(form, grid)
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

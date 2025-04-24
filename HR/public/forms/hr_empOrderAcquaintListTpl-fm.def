@@ -1,0 +1,129 @@
+/* global AC appAC UB */
+exports.formDef = {
+  size: {
+    width: 1100,
+    height: 600
+  },
+  requiredFields: ['organizationID'],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  items: [
+    {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [
+        {
+          attributeName: 'empOrderType',
+          disableContextMenu: false,
+          fieldLabel: UB.i18n('Вид наказу'),
+          flex: 1
+        },
+        {
+          attributeName: 'name',
+          flex: 1
+        }
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      name: 'empOrdAcquaintanceListTemplate',
+      autoScroll: true,
+      disableSearchBar: true,
+      disableMenuItemDetails: true,
+      rowEditing: true,
+      hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+      flex: 1,
+      entityConfig: {
+        entity: 'hr_empOrderAcquaintListTplDet',
+        method: 'select',
+        fieldList: [
+          {
+            name: 'employeePositionID.description',
+            description: UB.i18n('ПІБ працівника'),
+            config: {
+              width: 400
+            },
+            editor: {
+              fieldList: ['ID', 'description'],
+              gridFieldList: ['description'],
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              whereList: {
+                organizationID: {
+                  expression: '[organizationID]',
+                  condition: '=',
+                  values: {
+                    organizationID: appAC.globalOrganization()
+                  }
+                }
+              }
+            }
+          },
+          {
+            name: 'respEmployeePositionID.description',
+            description: UB.i18n('Відповідальна особа'),
+            config: {
+              width: 400
+            },
+            editor: {
+              fieldList: ['ID', 'description'],
+              gridFieldList: ['description'],
+              allowBlank: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              whereList: {
+                organizationID: {
+                  expression: '[organizationID]',
+                  condition: '=',
+                  values: {
+                    organizationID: appAC.globalOrganization()
+                  }
+                }
+              }
+            }
+          },
+          {
+            name: 'dictEventKnowledgID.name',
+            description: UB.i18n('Подія ознайомлення'),
+            editor: {
+              fieldList: ['ID', 'name'],
+              gridFieldList: ['name'],
+              whereList: {
+                organizationID: {
+                  expression: '[organizationID]',
+                  condition: '=',
+                  values: {
+                    organizationID: appAC.globalOrganization()
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      masterFields: ['ID'],
+      detailFields: ['empOrdAcquaintanceListTemplateID'],
+      onBeforeEdit: function (editor, context) {
+        const evaluationType = context.record.get('evaluationType')
+        const employeePosition = editor.editor.query('[name=employeePositionID.description]')[0]
+        const employeeResponsible = editor.editor.query('[name=respEmployeePositionID.description]')[0]
+
+        if (!evaluationType) context.record.set('evaluationType', 'INFO')
+        employeeResponsible.setReadOnly(context.record.data['employeePositionID.description'] && context.record.data['employeePositionID.description'].length)
+        employeePosition.setReadOnly(context.record.data['respEmployeePositionID.description'] && context.record.data['respEmployeePositionID.description'].length)
+
+        employeeResponsible.on('change', (ctrl, value) => {
+          employeePosition.setReadOnly(ctrl.getRawValue())
+        })
+        employeePosition.on('change', (ctrl, value) => {
+          employeeResponsible.setReadOnly(ctrl.getRawValue())
+        })
+        return true
+      }
+    }
+  ]
+}

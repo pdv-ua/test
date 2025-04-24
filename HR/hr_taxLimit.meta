@@ -1,0 +1,109 @@
+{
+  "caption": "Пільги ПДФО",
+  "description": "Пільги ПДФО",
+  "descriptionAttribute": "name",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 10,
+      "caption": "Код",
+      "description": "Код",
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Назва",
+      "description": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "taxLimitType",
+      "dataType": "Enum",
+      "enumGroup": "HR_TAXLIMIT_TYPE",
+      "caption": "Тип",
+      "description": "Тип"
+    },
+    {
+      "name": "size",
+      "dataType": "Currency",
+      "caption": "Розмір",
+      "description": "Розмір"
+    },
+    {
+      "name": "maxBase",
+      "dataType": "Currency",
+      "caption": "Базовий поріг для пільги",
+      "description": "Базовий поріг для пільги",
+      "defaultValue": "1.4"
+    },
+    {
+      "name": "codeForReport",
+      "dataType": "String",
+      "size": 2,
+      "caption": "Ознака для звіту",
+      "description": "Ознака для звіту"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Початок",
+      "description": "Дата початку",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Кінець",
+      "description": "Дата закінчення",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

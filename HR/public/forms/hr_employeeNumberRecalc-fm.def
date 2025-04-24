@@ -1,0 +1,317 @@
+// @isModal true
+/* global UB Ext appAC UB $App _ appAC appHR AC */
+
+exports.formDef = 'HR.employeeNumberRecalc'
+
+Ext.define('HR.employeeNumberRecalc', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.employeeNumberRecalc',
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        header: false,
+        region: 'north',
+        layout: 'hbox',
+        margin: '20 0 0 0',
+        items: [
+          {
+            xtype: 'ubcombobox',
+            name: 'period',
+            fieldLabel: UB.i18n('Дата перерахунку зарплати'),
+            valueField: 'ID',
+            displayField: 'name',
+            fieldList: ['ID', 'name', 'dateFrom', 'dateTo', 'orgID', 'description'],
+            orderList: {
+              orderBy: {
+                expression: 'dateFrom',
+                order: 'desc'
+              }
+            },
+            pageSize: 50,
+            labelWidth: 200,
+            width: 420,
+            allowBlank: true,
+            ubRequest: {
+              entity: 'hr_dictPeriod',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['ID', 'name', 'dateFrom', 'dateTo', 'isClosed', 'orgID', 'priorPeriodID', 'nextPeriodID', 'description'],
+              orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+            },
+            listeners: {
+              expand: appHR.periodExpand
+            }
+          }
+        ]
+      },
+      {
+        xtype: 'acGrid',
+        name: 'employeeList',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        rowEditing: true,
+        notWriteChanges: true,
+        storeType: 'local',
+        showToolBar: true,
+        disablePaging: true,
+        loadMaskMessage: UB.i18n('Завантаження даних...'),
+        ignoreAttr: ['posName', 'depName'],
+        hideActions: ['addNewByCurrent'],
+        ignoreAttrNewByCurrent: ['posName', 'depName', 'employeeNumberID.description', 'employeeNumberID'],
+        onBeforeEdit: (control, context) => {
+          const me = context.grid.up('form')
+          return me.beforeGridEdit(me, 'employeeList', context)
+        },
+        edit: (control, context) => {
+          const me = context.grid.up('form')
+          return me.onGridEdit(me, 'employeeList', context, control)
+        },
+        getRowClass: function (record) {
+          let cls = ''
+          const dateToEmpty = record.data['dateToEmpty']
+          const workPlaceCode = record.data['workPlaceCode']
+          const miDeleteUser = record.data.mi_deleteUser
+          if (miDeleteUser) cls = 'grd-color-grey'
+          else if (workPlaceCode) {
+            if (['1', '3'].includes(workPlaceCode)) cls = dateToEmpty ? 'grd-color-blue' : ''
+            else if (workPlaceCode === '2') cls = dateToEmpty ? 'grd-color-blue-italic' : 'grd-italic'
+            else if (workPlaceCode === '4') cls = dateToEmpty ? 'grd-color-blue' : 'grd-color-lightgreen'
+          }
+          return cls
+        },
+        customToolBarActions: [
+          {
+            iconCls: 'fas fa-angle-double-down',
+            cls: 'fill-action',
+            scale: 'medium',
+            tooltip: UB.i18n('Додати списком'),
+            handler: function (btn) {
+              const me = btn.up('form')
+              me.setEmployeeNumbers(me)
+            }
+          }
+        ],
+        fields: [
+          { name: 'employeeNumberID' },
+          { name: 'workPlaceCode' },
+          {
+            name: 'employeeNumberID.description',
+            columnConfig: {
+              text: UB.i18n('Працівник'),
+              flex: 1,
+              editor: {
+                dataType: 'Entity',
+                hideEntityItemInContext: true,
+                associatedEntity: 'hr_employeeNumberS',
+                storeAttributeValueField: 'employeeNumberID',
+                allowBlank: false,
+                fieldList: ['ID', 'description', 'orgID', 'dateFrom', 'dateTo', 'posName', 'depName', 'employeeID', 'dateToEmpty', 'workPlaceCode', 'mi_deleteUser']
+              }
+            }
+          },
+          {
+            name: 'posName',
+            columnConfig: {
+              text: UB.i18n('Посада'),
+              width: 150
+            }
+          },
+          { name: 'depName',
+            columnConfig: {
+              text: UB.i18n('Підрозділ'),
+              width: 150
+            }
+          },
+          {
+            name: 'dateFrom',
+            columnConfig: {
+              text: UB.i18n('Дата прийняття'),
+              width: 150,
+              renderer: Ext.util.Format.dateRenderer('d.m.Y')
+            }
+          },
+          {
+            name: 'dateToEmpty',
+            columnConfig: {
+              text: UB.i18n('Дата звільнення'),
+              width: 150,
+              renderer: (value) => {
+                if (_.isDate(value)) {
+                  if (AC.dateService.shiftDate(value) < AC.dateService.maxDate()) {
+                    return AC.dateService.formatDate(value)
+                  } else {
+                    return ''
+                  }
+                } else {
+                  return value
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Закрити без збереження'),
+            height: 30,
+            cls: 'red-action',
+            iconCls: 'u-icon-close',
+            margin: '10 10 10 0',
+            handler: function () {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Зберегти і закрити'),
+            height: 30,
+            iconCls: 'u-icon-save-and-close',
+            margin: '10 10 10 0',
+            cls: 'blue-action',
+            handler: function () {
+              me.closeAndLoad(false)
+            }
+          }
+        ]
+      }
+    ]
+
+    me.closeAndLoad = function () {
+      const periodID = me.attr.period.getValue()
+
+      const isEdit = _.get(me.attr.grid.down('grid'), 'editingPlugin.editing')
+      if (isEdit) {
+        AC.viewUtils.showToast(UB.i18n('Необхідно завершити редагування даних'))
+        return
+      }
+
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_payCalcDateFrom',
+        method: periodID ? 'addForRecalc' : 'cancelRecalc',
+        execParams: {
+          periodID: periodID,
+          orgID: appAC.globalOrganization(),
+          selected: me.attr.grid.getStore().data.items.map(o => o.get('employeeNumberID'))
+        }
+      }).then(() => {
+        me.setLoading(false)
+        me.up('window').close()
+      })
+    }
+
+    me.setEmployeeNumbers = function (me) {
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: 'hr_employeeNumberSearch',
+        isModal: true,
+        cmpInitConfig: {
+          orgID: appAC.globalOrganization(),
+          readOnlyAttr: ['periodID'],
+          defaultValues: {
+            periodID: me.currentPeriod.ID,
+            showPayCalcDateFrom: true
+          },
+          onSelect: (data) => {
+            const addEmployeeNumbers = []
+            const store = me.attr.grid.getStore()
+            const setData = () => {
+              me.attr.grid.getStore().un('clear', setData)
+              data.forEach(row => {
+                if (!store.findRecord('employeeNumberID', row.employeeNumberID)) {
+                  addEmployeeNumbers.push(row)
+                }
+              })
+              if (addEmployeeNumbers.length) {
+                const bind = () => {
+                  me.attr.grid.getStore().un('add', bind)
+                }
+                me.attr.grid.getStore().on('add', bind)
+                me.attr.grid.getStore().insert(me.attr.grid.getStore().data.length, addEmployeeNumbers)
+              }
+            }
+            if (me.attr.grid.getStore().count()) {
+              $App.dialogYesNo('Попередження', UB.i18n('Видалити раніше внесені записи?'))
+                .then(res => {
+                  if (res) {
+                    me.attr.grid.getStore().on('clear', setData)
+                    me.attr.grid.removeAll()
+                  } else {
+                    setData()
+                  }
+                })
+            } else {
+              setData()
+            }
+          }
+        }
+      })
+    }
+
+    me.beforeGridEdit = function (me, gridName, context) {
+      if (context.column.dataIndex === 'employeeNumberID.description') {
+        AC.viewUtils.setFilterValue(context.column.field, {
+          orgID: appAC.globalOrganization(),
+          dateFrom: { value: me.currentPeriod.dateTo || appAC.globalApplicationDate(), condition: '<=' },
+          dateTo: { value: me.currentPeriod.dateFrom || appAC.globalApplicationDate(), condition: '>=' }
+        })
+        AC.viewUtils.setValueOnChange(context.column.field,
+          {
+            'depName': 'depName',
+            'posName': 'posName',
+            'dateFrom': 'dateFrom',
+            'workPlaceCode': 'workPlaceCode',
+            'dateToEmpty': 'dateToEmpty'
+          },
+          context.record,
+          ['clearValue']
+        )
+      }
+    }
+
+    me.onGridEdit = function (me, gridName, context, control) {
+      const data = context.grid.getData()
+      if (context.column.field.name === 'employeeNumberID.description') {
+        if (data.filter(o => o.employeeNumberID === context.record.get('employeeNumberID')).length > 1) {
+          $App.dialogYesNo('Попередження', UB.i18n(`Табельний номер {0} вже додано! Продовжити?`, context.record.get('employeeNumberID.description')))
+            .then(choice => {
+              if (!choice) {
+                context.store.remove(context.record)
+                return false
+              }
+            })
+        }
+      }
+    }
+
+    me.currentPeriod = {}
+
+    me.on('afterrender', function () {
+      me.attr = {
+        period: me.down('[name=period]'),
+        grid: me.down('[name=employeeList]')
+      }
+      const globalOrganization = appAC.globalOrganization()
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        me.currentPeriod = response
+        AC.viewUtils.setWhereListProperty(me.attr.period, [
+          ['orgID', '=', appAC.globalOrganization()],
+          ['dateFrom', '<', response.dateFrom]
+        ], undefined, ['clearValue', 'clearWhereList'])
+      })
+    })
+
+    me.callParent(arguments)
+  }
+
+})

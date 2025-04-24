@@ -1,0 +1,58 @@
+exports.formDef = (function () {
+  return {
+    requiredFields: ['dictDocKindID.name'],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: { type: 'vbox', align: 'stretch' }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [
+      {
+        xtype: 'tabpanel',
+        flex: 1,
+        items: [
+          {
+            title: UB.i18n('Загальне'),
+            layout: { type: 'vbox', align: 'stretch' },
+            flex: 1,
+            items: [
+              { attributeName: 'employeeID', hidden: true },
+              { attributeName: 'dictDocKindID', margin: '10 15 5 15' },
+              { attributeName: 'docSeries' },
+              { attributeName: 'docNumber' },
+              { attributeName: 'docIssuedDate' },
+              { attributeName: 'docIssued' },
+              { attributeName: 'docValidUntil' },
+              { attributeName: 'state' },
+              { attributeName: 'comment', xtype: 'textarea', height: 45 }
+            ]
+          },
+          {
+            title: UB.i18n('Скан-копії'),
+            autoScroll: true,
+            layout: { type: 'vbox', align: 'stretch' },
+            flex: 1,
+            items: [
+              {
+                xtype: 'docAttachment',
+                name: 'docAttachment',
+                entity: 'hr_attachDoc',
+                detailFields: 'entityID',
+                fieldList: ['ID', 'caption', 'description', 'sheetsQuantity', 'document', 'mi_createDate',
+                  'mi_modifyDate', 'entityID'],
+                masterFields: 'ID',
+                showOriginal: true,
+                minHeight: 55,
+                maxHeight: 140,
+                height: 95
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+})()

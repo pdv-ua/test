@@ -1,0 +1,171 @@
+/* global Ext UB $App _ HR AC appAC */
+exports.formDef = 'HR.empListCustom'
+
+Ext.define('HR.empListCustom', {
+  extend: 'Ext.form.Panel',
+  requires: [
+    'UB.core.UBCommand',
+    'UB.core.UBUtil'
+  ],
+  width: 1280,
+  height: 800,
+  layout: { type: 'vbox', align: 'stretch' },
+  flex: 1,
+  items: [
+    {
+      xtype: 'panel',
+      region: 'center',
+      name: 'reportPanel',
+      flex: 1,
+      items: []
+    }
+  ],
+  initComponent: function () {
+    const me = this
+    const control = Ext.create('Ext.Component', {
+      flex: 1,
+      margin: 0,
+      autoEl: {
+        tag: 'iframe'
+      }
+    })
+    const container = Ext.create('Ext.panel.Panel', {
+      layout: { type: 'vbox', align: 'stretch' },
+      flex: 1,
+      items: [
+        {
+          flex: 1,
+          autoScroll: true,
+          layout: { type: 'hbox', pack: 'center', align: 'stretch' },
+          bodyCls: 'ub-panel-gray',
+          items: [control]
+        }]
+    })
+    me.items = [container]
+    me.reportControl = control
+    me.on('afterrender', function () {
+      me.showDesktop()
+    })
+    me.callParent(arguments)
+  },
+  showDesktop: async function () {
+    const me = this
+    const iFrame = me.reportControl.getEl().dom
+    const iFrameDoc = iFrame.contentDocument
+    let shTemplate = ''
+    const style = [HR.controlService.getShortcutListStyle()]
+    const shortcutData = await me.prepareShortcut()
+    const maxItems = _.max([shortcutData.left.length, shortcutData.right.length])
+    let idx = 0
+    while (idx < maxItems) {
+      const data = {
+        shData1: shortcutData.left[idx] || [],
+        shData2: shortcutData.right[idx] || []
+      }
+      for (let r = 0, l = _.max([data.shData1.length, data.shData2.length]); r < l; r++) {
+        shTemplate += '<tr>'
+        for (let i = 1; i <= 2; i++) {
+          let linkTag = (data[`shData${i}`][r] && data[`shData${i}`][r].isFolder) ? (data[`shData${i}`][r] ? data[`shData${i}`][r].caption : '')
+            : `<a href="#" data-id=${data[`shData${i}`][r] ? data[`shData${i}`][r].ID : ''}>${data[`shData${i}`][r] ? data[`shData${i}`][r].caption : ''}</a>`
+          shTemplate += `<td 
+          style="width:50%;font-size:${data[`shData${i}`][r] ? data[`shData${i}`][r].fontSize : 14}px; padding-left: ${data[`shData${i}`][r] ? data[`shData${i}`][r].pad : 0}px;">
+          ${data[`shData${i}`][r] && data[`shData${i}`][r].isFolder ? '<b>' : ''}
+          ${linkTag}
+          ${data[`shData${i}`][r] && data[`shData${i}`][r].isFolder ? '</b>' : ''}
+        </td>`
+        }
+        shTemplate += '</tr>'
+      }
+      idx++
+      shTemplate += '<tr><td style="height:10px;"></td><td></td></tr>'
+    }
+    const template = `<table style="border-collapse: collapse; width: 100%; word-break: break-all;" border="0px" cellspacing="0" cellpadding="3px">
+                     <tbody>
+                     ${shTemplate}
+                    </tbody>
+                    </table>`
+    iFrameDoc.body.innerHTML = template
+    iFrameDoc.head.innerHTML = `<style type="text/css">
+        ${style.join('\n')}
+      </style>`
+
+    const refs = iFrameDoc.getElementsByTagName('a')
+    for (let i = 0, L = refs.length; i < L; i++) {
+      refs[i].addEventListener('click', me.onReportClick, true)
+    }
+  },
+  prepareShortcut: async function () {
+    const result = {
+      left: [],
+      right: []
+    }
+
+    const parentCodes = ['reportsEmpListCommon', 'reportsEmpListByOrder', 'reportsEmpListByNonAttendance', 'reportsEmployee', 'reportsEmpListSettingsByNonAttendance']
+    const leftCol = ['reportsEmpListCommon', 'reportsEmployee']
+    const rightCol = ['reportsEmpListByOrder', 'reportsEmpListByNonAttendance', 'reportsEmpListSettingsByNonAttendance']
+    const parents = await UB.Repository('ubm_navshortcut')
+      .attrs('ID')
+      .where('code', 'in', parentCodes)
+      .selectAsObject()
+
+    const hrVacFixMonth = AC.settings.get('hrVacFixMonth', appAC.globalOrganization())
+    const hrFundSourceAccounting = AC.settings.get('hrFundSourceAccounting', appAC.globalOrganization())
+    let shortcuts = UB.core.UBStoreManager.getNavigationShortcutStore().data.items
+      .filter(o => {
+        return (parentCodes.indexOf(o.get('code')) !== -1 || parents.map(item => item.ID).indexOf(o.get('parentID')) !== -1) &&
+          (hrVacFixMonth || !['hr_empListUnusedVacationByPeriodsEmployee', 'hr_empListDayFixVacation'].includes(o.get('code'))) &&
+          (hrVacFixMonth || !['hr_empListUnusedVacationByPeriodsEmployee', 'hr_empListDayFixVacation'].includes(o.get('code')))
+      })
+    const baseFolder = shortcuts.filter(o => { return o.get('parentID') === null && o.get('isFolder') === true })
+
+    if (hrFundSourceAccounting !== 'STAFF' && hrFundSourceAccounting !== 'ORDER') {
+      shortcuts = shortcuts.filter(item => item.data.code !== 'hr_employeeByFundingSources')
+    }
+
+    function getShortcutByParent (parentID, folderShortcut, padding) {
+      const shcuts = shortcuts.filter(o => { return o.get('parentID') === parentID })
+      shcuts.forEach(sh => {
+        folderShortcut.push(
+          {
+            ID: sh.get('isFolder') ? '' : sh.get('ID'),
+            isFolder: sh.get('isFolder'),
+            caption: sh.get('caption'),
+            pad: padding,
+            fontSize: sh.get('isFolder') ? 14 : 14
+          }
+        )
+        if (sh.get('isFolder')) {
+          getShortcutByParent(sh.get('ID'), folderShortcut, padding + 10)
+        }
+      })
+    }
+
+    baseFolder.forEach(folder => {
+      const padding = 0
+      const folderShortcut = [{
+        ID: '',
+        isFolder: folder.get('isFolder'),
+        caption: folder.get('caption'),
+        pad: padding,
+        fontSize: 16
+      }]
+      getShortcutByParent(folder.get('ID'), folderShortcut, padding + 10)
+      if (leftCol.includes(folder.get('code'))) {
+        result.left.push(folderShortcut)
+      }
+      if (rightCol.includes(folder.get('code'))) {
+        result.right.push(folderShortcut)
+      }
+    })
+    return result
+  },
+  onReportClick: function (e) {
+    e.preventDefault()
+    if (e.target.dataset.id && e.target.dataset.id !== '') {
+      const store = UB.core.UBStoreManager.getNavigationShortcutStore()
+      const shortcut = _.find(store.data.items, item => { return item.get('ID') === Number(e.target.dataset.id) })
+
+      $App.runShortcutCommand(shortcut.get('code'), shortcut.get('inWindow'))
+    }
+  }
+})

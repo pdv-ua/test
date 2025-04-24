@@ -1,0 +1,219 @@
+{
+  "caption": "Масова зміна окладів",
+  "description": "Масова зміна окладів",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "staffTableID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffTable",
+      "caption": "Штатний розпис",
+      "description": "Штатний розпис",
+      "documentation": "Штатний розпис",
+      "allowNull": false
+    },
+    {
+      "name": "paymentType",
+      "dataType": "Enum",
+      "enumGroup": "HR_PAYMENT_TYPE",
+      "caption": "Тип оплати",
+      "documentation": "Тип оплати",
+      "description": "Тип оплати"
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ",
+      "allowNull": true
+    },
+    {
+      "name": "depName",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Назва підрозділу",
+      "description": "Назва підрозділу",
+      "documentation": "Назва підрозділу"
+    },
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада",
+      "allowNull": false
+    },
+    {
+      "name": "posName",
+      "dataType": "String",
+      "size": 256,
+      "caption": "Назва посади",
+      "description": "Назва посади",
+      "documentation": "Назва посади",
+      "allowNull": false
+    },
+    {
+      "name": "dictTarifCoeffID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTarifCoeff",
+      "caption": "Тарифний розряд",
+      "description": "Тарифний розряд",
+      "documentation": "Тарифний розряд"
+    },
+    {
+      "name": "dictSalarySchemeLevelID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictSalarySchemeLevel",
+      "caption": "Група (рівень) за схемою посадових окладів",
+      "description": "Група (рівень) за схемою посадових окладів",
+      "documentation": "Група (рівень) за схемою посадових окладів"
+    },
+    {
+      "name": "salarySchemeLevelDesc",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Група (рівень) за схемою посадових окладів",
+      "description": "Група (рівень) за схемою посадових окладів",
+      "documentation": "Група (рівень) за схемою посадових окладів"
+    },
+    {
+      "name": "accrualSumCur",
+      "dataType": "Currency",
+      "caption": "Поточний оклад",
+      "documentation": "Поточний оклад",
+      "description": "Поточний оклад",
+      "allowNull": false
+    },
+    {
+      "name": "accrualSum",
+      "dataType": "Currency",
+      "caption": "Оклад",
+      "documentation": "Оклад",
+      "description": "Оклад",
+      "allowNull": false
+    },
+    {
+      "name": "accrualSumMin",
+      "dataType": "Currency",
+      "caption": "Оклад (min)",
+      "documentation": "Оклад (min)",
+      "description": "Оклад (min)"
+    },
+    {
+      "name": "accrualSumMax",
+      "dataType": "Currency",
+      "caption": "Оклад (max)",
+      "documentation": "Оклад (max)",
+      "description": "Оклад (max)"
+    },
+    {
+      "name": "positionCategory",
+      "dataType": "Enum",
+      "enumGroup": "HR_POSITION_CATEGORY",
+      "caption": "Категорія посади",
+      "documentation": "Категорія посади",
+      "description": "Категорія посади"
+    },
+    {
+      "name": "positionType",
+      "dataType": "Enum",
+      "enumGroup": "HR_POSITION_TYPE",
+      "caption": "Тип посади",
+      "documentation": "Тип посади",
+      "description": "Тип посади"
+    },
+    {
+      "name": "dictStaffCatID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStaffCat",
+      "caption": "Категорія персоналу",
+      "description": "Категорія персоналу",
+      "documentation": "Категорія персоналу"
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_fundSource",
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування",
+      "documentation": "Джерело фінансування"
+    },
+    {
+      "name": "isDeleted",
+      "dataType": "Boolean",
+      "caption": "Видалено",
+      "description": "Видалено",
+      "documentation": "Видалено",
+      "defaultValue": "0",
+      "allowNull": false
+    },
+    {
+      "name": "isApplied",
+      "dataType": "Boolean",
+      "caption": "Застосовано",
+      "description": "Застосовано",
+      "documentation": "Застосовано",
+      "defaultValue": "0",
+      "allowNull": false
+    },
+    {
+      "name": "sumDelta",
+      "dataType": "Currency",
+      "caption": "Сума зміни",
+      "documentation": "Сума зміни",
+      "description": "Сума зміни",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "({self}.accrualSum - {self}.accrualSumCur)"
+        }
+      ]
+    },
+    {
+      "name": "rateDelta",
+      "dataType": "Currency",
+      "caption": "Відсоток зміни",
+      "documentation": "Відсоток зміни",
+      "description": "Відсоток зміни",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "CASE WHEN {self}.accrualSumCur=0 THEN NULL ELSE ({self}.accrualSum - {self}.accrualSumCur) / {self}.accrualSumCur * 100 END"
+        }
+      ]
+    },
+    {
+      "name": "dictStaffCatName",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Категорія персоналу",
+      "description": "Категорія персоналу",
+      "documentation": "Категорія персоналу",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 t.name FROM hr_dictStaffCat t where t.ID = {self}.dictStaffCatID)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select t.name FROM hr_dictStaffCat t where t.ID = {self}.dictStaffCatID LIMIT 1)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

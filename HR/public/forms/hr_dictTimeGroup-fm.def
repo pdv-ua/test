@@ -1,0 +1,59 @@
+exports.formDef = {
+  requiredFields: ['description'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'north',
+      split: true,
+      autoScroll: true,
+      items: [
+        { attributeName: 'code' },
+        { attributeName: 'name' },
+        { attributeName: 'isClose', labelWidth: 200 }
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      title: UB.i18n('Входимість елементів обліку робочого часу в групу'),
+      autoScroll: true,
+      region: 'center',
+      pageSize: 10000,
+      hideActions: [],
+      flex: 1,
+      entityConfig: {
+        entity: 'hr_dictTimeCostGroup',
+        method: 'select',
+        fieldList: [
+          {
+            name: 'dictTimeCostID.code',
+            description: UB.i18n('Код')
+          },
+          {
+            name: 'dictTimeCostID.name',
+            description: UB.i18n('Назва')
+          },
+          {
+            name: 'dateFromEmpty'
+          },
+          {
+            name: 'dateToEmpty'
+          }
+        ],
+        orderList: { dateTo: { expression: 'dateTo', order: 'DESC' } }
+      },
+      masterFields: ['ID'],
+      detailFields: ['dictTimeGroupID']
+    }
+  ]
+}

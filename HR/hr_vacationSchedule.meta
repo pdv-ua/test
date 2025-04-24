@@ -1,0 +1,204 @@
+{
+  "caption": "Графік відпусток",
+  "description": "Графік відпусток",
+  "descriptionAttribute": "orderDetID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "year",
+      "dataType": "Int",
+      "caption": "Рік графіка відпусток",
+      "description": "Звітний період, у якому плануються відпустки",
+      "documentation": "Рік графіка відпусток",
+      "allowNull": false
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ про затвердження графіка відпусток",
+      "description": "Наказ про затвердження графіка відпусток",
+      "documentation": "Наказ про затвердження графіка відпусток"
+    },
+    {
+      "name": "orderDetID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderVacationapschedDet",
+      "caption": "Наказ про затвердження графіка відпусток",
+      "description": "Наказ про затвердження графіка відпусток",
+      "documentation": "Наказ про затвердження графіка відпусток"
+    },
+    {
+      "name": "orderFactID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ про надання відпустки",
+      "description": "Наказ про надання відпустки",
+      "documentation": "Наказ про надання відпустки"
+    },
+    {
+      "name": "orderFactDetID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderVacationDet",
+      "caption": "Наказ про надання відпустки",
+      "description": "Наказ про надання відпустки",
+      "documentation": "Наказ про надання відпустки"
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "allowNull": false
+    },
+    {
+      "name": "dictVacationKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictVacationKind",
+      "caption": "Вид відпустки",
+      "description": "Вид відпустки",
+      "documentation": "Вид відпустки",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку відпустки",
+      "description": "Дата початку відпустки",
+      "documentation": "Дата початку відпустки",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення відпустки",
+      "description": "Дата закінчення відпустки",
+      "documentation": "Дата закінчення відпустки",
+      "allowNull": false
+    },
+    {
+      "name": "dayCount",
+      "dataType": "Int",
+      "caption": "Кількість днів",
+      "description": "Кількість днів",
+      "documentation": "Кількість днів",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Примітка",
+      "description": "Примітка",
+      "documentation": "Примітка"
+    },
+    {
+      "name": "state",
+      "dataType": "Enum",
+      "enumGroup": "HR_VAC_SCHEDULE_STATE",
+      "caption": "Стан",
+      "documentation": "Стан",
+      "description": "Стан",
+      "allowNull": false,
+      "defaultValue": "NEW"
+    },
+    {
+      "name": "personDescription",
+      "dataType": "String",
+      "size": 512,
+      "caption": "ПІБ",
+      "description": "Опис працівника",
+      "documentation": "Опис працівника"
+    },
+    {
+      "name": "errorText",
+      "dataType": "String",
+      "size": 1024,
+      "caption": "Виявлені помилки",
+      "documentation": "Виявлені помилки",
+      "description": "Виявлені помилки"
+    },
+    {
+      "name": "isBountyHelp",
+      "dataType": "Boolean",
+      "caption": "Надання матеріальної допомоги",
+      "description": "Надання матеріальної допомоги",
+      "documentation": "Надання матеріальної допомоги",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isNewVacation",
+      "dataType": "Boolean",
+      "caption": "Планувати тільки право на відпустку вказаного року",
+      "description": "Планувати тільки право на відпустку вказаного року",
+      "documentation": "Планувати тільки право на відпустку вказаного року",
+      "defaultValue": "0"
+    },
+    {
+      "name": "tabNum",
+      "dataType": "String",
+      "size": 15,
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "[employeeNumberID.tabNum]"
+        }
+      ]
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_VACATIONSCHEDULE_ORGDATE": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "mi_deleteDate": {
+            "sort": "ASC"
+          },
+          "organizationID": {
+            "sort": "ASC"
+          },
+          "year": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "audit": {
+      "enabled": false
+    }
+  }
+}

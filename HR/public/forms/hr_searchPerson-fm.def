@@ -1,0 +1,213 @@
+/* global Ext UB HR */
+exports.formDef = 'HR.searchPersonForm'
+
+Ext.define('HR.searchPersonForm', {
+  extend: 'Ext.form.Panel',
+  autoScroll: true,
+  layout: 'card',
+  initComponent: function () {
+    let me = this
+    me.srchEmpParams = {
+      baseEntity: 'hr_employee',
+      baseEntityAlias: 'emp',
+      baseJoinField: 'employeeID',
+      joinExclusions: {
+        ac_address: { type: 'changeKeyFields', joinBaseAlias: 'emp', joinBaseField: 'ID', joinParentField: 'ownerID' }
+      },
+      searchEntity: 'hr_searchPerson',
+      getSqlMethod: 'getSearchSql',
+      templateEntity: 'hr_searchPerson',
+      categoryValueField: 'categoryCode',
+      categoryDisplayField: 'categoryName',
+      categoryGroupField: 'parentGroupCode',
+      categoryRequest: {
+        entity: 'hr_searchAttr',
+        method: 'selectCategories4person',
+        fieldList: HR.searchAttrFieldList.getSearchParamsFields('category')
+      },
+      attrValueField: 'attributeCode',
+      attrDisplayField: 'attributeDesc',
+      attrRequest: {
+        entity: 'hr_searchAttr',
+        method: 'selectAttr4person',
+        fieldList: HR.searchAttrFieldList.getSearchParamsFields('attribute')
+      },
+      addCatInAttrEntity: null,
+      mainPanel: null,
+      attrPanel: null,
+      condPanel: null,
+      attrBlockParams: null,
+      condBlockParams: null,
+      dataPanel: null,
+      searchGrid: null,
+      sqlLabel: null
+    }
+    me.tabs = Ext.create('Ext.tab.Panel', {
+      items: [
+        {
+          title: UB.i18n('Форма пошуку'),
+          autoScroll: true,
+          iconCls: 'fa fa-search-plus',
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              xtype: 'toolbar',
+              dock: 'top',
+              items: HR.searchUtils.get('toolbar_items', me.srchEmpParams)
+            },
+            {
+              autoScroll: true,
+              layout: {
+                type: 'hbox',
+                align: 'stretch'
+              },
+              items: [
+                {
+                  xtype: 'panel',
+                  ubID: 'condPanel',
+                  autoScroll: true,
+                  width: '100%',
+                  margins: '0 0 10 0',
+                  bodyStyle: { 'background-color': '#f3f2d7' },
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  items: []
+                }
+              ]
+            },
+            {
+              xtype: 'panel',
+              ubID: 'attrPanel',
+              autoScroll: true,
+              bodyStyle: { 'background-color': '#e8eee9' },
+              layout: {
+                type: 'hbox',
+                align: 'stretch'
+              },
+              items: []
+            }
+          ]
+        },
+        {
+          xtype: 'panel',
+          ubID: 'dataPanel',
+          title: UB.i18n('Результат пошуку'),
+          layout: 'card',
+          iconCls: 'fa fa-list',
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              ubID: 'searchGrid',
+              cmdType: 'showList',
+              description: UB.i18n('Особи'),
+              entity: 'hr_searchPerson',
+              emptyText: UB.i18n('За вказаними умовами не знайдено жодного запису'),
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              cmdData: {
+                params: [
+                  {
+                    entity: 'hr_searchPerson',
+                    method: 'select4search',
+                    fieldList: [
+                      { name: 'ID', visibility: false },
+                      { name: 'taxCode' },
+                      { name: 'sexType' },
+                      { name: 'lastName' },
+                      { name: 'firstName' },
+                      { name: 'middleName' },
+                      { name: 'fullFIO', visibility: false },
+                      { name: 'birthDate', format: 'd.m.Y' },
+                      { name: 'citizenshipName' },
+                      { name: 'phoneMobile' },
+                      { name: 'phoneWorking' },
+                      { name: 'phoneHome' },
+                      { name: 'email' },
+                      { name: 'educationLevelName', visibility: false },
+                      { name: 'employeeID', visibility: false }
+                    ],
+                    __totalRecCount: false
+                  }
+                ]
+              },
+              cmpInitConfig: {
+                selModel: {
+                  selectionMode: 'MULTI',
+                  showHeaderCheckbox: true,
+                  checkOnly: false,
+                  selType: 'checkboxmodel'
+                }
+              },
+              onDeterminateForm: HR.employeeTabs.onDeterminateCard,
+              contextMenuType: 'employee',
+              customActions: [
+                {
+                  text: UB.i18n('Порівняти'),
+                  actionId: 'reportCompare',
+                  iconCls: 'fas fa-file-excel',
+                  cls: 'green-action',
+                  handler: function (btn) {
+                    const me = btn.up('form')
+                    HR.searchUtils.compareReport(me.srchEmpParams)
+                  }
+                },
+                {
+                  text: UB.i18n('Друкувати'),
+                  actionId: 'reportResults',
+                  tooltip: UB.i18n('Вивід друкованої форми'),
+                  iconCls: 'fas fa-print',
+                  handler: async function (ctrl) {
+                    const grid = me.down('[ubID=searchGrid]')
+                    grid.onExportXls()
+                  }
+                }
+              ]
+
+              // customActions: HR.searchUtils.get('results_toolbar', me.srchEmpParams)
+            }
+          ]
+        },
+        {
+          title: 'SQL',
+          hidden: true,
+          autoScroll: true,
+          iconCls: 'fa fa-eye',
+          layout: 'card',
+          items: [
+            {
+              xtype: 'label',
+              ubID: 'sqlLabel',
+              margin: '10 5 0 10',
+              fieldStyle: {
+                fontWeight: 'bold',
+                border: 'none'
+              }
+            }
+          ]
+        }
+      ]
+    })
+    me.items = [
+      me.tabs
+    ]
+    me.callParent(arguments)
+    me.srchEmpParams.mainPanel = me.tabs
+    me.srchEmpParams.dataPanel = me.down('[ubID=dataPanel]')
+    me.srchEmpParams.searchGrid = me.down('[ubID=searchGrid]')
+    me.srchEmpParams.sqlLabel = me.down('[ubID=sqlLabel]')
+    me.srchEmpParams.attrPanel = me.down('[ubID=attrPanel]')
+    me.srchEmpParams.condPanel = me.down('[ubID=condPanel]')
+    if (me.customParams) {
+      me.srchEmpParams.searchAllOrg = me.customParams.searchAllOrg
+      me.srchEmpParams.senderParams = me.customParams.senderParams
+    }
+    HR.searchUtils.initNewSearch(me.srchEmpParams)
+    if (me.customParams && me.customParams.searchParams) {
+      HR.searchUtils.addCondItems(me.srchEmpParams, me.customParams.searchParams)
+    }
+  }
+})

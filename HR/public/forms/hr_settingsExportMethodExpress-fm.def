@@ -1,0 +1,230 @@
+/* global Ext AC appAC $App UB saveAs Blob */
+
+exports.formDef = 'HR.settingsExportMethodExpress'
+
+Ext.define('HR.settingsExportMethodExpress', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    const accMainReportsSubOrg = AC.entityUtils.verifyRightsMethod('ac_service', 'subOrg')
+    const me = this
+    me.items = [
+      {
+        region: 'north',
+        autoScroll: true,
+        split: true,
+        layout: { type: 'hbox' },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            name: 'orgID',
+            readOnly: !accMainReportsSubOrg,
+            flex: 1,
+            fieldLabel: UB.i18n('Організація'),
+            displayField: 'description',
+            valueField: 'mi_data_id',
+            ubRequest: {
+              entity: 'hr_organization',
+              fieldList: ['mi_data_id', 'description', 'mi_treePath'],
+              whereList: {
+                state: {
+                  expression: '[state]',
+                  condition: 'equal',
+                  value: 'ACTIVE'
+                },
+                path: {
+                  expression: accMainReportsSubOrg ? '[mi_treePath]' : '[mi_data_id]',
+                  condition: accMainReportsSubOrg ? 'like' : '=',
+                  value: accMainReportsSubOrg ? `/${appAC.globalOrganization()}/` : appAC.globalOrganization()
+                }
+              },
+              orderList: { orderBy: { expression: 'mi_data_id' } },
+              __mip_ondate: appAC.globalApplicationDate()
+            }
+          },
+          {
+            xtype: 'checkboxfield',
+            name: 'childOrg',
+            fieldLabel: UB.i18n('з підлеглими'),
+            labelWidth: 100
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        region: 'center',
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            name: 'exportMethod',
+            cmdType: 'showList',
+            entity: 'hr_exportMethod',
+            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+            cmdData: {
+              params: [
+                {
+                  entity: 'hr_exportMethod',
+                  method: 'select',
+                  fieldList: [
+                    { name: 'ID', visibility: false },
+                    { name: 'shortName', visibility: false },
+                    { name: 'nameFile', visibility: false },
+                    { name: 'typeFile', visibility: false },
+                    { name: 'isActive', visibility: false },
+                    { name: 'orgID', visibility: false },
+                    { name: 'name', description: UB.i18n('Оберіть файли для експорту') }
+                  ],
+                  whereList: {
+                    orgID: {
+                      expression: '[orgID]',
+                      condition: 'equal',
+                      value: appAC.globalOrganization()
+                    },
+                    isActive: {
+                      expression: '[isActive]',
+                      condition: 'equal',
+                      value: 1
+                    },
+                    typeFile: {
+                      expression: '[typeFile]',
+                      condition: 'equal',
+                      value: 'fileExpress'
+                    }
+                  }
+                }
+              ]
+            },
+            cmpInitConfig: {
+              selModel: {
+                selectionMode: 'MULTI',
+                showHeaderCheckbox: true,
+                checkOnly: false,
+                selType: 'checkboxmodel'
+              },
+              /*
+              customInit: function () {
+                this.store.on('load', () => {
+                  this.getSelectionModel().selectAll()
+                })
+              },
+              */
+              onDeterminateForm: function (grid) {
+                return {
+                  entityName: 'hr_exportMethod',
+                  formCode: 'hr_exportMethodFileExpress'
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 120,
+            height: 30,
+            // iconCls: 'u-icon-close',
+            // cls: 'red-action',
+            margin: '10 10 10 0',
+            // style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+            handler: function () {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Експорт'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            iconCls: 'u-icon-file-export',
+            cls: 'green-action',
+            handler: function () {
+              const selection = me.attr.exportMethod.getSelectionModel().selected.items
+              if (!selection.length) {
+                AC.viewUtils.showToast(UB.i18n('Необхідно вибрати хоча б один запис'))
+                return
+              }
+              me.exportData(selection)
+            }
+          }
+        ]
+      }
+    ]
+
+    me.exportData = async function (selection) {
+      if ($App.domainInfo.models['INTEGRATOR']) {
+        try {
+          let isExport = true
+          me.setLoading(true)
+          const mParams = await $App.connection.run({
+            entity: 'int_baseEntity',
+            method: 'checkOrgData',
+            childOrg: me.attr.childOrg.getValue(),
+            periodID: me.periodID,
+            orgID: me.attr.orgID.getValue()
+          })
+          me.setLoading(false)
+          if (mParams.orgWithError) {
+            const message = UB.i18n('Для організацій {0} не знайдена відповідність для Express! Передати без них?', JSON.parse(mParams.orgWithError).join(','))
+            isExport = await $App.dialogYesNo(UB.i18n('Попередження'), message)
+          }
+          if (isExport && selection.find(o => o.get('nameFile') === 'ZEX')) {
+            me.setLoading(true)
+            const mParams = await $App.connection.run({
+              entity: 'int_baseEntity',
+              method: 'checkEmpData',
+              childOrg: me.attr.childOrg.getValue(),
+              periodID: me.periodID,
+              orgID: me.attr.orgID.getValue()
+            })
+            me.setLoading(false)
+            if (mParams.empWithError) {
+              const message = UB.i18n('Для {0} не знайдена відповідність для Express! Передати без них?', JSON.parse(mParams.empWithError).join(','))
+              isExport = await $App.dialogYesNo(UB.i18n('Попередження'), message)
+            }
+          }
+          if (isExport) {
+            me.setLoading(true)
+            await $App.connection.run({
+              entity: 'int_baseEntity',
+              method: 'exportExpress',
+              childOrg: me.attr.childOrg.getValue(),
+              periodID: me.periodID,
+              orgID: me.attr.orgID.getValue(),
+              onDate: appAC.globalApplicationDate(),
+              params: {
+                methodIDs: selection.map(o => o.get('ID'))
+              }
+            })
+            me.setLoading(false)
+            await $App.dialogInfo(UB.i18n('Дані експортовано'))
+          }
+        } catch (err) {
+          me.setLoading(false)
+          throw err
+        }
+      } else {
+        AC.viewUtils.showToast(UB.i18n('Відсутня процедура експорту'))
+      }
+    }
+
+    me.on('afterrender', function () {
+      me.attr = {
+        orgID: me.down('[name=orgID]'),
+        exportMethod: me.down('[name=exportMethod]'),
+        childOrg: me.down('[name=childOrg]')
+      }
+      me.attr.orgID.setValueById(appAC.globalOrganization())
+    })
+    me.callParent(arguments)
+  }
+})

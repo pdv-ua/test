@@ -1,0 +1,378 @@
+/* global Ext _ UB */
+/* global AC HR $App UB Ext _ */
+
+exports.formDef = 'HR.settingsDictTimeCost'
+
+Ext.define('HR.settingsDictTimeCost', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+    /*
+    const queryDelay = 500
+    function setFilter () {
+      me.settingsGrid.getStore().filter({
+        filterFn: function (item) {
+          return (item.get('valueDictTimeCostName') || '').toLowerCase().includes((searchCtrl.getValue() || '').toLowerCase())
+        }
+      })
+    }
+    function clearFilter () {
+      me.settingsGrid.getStore().filters.removeAtKey('valueDictTimeCostName')
+      me.settingsGrid.getStore().clearFilter()
+    }
+    let doQueryTask = new Ext.util.DelayedTask(function () {
+      let value = searchCtrl.getValue()
+      if (value === '') {
+        clearFilter()
+      } else {
+        setFilter()
+      }
+    }, me)
+    let searchCtrl = Ext.widget('textfield', {
+      labelWidth: 80,
+      fieldLabel: UB.i18n('filter')
+    })
+    searchCtrl.on('change', function () {
+      doQueryTask.delay(queryDelay)
+    })
+    */
+
+    me.items = [
+      {
+        xtype: 'label',
+        name: 'labelName',
+        region: 'north',
+        margin: '10 10 10 10'
+      },
+      me.settingsGrid = Ext.widget('acGrid', {
+        xtype: 'acGrid',
+        flex: 1,
+        storeType: 'local',
+        disablePaging: true,
+        name: 'settingsGrid',
+        autoScroll: true,
+        enableMultifilter: true,
+        showToolBar: true,
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        region: 'center',
+        fields: [
+          {
+            name: 'valueDictTimeCostName',
+            columnConfig: {
+              text: UB.i18n('Елементи обліку'),
+              flex: 1,
+              filterBy: 'string'
+            }
+          },
+          {
+            name: 'timeCost1PriorityTypeName',
+            columnConfig: {
+              text: UB.i18n('Пріоритет Перший'),
+              flex: 1,
+              renderer: function (value, meta, record) {
+                if (value === 'Перетин заборонено') {
+                  meta.tdCls = 'grd-color-grey'
+                }
+                return value
+              },
+              filterable: false
+            }
+          },
+          {
+            name: 'timeCost2PriorityTypeName',
+            columnConfig: {
+              text: UB.i18n('Пріоритет Другий'),
+              flex: 1,
+              renderer: function (value, meta, record) {
+                if (value === 'Перетин заборонено') {
+                  meta.tdCls = 'grd-color-grey'
+                }
+                return value
+              },
+              filterable: false
+            }
+          },
+          {
+            name: 'priorityId1'
+          },
+          {
+            name: 'priorityId2'
+          },
+          {
+            name: 'idDictTimeCost'
+          },
+          {
+            name: 'valueDictTimeCost'
+          },
+          {
+            name: 'dateFromEmpty1'
+          },
+          {
+            name: 'dateFrom1'
+          },
+          {
+            name: 'dateToEmpty1'
+          },
+          {
+            name: 'isCrossInfo1'
+          },
+          {
+            name: 'dateFromEmpty2'
+          },
+          {
+            name: 'dateFrom2'
+          },
+          {
+            name: 'dateToEmpty2'
+          },
+          {
+            name: 'isCrossInfo2'
+          },
+          {
+            name: 'timeCost1PriorityType'
+          },
+          {
+            name: 'timeCost2PriorityType'
+          }
+        ],
+        getRowClass: function (record, rowIndex, rowParams, store) {
+          let cls = ''
+          let crossingClose1 = record.get('timeCost1PriorityType') ? record.get('timeCost1PriorityType') : 'Close'
+          let crossingClose2 = record.get('timeCost2PriorityType') ? record.get('timeCost2PriorityType') : 'Close'
+          if (crossingClose1 === 'Close' && crossingClose2 === 'Close') {
+            cls = 'grd-color-grey'
+          }
+          return cls
+        },
+        onItemDoubleClick: function (gridview, record) {
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'hr_settingsTimeCostInt',
+            sender: me,
+            cmpInitConfig: {
+              data: {
+                idDictTimeCost: record.get('idDictTimeCost'),
+                valueDictTimeCost: record.get('valueDictTimeCost'),
+                timeCost1PriorityType: record.get('timeCost1PriorityType') ? record.get('timeCost1PriorityType') : '',
+                priorityId1: record.get('priorityId1'),
+                timeCost2PriorityType: record.get('timeCost2PriorityType') ? record.get('timeCost2PriorityType') : '',
+                priorityId2: record.get('priorityId2'),
+                dateFromEmpty1: record.get('dateFromEmpty1'),
+                dateFrom1: record.get('dateFrom1'),
+                dateToEmpty1: record.get('dateToEmpty1'),
+                isCrossInfo1: record.get('isCrossInfo1'),
+                dateFromEmpty2: record.get('dateFromEmpty2'),
+                dateFrom2: record.get('dateFrom2'),
+                dateToEmpty2: record.get('dateToEmpty2'),
+                isCrossInfo2: record.get('isCrossInfo2')
+              },
+              onEditData: () => {
+                me.onRefresh()
+              }
+            }
+          })
+        },
+        customToolBarActions: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Оновити'),
+            iconCls: 'u-icon-refresh',
+            cls: 'fill-action',
+            handler: function (btn) {
+              const me = btn.up('form')
+              me.loadData()
+            }
+          },
+          {
+            scale: 'medium',
+            iconCls: 'fas fa-file-excel',
+            tooltip: UB.i18n('Сформувати'),
+            cls: 'green-action',
+            handler: function (btn) {
+              const me = btn.up('form')
+              const grid = btn.up('[name=settingsGrid]')
+              const title = me.nameDictTimeCost
+              let data = grid.getData()
+
+              function setStyles () {
+                defFont = stl.fonts.add({
+                  code: 'def',
+                  name: 'Calibri',
+                  fontSize: 11,
+                  scheme: 'minor'
+                })
+                stl.fonts.add({
+                  code: 'defBold',
+                  name: 'Calibri',
+                  fontSize: 11,
+                  scheme: 'minor',
+                  bold: true
+                })
+
+                borderFull = stl.borders.add({
+                  left: {
+                    style: 'thin'
+                  },
+                  right: {
+                    style: 'thin'
+                  },
+                  top: {
+                    style: 'thin'
+                  },
+                  bottom: {
+                    style: 'thin'
+                  }
+                })
+                stl.alignments.add({
+                  code: 'Hright',
+                  horizontal: 'right'
+                })
+                stl.alignments.add({
+                  code: 'Hcenter',
+                  horizontal: 'center',
+                  wrapText: '1'
+                })
+                stl.alignments.add({
+                  code: 'HVcenter',
+                  horizontal: 'center',
+                  vertical: 'center',
+                  wrapText: '1'
+                })
+                stl.alignments.add({
+                  code: 'wrapText',
+                  wrapText: '1'
+                })
+                styleCol = stl.getStyle({
+                  font: defFont,
+                  border: borderFull
+                })
+                styleNumCol = stl.getStyle({
+                  font: defFont,
+                  alignment: stl.alignments.named.Hright,
+                  border: borderFull
+                })
+                headerStyle = stl.getStyle({
+                  font: stl.fonts.named.defBold,
+                  alignment: stl.alignments.named.HVcenter,
+                  border: borderFull
+                })
+                rowHeaderStyle = stl.getStyle({
+                  font: stl.fonts.named.defBold,
+                  fill: 'EBEDED',
+                  border: borderFull,
+                  alignment: stl.alignments.named.HVcenter
+                })
+              }
+              let wb, defFont, ws, borderFull, headerStyle, rowHeaderStyle, stl, styleCol, styleNumCol
+              wb = new window.XLSX.XLSXWorkbook()
+              wb.useSharedString = true
+              stl = wb.style
+              setStyles()
+
+              ws = wb.addWorkSheet({ caption: title, name: title })
+              ws.addMerge({ colFrom: 0, colTo: 3 })
+              ws.addRow({ value: title, column: 0, style: headerStyle }, {}, { height: 40 })
+              ws.setColsProperties([
+                { column: 0, width: 100 },
+                { column: 1, width: 50 },
+                { column: 2, width: 50 }
+              ])
+              ws.addRow([
+                { column: 0, value: UB.i18n('Елемент обліку'), style: rowHeaderStyle },
+                { column: 1, value: UB.i18n('Пріоритет Перший'), style: rowHeaderStyle },
+                { column: 2, value: UB.i18n('Пріоритет Другий'), style: rowHeaderStyle }
+              ], null, { height: 30 })
+              data.forEach((fix, idx) => {
+                ws.addRow([
+                  { column: 0, value: fix['valueDictTimeCostName'], style: styleCol },
+                  { column: 1, value: fix['timeCost1PriorityTypeName'], style: styleCol },
+                  { column: 2, value: fix['timeCost2PriorityTypeName'], style: styleCol }
+                ])
+              })
+              const rData = wb.render()
+              const dBlob = new Blob([rData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) // data:  ;base64
+              saveAs(dBlob, UB.i18n('Налаштування перетинів') + '.xlsx')
+            }
+          },
+          {
+            xtype: 'button',
+            name: 'fillBtn',
+            tooltip: UB.i18n('Налаштувати як'),
+            iconCls: 'fas fa-angle-double-down',
+            cls: 'fill-action',
+            handler: function (btn) {
+              const me = btn.up('form')
+              $App.doCommand({
+                cmdType: 'showForm',
+                formCode: 'hr_settingsTimeCostConf',
+                sender: me,
+                cmpInitConfig: {
+                  data: {
+                    ID: me.ID,
+                    nameDictTimeCost: me.nameDictTimeCost
+                  },
+                  onEditData: () => {
+                    me.onRefresh()
+                  }
+                }
+              })
+            }
+          }
+        ]
+      })
+    ]
+
+    me.loadData = async function () {
+      let result = []
+      const dictTimeCost = await UB.Repository('hr_dictTimeCost')
+        .attrs(['ID', 'name'])
+        .where('ID', '<>', me.ID)
+        .selectAsObject()
+      Promise.all([
+        UB.Repository('hr_dictTimeCostInt')
+          .attrs(['ID', 'dictTimeCost1ID', 'priorityType', 'priorityType.name', 'dateFrom', 'dateFromEmpty', 'dateToEmpty', 'isCrossInfo'])
+          .where('dictTimeCost1ID', 'in', dictTimeCost.map(o => o.ID))
+          .where('dictTimeCost2ID', '=', me.ID)
+          .selectAsObject(),
+        UB.Repository('hr_dictTimeCostInt')
+          .attrs(['ID', 'dictTimeCost2ID', 'priorityType', 'priorityType.name', 'dateFrom', 'dateFromEmpty', 'dateToEmpty', 'isCrossInfo'])
+          .where('dictTimeCost2ID', 'in', dictTimeCost.map(o => o.ID))
+          .where('dictTimeCost1ID', '=', me.ID)
+          .selectAsObject()
+      ]).then(([dictTimeCost1ID, dictTimeCost2ID]) => {
+        dictTimeCost.forEach(row => {
+          const el1 = dictTimeCost1ID.find(o => o.dictTimeCost1ID === row.ID)
+          const el2 = dictTimeCost2ID.find(o => o.dictTimeCost2ID === row.ID)
+          row.idDictTimeCost = me.ID
+          row.valueDictTimeCostName = row.name
+          row.valueDictTimeCost = row.ID
+          row.timeCost1PriorityTypeName = el1 ? el1['priorityType.name'] : 'Перетин заборонено'
+          row.timeCost1PriorityType = el1 ? el1.priorityType : null
+          row.priorityId1 = el1 ? el1.ID : null
+          row.dateFromEmpty1 = el1 ? el1.dateFromEmpty : null
+          row.dateFrom1 = el1 ? el1.dateFrom : null
+          row.dateToEmpty1 = el1 ? el1.dateToEmpty : null
+          row.isCrossInfo1 = el1 ? el1.isCrossInfo : 0
+          row.timeCost2PriorityTypeName = el2 ? el2['priorityType.name'] : 'Перетин заборонено'
+          row.timeCost2PriorityType = el2 ? el2.priorityType : null
+          row.priorityId2 = el2 ? el2.ID : null
+          row.dateFromEmpty2 = el2 ? el2.dateFromEmpty : null
+          row.dateFrom2 = el2 ? el2.dateFrom : null
+          row.dateToEmpty2 = el2 ? el2.dateToEmpty : null
+          row.isCrossInfo2 = el2 ? el2.isCrossInfo : 0
+          result.push(row)
+        })
+        me.settingsGrid.setLocalStoreData(result)
+      })
+    }
+
+    me.on('afterrender', async function () {
+      me.down('[name=labelName]').setText(me.nameDictTimeCost)
+      me.loadData()
+    })
+    me.callParent(arguments)
+  }
+})

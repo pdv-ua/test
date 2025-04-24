@@ -1,0 +1,260 @@
+/* global UB */
+
+exports.formDef = {
+  requiredFields: ['orderID', 'empOrderType', 'organizationID', 'isGroup', 'organizationID.mi_data_id'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          attributeName: 'staffTableID',
+          allowBlank: false,
+          hidden: true,
+          flex: 1
+        },
+        {
+          attributeName: 'staffTariffingID',
+          allowBlank: false,
+          hidden: true,
+          flex: 1
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      layout: 'fit',
+      ubID: 'tpDetail',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Працівники'),
+          xtype: 'acGrid',
+          name: 'empOrderSTMovePosDet',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_empOrderStafftablemoveDet_empOrderSTMovePosDet'),
+          flex: 1,
+          autoScroll: true,
+          cellEditing: false,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          summaryDataOnClient: true,
+          hideActions: ['addNew', 'addNewByCurrent'],
+          onBeforeEdit: (control, context) => {
+            const me = context.grid.up('form')
+            if (['ON_RECONCILATION', 'RECONCILED', 'POSTED'].includes(me.record.get('orderState'))) {
+              return false
+            }
+            me.setIsDirty(true)
+          },
+          getRowClass: () => {},
+          fields: [
+            { name: 'ID' },
+            { name: 'orderID' },
+            { name: 'paraID' },
+            { name: 'organizationID' },
+            { name: 'mi_modifyDate' },
+            { name: 'employeeNumberID' },
+            { name: 'employeeID' },
+            { name: 'empOrderType' },
+            {
+              name: 'employeePositionID.employeeID.fullFIO',
+              columnConfig: {
+                text: UB.i18n('ПІБ'),
+                flex: 1
+              }
+            },
+            { name: 'employeePositionID' },
+            {
+              name: 'prevPosFullName',
+              columnConfig: {
+                text: UB.i18n('Назва посади'),
+                flex: 1
+              }
+            },
+            {
+              name: 'posFullName',
+              columnConfig: {
+                text: UB.i18n('Змінена назва посади'),
+                flex: 1
+              }
+            },
+            { name: 'prevPosName' },
+            { name: 'posName' },
+            { name: 'prevPosFullNameNom' },
+            { name: 'posFullNameNom' },
+            { name: 'positionID' },
+            {
+              name: 'prevAccrualSum',
+              columnConfig: {
+                text: UB.i18n('Попередній оклад'),
+                width: 150,
+                floatFormat: 2,
+                align: 'right'
+              }
+            },
+            {
+              name: 'accrualSum',
+              columnConfig: {
+                text: UB.i18n('Новий оклад'),
+                width: 150,
+                floatFormat: 2,
+                align: 'right'
+              }
+            },
+            {
+              name: 'employeePositionID.accrualSum',
+              columnConfig: {
+                text: UB.i18n('Оклад Призначення'),
+                width: 150,
+                floatFormat: 2,
+                align: 'right'
+              }
+            }
+          ],
+          customToolBarActions: [
+            {
+              xtype: 'button',
+              name: 'fillBtn',
+              tooltip: UB.i18n('Заповнити'),
+              iconCls: 'fas fa-angle-double-down',
+              cls: 'fill-action',
+              handler: function (btn) {
+                const me = btn.up('form')
+                me.setEmployeePositions(me)
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Тарифікаційний список'),
+          xtype: 'acGrid',
+          name: 'empOrderTarifficationPosDet',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_empOrderStafftablemoveDet_empOrderTarifficationPosDet'),
+          flex: 1,
+          hidden: true,
+          autoScroll: true,
+          cellEditing: false,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          summaryDataOnClient: true,
+          hideActions: ['addNew', 'addNewByCurrent'],
+          onBeforeEdit: (control, context) => {
+            const me = context.grid.up('form')
+            if (['ON_RECONCILATION', 'RECONCILED', 'POSTED'].includes(me.record.get('orderState'))) {
+              return false
+            }
+            me.setIsDirty(true)
+          },
+          getRowClass: () => {},
+          fields: [
+            { name: 'ID' },
+            { name: 'orderID' },
+            { name: 'paraID' },
+            { name: 'organizationID' },
+            { name: 'mi_modifyDate' },
+            { name: 'employeeNumberID' },
+            { name: 'employeeID' },
+            { name: 'empOrderType' },
+            { name: 'employeeNumberID.tabNum',
+              columnConfig: {
+                text: UB.i18n('Таб.номер'),
+                flex: 1
+              }
+            },
+            {
+              name: 'employeePositionID.employeeID.fullFIO',
+              columnConfig: {
+                text: UB.i18n('ПІБ'),
+                flex: 1
+              }
+            },
+            { name: 'employeePositionID' },
+            {
+              name: 'depName',
+              columnConfig: {
+                text: UB.i18n('Підрозділ'),
+                flex: 1
+              }
+            },
+            {
+              name: 'posName',
+              columnConfig: {
+                text: UB.i18n('Посада'),
+                flex: 1
+              }
+            },
+            { name: 'positionID' },
+            { name: 'departmentID' },
+            { name: 'dictPositionID' },
+            { name: 'dictTarifCoeffID' },
+            {
+              name: 'dictTarifCoeffID.code',
+              columnConfig: {
+                text: UB.i18n('Тарифний розряд'),
+                flex: 1
+              }
+            },
+            {
+              name: 'mtCount',
+              columnConfig: {
+                text: UB.i18n('Кількість ставок'),
+                width: 150,
+                floatFormat: 2,
+                align: 'right'
+              }
+            },
+            {
+              name: 'accrualSum',
+              columnConfig: {
+                text: UB.i18n('Оклад'),
+                width: 150,
+                floatFormat: 2,
+                align: 'right'
+              }
+            },
+            {
+              name: 'employeePositionID.accrualSum',
+              columnConfig: {
+                text: UB.i18n('Оклад Призначення'),
+                width: 150,
+                floatFormat: 2,
+                align: 'right'
+              }
+            }
+          ],
+          customToolBarActions: [
+            {
+              xtype: 'button',
+              name: 'fillBtn',
+              tooltip: UB.i18n('Заповнити'),
+              iconCls: 'fas fa-angle-double-down',
+              cls: 'fill-action',
+              handler: function (btn) {
+                const me = btn.up('form')
+                me.loadFromTariffication(me)
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

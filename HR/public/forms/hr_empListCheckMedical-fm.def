@@ -1,0 +1,496 @@
+/* global Ext AC appAC $App HR UB */
+exports.formDef = 'HR.empListCheckMedical'
+const accMainReportsSubOrg = AC.entityUtils.verifyRightsMethod('ac_service', 'subOrg')
+
+Ext.define('HR.empListCheckMedical', {
+  extend: 'Ext.form.Panel',
+  height: 600,
+  width: 800,
+  layout: 'border',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'hbox' },
+            collapsed: false,
+            items: [
+              {
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          HR.controlService.getOrgCombo({
+                            labelWidth: 185,
+                            width: 700,
+                            flex: 1,
+                            readOnly: !accMainReportsSubOrg,
+                            ubRequest: {
+                              entity: 'hr_organization',
+                              fieldList: ['mi_data_id', 'description', 'mi_treePath'],
+                              whereList: {
+                                state: {
+                                  expression: '[state]',
+                                  condition: '=',
+                                  values: {
+                                    state: 'ACTIVE'
+                                  }
+                                },
+                                path: {
+                                  expression: accMainReportsSubOrg ? '[mi_treePath]' : '[mi_data_id]',
+                                  condition: accMainReportsSubOrg ? 'like' : '=',
+                                  values: {
+                                    state: accMainReportsSubOrg ? `/${appAC.globalOrganization()}/` : appAC.globalOrganization()
+                                  }
+                                }
+                              },
+                              orderList: { orderBy: { expression: 'description' } },
+                              __mip_ondate: appAC.globalApplicationDate()
+                            },
+                            listeners: {
+                              change: function (ctrl) {
+                                const form = ctrl.up('form')
+                                HR.controlService.onChangeIncludeChildOrgs(form)
+                              }
+                            }
+                          }),
+                          HR.controlService.getIncludeChildOrgs(accMainReportsSubOrg)
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          HR.controlService.getDepCombo({
+                            labelWidth: 185,
+                            width: 700,
+                            displayField: 'description',
+                            flex: 1,
+                            listeners: {
+                              change: function (ctrl, value) {
+                                const form = ctrl.up('form')
+                                form.down('[name=includeChildDepts]').setReadOnly(!value)
+                                if (!value) {
+                                  form.down('[name=includeChildDepts]').setValue()
+                                }
+                              }
+                            }
+                          }),
+                          HR.controlService.getIncludeChildDepts()
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        labelWidth: 185,
+                        name: 'dateFrom',
+                        fieldLabel: UB.i18n('Проходження медогляду з'),
+                        allowBlank: true
+                      },
+                      {
+                        xtype: 'ubdatefield',
+                        labelWidth: 50,
+                        name: 'dateTo',
+                        fieldLabel: UB.i18n('по'),
+                        allowBlank: true
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        labelWidth: 185,
+                        name: 'dateFromNext',
+                        fieldLabel: UB.i18n('Наступний медогляд з'),
+                        allowBlank: true
+                      },
+                      {
+                        xtype: 'ubdatefield',
+                        labelWidth: 50,
+                        name: 'dateToNext',
+                        fieldLabel: UB.i18n('по'),
+                        allowBlank: true
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'dictCheckMedicalID',
+                    ubID: 'dictCheckMedicalID',
+                    labelWidth: 185,
+                    width: 700,
+                    fieldLabel: UB.i18n('Тип медогляду'),
+                    displayField: 'name',
+                    valueField: 'ID',
+                    ubRequest: {
+                      entity: 'hr_dictCheckMedical',
+                      fieldList: ['ID', 'code', 'name'],
+                      orderList: { orderBy: { expression: 'name' } }
+                    }
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'workPlace',
+                        labelWidth: 185,
+                        width: 700,
+                        fieldLabel: UB.i18n('Місце роботи'),
+                        hideEntityItemInContext: true,
+                        enumGroupFilter: 'HR_WORKER_PLACE',
+                        valueField: 'code',
+                        displayField: 'name',
+                        ubRequest: {
+                          entity: 'ubm_enum',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                          whereList: {
+                            eGroup: {
+                              expression: '[eGroup]',
+                              condition: 'equal',
+                              values: { 'eGroup': 'HR_WORKER_PLACE' }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'dictEmpCategoryID',
+                    ubID: 'dictEmpCategoryID',
+                    fieldLabel: UB.i18n('Кваліфікаційна категорія'),
+                    labelWidth: 185,
+                    width: 700,
+                    valueField: 'ID',
+                    displayField: 'name',
+                    // hidden: !(orgType === '1'),
+                    ubRequest: {
+                      entity: 'hr_dictEmpCategory',
+                      method: 'select',
+                      fieldList: ['ID', 'description', 'name'],
+                      orderList: { orderBy: { expression: 'description' } }
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'dictStaffCatID',
+                    ubID: 'dictStaffCatID',
+                    labelWidth: 185,
+                    width: 700,
+                    fieldLabel: UB.i18n('Категорія персоналу'),
+                    displayField: 'name',
+                    valueField: 'ID',
+                    ubRequest: {
+                      entity: 'hr_dictStaffCat',
+                      fieldList: ['ID', 'code', 'name'],
+                      orderList: { orderBy: { expression: 'name' } }
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'dictSpecialtyID',
+                    ubID: 'dictSpecialtyID',
+                    labelWidth: 185,
+                    width: 700,
+                    fieldLabel: UB.i18n('Спеціальність'),
+                    displayField: 'name',
+                    valueField: 'ID',
+                    ubRequest: {
+                      entity: 'hr_specialty',
+                      fieldList: ['ID', 'code', 'name'],
+                      orderList: { orderBy: { expression: 'name' } }
+                    }
+                  }
+                ]
+              }, {
+                layout: { type: 'hbox' },
+                padding: '50 0 0 0',
+                items: [
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Шукати'),
+                    iconCls: 'fas fa-search',
+                    width: 30,
+                    cls: 'green-action',
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.searchEmployee()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Очистити'),
+                    iconCls: 'fas fa-eraser',
+                    width: 30,
+                    cls: 'fill-action',
+                    margin: '5 0 0 0',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.clearSearch()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    iconCls: 'fas fa-print',
+                    width: 30,
+                    cls: 'blue-action',
+                    margin: '5 0 0 0',
+                    tooltip: UB.i18n('Друкувати'),
+                    handler: function () {
+                      me.doReport()
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'employeeNumberListGrid',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink',
+          'commandLink', 'showDetail', 'audit'],
+        cmdData: {
+          params: [{
+            entity: 'hr_empListCheckMedical',
+            method: 'search',
+            fieldList: [
+              { name: 'employeeID', visibility: false },
+              { name: 'employeeNumberID', visibility: false },
+              { name: 'fullFIO', description: UB.i18n('ПІБ (Таб. №)') },
+              { name: 'sexType', description: UB.i18n('Стать') },
+              { name: 'taxCode', description: UB.i18n('ІПН') },
+              { name: 'documentInfo', description: UB.i18n('Документ ідентифікаційний') },
+              { name: 'specialtyName', description: UB.i18n('Спеціальність') },
+              { name: 'categoryName', description: UB.i18n('Кваліфікаційна категорія') },
+              { name: 'addDescrPerson', description: UB.i18n('Додаткова інформація') },
+              { name: 'dictCheckMedicalName', description: UB.i18n('Тип медогляду') },
+              { name: 'dateCheck', description: UB.i18n('Дата проходження') },
+              { name: 'dateNext', description: UB.i18n('Наступний медогляд') },
+              { name: 'dictStaffCatName', description: UB.i18n('Категорія персоналу') },
+              { name: 'startWork', description: UB.i18n('Дата прийняття на роботу') },
+              { name: 'posName', description: UB.i18n('Посада') },
+              { name: 'actualPositionName', description: UB.i18n('Фактична посада')  },
+              { name: 'depName', description: UB.i18n('Підрозділ') },
+              { name: 'selfStructDepName', description: UB.i18n('Самостійний структурний підрозділ') },
+              { name: 'dictCostTypeName', description: UB.i18n('Місце виникнення витрат') },
+              { name: 'orgName', description: UB.i18n('Організація') },
+              { name: 'workPlace', description: UB.i18n('Місце роботи') }
+            ]
+          }]
+        },
+        onItemDblClick: HR.employeeTabs.openEmpCard,
+        cmpInitConfig: {
+          afterInit: function () {
+            const me = this
+            const store = me.getStore()
+            store.autoLoad = false
+          },
+          onDeterminateForm: HR.employeeTabs.onDeterminateCard,
+
+          listeners: {
+            render: (grid) => {
+              grid.menu.removeAll()
+              grid.menu.add([HR.employeeTabs.getEmpCardMenu(grid)])
+              const showAddDescrPerson = !!AC.settings.get('hrShowAddDescrPerson', appAC.globalOrganization())
+              const colPersonDescr = AC.gridUtils.getColumnByIndex(grid, 'addDescrPerson')
+              colPersonDescr.setVisible(showAddDescrPerson)
+              const useActualPositionName = AC.settings.get('hrOrderActualPositionName', appAC.globalOrganization()) === true
+              const colActualPositionName = AC.gridUtils.getColumnByIndex(grid, 'actualPositionName')
+              colActualPositionName.setVisible(useActualPositionName)
+            }
+          }
+        },
+        getExportTitle: function () {
+          return UB.i18n('Список працівників, які проходили медогляд')
+        }
+      }
+    ]
+
+    me.setDefaultParams = (isInit) => {
+      const me = this
+      me.attr.dateFrom.setValue(new Date((new Date()).getFullYear(), (new Date()).getMonth(), 1, 0, 0, 0, 0))
+      me.attr.dateTo.setValue(AC.dateService.lastDayOfMonth(new Date((new Date()).getFullYear(), (new Date()).getMonth(), 1, 0, 0, 0, 0)))
+      me.attr.dateFromNext.setValue(new Date((new Date()).getFullYear(), (new Date()).getMonth(), 1, 0, 0, 0, 0))
+      me.attr.dateToNext.setValue(AC.dateService.lastDayOfMonth(new Date((new Date()).getFullYear(), (new Date()).getMonth(), 1, 0, 0, 0, 0)))
+      me.attr.organizationID.setValue(appAC.globalOrganization())
+      me.attr.includeChildOrgs.setValue()
+      me.attr.departmentID.setValue()
+      me.attr.includeChildDepts.setValue()
+      me.attr.workPlace.setValue()
+      me.attr.dictCheckMedicalID.setValue()
+      me.attr.dictEmpCategoryID.setValue()
+      me.attr.dictStaffCatID.setValue()
+      me.attr.dictSpecialtyID.setValue()
+    }
+
+    me.clearSearch = () => {
+      me.setDefaultParams(false)
+    }
+
+    me.searchEmployee = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+      const store = me.attr.grid.getStore()
+      let req = store.ubRequest
+      req.organizationID = me.attr.organizationID.getValue()
+      req.includeChildOrgs = me.attr.includeChildOrgs.getValue()
+      req.departmentID = me.attr.departmentID.getValue()
+      req.includeChildDepts = me.attr.includeChildDepts.getValue()
+      req.onDate = appAC.globalApplicationDate()
+      req.dateFrom = AC.dateService.shiftDate(me.attr.dateFrom.getValue())
+      req.dateTo = AC.dateService.shiftDate(me.attr.dateTo.getValue())
+      req.dateFromNext = AC.dateService.shiftDate(me.attr.dateFromNext.getValue())
+      req.dateToNext = AC.dateService.shiftDate(me.attr.dateToNext.getValue())
+      req.workPlace = me.attr.workPlace.getValue()
+      req.dictCheckMedicalID = me.attr.dictCheckMedicalID.getValue()
+      req.dictEmpCategoryID = me.attr.dictEmpCategoryID.getValue()
+      req.dictStaffCatID = me.attr.dictStaffCatID.getValue()
+      req.dictSpecialtyID = me.attr.dictSpecialtyID.getValue()
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=employeeNumberListGrid]'),
+        dateFrom: me.down('[name=dateFrom]'),
+        dateTo: me.down('[name=dateTo]'),
+        dateFromNext: me.down('[name=dateFromNext]'),
+        dateToNext: me.down('[name=dateToNext]'),
+        workPlace: me.down('[name=workPlace]'),
+        organizationID: me.down('[name=organizationID]'),
+        includeChildOrgs: me.down('[name=includeChildOrgs]'),
+        departmentID: me.down('[name=departmentID]'),
+        includeChildDepts: me.down('[name=includeChildDepts]'),
+        dictCheckMedicalID: me.down('[name=dictCheckMedicalID]'),
+        dictEmpCategoryID: me.down('[name=dictEmpCategoryID]'),
+        dictStaffCatID: me.down('[name=dictStaffCatID]'),
+        dictSpecialtyID: me.down('[name=dictSpecialtyID]')
+      }
+      me.setDefaultParams(true)
+    }, me)
+
+    me.validateParams = () => {
+      let res
+      const params = []
+
+      let ctrl = me.attr.dateFrom
+      const dateFrom = ctrl.getValue()
+      ctrl = me.attr.dateTo
+      const dateTo = ctrl.getValue()
+
+      ctrl = me.attr.dateFromNext
+      const dateFromNext = ctrl.getValue()
+      ctrl = me.attr.dateToNext
+      const dateToNext = ctrl.getValue()
+
+      if (!me.attr.organizationID.getValue()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Організація"')))
+      }
+      if (params.length) {
+        res = {
+          msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+        }
+      } else {
+        if (dateFrom && dateTo && dateFrom > dateTo) {
+          res = {
+            msg: UB.i18n(`Дата {0} не може перевищувати дату {1}`, AC.viewUtils.formatFieldLabel('"Проходження медогляд з"'), AC.viewUtils.formatFieldLabel('"по"'))
+          }
+        } else if (dateFromNext && dateToNext && dateFromNext > dateToNext) {
+          res = {
+            msg: UB.i18n(`Дата {0} не може перевищувати дату {1}`, AC.viewUtils.formatFieldLabel('"Наступний медогляд з "'), AC.viewUtils.formatFieldLabel('"по"'))
+          }
+        }
+      }
+      return res
+    }
+
+    me.report_code = 'hr_empListCheckMedical'
+    me.doReport = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+      let reportParams = {
+        organizationID: me.attr.organizationID.getValue(),
+        includeChildOrgs: me.attr.includeChildOrgs.getValue(),
+        departmentID: me.attr.departmentID.getValue(),
+        includeChildDepts: me.attr.includeChildDepts.getValue(),
+        onDate: appAC.globalApplicationDate(),
+        dateFrom: AC.dateService.shiftDate(me.attr.dateFrom.getValue()),
+        dateTo: AC.dateService.shiftDate(me.attr.dateTo.getValue()),
+        dateFromNext: AC.dateService.shiftDate(me.attr.dateFromNext.getValue()),
+        dateToNext: AC.dateService.shiftDate(me.attr.dateToNext.getValue()),
+        workPlace: me.attr.workPlace.getValue(),
+        workPlaceName: me.attr.workPlace.getRawValue(),
+        dictCheckMedicalID: me.attr.dictCheckMedicalID.getValue(),
+        dictCheckMedicalName: me.attr.dictCheckMedicalID.getRawValue(),
+        dictEmpCategoryID: me.attr.dictEmpCategoryID.getValue(),
+        dictEmpCategoryName: me.attr.dictEmpCategoryID.getRawValue(),
+        dictStaffCatID: me.attr.dictStaffCatID.getValue(),
+        dictStaffCatName: me.attr.dictStaffCatID.getRawValue(),
+        dictSpecialtyID: me.attr.dictSpecialtyID.getValue(),
+        dictSpecialtyName: me.attr.dictSpecialtyID.getRawValue()
+      }
+
+      $App.doCommand({
+        cmdType: 'showReport',
+        caption: UB.i18n('Друкована форма'),
+        tabId: 'printDocument' + me.report_code + Date.now(),
+        target: $App.getViewport().centralPanel,
+        cmdData: {
+          reportCode: me.report_code,
+          reportParams: reportParams,
+          reportOptions: {
+            allowExportToExcel: true,
+            isModal: false
+          }
+        }
+      })
+    }
+
+    me.callParent(arguments)
+  }
+})

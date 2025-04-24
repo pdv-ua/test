@@ -1,0 +1,349 @@
+/* global Ext AC appAC $App HR UB */
+exports.formDef = 'HR.empListEducation'
+const accMainReportsSubOrg = AC.entityUtils.verifyRightsMethod('ac_service', 'subOrg')
+
+Ext.define('HR.empListEducation', {
+  extend: 'Ext.form.Panel',
+  height: 600,
+  width: 800,
+  layout: 'border',
+  alias: 'widget.empListEducation',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'hbox' },
+            collapsed: false,
+            items: [
+              {
+                xtype: 'panel',
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getOrgCombo({
+                        labelWidth: 130,
+                        width: 700,
+                        flex: 1,
+                        readOnly: !accMainReportsSubOrg,
+                        ubRequest: {
+                          entity: 'hr_organization',
+                          fieldList: ['mi_data_id', 'description', 'mi_treePath'],
+                          whereList: {
+                            state: {
+                              expression: '[state]',
+                              condition: '=',
+                              values: {
+                                state: 'ACTIVE'
+                              }
+                            },
+                            path: {
+                              expression: accMainReportsSubOrg ? '[mi_treePath]' : '[mi_data_id]',
+                              condition: accMainReportsSubOrg ? 'like' : '=',
+                              values: {
+                                state: accMainReportsSubOrg ? `/${appAC.globalOrganization()}/` : appAC.globalOrganization()
+                              }
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'description' } },
+                          __mip_ondate: appAC.globalApplicationDate()
+                        },
+                        listeners: {
+                          change: function (ctrl) {
+                            const form = ctrl.up('form')
+                            HR.controlService.onChangeIncludeChildOrgs(form)
+                          }
+                        }
+                      }),
+                      HR.controlService.getIncludeChildOrgs(accMainReportsSubOrg)
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getDepCombo({
+                        labelWidth: 130,
+                        width: 700,
+                        displayField: 'description',
+                        flex: 1,
+                        listeners: {
+                          change: function (ctrl, value) {
+                            const form = ctrl.up('form')
+                            form.down('[name=includeChildDepts]').setReadOnly(!value)
+                            if (!value) {
+                              form.down('[name=includeChildDepts]').setValue()
+                            }
+                          }
+                        }
+                      }),
+                      HR.controlService.getIncludeChildDepts()
+                    ]
+                  },
+                  {
+                    xtype: 'ubboxselect',
+                    name: 'dictEducationLevelType',
+                    fieldLabel: UB.i18n('Рівень освіти'),
+                    labelWidth: 130,
+                    width: 700,
+                    multiSelect: true,
+                    valueField: 'ID',
+                    displayField: 'name',
+                    ubRequest: {
+                      entity: 'hr_dictEducationLevel',
+                      fieldList: ['ID', 'name']
+                    }
+                  },
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'lastEducationLevelType',
+                    fieldLabel: UB.i18n('Останній рівень освіти Особи'),
+                    labelWidth: 230,
+                    width: 520,
+                    checked: false,
+                    listeners: {
+                      change: function (ctrl) {
+                        const isChecked = ctrl.getValue()
+                        const form = ctrl.up('form')
+                        const edu = form.down('[name=dictEducationLevelType]')
+                        const colAcademName = AC.gridUtils.getColumnByIndex(me.attr.grid, 'academName')
+                        const colDegreeName = AC.gridUtils.getColumnByIndex(me.attr.grid, 'degreeName')
+                        edu.setDisabled(isChecked)
+                        colAcademName.setVisible(isChecked)
+                        colDegreeName.setVisible(isChecked)
+                        if (isChecked) {
+                          edu.setValue()
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                padding: '35 0 0 0',
+                items: [
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Шукати'),
+                    iconCls: 'fas fa-search',
+                    width: 30,
+                    cls: 'green-action',
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.searchEmployee()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Очистити'),
+                    iconCls: 'fas fa-eraser',
+                    width: 30,
+                    cls: 'fill-action',
+                    margin: '5 0 0 0',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.clearSearch()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    iconCls: 'fas fa-print',
+                    width: 30,
+                    cls: 'blue-action',
+                    margin: '5 0 0 0',
+                    tooltip: UB.i18n('Друкувати'),
+                    handler: function () {
+                      me.doReport()
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'employeeNumberListGrid',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink',
+          'commandLink', 'showDetail', 'audit'],
+        cmdData: {
+          params: [{
+            entity: 'hr_empListEducation',
+            method: 'search',
+            fieldList: [
+              { name: 'tabNum' },
+              { name: 'employeeID', visibility: false },
+              { name: 'employeeNumberID', visibility: false },
+              { name: 'fullFIO', description: UB.i18n('ПIБ') },
+              { name: 'taxCode', description: UB.i18n('РНОКПП'), config: { align: 'center', width: 100 } },
+              { name: 'posCategory' },
+              { name: 'rankCur' },
+              { name: 'dictEduLevelName' },
+              { name: 'dictSpecialtyName' },
+              { name: 'qualification' },
+              { name: 'dictDegreeName' },
+              { name: 'academName' },
+              { name: 'degreeName' },
+              { name: 'docSeries' },
+              { name: 'docNumber' },
+              { name: 'dateIssue', format: 'd.m.Y', config: { align: 'center', width: 100 } },
+              { name: 'educationName' },
+              { name: 'sexType', config: { align: 'center', width: 100 } },
+              { name: 'addDescrPerson', description: UB.i18n('Додаткова інформація') },
+              { name: 'posName' },
+              { name: 'actualPositionName' },
+              { name: 'depName' },
+              { name: 'selfStructDepName', description: UB.i18n('Самостійний структурний підрозділ') },
+              { name: 'orgName', description: UB.i18n('Організація') }
+            ]
+          }]
+        },
+        cmpInitConfig: {
+          onDeterminateForm: HR.employeeTabs.onDeterminateCard,
+          listeners: {
+            render: (grid) => {
+              grid.menu.removeAll()
+              grid.menu.add([HR.employeeTabs.getEmpCardMenu(grid)])
+              const showAddDescrPerson = !!AC.settings.get('hrShowAddDescrPerson', appAC.globalOrganization())
+              const colPersonDescr = AC.gridUtils.getColumnByIndex(grid, 'addDescrPerson')
+              colPersonDescr.setVisible(showAddDescrPerson)
+              const useActualPositionName = AC.settings.get('hrOrderActualPositionName', appAC.globalOrganization()) === true
+              const colActualPositionName = AC.gridUtils.getColumnByIndex(grid, 'actualPositionName')
+              colActualPositionName.setVisible(useActualPositionName)
+            }
+          }
+        },
+        getExportTitle: function () {
+          return UB.i18n(`Список працівників за освітою`)
+        }
+      }
+    ]
+
+    me.setDefaultParams = (isInit) => {
+      const me = this
+      me.attr.dictEducationLevelType.setValue(null)
+      me.attr.lastEducationLevelType.setValue()
+      me.attr.organizationID.setValue(appAC.globalOrganization())
+      me.attr.includeChildOrgs.setValue()
+      me.attr.departmentID.setValue()
+      me.attr.includeChildDepts.setValue()
+
+      if (!me.attr.lastEducationLevelType.getValue()) {
+        AC.gridUtils.getColumnByIndex(me.attr.grid, 'academName').setVisible(false)
+        AC.gridUtils.getColumnByIndex(me.attr.grid, 'degreeName').setVisible(false)
+      }
+    }
+
+    me.clearSearch = () => {
+      me.setDefaultParams(false)
+    }
+
+    me.searchEmployee = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+      const store = me.attr.grid.getStore()
+      let req = store.ubRequest
+      req.onDate = appAC.globalApplicationDate()
+      req.dictEducationLevelType = me.attr.dictEducationLevelType.getValue()
+      req.lastEducationLevelType = me.attr.lastEducationLevelType.getValue()
+      req.organizationID = me.attr.organizationID.getValue()
+      req.includeChildOrgs = me.attr.includeChildOrgs.getValue()
+      req.departmentID = me.attr.departmentID.getValue()
+      req.includeChildDepts = me.attr.includeChildDepts.getValue()
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=employeeNumberListGrid]'),
+        dictEducationLevelType: me.down('[name=dictEducationLevelType]'),
+        lastEducationLevelType: me.down('[name=lastEducationLevelType]'),
+        organizationID: me.down('[name=organizationID]'),
+        includeChildOrgs: me.down('[name=includeChildOrgs]'),
+        departmentID: me.down('[name=departmentID]'),
+        includeChildDepts: me.down('[name=includeChildDepts]')
+      }
+      me.setDefaultParams(true)
+    }, me)
+
+    me.validateParams = () => {
+      let res
+      let params = []
+      if (!me.attr.organizationID.getValue()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Організація"')))
+      }
+      if (params.length) {
+        res = {
+          msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+        }
+      }
+      return res
+    }
+
+    me.report_code = 'hr_empListEducation'
+    me.doReport = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+
+      $App.doCommand({
+        cmdType: 'showReport',
+        caption: UB.i18n('Друкована форма'),
+        tabId: 'printDocument' + me.report_code + Date.now(),
+        target: $App.getViewport().centralPanel,
+        cmdData: {
+          reportCode: me.report_code,
+          reportParams: {
+            organizationID: me.attr.organizationID.getValue(),
+            includeChildOrgs: me.attr.includeChildOrgs.getValue(),
+            departmentID: me.attr.departmentID.getValue(),
+            includeChildDepts: me.attr.includeChildDepts.getValue(),
+            onDate: appAC.globalApplicationDate(),
+            dictEducationLevelType: me.attr.lastEducationLevelType.getValue() ? undefined : me.attr.dictEducationLevelType.getValue(),
+            lastEducationLevelType: me.attr.lastEducationLevelType.getValue()
+          },
+          reportOptions: {
+            allowExportToExcel: true,
+            isModal: false
+          }
+        }
+      })
+    }
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,113 @@
+{
+  "caption": "Група оплати праці держслужбовців",
+  "description": "Група оплати праці держслужбовців",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "groupN",
+      "dataType": "String",
+      "size": 5,
+      "caption": "№ групи",
+      "description": "№ групи",
+      "documentation": "№ групи",
+      "allowNull": false,
+      "isUnique": true
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 256,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "prim",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Примітка",
+      "description": "Примітка",
+      "documentation": "Примітка",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 290,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["groupN","name"],
+        "compositeSeparator": " "
+      }
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+
+}

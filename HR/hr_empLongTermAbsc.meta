@@ -1,0 +1,129 @@
+{
+  "caption": "Довготривала відсутність",
+  "description": "Довготривала відсутність",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+       "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ - підстава виникнення",
+      "description": "Наказ - підстава виникнення"
+    },
+    {
+      "name": "paraID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Деталь - підстава виникнення",
+      "description": "Деталь - підстава виникнення"
+    },
+    {
+      "name": "changeOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ - підстава припинення",
+      "description": "Наказ - підстава припинення"
+    },
+    {
+      "name": "changeParaID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Деталь - підстава припинення",
+      "description": "Деталь - підстава припинення"
+    },
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер наказу",
+      "description": "Номер наказу",
+      "documentation": "Номер наказу"
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу",
+      "description": "Дата наказу",
+      "documentation": "Дата наказу"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_EMPLONGTERMORGEMP": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "organizationID": { "sort": "ASC" },
+          "employeeNumberID": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

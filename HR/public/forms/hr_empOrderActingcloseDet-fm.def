@@ -1,0 +1,208 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+
+/* global  HR AC UB */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'empOrderType', 'organizationID', 'employeePositionID', 'title'],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [
+      {
+        xtype: 'tabpanel',
+        region: 'center',
+        items: [
+          {
+            title: UB.i18n('Загальне'),
+            layout: {
+              type: 'border'
+            },
+            items: [
+              {
+                region: 'north',
+                autoScroll: false,
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                items: [
+                  HR.controlService.getAttrDepPosBlock({
+                    valueField: 'ID',
+                    labelWidth: 110,
+                    showPosCategory: false,
+                    posConfig: {
+                      gridFieldList: ['code', 'name', 'psCategory', 'positionType', 'dictStaffCatID']
+                    }
+                  }),
+                  {
+                    attributeName: 'employeePositionID',
+                    fieldLabel: UB.i18n('За працівника'),
+                    fieldList: ['ID', 'description', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+                    xtype: 'empPositionCombobox',
+                    addWorkPlace: true,
+                    allowBlank: true
+                  },
+                  {
+                    layout: {
+                      type: 'hbox',
+                      align: 'top'
+                    },
+                    flex: 1,
+                    name: 'reasonDocPanel',
+                    hidden: true,
+                    items: [{
+                      fieldLabel: UB.i18n('Підстава (до пункту наказу)'),
+                      attributeName: 'reason',
+                      flex: 1
+                    },
+                    {
+                      xtype: 'button',
+                      cls: 'list-icon',
+                      name: 'reasonButton',
+                      tooltip: UB.i18n('Вибрати'),
+                      width: 35,
+                      height: 35,
+                      margin: '0 2 0 -45',
+                      handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+                    }
+                    ]
+                  }
+                ]
+              },
+              {
+                xtype: 'panel',
+                region: 'center',
+                layout: 'fit',
+                items: [
+                  {
+                    name: 'hr_empOrderActingCloseEmp',
+                    xtype: 'ubdetailgrid',
+                    paraGrid: true,
+                    autoScroll: true,
+                    rowEditing: true,
+                    sortableColumns: false,
+                    enableColumnHide: false,
+                    notWriteChanges: true,
+                    flex: 1,
+                    hideActions: ['addNewByCurrent', 'newVersion'],
+                    entityConfig: {
+                      entity: 'hr_empOrderActingCloseEmp',
+                      method: 'select',
+                      fieldList: [
+                        {
+                          name: 'itemIdx',
+                          description: '№',
+                          config: { align: 'center', width: 60 },
+                          visibility: true,
+                          editor: {
+                            readOnly: true
+                          }
+                        },
+                        {
+                          name: 'actingID.employeePositionID.description',
+                          description: UB.i18n('Працівник'),
+                          config: { width: 300 },
+                          editor: {
+                            fieldList: ['ID', 'employeePositionID.description', 'employeePositionID', 'dateFrom', 'dateTo'],
+                            displayField: 'employeePositionID.description',
+                            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                            listeners: {
+                              render: function (ctrl) {
+                                HR.orderManager.disableContextMenuItems(ctrl, ['editItem', 'addItem'])
+                              }
+                            }
+                          }
+                        },
+                        {
+                          name: 'orderID',
+                          visibility: false
+                        },
+                        {
+                          name: 'paraID',
+                          visibility: false
+                        },
+                        {
+                          name: 'employeePositionID',
+                          visibility: false
+                        },
+                        {
+                          name: 'employeeID',
+                          visibility: false
+                        },
+                        {
+                          name: 'dateTo',
+                          config: { width: 120 },
+                          description: UB.i18n('Припинити з дати'),
+                          editor: {
+                            allowBlank: false
+                          }
+                        },
+                        {
+                          name: 'dateFrom',
+                          config: { width: 120 },
+                          description: UB.i18n('Початок виконання'),
+                          editor: {
+                            readOnly: true
+                          }
+                        },
+                        {
+                          name: 'empOrderType',
+                          visibility: false
+                        }
+                      ],
+                      orderList: { itemIdx: { expression: 'itemIdx' } }
+                    },
+                    masterFields: ['ID', 'orderID'],
+                    detailFields: ['paraID', 'orderID'],
+                    onBeforeEdit: function (rowEditor, context) {
+                      if (context.grid.isEditDisabled) {
+                        return false
+                      }
+                      const editor = rowEditor.editor
+                      const me = editor.up('form')
+                      const reco = context.record
+                      if (!me.attr.positionID.getValue() && !me.attr.employeePositionID.getValue()) {
+                        AC.viewUtils.showToast('Помилка', UB.i18n('Необхідно вибрати посаду або заповнити поле "За працівника"!'))
+                        if (reco.phantom) {
+                          const store = context.grid.getStore()
+                          store.remove(reco)
+                        }
+                        AC.gridUtils.removeDirtyRecords(context.grid)
+                        return false
+                      }
+                      me.setIsDirty(true)
+                      const empPos = editor.query('[name=actingID.employeePositionID.description]')[0]
+                      const dateFromCtrl = editor.query('[name=dateFrom]')[0]
+                      me.filterEmployeePosition(empPos)
+                      if (!reco.get('ID')) {
+                        reco.set('paraID', me.record.get('ID'))
+                        reco.set('orderID', me.record.get('orderID'))
+                        reco.set('empOrderType', 'ACTINGCLOSE')
+                        reco.set('itemIdx', context.grid.getStore().getCount())
+                      }
+                      if (typeof empPos.events.select.clearListeners === 'function') {
+                        empPos.events.select.clearListeners()
+                      }
+                      empPos.on('select', ctrl => {
+                        reco.set('employeePositionID', ctrl.getFieldValue('employeePositionID'))
+                        dateFromCtrl && dateFromCtrl.setValue(AC.dateService.shiftDate(ctrl.getFieldValue('dateFrom')))
+                      })
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+})()

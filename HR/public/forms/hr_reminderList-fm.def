@@ -1,0 +1,78 @@
+/* global Ext UB appAC AC $App */
+exports.formDef = 'HR.reminderList'
+
+Ext.define('HR.reminderList', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_reminderList',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  readOnly: true,
+  checkPaySum: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'center',
+        name: 'panel',
+        items: []
+      }
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {}
+      me.setTitle(me.params.formTitle || 'Сегмент діаграми')
+      if (me.data) {
+        const fields = []
+        me.params.grid.forEach(field => {
+          fields.push(field)
+        })
+
+        const grid = Ext.create('AC.controls.AcGrid', {
+          xtype: 'acGrid',
+          name: 'grid',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_reminderList'),
+          region: 'center',
+          autoScroll: true,
+          storeType: 'local',
+          disablePaging: true,
+          notWriteChanges: true,
+          showToolBar: true,
+          hideActions: ['addNew', 'edit', 'del', 'addNewByCurrent'],
+          fields: fields,
+          onItemDoubleClick: function (grid, record) {
+            let showForm = true
+            switch (me.params.onClickFiredIfConditionCode) {
+              case 'firedEmps':
+                showForm = (record.get('orderID') && record.get('dismissOrderEntityName') && record.get('dismissOrderEntityName') === 'hr_empOrder')
+                break
+            }
+            if (showForm) {
+              const execParams = {
+                cmdType: 'showForm',
+                formCode: me.params.onClickFormCode,
+                entity: me.params.onClickEntity,
+                target: $App.getViewport().centralPanel,
+                tabId: me.params.onClickEntity + record.get(me.params.onClickInstanceIDAttrName),
+                instanceID: record.get(me.params.onClickInstanceIDAttrName)
+              }
+              if (me.params.onClickCmpInitConfig && me.params.onClickCmpInitConfig.length) {
+                execParams.cmpInitConfig = {}
+                me.params.onClickCmpInitConfig.forEach(param => {
+                  execParams.cmpInitConfig[param] = record.get(param)
+                })
+              }
+
+              $App.doCommand(execParams)
+            }
+          }
+        })
+        me.down('[name=panel]').add(grid)
+        me.attr.grid = me.down('[name=grid]')
+        me.attr.grid.setLocalStoreData(me.data[me.params.gridData])
+      }
+    }, me)
+    me.callParent(arguments)
+  }
+})

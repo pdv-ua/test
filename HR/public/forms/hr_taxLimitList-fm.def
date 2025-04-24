@@ -1,0 +1,96 @@
+/* global Ext */
+
+exports.formDef = 'HR.taxLimitList'
+
+Ext.define('HR.taxLimitList', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.taxLimitList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    let panel
+    me.items = [
+      panel = Ext.widget('tabpanel', {
+        xtype: 'tabpanel',
+        region: 'center',
+        flex: 1,
+        items: [
+          {
+            title: UB.i18n('Пільги ПДФО'),
+            layout: { type: 'vbox', align: 'stretch' },
+            items: [
+              {
+                name: 'taxLimit',
+                xtype: 'ubdetailgrid',
+                autoScroll: true,
+                layout: 'fit',
+                flex: 1,
+                cmdType: 'showList',
+                entityName: 'hr_taxLimit',
+                description: UB.i18n('Пільги ПДФО'),
+                cmdData: {
+                  params: [{
+                    entity: 'hr_taxLimit',
+                    method: 'select',
+                    fieldList: [
+                      { name: 'code', description: UB.i18n('Код'), config: { align: 'center', flex: 0.3 } },
+                      { name: 'name', description: UB.i18n('Назва'), config: { flex: 1.5 } },
+                      { name: 'taxLimitType', config: { align: 'center', flex: 0.5 } },
+                      { name: 'size', config: { align: 'center', flex: 0.3 } },
+                      { name: 'codeForReport', config: { align: 'center', flex: 0.3 } },
+                      { name: 'dateFromEmpty', description: UB.i18n('Початок'), tooltip: UB.i18n('Дата початку дії'), config: { align: 'center', flex: 0.3 } },
+                      { name: 'dateToEmpty', description: UB.i18n('Кінець'), tooltip: UB.i18n('Дата закінчення дії'), config: { align: 'center', flex: 0.3 } }
+                    ]
+                  }]
+                }
+              }
+            ]
+          },
+          {
+            title: UB.i18n('Базовий розмір податкової соціальної пільги'),
+            layout: { type: 'vbox', align: 'stretch' },
+            items: [
+              {
+                name: 'taxLimitBase',
+                xtype: 'ubdetailgrid',
+                autoScroll: true,
+                layout: 'fit',
+                flex: 1,
+                cmdType: 'showList',
+                entityName: 'hr_taxLimitBase',
+                description: UB.i18n('Базовий розмір податкової соціальної пільги'),
+                cmdData: {
+                  params: [{
+                    entity: 'hr_taxLimitBase',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'yearFrom',
+                        description: UB.i18n('Рік початку'),
+                        format: '0000',
+                        config: { align: 'center', flex: 0.2 }
+                      },
+                      {
+                        name: 'rate',
+                        description: UB.i18n('Відсоток від прожиткового мінімуму'),
+                        config: { align: 'center' }
+                      }
+                    ]
+                  }]
+                }
+              }
+            ]
+          }
+        ]
+      })
+    ]
+    me.callParent(arguments)
+  }
+})

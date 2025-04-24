@@ -1,0 +1,294 @@
+// @isModal true
+/* global Ext appAC $App UB AC */
+
+exports.formDef = 'HR.staffTreeSelect'
+
+Ext.define(exports.formDef, {
+  extend: 'Ext.panel.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  width: 100,
+  height: 100,
+  _dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      ubID: 'mainToolbar',
+      enableOverflow: true,
+      items: [
+        {
+          xtype: 'textfield',
+          maxSize: 200,
+          width: 400,
+          name: 'searchText',
+          emptyText: UB.i18n('Введіть рядок для пошуку, Enter - шукати'),
+          enableKeyEvents: true,
+          listeners: {
+            keydown: (ctrl, ev) => {
+              if (ev.keyCode === 13) {
+                ctrl.up('[formCode]').doSearch()
+              }
+            }
+          }
+        },
+        {
+          actionId: 'search',
+          iconCls: 'fas fa-search',
+          cls: 'blue-action',
+          handler: btn => {
+            btn.up('[formCode]').doSearch()
+          }
+        }
+      ]
+    }
+  ],
+  bbar: {
+    layout: { pack: 'center' },
+    frame: true,
+    padding: '0 0 10 0',
+    items: [
+      {
+        xtype: 'button',
+        text: 'Ok',
+        width: 80,
+        minWidth: 80,
+        margin: '0 10 0 0',
+        iconCls: 'iconApprove',
+        event: 'generate',
+        handler: function (btn) {
+          let me = btn.up('[onSelectNodeHandler]')
+          if (me) {
+            me.onSelectNodeHandler(me.staffTreeControl).then(() => {
+              me.up('window').close()
+            })
+          }
+        }
+      },
+      {
+        xtype: 'button',
+        text: UB.i18n('cancel'),
+        width: 100,
+        minWidth: 100,
+        iconCls: 'iconReject',
+        event: 'reject',
+        handler: function () {
+          this.up('window').close()
+        }
+      }
+    ]
+  },
+  initComponent: function () {
+    let me = this
+    me.onSelectNodeHandler = me.customParams.onSelectNodeHandler
+    me.staffTreeControl = Ext.widget('staffTreeControl', {
+      xtype: 'staffTreeControl',
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_staffTreeSelect_staffTreeControl'),
+      readOnly: true,
+      onDate: me.customParams.onDate || appAC.globalApplicationDate(),
+      organization: me.customParams.organizationID || appAC.globalOrganization(),
+      isExpandRoot: true,
+      isNotChildOrg: true,
+      isPlan: me.customParams.isPlan === undefined ? true : me.customParams.isPlan,
+      rootID: (me.customParams && me.customParams.rootID) || null,
+      empOrderType: 'NOCHILDORGS',
+      searchFeature: true,
+      fields: [
+        {
+          name: 'ID',
+          type: 'number'
+        },
+        {
+          name: 'text',
+          type: 'string'
+        },
+        {
+          name: 'description',
+          type: 'string'
+        },
+        {
+          name: 'state',
+          type: 'string'
+        },
+        {
+          name: 'quantity',
+          type: 'string'
+        },
+        {
+          name: 'accrualSum',
+          type: 'string'
+        },
+        {
+          name: 'dateFrom',
+          type: 'string'
+        },
+        {
+          name: 'dateTo',
+          type: 'string'
+        },
+        {
+          name: 'staffOrder',
+          type: 'string'
+        },
+        {
+          name: 'stateCode',
+          type: 'string'
+        },
+        {
+          name: 'vacancyRate',
+          type: 'string'
+        },
+        {
+          name: 'mi_data_id',
+          type: 'number'
+        },
+        {
+          name: 'addDescrPosition',
+          type: 'string'
+        }
+      ],
+      columns: [
+        {
+          xtype: 'treecolumn',
+          flex: 1,
+          sortable: false,
+          dataIndex: 'text',
+          minWidth: 150,
+          renderer: function (value, meta, record) {
+            meta.tdAttr = 'data-qtip="' + (record.data.addDescrPosition || '').split('; ').join('<br />') + '"'
+            return value
+          }
+        },
+        {
+          text: UB.i18n('Додаткова інформація'),
+          width: 140,
+          dataIndex: 'addDescrPosition'
+        },
+        {
+          text: UB.i18n('Кількість'),
+          width: 100,
+          dataIndex: 'quantity'
+        },
+        {
+          text: UB.i18n('Оклад'),
+          width: 100,
+          dataIndex: 'accrualSum'
+        },
+        {
+          text: UB.i18n('Вакантно'),
+          width: 100,
+          dataIndex: 'vacancyRate'
+        },
+        {
+          text: UB.i18n('Дата початку дії'),
+          width: 100,
+          dataIndex: 'dateFrom',
+          hidden: true
+        },
+        {
+          text: UB.i18n('Дата закінчення дії'),
+          width: 100,
+          dataIndex: 'dateTo',
+          hidden: true
+        }
+      ]
+    })
+    me.treeSearchControl = Ext.widget('treeSearchControl', {
+      xtype: 'treeSearchControl',
+      flex: 1,
+      staffTreeControl: me.staffTreeControl
+    })
+    me.items = [
+      me.staffTreeControl,
+      { xtype: 'splitter' },
+      me.treeSearchControl
+    ]
+    me.doSearch = function (isSilence) {
+      const treeSearchControl = me.treeSearchControl
+      const searchText = (me.down('[name=searchText]').getValue() || '').trim()
+      if (searchText.length < 4) {
+        !isSilence && AC.viewUtils.showToast(UB.i18n('Пошуковий рядок має містити не менше, ніж 4 символи'))
+        return
+      }
+      treeSearchControl.search({
+        onDate: me.staffTreeControl.onDate,
+        startID: appAC.globalOrganization(),
+        search: searchText
+      }).then(() => {
+        treeSearchControl.show()
+        Ext.defer(() => {
+          treeSearchControl.down('[name=searchResult]').getView().focus()
+        }, 100)
+      })
+    }
+    me.fullReload = function () {
+      changeGlobal()
+    }
+    me.items = [
+      me.staffTreeControl,
+      { xtype: 'splitter' },
+      me.treeSearchControl
+    ]
+    me.doSearch = function (isSilence) {
+      const treeSearchControl = me.treeSearchControl
+      const searchText = (me.down('[name=searchText]').getValue() || '').trim()
+      if (searchText.length < 4) {
+        !isSilence && AC.viewUtils.showToast(UB.i18n('Пошуковий рядок має містити не менше, ніж 4 символи'))
+        return
+      }
+      treeSearchControl.search({
+        onDate: me.staffTreeControl.onDate,
+        startID: appAC.globalOrganization(),
+        search: searchText
+      }).then(() => {
+        treeSearchControl.show()
+        Ext.defer(() => {
+          treeSearchControl.down('[name=searchResult]').getView().focus()
+        }, 100)
+      })
+    }
+    const changeGlobal = () => {
+      const node = me.staffTreeControl.tree.store.getRootNode()
+      if (node) {
+        me.staffTreeControl.orgIDs = [appAC.globalOrganization()]
+        me.staffTreeControl.onDate = appAC.globalApplicationDate()
+        me.staffTreeControl.clearTree(node)
+        me.staffTreeControl.appendItems(me.staffTreeControl.rootID ? [me.staffTreeControl.rootID] : [appAC.globalOrganization()], node)
+        me.treeSearchControl.clearSearchResult()
+      }
+    }
+
+    me.on('afterrender', () => {
+      let win = me.window
+      if (win) {
+        if (!win.height) {
+          win.height = 600
+        }
+        if (!win.width) {
+          win.width = 800
+        }
+      }
+      if (me.customParams.useFundSource) {
+        me.staffTreeControl.filterByFundSource = true
+        me.staffTreeControl.enableFundSourceDockedItems(me.staffTreeControl.dockedItems.items[0].items)
+        me.staffTreeControl.dictFundSourceID = me.customParams.dictFundSourceID
+        if (me.customParams.dictFundSourceID) {
+          const fundSourceCtrl = me.down('[name=dictFundSource]')
+          fundSourceCtrl.skipChange = true
+          fundSourceCtrl.setValueById(me.customParams.dictFundSourceID)
+          fundSourceCtrl.setDisabled(true)
+        }
+      }
+      $App.on('ac:app:organizationChanged', changeGlobal)
+      $App.on('ac:app:operationDateChanged', changeGlobal)
+    }, me)
+
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', changeGlobal)
+      $App.un('ac:app:operationDateChanged', changeGlobal)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

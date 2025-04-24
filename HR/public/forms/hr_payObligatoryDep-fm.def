@@ -1,0 +1,81 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['payObligatoryID.organizationID', 'departmentID.parentTreeDepName'],
+  size: {
+    width: 900,
+    height: 400
+  },
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  items: [
+    { attributeName: 'payObligatoryID',
+      hidden: true
+    },
+    {
+      attributeName: 'departmentID',
+      fieldList: ['mi_data_id', 'caption', 'parentUnitID', 'mi_treePath', 'orgID', 'parentTreeDepName'],
+      gridFieldList: ['code', 'name', 'fullName', 'state', 'description', 'staffOrderID', 'changeStaffOrderID', 'parentUnitID'],
+      valueField: 'mi_data_id',
+      displayField: 'caption',
+      __mip_recordhistory_all: true,
+      whereList: { state: { expression: '[state]', condition: '=', value: 'ACTIVE' } },
+      orderList: { orderBy: { expression: 'mi_dateTo', order: 'desc' } }
+    },
+    {
+      xtype: 'label',
+      text: '',
+      name: 'parentTreeDepName',
+      cls: 'x-form-item-label',
+      margin: '5 15 5 140'
+    },
+    {
+      attributeName: 'positionID',
+      hidden: true,
+      fieldList: ['mi_data_id', 'caption', 'parentUnitID', 'mi_treePath', 'positionCategory', 'orgID',
+        'dictPositionID'],
+      gridFieldList: [
+        { name: 'code', description: UB.i18n('Код') },
+        { name: 'name', description: UB.i18n('Назва') },
+        { name: 'parentUnitID.name', description: UB.i18n('Підпорядкування') },
+        { name: 'personalType', description: UB.i18n('Тип персоналу') },
+        { name: 'dictPositionID.dictProfessionID.code', description: UB.i18n('Державний класифікатор') },
+        { name: 'state', description: UB.i18n('Стан') },
+        { name: 'mi_dateFrom', description: UB.i18n('Дата початку дії'), format: 'd.m.Y' },
+        { name: 'mi_dateTo', description: UB.i18n('Дата закінчення дії'), format: 'd.m.Y' },
+        { name: 'staffOrderID.description', description: UB.i18n('Наказ') },
+        { name: 'description', description: UB.i18n('Опис'), visibility: false }
+      ],
+      valueField: 'mi_data_id',
+      displayField: 'caption',
+      __mip_recordhistory_all: true,
+      whereList: { state: { expression: '[state]', condition: '=', value: 'ACTIVE' } },
+      orderList: { orderBy: { expression: 'mi_dateTo', order: 'desc' } }
+    },
+    { attributeName: 'dictPositionID', fieldList: ['ID', 'caption', 'positionType'] },
+    { attributeName: 'employeeNumberID', hidden: true },
+    {
+      xtype: 'empPositionCombobox',
+      attributeName: 'employeePositionID',
+      fieldList: ['ID', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'dateFrom', 'dateTo',
+        'employeeNumberID.dateFrom', 'employeeNumberID.dateTo', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+      orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+      addWorkPlace: true,
+      addDateTo: true
+    },
+    { attributeName: 'contractorID',
+      whereList: {
+        contrType: {
+          expression: '[contrType]',
+          condition: 'equal',
+          value: 'legalEntitie'
+        }
+      }
+    },
+    {
+      attributeName: 'contrAccountID',
+      fieldList: ['ID', 'description', 'currencyID', 'organizationID']
+    }
+  ]
+}

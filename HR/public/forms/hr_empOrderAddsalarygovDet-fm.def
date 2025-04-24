@@ -1,0 +1,301 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+
+/* global $App UB AC HR appAC */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'empOrderType', 'organizationID', 'isGroup', 'orderID.orderState', 'errorText', 'payElID.dictExperienceID.name'],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    dockedItems: [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [{
+        orderId: 4,
+        actionId: 'fillData',
+        iconCls: 'fas fa-angle-double-down',
+        cls: 'fill-action',
+        text: UB.i18n('Завантажити згідно вибраним параметрам')
+      }]
+    }],
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [{
+        title: UB.i18n('Загальне'),
+        ubID: 'tabMain',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [{
+          layout: {
+            type: 'hbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              defaults: { labelWidth: 140 },
+              flex: 1,
+              items: [
+                {
+                  attributeName: 'dateFrom',
+                  fieldLabel: UB.i18n('Дата початку'),
+                  margin: '10 15 5 15'
+                },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      attributeName: 'payElID',
+                      fieldLabel: UB.i18n('Вид нарахування'),
+                      labelWidth: 140,
+                      flex: 1,
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                      displayField: 'description',
+                      fieldList: ['ID', 'description', 'dictExperienceID', 'dictExperienceID.name', 'codeSort', 'dictFundSourceID'],
+                      orderList: {
+                        orderBy: {
+                          expression: 'codeSort'
+                        }
+                      },
+                      gridFieldList: ['description'],
+                      whereList: {
+                        isSalary: {
+                          expression: '[methodID.code]',
+                          condition: 'equal',
+                          values: {
+                            val: '6'
+                          }
+                        }
+                      }
+                    },
+                    {
+                      xtype: 'textfield',
+                      name: 'experience',
+                      fieldLabel: UB.i18n('Вид стажу:'),
+                      readOnly: true,
+                      labelWidth: 95,
+                      width: 350
+                    }
+                  ]
+                },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      attributeName: 'dictFundSourceID',
+                      labelWidth: 140,
+                      flex: 1
+                    },
+                    {
+                      xtype: 'textfield',
+                      attributeName: 'inAmountOfText',
+                      fieldLabel: UB.i18n('Замість слів "у розмірі"'),
+                      labelWidth: 95,
+                      width: 350
+                    }
+                  ]
+                },
+                {
+                  name: 'errorText',
+                  xtype: 'label',
+                  cls: 'x-form-item-label field-label-red',
+                  margin: '10 10 5 15'
+                }
+              ]
+            }
+          ]
+        },
+        {
+          xtype: 'tabpanel',
+          region: 'center',
+          layout: 'fit',
+          flex: 1,
+          items: [{
+            title: UB.i18n('Працівники'),
+            name: 'empOrderChgSalEmpDet',
+            xtype: 'ubdetailgrid',
+            paraGrid: true,
+            autoScroll: true,
+            rowEditing: true,
+            notWriteChanges: true,
+            enableColumnHide: false,
+            hideActions: [ 'refresh', /* 'exportXls', 'exportCsv', 'exportHtml', */ 'showPreview', 'itemLink',
+              'commandLink', 'addNewByCurrent', 'audit', 'history', 'showDetail'
+            ],
+            flex: 1,
+            entityConfig: {
+              entity: 'hr_empOrderChgSalEmpDet',
+              method: 'select',
+              fieldList: [
+                {
+                  name: 'employeePositionID.description',
+                  description: UB.i18n('Призначення'),
+                  visibility: true,
+                  editor: {
+                    fieldList: ['ID', 'description', 'positionID', 'accrualSum', 'employeeID', 'positionType'],
+                    gridFieldList: ['description'],
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                    whereList: {
+                      positionType: {
+                        expression: '[positionType]',
+                        condition: 'equal',
+                        value: '1'
+                      }
+                    }
+                  }
+                },
+                {
+                  name: 'stageYear',
+                  description: UB.i18n('Років стажу'),
+                  visibility: true,
+                  config: { align: 'center' }
+                },
+                {
+                  name: 'stageMonth',
+                  config: { align: 'center' }
+                },
+                {
+                  name: 'stageDay',
+                  config: { align: 'center' }
+                },
+                {
+                  name: 'accrualRate',
+                  description: UB.i18n('Розмір надбавки'),
+                  visibility: true,
+                  config: { align: 'center' }
+                },
+                { name: 'dateFrom', visibility: true, config: { align: 'center' } },
+                { name: 'dateTo', visibility: false },
+                { name: 'employeePositionID', visibility: false },
+                { name: 'employeeNumberID', visibility: false },
+                { name: 'payElID', visibility: false },
+                { name: 'itemIdx', visibility: false },
+                { name: 'empOrderType', visibility: false },
+                { name: 'organizationID', visibility: false },
+                { name: 'workPlace', visibility: false }
+              ]
+            },
+            masterFields: ['ID', 'orderID'],
+            detailFields: ['paraID', 'orderID'],
+            onBeforeEdit: function (rowEditor, context) {
+              context.grid.up('form').empOrderChgSalEmpDetGridBeforeEdit(rowEditor, context)
+            },
+            cmpInitConfig: {
+              listeners: {
+                render: (grid) => {
+                  const isGovSphere = AC.settings.get('hrFuncOrgType', appAC.globalOrganization()) === '2'
+                  const colStageMonth = AC.gridUtils.getColumnByIndex(grid, 'stageMonth')
+                  colStageMonth.setVisible(!isGovSphere)
+                  const colStageDay = AC.gridUtils.getColumnByIndex(grid, 'stageDay')
+                  colStageDay.setVisible(!isGovSphere)
+                }
+              },
+              customActions: [
+                {
+                  actionId: 'addByList',
+                  text: UB.i18n('Додати списком'),
+                  iconCls: 'fas fa-angle-double-down',
+                  cls: 'fill-action',
+                  handler: function (btn) {
+                    const me = btn.up('form')
+                    const grid = btn.up('[name=empOrderChgSalEmpDet]')
+                    if (!me.record.get('payElID')) {
+                      AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вибрано вид нарахування'))
+                      return
+                    }
+                    $App.doCommand({
+                      cmdType: 'showForm',
+                      formCode: 'hr_empListExpSearch',
+                      isModal: true,
+                      sender: grid,
+                      payElID: me.record.get('payElID'),
+                      cmpInitConfig: {
+                        onSelectData: (data, calcDateFrom) => {
+                          if (data.length) {
+                            const orgID = me.record.get('organizationID')
+                            const orderID = me.record.get('orderID')
+                            const paraID = me.instanceID
+                            const empOrderType = me.record.get('empOrderType')
+                            const payElID = me.record.get('payElID')
+                            const dateFrom = me.record.get('dateFrom')
+                            let itemIdx = 1
+                            let rows = []
+                            const gridItems = grid.store.data.items
+                            const isGovSphere = AC.settings.get('hrFuncOrgType', appAC.globalOrganization()) === '2'
+                            let hasGridItems = gridItems.length > 0
+                            data.forEach(item => {
+                              let existItem = hasGridItems && gridItems.find(rec => rec.get('employeePositionID') === item.employeePositionID)
+                              if (!existItem) {
+                                const diff = isGovSphere ? { years: item.stageYear, months: 0, days: 0 }
+                                  : AC.dateService.getYmd(item.calcDate, item.setDate || dateFrom)
+                                rows.push({
+                                  itemIdx: itemIdx++,
+                                  orderID: orderID,
+                                  paraID: paraID,
+                                  employeePositionID: item.employeePositionID,
+                                  'employeePositionID.description': item.employeePositionDesc,
+                                  empOrderType: empOrderType,
+                                  organizationID: orgID,
+                                  payElID: payElID,
+                                  dateFrom: AC.dateService.shiftDate(item.setDate || dateFrom),
+                                  accrualRate: item.rate,
+                                  workPlace: item.workPlaceName,
+                                  stageYear: diff.years,
+                                  stageMonth: diff.months,
+                                  stageDay: diff.days
+                                })
+                              }
+                            })
+                            AC.gridUtils.insert(grid, rows)
+                            HR.orderManager.setIsDirty(me, true)
+                          }
+                        }
+                      }
+                    })
+                  }
+                },
+                {
+                  actionId: 'clearPersons',
+                  text: UB.i18n('Очистити працівників'),
+                  iconCls: 'fas fa-eraser',
+                  cls: 'fill-action',
+                  handler: (btn) => {
+                    const me = btn.up('form')
+                    const grid = me.down('[name=empOrderChgSalEmpDet]')
+                    grid.getStore().removeAll()
+                    HR.orderManager.setIsDirty(me, true)
+                  }
+                }
+              ],
+              afterInit: function () {
+                // this.store.sort('itemIdx', 'ASC')
+              },
+              customInit: function () {
+                let grid = this
+                grid.on('changeData', (grd, event) => {
+                  const me = grd.up('form')
+                  HR.orderManager.setIsDirty(me, true)
+                })
+              }
+            }
+          }]
+        }
+        ]
+      }]
+    }]
+  }
+})()

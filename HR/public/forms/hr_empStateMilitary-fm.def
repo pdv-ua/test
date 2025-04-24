@@ -1,0 +1,310 @@
+const layout = { type: 'vbox', align: 'stretch' }
+const hLayout = { type: 'hbox' }
+const labelWidth = 150
+const labelWidthDouble = 300
+const lWidth = 550
+const lPartWidth = 390
+const rLabelWidth = 150
+const fieldOffset = 20
+const dateFieldWidth = 120
+const specTabLabelWidth = 220
+const specTabLabel3Width = 140
+
+const getContractorComboBox = (fieldName, fieldLabel) => ({
+  xtype: 'ubcombobox',
+  gridFieldList: ['name'],
+  name: fieldName,
+  valueField: 'name',
+  displayField: 'name',
+  allowCustomText: true,
+  disableModifyEntity: true,
+  triggerCls: 'hr-list-trigger',
+  fieldLabel: fieldLabel,
+  ubRequest: {
+    entity: 'ac_contractor',
+    fieldList: ['name'],
+    whereList: {
+      orgBusinessType: {
+        expression: '[orgBusinessTypeID.code]',
+        condition: 'equal',
+        value: 'mlt'
+      }
+    },
+    orderList: { orderBy: { 'expression': 'name', 'order': 'asc' } }
+  },
+  maxLength: 600,
+  listeners: {
+    render: function (ctrl) {
+      const me = ctrl.up('form')
+      const onCtrlChange = () => {
+        let oldValue = me.record.get(fieldName)
+        if (oldValue !== ctrl.rawValue) {
+          me.record.set(fieldName, ctrl.rawValue ? ctrl.rawValue : null)
+        }
+      }
+      me.on('recordloaded', () => {
+        ctrl.un('change', onCtrlChange)
+        ctrl.setValue(me.record.get(fieldName))
+        ctrl.on('change', onCtrlChange)
+      })
+    },
+    select: ctrl => {
+      const form = ctrl.up('form')
+      ctrl.setValue(ctrl.rawValue)
+      form.record.set(fieldName, ctrl.rawValue)
+    },
+    blur: ctrl => {
+      const form = ctrl.up('form')
+      ctrl.setValue(ctrl.rawValue)
+      form.record.set(fieldName, ctrl.rawValue)
+    },
+    focus: ctrl => {
+      ctrl.inputEl.dom.setAttribute('maxlength', 600)
+    }
+  }
+})
+
+/* global HR */
+exports.formDef = {
+  requiredFields: ['dictStateMilitaryID.name', 'dictCategMilitaryID.name', 'dictMilitaryRankID.name',
+    'dictMilitarySpecialityID.name', 'dictMilitarySuitableID.name', 'impSourceID', 'office', 'officeFact'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout
+  },
+  size: {
+    width: 1100,
+    height: 700
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout,
+          autoScroll: true,
+          items: [
+            {
+              layout,
+              defaults: { labelWidth },
+              items: [
+                { attributeName: 'employeeID', hidden: true },
+                {
+                  layout: hLayout,
+                  items: [
+                    { attributeName: 'dictStateMilitaryID', labelWidth, width: lWidth, margin: '10 15 0 15' },
+                    { attributeName: 'dismissDate', labelWidth: rLabelWidth, flex: 1 }
+                  ]
+                },
+                {
+                  layout: hLayout,
+                  items: [
+                    { attributeName: 'composition', labelWidth: labelWidth, width: lWidth, disableContextMenu: false, hideEntityItemInContext: true },
+                    { attributeName: 'dictCategMilitaryID', labelWidth: rLabelWidth, flex: 1 }
+                  ]
+                },
+                {
+                  layout: hLayout,
+                  items: [
+                    { attributeName: 'dictMilitaryRankID', labelWidth: labelWidth, width: lWidth },
+                    { attributeName: 'dictMilitaryProfileID', labelWidth: rLabelWidth, flex: 1 }
+                  ]
+                },
+                {
+                  layout: hLayout,
+                  items: [
+                    { attributeName: 'dictMilitarySpecialityID', labelWidth, width: lWidth },
+                    { attributeName: 'groupAccounting', labelWidth: rLabelWidth, flex: 1, margin: '10 15 5 15', disableContextMenu: false, hideEntityItemInContext: true }
+                  ]
+                },
+                {
+                  layout: hLayout,
+                  items: [
+                    { attributeName: 'dictMilitaryGroupID', labelWidth, width: lWidth },
+                    { attributeName: 'milSpecDescription', labelWidth: rLabelWidth, flex: 1 }
+                  ]
+                },
+                {
+                  layout: hLayout,
+                  items: [
+                    { attributeName: 'dictMilitarySuitableID', labelWidth, width: lWidth },
+                    { attributeName: 'specialSign', labelWidth: rLabelWidth, flex: 1, margin: '10 15 5 15', disableContextMenu: false, hideEntityItemInContext: true }
+                  ]
+                },
+                {
+                  layout: hLayout,
+                  items: [
+                    { attributeName: 'columnMMC', labelWidth, width: lWidth },
+                    { attributeName: 'itemMMC', labelWidth: rLabelWidth, flex: 1 }
+                  ]
+                },
+                {
+                  xtype: 'fieldset',
+                  title: UB.i18n('Повідомлення до ТЦКСП про призначення/звільнення на посаду/з посади'),
+                  layout: hLayout,
+                  margin: '0 15 5 10',
+                  defaults: { margin: '5 15 10 15' },
+                  items: [
+                    { attributeName: 'messageDate', fieldLabel: UB.i18n('Дата'), labelWidth: labelWidth - fieldOffset, width: labelWidth + 100 },
+                    { attributeName: 'messageNumber', fieldLabel: UB.i18n('Номер'), labelWidth: 100, flex: 1 }
+                  ]
+                },
+                {
+                  layout: hLayout,
+                  items: [
+                    { attributeName: 'regNumber', labelWidth: labelWidthDouble, width: lWidth },
+                    { attributeName: 'isServesReserve', labelWidth: 400, flex: 1, margin: '17 15 5 15' }
+                  ]
+                },
+                getContractorComboBox('office', UB.i18n('Назва військкомату за місцем реєстрації')),
+                getContractorComboBox('officeFact', UB.i18n('Назва військкомату за місцем прожив.')),
+                { attributeName: 'comment' }
+              ]
+            },
+            {
+              xtype: 'fieldset',
+              title: UB.i18n('Зняття з обліку'),
+              layout: hLayout,
+              margin: '0 15 5 10',
+              defaults: { margin: '5 15 10 15' },
+              items: [
+                { attributeName: 'removalDate', description: UB.i18n('Дата зняття'), labelWidth: labelWidth - fieldOffset, width: labelWidth + 100 },
+                { attributeName: 'removalReason', description: UB.i18n('Причина зняття'), labelWidth: 180, flex: 1 }
+              ]
+            },
+            /* eslint-disable no-template-curly-in-string */
+            AC.viewUtils.getCollapsiblePanel(
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Документ")}: </span> ${get("employeeDocID.description") || ""}' +
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Вид документа")}: </span> ${get("dictDocKindID.name") || ""}<br/>' +
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Серія")}: </span> ${get("docSeries") || ""}' +
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Номер")}: </span> ${get("docNumber") || ""}' +
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Дата видачі")}: </span> ${get("dateIssue") ? moment(get("dateIssue")).format("DD.MM.YYYY") : ""}' +
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Ким виданий")}: </span> ${get("docIssuer") || ""}',
+              {
+                expandTitle: UB.i18n('Військовий документ'),
+                layout,
+                margin: '0 15 5 10',
+                collapsed: true,
+                defaults: { labelWidth: labelWidth - fieldOffset },
+                items: [
+                  {
+                    attributeName: 'employeeDocID',
+                    fieldList: ['ID', 'dictDocKindID', 'docSeries', 'docNumber', 'docIssued', 'docIssuedDate', 'employeeID', 'description'],
+                    gridFieldList: ['description', 'docIssued'],
+                    displayField: 'description'
+                  },
+                  { attributeName: 'dictDocKindID', description: UB.i18n('Вид документа'), recordField: 'dictDocKindID' },
+                  {
+                    layout: hLayout,
+                    items: [
+                      { attributeName: 'docSeries', description: UB.i18n('Серія довідки'), recordField: 'docSeries', labelWidth: labelWidth - fieldOffset, width: labelWidth + 100 },
+                      { attributeName: 'docNumber', description: UB.i18n('Номер довідки'), recordField: 'docNumber', labelWidth: 60, width: lWidth - labelWidth - fieldOffset - 130 },
+                      { attributeName: 'dateIssue', description: UB.i18n('Дата видачі'), recordField: 'docIssuedDate', labelWidth: rLabelWidth, width: rLabelWidth + dateFieldWidth }
+                    ]
+                  },
+                  { attributeName: 'docIssuer', description: UB.i18n('Ким виданий'), recordField: 'docIssued', labelWidth: labelWidth - fieldOffset, margin: '5 15 10 15' }
+                ]
+              }
+            )
+          ]
+        },
+        {
+          title: UB.i18n('Спецоблік'),
+          layout,
+          autoScroll: true,
+          items: [
+            {
+              layout: hLayout,
+              defaults: { margin: '10 15 5 15' },
+              items: [
+                { attributeName: 'delayDocument', labelWidth: specTabLabelWidth, width: specTabLabelWidth + dateFieldWidth + dateFieldWidth + 170 },
+                { attributeName: 'delayDate', labelWidth: specTabLabel3Width, width: dateFieldWidth + specTabLabel3Width }
+              ]
+            },
+            {
+              layout: hLayout,
+              items: [
+                { attributeName: 'isMobilOrder', labelWidth: specTabLabelWidth, width: specTabLabelWidth + 65 },
+                {
+                  attributeName: 'commandNumber',
+                  labelWidth: 195,
+                  width: dateFieldWidth + 225 + dateFieldWidth + specTabLabel3Width,
+                  readOnlyIf: (ctrl, form) => !form.attr.isMobilOrder.getValue()
+                }
+              ]
+            },
+            {
+              xtype: 'fieldset',
+              layout,
+              margin: '5 15 5 10',
+              items: [
+                { attributeName: 'isRecruiter', labelWidth: specTabLabelWidth - fieldOffset, width: specTabLabelWidth - fieldOffset + 10 },
+                {
+                  layout: hLayout,
+                  defaults: { margin: '5 15 10 15', readOnlyIf: (ctrl, form) => !form.attr.isRecruiter.getValue() },
+                  items: [
+                    { attributeName: 'itemNumber', labelWidth: specTabLabelWidth - fieldOffset, width: specTabLabelWidth - fieldOffset + dateFieldWidth },
+                    { attributeName: 'partNumber', labelWidth: 140, width: dateFieldWidth + 140 },
+                    { attributeName: 'articleNumber', labelWidth: specTabLabel3Width, width: dateFieldWidth + 225 + dateFieldWidth + specTabLabel3Width }
+                  ]
+                }
+              ]
+            },
+            {
+              xtype: 'fieldset',
+              layout,
+              margin: '5 15 5 10',
+              items: [
+                {
+                  layout: hLayout,
+                  items: [
+                    { attributeName: 'delayDateTo', margin: '10 15 10 15', labelWidth: specTabLabelWidth - fieldOffset, width: specTabLabelWidth  - fieldOffset + dateFieldWidth },
+                    { attributeName: 'delayLaw', labelWidth: 250, flex: 1 }
+                  ]
+                }
+              ]
+            },
+            {
+              xtype: 'fieldset',
+              title: UB.i18n('Бронювання'),
+              layout,
+              margin: '0 15 5 10',
+              items: [
+                {
+                  layout: hLayout,
+                  defaults: { margin: '5 15 10 15' },
+                  items: [
+                    { attributeName: 'isProtected', labelWidth: specTabLabelWidth - fieldOffset, width: specTabLabelWidth - fieldOffset + 10 }
+                  ]
+                },
+                {
+                  xtype: 'fieldset',
+                  title: UB.i18n('Перелік'),
+                  layout: hLayout,
+                  margin: '0 15 5 5',
+                  defaults: { margin: '0 15 10 15', readOnlyIf: (ctrl, form) => !form.attr.isProtected.getValue() },
+                  items: [
+                    { attributeName: 'listNumber', fieldLabel: UB.i18n('Номер'), labelWidth: specTabLabelWidth - 2 * fieldOffset + 5, width: specTabLabelWidth - 2 * fieldOffset + 125 },
+                    { attributeName: 'listItem', fieldLabel: UB.i18n('Пункт'), labelWidth: 140, width: dateFieldWidth + 140 },
+                    { attributeName: 'listChapter', fieldLabel: UB.i18n('Розділ'), labelWidth: specTabLabel3Width, width: dateFieldWidth + specTabLabel3Width }
+                  ]
+                },
+                {
+                  layout: hLayout,
+                  defaults: { margin: '5 15 10 15', readOnlyIf: (ctrl, form) => !form.attr.isProtected.getValue() },
+                  items: [
+                    { attributeName: 'reservationPeriod', labelWidth: specTabLabelWidth - fieldOffset, width: specTabLabelWidth - fieldOffset + 120 },
+                    { attributeName: 'reservationDocNumber', labelWidth: 140, width: dateFieldWidth + 140 },
+                    { attributeName: 'reservationDate', labelWidth: specTabLabel3Width, width: dateFieldWidth + specTabLabel3Width }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

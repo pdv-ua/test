@@ -1,0 +1,208 @@
+/* global appHR $App UB HR */
+
+exports.formDef = {
+  requiredFields: ['description', 'filterParams', 'orderType', 'orderNumber', 'hasPosted', 'hasProject'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          layout: { type: 'hbox' },
+          flex: 1,
+          items: [
+            { attributeName: 'orderDate', hidden: true },
+            { attributeName: 'orderType', hidden: true, readOnly: false },
+            { attributeName: 'organizationID', hidden: true },
+            {
+              attributeName: 'orderNumber',
+              fieldLabel: UB.i18n('Номер'),
+              allowBlank: false,
+              labelWidth: 100,
+              width: 300
+            },
+            {
+              attributeName: 'periodID',
+              fieldLabel: UB.i18n('Період створення'),
+              fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name'],
+              width: 420,
+              labelWidth: 160,
+              pageSize: 50,
+              orderList: {
+                orderBy: {
+                  expression: 'dateFrom',
+                  order: 'desc'
+                }
+              },
+              listeners: {
+                expand: appHR.periodExpand
+              }
+            },
+            {
+              attributeName: 'orderState',
+              allowBlank: false,
+              readOnly: true,
+              flex: 1,
+              hidden: true,
+              labelWidth: 90,
+              width: 300
+            }
+          ]
+        },
+        {
+          attributeName: 'name',
+          labelWidth: 100,
+          xtype: 'ubtextfield',
+          fieldLabel: UB.i18n('Назва'),
+          flex: 1
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      items: [
+        {
+          xtype: 'ubdetailgrid',
+          name: 'orderRegistryDt',
+          autoScroll: true,
+          hideActions: ['addNew', 'del', 'addNewByCurrent', 'prefilter', 'exportXls', 'exportCsv', 'exportHtml',
+            'showPreview', 'itemLink', 'commandLink', 'history', 'edit'
+          ],
+          stateful: true,
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_orderRegistryDt_orderRegistrySinglePay'),
+          disableMenuItemDetails: true,
+          flex: 1,
+          entityConfig: {
+            entity: 'hr_orderRegistryDt',
+            method: 'select',
+            fieldList: [
+              { name: 'ID', visibility: false },
+              { name: 'employeeNumberID', visibility: false },
+              { name: 'orderID', visibility: false },
+              { name: 'orderID.orderState', visibility: false },
+              { name: 'orderID.orderClass.entityName', visibility: false },
+              { name: 'checked', description: ' ', config: HR.orderManager.checkBoxColumnConfig() },
+              { name: 'employeeNumberID.tabNum', description: UB.i18n('Таб.№'), simpleFilter: true },
+              { name: 'employeeNumberID.description', description: UB.i18n('ПІБ'), simpleFilter: true },
+              { name: 'payElID.name', description: UB.i18n('Вид оплати') },
+              { name: 'periodSalaryID.name', description: UB.i18n('Період нарахування'), simpleFilter: true },
+              { name: 'paySum', description: UB.i18n('Сума') },
+              { name: 'orderNumber', description: UB.i18n('Документ') },
+              { name: 'posName', description: UB.i18n('Посада') },
+              { name: 'depName', description: UB.i18n('Підрозділ') },
+              { name: 'mi_createDate', description: UB.i18n('Дата створення'), tooltip: UB.i18n('Дата створення') },
+              { name: 'mi_createUser.fullName', description: UB.i18n('Користувач, що створив'), tooltip: UB.i18n('Користувач, що створив') },
+              { name: 'mi_modifyDate', description: UB.i18n('Дата останнього коригування'), tooltip: UB.i18n('Дата останнього коригування') },
+              { name: 'mi_modifyUser.fullName', description: UB.i18n('Користувач, що останнім коригував'), tooltip: UB.i18n('Користувач, що останнім коригував') }
+            ],
+            orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } }
+          },
+          summary: { paySum: 'sum' },
+          masterFields: ['ID'],
+          detailFields: ['orderRegistryID'],
+          cmpInitConfig: {
+            getRowClass: function (row) {
+              return row.get('orderID.orderState') === 'POSTED' ? 'ub-row-green' : 'ub-row-lightgrey'
+            },
+            customActions: [
+              {
+                text: UB.i18n(`Додати Разове нарахування`),
+                iconCls: 'u-icon-add',
+                scale: 'medium',
+                actionId: 'addNewOrder',
+                cls: 'add-new-action',
+                handler: function (btn) {
+                  const me = btn.up('form')
+                  const grid = btn.up('ubdetailgrid')
+                  me.saveForm()
+                    .then(function (result) {
+                      if (result !== -1) {
+                        $App.doCommand({
+                          cmdType: 'showForm',
+                          formCode: 'hr_docRegSinglePay',
+                          entity: 'hr_docRegSinglePay',
+                          tabId: 'hr_docRegSinglePayNew' + Date.now(),
+                          title: UB.i18n(`Документ Разове нарахування`),
+                          description: UB.i18n(`Документ Разове нарахування`),
+                          target: $App.getViewport().centralPanel,
+                          sender: grid.getView(),
+                          store: grid.store,
+                          cmpInitConfig:
+                            {
+                              defaultValues: {
+                                orderRegistryID: me.record.get('ID'),
+                                'orderRegistryID.organizationID': me.record.get('organizationID'),
+                                'orderRegistryID.periodID': me.record.get('periodID'),
+                                'orderRegistryID.periodID.dateFrom': me.attr.periodID.getFieldValue('dateFrom')
+                              }
+                            }
+                        })
+                      } else {
+                        $App.dialogInfo(UB.i18n('Необхідно спочатку зберегти Реєстр документів'))
+                      }
+                    })
+                }
+              }
+            ],
+            onItemDblClick: function (grid, record) {
+              if (record.get('orderID')) {
+                let ubdetailgrid = grid.up('ubdetailgrid')
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: 'hr_docRegSinglePay',
+                  entity: 'hr_docRegSinglePay',
+                  title: UB.i18n(`Документ Разове нарахування`),
+                  isModal: false,
+                  instanceID: record.get('orderID'),
+                  tabId: 'hr_docRegSinglePay' + record.get('ID'),
+                  target: $App.getViewport().centralPanel,
+                  sender: ubdetailgrid.getView(),
+                  store: ubdetailgrid.store
+                })
+              }
+            }
+          },
+          listeners: {
+            render: grid => {
+              grid.menu.add([
+                HR.orderManager.getOrderRegistryDeleteAction(grid),
+                HR.orderManager.getOrderRegistryRlAction(grid),
+                HR.orderManager.getOrderRegistryEmployeeAction(grid)
+              ])
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

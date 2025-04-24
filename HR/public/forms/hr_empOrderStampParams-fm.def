@@ -1,0 +1,97 @@
+/* global UB Ext appAC UB $App AC */
+
+exports.formDef = 'HR.empOrderStampParams'
+
+Ext.define('HR.empOrderStampParams', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empOrderStampParams',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        layout: 'vbox',
+        items: [
+          {
+            xtype: 'ubtextfield',
+            name: 'orderNumber',
+            labelWidth: 150,
+            margin: '40 0 0 20',
+            fieldLabel: UB.i18n('Номер наказу'),
+            width: 400
+          },
+          {
+            name: 'orderDate',
+            xtype: 'ubdatefield',
+            margin: '10 0 0 20',
+            labelWidth: 150,
+            fieldLabel: UB.i18n('Дата наказу')
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.commandConfig.deferred.resolve(null)
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Зберегти'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.closeAndSave()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.closeAndSave = function () {
+      me.setLoading(true)
+      const params = {
+        orderNumber: me.attr.orderNumber.getValue(),
+        orderDate: me.attr.orderDate.getValue()
+      }
+      me.commandConfig.deferred.resolve(params)
+      me.up('window').close()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      const win = this.window
+      if (win) {
+        win.height = 450
+        win.width = 700
+      }
+      me.attr = {
+        orderNumber: me.down('[name=orderNumber]'),
+        orderDate: me.down('[name=orderDate]')
+      }
+      if (me.customParams) {
+        me.attr.orderNumber.setValue(me.customParams.orderNumber)
+        me.attr.orderDate.setValue(me.customParams.orderDate)
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

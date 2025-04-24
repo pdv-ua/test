@@ -1,0 +1,105 @@
+/* global AC appAC UB */
+exports.formDef = {
+  size: {
+    width: 1100,
+    height: 600
+  },
+  requiredFields: ['organizationID'],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  items: [
+    {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [
+        {
+          attributeName: 'empOrderType',
+          disableContextMenu: false,
+          fieldLabel: UB.i18n('Вид наказу'),
+          flex: 1
+        },
+        {
+          attributeName: 'name',
+          flex: 1
+        }
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      name: 'mailingLetterTemplateList',
+      autoScroll: true,
+      disableSearchBar: true,
+      disableMenuItemDetails: true,
+      rowEditing: true,
+      hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+      flex: 1,
+      entityConfig: {
+        entity: 'hr_mailingLetterTemplateDet',
+        method: 'select',
+        fieldList: [
+          {
+            name: 'participantTypeID.name',
+            description: UB.i18n('Вид учасника розсилки'),
+            config: {
+              width: 300
+            },
+            editor: {
+              fieldList: ['ID', 'name'],
+              gridFieldList: ['code', 'name'],
+              allowBlank: false
+            }
+          },
+          {
+            name: 'participantID.name',
+            description: UB.i18n('Учасник розсилки'),
+            config: {
+              width: 300
+            },
+            editor: {
+              fieldList: ['ID', 'name'],
+              gridFieldList: ['code', 'name'],
+              allowBlank: false
+            }
+          },
+          {
+            name: 'employeePositionID.description',
+            description: UB.i18n('ПІБ працівника'),
+            config: {
+              width: 400
+            },
+            editor: {
+              fieldList: ['ID', 'description'],
+              gridFieldList: ['description'],
+              allowBlank: false,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+            }
+          },
+          {
+            name: 'copies',
+            editor: {
+            }
+          }
+        ]
+      },
+      masterFields: ['ID'],
+      detailFields: ['mailLetterTemplateID'],
+      onBeforeEdit: function (editor, context) {
+        const me = context.grid.up('form')
+        const onDate = appAC.globalApplicationDate()
+        AC.viewUtils.setWhereListProperty(editor.editor.query('[name=employeePositionID.description]')[0], [
+          ['organizationID', '=', me.record.get('organizationID') || appAC.globalOrganization()],
+          ['dateFrom', '<=', onDate],
+          ['dateTo', '>=', onDate]
+        ])
+        context.record.set('organizationID', me.record.get('organizationID'))
+        return true
+      }
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+/* global UB HR */
+exports.formDef = {
+  requiredFields: ['dictDocKindID.name', 'impSourceID', 'dictDocKindID.docType', 'docIssued', 'docIssuedOrgID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            { attributeName: 'employeeID', hidden: true },
+            { attributeName: 'dictDocKindID', fieldList: ['ID', 'name', 'docType'], orderList: { orderBy: { expression: 'code' } }, margin: '10 15 5 15' },
+            { attributeName: 'dateFrom', hidden: true },
+            { attributeName: 'dateTo', hidden: true },
+            { attributeName: 'mtCount', decimalPrecision: 2, hidden: true },
+            { attributeName: 'docSeries' },
+            { attributeName: 'docNumber' },
+            { attributeName: 'docIssuedDate' },
+            HR.controlService.getCustomOrgCombo({
+              fieldID: 'docIssuedOrgID', fieldName: 'docIssued', isChangeDocIssuer: true, allowBlank: true, fieldLabel: UB.i18n('Ким видано')
+            }),
+            { attributeName: 'docValidUntil' },
+            { attributeName: 'state' },
+            { attributeName: 'comment', xtype: 'textarea', height: 45 }
+          ]
+        },
+        {
+          title: UB.i18n('Скан-копії'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'docAttachment',
+              entity: 'hr_attachDoc',
+              detailFields: 'entityID',
+              fieldList: ['ID', 'caption', 'description', 'sheetsQuantity', 'document', 'mi_createDate',
+                'mi_modifyDate', 'entityID'],
+              masterFields: 'ID',
+              showOriginal: true,
+              minHeight: 55,
+              maxHeight: 140,
+              height: 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

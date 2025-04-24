@@ -1,0 +1,181 @@
+// @isModal true
+/* global Ext UB $App */
+
+exports.formDef = 'HR.trf_dictAccrual'
+
+Ext.define('HR.trf_dictAccrual', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.trf_dictAccrual',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        name: 'panel',
+        flex: 1,
+        layout: 'fit',
+        items: [
+          {
+            name: 'payElEntrySum',
+            xtype: 'ubdetailgrid',
+            autoScroll: true,
+            pageSize: 10000,
+            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+            flex: 1,
+            entityConfig: {
+              entity: 'trf_dictAccrual',
+              method: 'select',
+              fieldList: [
+                {
+                  name: 'payElID.code',
+                  description: UB.i18n('Код')
+                },
+                {
+                  name: 'payElID.name',
+                  description: UB.i18n('Назва')
+                },
+                {
+                  name: 'payElID.comment',
+                  description: UB.i18n('Коментар')
+                },
+                // {
+                //   name: 'isAutoAdd',
+                //   description: UB.i18n('Додавати автоматично')
+                // },
+                // {
+                //   name: 'isAutoHours',
+                //   description: UB.i18n('Заповнювати години автоматично')
+                // },
+                {
+                  name: 'payElID.description',
+                  visibility: false
+                },
+                {
+                  name: 'payElID.caption',
+                  visibility: false
+                },
+                {
+                  name: 'payElID.methodID.code',
+                  visibility: false
+                },
+                {
+                  name: 'payElID',
+                  visibility: false
+                },
+                {
+                  name: 'payElID.methodID.methodGroupID.code',
+                  visibility: false
+                }
+              ]
+            },
+            masterFields: ['ID'],
+            detailFields: ['payElID'],
+            cmpInitConfig: {
+              customActions: [
+                {
+                  text: UB.i18n('Редагувати'),
+                  iconCls: 'u-icon-edit-alt',
+                  cls: 'fill-action',
+                  scale: 'medium',
+                  handler: function (btn) {
+                    const grid = btn.up('grid')
+                    const form = grid.up('form')
+
+                    if (form.isNewInstance) {
+                      form.saveForm().then(result => {
+                        if (result !== -1) {
+                          me.setPayEl(form, grid)
+                        }
+                      })
+                    } else {
+                      me.setPayEl(form, grid)
+                    }
+                  }
+                }
+              ],
+              onItemDblClick: function (grid) {
+                const form = grid.up('form')
+                me.setAccrualDt(form, grid.ownerCt)
+              }
+            }
+          }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=payElEntrySum]')
+      }
+    }, me)
+
+    me.setAccrualDt = (me, grid) => {
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: 'trf_dictAccrualDtList',
+        entity: 'trf_dictAccrualDt',
+        tabId: `trf_dictAccrualDtList-${grid.selectedRecordID}`,
+        target: $App.getViewport().centralPanel,
+        customParams: {
+          dictAccrualID: grid.selectedRecordID,
+          payElID: grid.selModel.selected.items[0].data['payElID'],
+          accrualName: grid.selModel.selected.items[0].data['payElID.description'],
+          accrualForm: me,
+          'methodID.code': grid.selModel.selected.items[0].data['payElID.methodID.code'],
+          'methodGroupID.code': grid.selModel.selected.items[0].data['payElID.methodID.methodGroupID.code'],
+          // isAutoAdd: grid.selModel.selected.items[0].data['isAutoAdd'],
+          // isAutoHours: grid.selModel.selected.items[0].data['isAutoHours'],
+          onUpdate: me.onUpdateAccrual
+        }
+      })
+    }
+
+    me.onUpdateAccrual = () => {
+      me = this
+      me.attr.grid.getStore().load()
+    }
+
+    me.setPayEl = (me, grid) => {
+      UB.Repository('trf_dictAccrual')
+        .attrs(['ID', 'payElID'])
+        .selectAsObject()
+        .then(result => {
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'hr_payElSelect',
+            cmpInitConfig: {
+              withPeriod: true,
+              payElEntryType: ['PAYMENT'],
+              methodGroupCode: ['1', '2'],
+              selectData: result.map(o => o.payElID),
+              sourceData: result,
+              sourceAttr: 'payElID',
+              onSelectData: (data) => {
+                if (data.remove.length || data.add.length) {
+                  $App.connection.run({
+                    entity: 'trf_dictAccrual',
+                    method: 'updatePayEl',
+                    payElID: me.instanceID,
+                    data: JSON.stringify(data)
+                  }).then(() => {
+                    grid.getStore().load()
+                  })
+                }
+              }
+            }
+          })
+        })
+    }
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,105 @@
+/* global UB */
+
+exports.formDef = {
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      // split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 170, width: 380 },
+      items: [
+        { attributeName: 'changeDateFrom' },
+        { attributeName: 'changeDateTo' }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Організації (якщо не визначено перелік організацій, перенесення застосовується для всіх організацій)'),
+          layout: { type: 'border' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'excludeOrg'
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              hideHeaders: true,
+              region: 'center',
+              name: 'organization',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_calendarChangeDt',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'orgID.description',
+                    description: UB.i18n('Назва'),
+                    simpleFilter: true
+                  }
+                ],
+                whereList: {
+                  orgID: {
+                    expression: '[orgID.state]',
+                    condition: 'equal',
+                    value: 'ACTIVE'
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['calendarChangeID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    scale: 'medium',
+                    cls: 'fill-action',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.changeGridValue(form, grid)
+                          }
+                        })
+                      } else {
+                        form.changeGridValue(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.changeGridValue(form, grid.ownerCt)
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

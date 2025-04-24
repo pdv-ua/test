@@ -1,0 +1,133 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+
+/* global HR UB */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'empOrderType', 'organizationID', 'employeePositionID', 'title'],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [{
+        title: UB.i18n('Загальне'),
+        layout: {
+          type: 'border'
+        },
+        items: [{
+          region: 'north',
+          autoScroll: false,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            HR.controlService.getAttrDepPosBlock({
+              valueField: 'ID',
+              labelWidth: 110,
+              showPosCategory: false,
+              showFundSource: true,
+              onDateField: 'dateFrom',
+              posConfig: {
+                gridFieldList: ['code', 'name', 'psCategory', 'positionType', 'dictStaffCatID']
+              }
+            }),
+            {
+              attributeName: 'employeePositionID',
+              fieldLabel: UB.i18n('Працівник'),
+              fieldList: ['ID', 'description', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+              xtype: 'empPositionCombobox',
+              addWorkPlace: true,
+              allowBlank: true
+            },
+
+            {
+              attributeName: 'dateFrom',
+              fieldLabel: UB.i18n('Дата початку'),
+              allowBlank: false
+            },
+            {
+              attributeName: 'dateToEmpty',
+              fieldLabel: UB.i18n('Дата закінчення')
+            },
+            {
+              attributeName: 'actingReasonKindID',
+              fieldList: ['ID', 'description'],
+              displayField: 'description'
+            },
+            {
+              layout: {
+                type: 'hbox',
+                align: 'top'
+              },
+              flex: 1,
+              name: 'reasonDocPanel',
+              hidden: true,
+              items: [{
+                fieldLabel: UB.i18n('Підстава (до пункту наказу)'),
+                attributeName: 'reason',
+                flex: 1
+              },
+              {
+                xtype: 'button',
+                cls: 'list-icon',
+                name: 'reasonButton',
+                tooltip: UB.i18n('Вибрати'),
+                width: 35,
+                height: 35,
+                margin: '0 2 0 -45',
+                handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+              }
+              ]
+            }
+          ]
+        },
+        {
+          xtype: 'panel',
+          region: 'center',
+          layout: 'fit',
+          items: [
+            HR.orderManager.getActingParaGrid('hr_empOrderActingordDet', {
+              title: UB.i18n('Виконуючі обов\'язки'),
+              hidden: false,
+              // hideActions: ['refresh'],
+              rowEditing: true,
+              notWriteChanges: false,
+              disableSearchBar: true,
+              hidePagingBar: true,
+              sortableColumns: false,
+              enableColumnHide: false,
+              hrTypePayElActing: true,
+              onAddNew: function () {
+                this.up('basepanel').onAddNewGrid(this)
+              },
+              onStartEdit: function (rowEditor, context) {
+                rowEditor.grid.up('form').startActingGridEdit(rowEditor, context)
+              }
+            })
+          ]
+        }
+        ]
+      },
+      {
+        title: UB.i18n('Нарахування'),
+        hidden: true,
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [HR.orderManager.getOrderAccrualGrid()]
+      }
+      ]
+    }]
+  }
+})()

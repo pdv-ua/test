@@ -1,0 +1,93 @@
+/* global appAC AC UB */
+
+exports.formDef = {
+  requiredFields: ['organizationID', 'employeePositionID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      attributeName: 'organizationID',
+      allowBlank: false,
+      fieldList: ['mi_data_id', 'description'],
+      gridFieldList: [ { name: 'mi_data_id', visibility: false }, 'description' ],
+      valueField: 'mi_data_id',
+      displayField: 'description',
+      whereList: {
+        state: {
+          expression: '[state]',
+          condition: '=',
+          values: {
+            state: 'ACTIVE'
+          }
+        }
+      },
+      listeners: {
+        afterrender: function (crtl) {
+          crtl.setValue(appAC.globalOrganization())
+        },
+        change: function (ctrl, value) {
+          const form = ctrl.up('form')
+          const employeePositionID = form.down('[name=employeePositionID]')
+          if (value) {
+            AC.viewUtils.setFilterValue(employeePositionID, { organizationID: value })
+          }
+        }
+      },
+      orderList: { orderBy: { expression: 'description' } }
+    },
+    {
+      attributeName: 'employeePositionID',
+      fieldLabel: UB.i18n('Працівник'),
+      fieldList: ['ID', 'description', 'workScheduleID', 'vacancyDateFrom', 'vacancyDateTo', 'employeeNumberID', 'workPlace', 'organizationID'],
+      orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+      allowBlank: false,
+      xtype: 'empPositionCombobox',
+      addWorkPlace: true,
+      whereList: {
+        dateFrom: {
+          expression: '[dateFrom]',
+          condition: 'lessEqual',
+          values: { value: appAC.globalApplicationDate() }
+        },
+        dateTo: {
+          expression: '[dateTo]',
+          condition: 'moreEqual',
+          values: { value: appAC.globalApplicationDate() }
+        },
+        isActive: {
+          expression: '[isActive]',
+          condition: 'equal',
+          values: { value: true }
+        },
+        empNumberDateFrom: {
+          expression: '[employeeNumberID.dateFrom]',
+          condition: 'lessEqual',
+          values: { value: appAC.globalApplicationDate() }
+        },
+        empNumberDateTo: {
+          expression: '[employeeNumberID.dateTo]',
+          condition: 'moreEqual',
+          values: { value: appAC.globalApplicationDate() }
+        },
+        empNumberDel: {
+          expression: '[employeeNumberID.mi_deleteDate]',
+          condition: 'moreEqual',
+          values: { value: '#maxdate' }
+        }
+      }
+    },
+    {
+      attributeName: 'empOrderType',
+      editable: true
+    }
+  ]
+}

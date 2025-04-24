@@ -1,0 +1,363 @@
+// @isModal true
+
+/* global Ext _ UB $App AC HR appAC UB */
+exports.formDef = 'HR.empListExpSearch'
+
+Ext.define('HR.empListExpSearch', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.empListExpSearch',
+  layout: { type: 'border' },
+  width: 1100,
+  height: 600,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        name: 'paramPanel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'hbox', align: 'middle' },
+            collapsed: false,
+            items: [
+              {
+                xtype: 'panel',
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'datefield',
+                        name: 'dateFrom',
+                        labelWidth: 145,
+                        width: 277,
+                        fieldLabel: UB.i18n('За період з'),
+                        allowBlank: false
+                      },
+                      {
+                        xtype: 'datefield',
+                        name: 'dateTo',
+                        labelWidth: 80,
+                        width: 200,
+                        fieldLabel: UB.i18n('по'),
+                        allowBlank: false
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'payElID',
+                        fieldLabel: UB.i18n('Вид нарахування'),
+                        labelWidth: 145,
+                        flex: 1,
+                        gridFieldList: ['description', 'dictExperienceID'],
+                        displayField: 'description',
+                        allowBlank: false,
+                        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                        disableModifyEntity: true,
+                        ubRequest: {
+                          entity: 'hr_payEl',
+                          fieldList: ['ID', 'description', 'dictExperienceID'],
+                          whereList: {
+                            methodId: {
+                              expression: '[methodID.code]',
+                              condition: '=',
+                              values: {
+                                value: '6'
+                              }
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'codeSort' } }
+                        },
+                        listeners: {
+                          change: function (ctrl, value) {
+                            let expCtrl = me.down('[name=experience]')
+                            const rec = AC.gridUtils.getCurrentRecord(ctrl)
+                            if (rec && rec.data && rec.data.dictExperienceID) {
+                              UB.Repository('hr_dictExperience')
+                                .attrs('name')
+                                .where('ID', '=', rec.data.dictExperienceID)
+                                .orderBy('dateFrom', 'desc')
+                                .selectSingle()
+                                .then(res => {
+                                  if (res) {
+                                    expCtrl.setValue(res.name)
+                                  }
+                                })
+                            }
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'textfield',
+                        name: 'experience',
+                        readOnly: true,
+                        labelWidth: 80,
+                        width: 350,
+                        fieldLabel: UB.i18n('Вид стажу:')
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'positionType',
+                    labelWidth: 145,
+                    width: 900,
+                    fieldLabel: UB.i18n('Тип посади'),
+                    hideEntityItemInContext: true,
+                    enumGroupFilter: 'HR_POSITION_TYPE',
+                    valueField: 'code',
+                    displayField: 'name',
+                    ubRequest: {
+                      entity: 'ubm_enum',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                      whereList: {
+                        eGroup: {
+                          expression: '[eGroup]',
+                          condition: 'equal',
+                          values: { 'eGroup': 'HR_POSITION_TYPE' }
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'button',
+                tooltip: UB.i18n('Сформувати'),
+                iconCls: 'fas fa-search',
+                width: 30,
+                cls: 'green-action',
+                margin: '5 0 0 0',
+                handler: function (btn) {
+                  let me = btn.up('[name=paramPanel]').ownerCt
+                  me.refreshData(me)
+                }
+              },
+              {
+                xtype: 'button',
+                tooltip: UB.i18n('Очистити'),
+                iconCls: 'fas fa-eraser',
+                width: 30,
+                cls: 'fill-action',
+                margin: '5 0 0 0',
+                handler: function (btn) {
+                  me.clearSearch()
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'searchGrid',
+        region: 'center',
+        autoScroll: true,
+        flex: 1,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink',
+          'commandLink', 'showDetail', 'audit', 'refresh'],
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        entityConfig: {
+          entity: 'hr_empListExpAllowance',
+          method: 'search',
+          fieldList: [
+            { name: 'tabNum', description: UB.i18n('Таб. №'), tooltip: UB.i18n('Табельний номер') },
+            { name: 'fullFIO', description: UB.i18n('ПІБ'), tooltip: UB.i18n('Прізвище, Ім\'я, По батькові') },
+            { name: 'stageYear', description: UB.i18n('Років'), tooltip: UB.i18n('Стаж державної служби (в роках)') },
+            { name: 'rate', description: UB.i18n('Відсоток'), tooltip: UB.i18n('Надбавка за стаж державної служби') },
+            { name: 'setDate', description: UB.i18n('Дата встановлення'), tooltip: UB.i18n('Дата встановлення надбавки') },
+            { name: 'calcDate', visibility: false },
+            { name: 'posName', description: UB.i18n('Посада') },
+            { name: 'depName', description: UB.i18n('Підрозділ') },
+            { name: 'structDepName', description: UB.i18n('Структурний підрозділ') },
+            { name: 'employeePositionID', visibility: false },
+            { name: 'employeeNumberID', visibility: false },
+            { name: 'employeeID', visibility: false },
+            { name: 'positionID', visibility: false },
+            { name: 'departmentID', visibility: false },
+            { name: 'lastName', visibility: false },
+            { name: 'firstName', visibility: false },
+            { name: 'middleName', visibility: false },
+            { name: 'employeePositionDesc', visibility: false },
+            { name: 'workPlaceName', visibility: false }
+          ]
+        },
+        cmpInitConfig: {
+          onDeterminateForm: HR.employeeTabs.onDeterminateCard,
+          listeners: {
+            render: (grid) => {
+              grid.menu.removeAll()
+              grid.menu.add([HR.employeeTabs.getEmpCardMenu(grid)])
+            }
+          },
+          selModel: {
+            selectionMode: 'MULTI',
+            showHeaderCheckbox: true,
+            checkOnly: false,
+            selType: 'checkboxmodel'
+          },
+          customActions: [
+            {
+              actionId: 'selectEmpList',
+              cls: 'fill-action',
+              iconCls: 'fa fa-pencil-square-o',
+              text: UB.i18n('Додати'),
+              handler: function (btn) {
+                me.closeAndLoad()
+              }
+            }
+          ]
+        }
+      }
+    ]
+
+    me.refreshData = (me) => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+
+      const store = me.attr.grid.getStore()
+      let req = store.ubRequest
+      req.orgID = appAC.globalOrganization()
+      req.organizationID = appAC.globalOrganization()
+      req.onDate = appAC.globalApplicationDate()
+      req.dateFrom = AC.dateService.shiftDate(me.attr.dateFrom.getValue())
+      req.dateTo = AC.dateService.shiftDate(me.attr.dateTo.getValue())
+      req.payElID = me.attr.payElID.getValue()
+      req.positionType = me.attr.positionType.getValue()
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      const grid = me.down('[name=searchGrid]')
+      me.attr = {
+        grid: grid,
+        dateFrom: me.down('[name=dateFrom]'),
+        dateTo: me.down('[name=dateTo]'),
+        payElID: me.down('[name=payElID]'),
+        positionType: me.down('[name=positionType]')
+      }
+      me.setDefaultParams()
+    }, me)
+
+    me.clearSearch = () => {
+      me.setDefaultParams()
+    }
+
+    me.clearData = function () {
+      const searchGrid = me.down('[name=searchGrid]')
+      if (searchGrid && searchGrid.store && searchGrid.store.data) {
+        searchGrid.store.data.items = []
+        searchGrid.view.refresh()
+      }
+    }
+
+    me.setDefaultParams = () => {
+      const me = this
+      me.attr.dateFrom.setValue(AC.dateService.addMonths(new Date((new Date()).getFullYear(), (new Date()).getMonth(), 1, 0, 0, 0, 0), +1))
+      me.attr.dateTo.setValue(AC.dateService.lastDayOfMonth(AC.dateService.addMonths(new Date((new Date()).getFullYear(), (new Date()).getMonth(), 1, 0, 0, 0, 0), +1)))
+
+      UB.Repository('hr_payEl')
+        .attrs(['ID', 'dictExperienceID'])
+        .where('methodID.code', '=', '6')
+        .selectAsObject()
+        .then(payElRes => {
+          payElRes && payElRes.length === 1 ? me.attr.payElID.setValueById(payElRes[0].ID) : me.attr.payElID.setValue(null)
+        })
+
+      me.setDefaultPositionTypeParam()
+      if (me.sender && me.sender.up) {
+        const parentForm = me.sender.up('form')
+        if (parentForm && parentForm.record) {
+          const ctrlPayElID = me.sender.up('form').getField('payElID')
+          if (ctrlPayElID && parentForm.record.get('payElID')) {
+            me.attr.payElID.store.load().then(store => {
+              me.attr.payElID.setValueById(parentForm.record.get('payElID'))
+              me.attr.payElID.setRawValue(ctrlPayElID.getRawValue())
+              me.attr.payElID.setReadOnly(true)
+            })
+          }
+        }
+      }
+    }
+
+    me.setDefaultPositionTypeParam = (ctrl) => {
+      const funcOrgType = AC.settings.get('hrFuncOrgType', appAC.globalOrganization())
+      /* Сфера діяльності організації - Бюджетна funcOrgType === '1' */
+      funcOrgType && funcOrgType === '1' ? me.attr.positionType.setValueById('8')
+        : funcOrgType && funcOrgType === '2' ? me.attr.positionType.setValueById('1')
+          : me.attr.positionType.setValueById()
+    }
+
+    me.validateParams = () => {
+      let res
+      let params = []
+      let dateFromCtrl = me.attr.dateFrom
+      let dateFrom = dateFromCtrl.getValue()
+      if (!dateFrom || !dateFromCtrl.isValid()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"За період з "')))
+      }
+      let dateToCtrl = me.attr.dateTo
+      let dateTo = dateToCtrl.getValue()
+      if (!dateTo || !dateToCtrl.isValid()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"по"')))
+      }
+      if (!me.attr.payElID.getValue()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Вид нарахування"')))
+      }
+      if (params.length) {
+        res = {
+          msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+        }
+      } else {
+        if (dateFrom > dateTo) {
+          res = {
+            msg: UB.i18n(`Дата {0} не може перевищувати дату {1}`, AC.viewUtils.formatFieldLabel('"За період з"'), AC.viewUtils.formatFieldLabel('"по"'))
+          }
+        }
+      }
+      return res
+    }
+
+    me.closeAndLoad = () => {
+      const searchGrid = me.down('[name=searchGrid]')
+      const selection = searchGrid.getSelectionModel().selected.items
+      if (!selection.length) {
+        $App.dialogInfo(UB.i18n('Не вибраний жодний працівник'), UB.i18n('Увага'))
+        return
+      }
+      if (me.onSelectData && _.isFunction(me.onSelectData)) {
+        const data = []
+        selection.forEach(item => {
+          data.push(item.getData())
+        })
+        me.onSelectData(data, me.attr.dateFrom.value)
+      }
+      me.up('window').close()
+    }
+
+    me.callParent(arguments)
+  }
+})

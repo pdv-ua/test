@@ -1,0 +1,105 @@
+{
+  "caption": "Відрядження працівників (імпорт)",
+  "description": "Відрядження працівників (імпорт)",
+  "attributes": [
+    {
+      "name": "impID",
+      "caption": "Внешний ID",
+      "description": "Внешний ID"
+    },
+    {
+      "name": "orgID",
+      "caption": "Организационная единица",
+      "description": "Организационная единица"
+    },
+    {
+      "name": "impOrgID",
+      "caption": "Внешняя организационная единица",
+      "description": "Внешняя организационная единица"
+    },
+    {
+      "name": "employeeID",
+      "caption": "Физическое лицо",
+      "description": "Физическое лицо"
+    },
+    {
+      "name": "employeeNumberID",
+      "caption": "Работник",
+      "description": "Работник"
+    },
+    {
+      "name": "cityName",
+      "caption": "Место командировки",
+      "description": "Место командировки"
+    },
+    {
+      "name": "destOrganizationName",
+      "caption": "Организация",
+      "description": "Организация"
+    },
+    {
+      "name": "dayCount",
+      "caption": "Дней",
+      "description": "Дней"
+    },
+    {
+      "name": "dateFrom",
+      "caption": "Дата с",
+      "description": "Дата с"
+    },
+    {
+      "name": "dateTo",
+      "caption": "Дата по",
+      "description": "Дата по"
+    },
+    {
+      "name": "reportDate",
+      "caption": "Дата подачи отчета",
+      "description": "Дата подачи отчета"
+    },
+    {
+      "name": "requisites",
+      "caption": "Реквизиты отчета",
+      "description": "Реквизиты отчета"
+    },
+    {
+      "name": "comment",
+      "caption": "Комментарий",
+      "description": "Комментарий"
+    },
+    {
+      "name": "reason",
+      "caption": "Обоснование",
+      "description": "Обоснование"
+    },
+    {
+      "name": "purpose",
+      "caption": "Цель командировки",
+      "description": "Цель командировки"
+    },
+    {
+      "name": "description",
+      "caption": "Информация",
+      "description": "Информация"
+    },
+    {
+      "name": "isInsideCountry",
+      "caption": "В пределах страны",
+      "description": "В пределах страны"
+    },
+    {
+      "name": "countryID",
+      "caption": "Страна",
+      "description": "Страна"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": false,
+      "safeDelete": false
+    },
+    "audit": {
+      "enabled": false
+    }
+  }
+}

@@ -1,0 +1,103 @@
+/* global UB */
+exports.formDef = {
+  parentConfig: {
+    layout: {
+      type: 'border'
+    },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  requiredFields: ['dateFrom', 'dateTo'],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: {
+        type: 'hbox'
+      },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 250 },
+          items: [
+            { attributeName: 'code', width: 500 },
+            { attributeName: 'name', width: 500 },
+            { attributeName: 'codeReport', width: 500 },
+            { attributeName: 'taxBreaks', fieldLabel: '', margin: '10 0 15 250', boxLabel: UB.i18n('Застосувати пільги ПДФО') }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 150 },
+          items: [
+            { attributeName: 'priority', fieldLabel: UB.i18n('Пріоритет розрахунк'), minValue: 0, maxValue: 9999 },
+            { attributeName: 'dateFromEmpty', fieldLabel: UB.i18n('Дата початку') },
+            { attributeName: 'dateToEmpty', fieldLabel: UB.i18n('Дата закінчення') }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      layout: { type: 'hbox' },
+      split: true,
+      items: [
+        {
+          name: 'payElList',
+          xtype: 'ubdetailgrid',
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          hideActions: [ 'refresh', 'addNew', 'addNewByCurrent', 'del', 'audit', 'showDetail', 'edit' ],
+          cmdType: 'showList',
+          description: UB.i18n('Види оплат'),
+          entity: 'hr_payElTaxIndivid',
+          cmdData: {
+            params: [{
+              entity: 'hr_payElTaxIndivid',
+              method: 'select',
+              fieldList: [
+                { name: 'payElID.description', description: UB.i18n('Види оплати') }
+              ]
+            }]
+          },
+          masterFields: ['ID'],
+          detailFields: ['taxIndividID'],
+          cmpInitConfig: {
+            customActions: [
+              {
+                tooltip: UB.i18n('Редагувати'),
+                iconCls: 'u-icon-edit-alt',
+                cls: 'fill-action',
+                handler: function (btn) {
+                  const grid = btn.up('grid')
+                  const form = grid.up('form')
+                  if (form.isNewInstance) {
+                    form.saveForm().then(result => {
+                      if (result !== -1) {
+                        form.setPayElEntry(form, grid)
+                      }
+                    })
+                  } else {
+                    form.setPayElEntry(form, grid)
+                  }
+                }
+              }
+            ],
+            onItemDblClick: function (grid) {
+              const form = grid.up('form')
+              form.setPayElEntry(form, grid)
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

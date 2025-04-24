@@ -1,0 +1,84 @@
+/* global UB Ext appAC $App */
+
+exports.formDef = 'HR.staffTree'
+
+Ext.define('HR.staffTree', {
+  extend: 'Ext.panel.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  width: 1100,
+  height: 600,
+  flex: 1,
+  alias: 'widget.stafftree',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  isModal: true,
+  initComponent: function () {
+    let me = this
+
+    me.staffTreeControl = Ext.widget('staffTreeControl', {
+      xtype: 'staffTreeControl',
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_staffTree_staffTreeControl'),
+      onDate: appAC.globalApplicationDate(),
+      organization: appAC.globalOrganization()
+    })
+
+    me.staffOrderID = Ext.widget('ubcombobox', {
+      xtype: 'ubcombobox',
+      name: 'staffOrderID',
+      labelWidth: 200,
+      fieldLabel: UB.i18n('Показати зміни за наказом'),
+      width: '100%',
+      ubRequest: {
+        entity: 'hr_staffOrder',
+        method: UB.core.UBCommand.methodName.SELECT,
+        fieldList: ['ID', 'description', 'entryDate'],
+        whereList: {
+          orderState: {
+            expression: '[orderState]',
+            condition: '=',
+            values: {
+              orderState: 'PROJECT'
+            }
+          }
+        }
+      },
+      listeners: {
+        change: function (ctrl, value) {
+          const node = me.staffTreeControl.tree.store.getRootNode()
+          if (node) {
+            me.staffTreeControl.orderID = value
+            me.staffTreeControl.clearTree(node)
+            me.staffTreeControl.appendItems([appAC.globalOrganization()], node)
+          }
+        }
+      }
+    }
+    )
+
+    me.items = [
+      me.staffOrderID,
+      me.staffTreeControl
+    ]
+
+    $App.on('ac:app:organizationChanged', (value) => {
+      const node = me.staffTreeControl.tree.store.getRootNode()
+      if (node && value) {
+        me.staffTreeControl.clearTree(node)
+        me.staffTreeControl.appendItems([value], node)
+      }
+    })
+    $App.on('ac:app:operationDateChanged', (value) => {
+      const node = me.staffTreeControl.tree.store.getRootNode()
+      if (node) {
+        me.staffTreeControl.onDate = value
+        me.staffTreeControl.clearTree(node)
+        me.staffTreeControl.appendItems([appAC.globalOrganization()], node)
+      }
+    })
+    me.callParent(arguments)
+  }
+})

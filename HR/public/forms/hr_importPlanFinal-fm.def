@@ -1,0 +1,187 @@
+/* global Ext $App appAC appHR AC UB */
+exports.formDef = 'HR.importPlanFinal'
+
+Ext.define('HR.importPlanFinal', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_importPlanFinal',
+  width: 600,
+  height: 400,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'center',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            name: 'periodID',
+            fieldLabel: UB.i18n('Період'),
+            labelWidth: 120,
+            hideEntityItemInContext: true,
+            selectOnFocus: true,
+            pageSize: 50,
+            ubRequest: {
+              entity: 'hr_dictPeriod',
+              fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'priorPeriodID', 'nextPeriodID', 'isClosed'],
+              orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+            },
+            listeners: {
+              expand: appHR.periodExpand
+            }
+          },
+          {
+            xtype: 'textarea',
+            labelWidth: 150,
+            rows: 7,
+            name: 'tabNum',
+            fieldLabel: UB.i18n('Табельні номери (через кому)')
+          },
+          {
+            xtype: 'checkbox',
+            labelWidth: 150,
+            fieldLabel: UB.i18n('Розклад роботи'),
+            checked: true,
+            name: 'schedules',
+            listeners: {
+              change: (ctrl, value) => {
+                value && me.attr.removeCorrect.setValue(false)
+              }
+            }
+          },
+          {
+            xtype: 'checkbox',
+            labelWidth: 150,
+            fieldLabel: UB.i18n('Табель'),
+            checked: true,
+            name: 'timesheet',
+            listeners: {
+              change: (ctrl, value) => {
+                value && me.attr.removeCorrect.setValue(false)
+              }
+            }
+          },
+          {
+            xtype: 'checkbox',
+            labelWidth: 150,
+            fieldLabel: UB.i18n('Сальдо по періодам'),
+            checked: true,
+            name: 'balance',
+            listeners: {
+              change: (ctrl, value) => {
+                value && me.attr.removeCorrect.setValue(false)
+              }
+            }
+          },
+          {
+            layout: { type: 'hbox' },
+            style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px'
+          },
+          {
+            xtype: 'checkbox',
+            labelWidth: 310,
+            fieldLabel: UB.i18n('Видалити сформовані коригування табеля'),
+            checked: false,
+            name: 'removeCorrect',
+            listeners: {
+              change: (ctrl, value) => {
+                if (value) {
+                  me.attr.timesheet.setValue(false)
+                  me.attr.schedules.setValue(false)
+                  me.attr.balance.setValue(false)
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Сформувати'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: () => {
+              me.setTimeSheet()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Закрити'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: () => {
+              me.up('window').close()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.setTimeSheet = () => {
+      $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Формувати підсумки необхідно після імпорту всіх даних. Виконати?'))
+        .then(choice => {
+          if (choice) {
+            me.setLoading(UB.i18n('Формування'))
+            $App.connection.run({
+              entity: 'hr_importPlan',
+              method: 'setTimeSheet',
+              tabNum: me.attr.tabNum.getValue(),
+              schedules: me.attr.schedules.getValue(),
+              balance: me.attr.balance.getValue(),
+              timesheet: me.attr.timesheet.getValue(),
+              removeCorrect: me.attr.removeCorrect.getValue(),
+              periodID: me.attr.periodID.getValue(),
+              orgID: appAC.globalOrganization()
+            }).then(response => {
+              me.setLoading(false)
+              $App.dialogInfo(UB.i18n('Формування завершено'))
+            }, (err) => {
+              me.setLoading(false)
+              if (err.config && err.config.timeout) {
+                $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+              } else {
+                throw err
+              }
+            })
+          }
+        })
+    }
+    me.changeGlobal = () => {
+      const globalOrganization = appAC.globalOrganization()
+      me.attr.periodID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization })
+      me.attr.periodID.clearValue()
+    }
+
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+    me.on('afterrender', () => {
+      const me = this
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+      me.attr = {
+        tabNum: me.down('[name=tabNum]'),
+        timesheet: me.down('[name=timesheet]'),
+        schedules: me.down('[name=schedules]'),
+        balance: me.down('[name=balance]'),
+        removeCorrect: me.down('[name=removeCorrect]'),
+        periodID: me.down('[name=periodID]')
+      }
+      const globalOrganization = appAC.globalOrganization()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization })
+    })
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,250 @@
+/* global UB Ext AC $App appAC */
+
+exports.formDef = 'HR.importStudentAPIParams'
+
+Ext.define('HR.importStudentAPIParams', {
+  extend: 'Ext.form.Panel',
+  width: 600,
+  height: 550,
+  layout: 'border',
+  alias: 'widget.importStudentAPIParams',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'panel',
+            layout: { type: 'vbox' },
+            region: 'center',
+            items: [
+              {
+                margin: '30 0 0 15',
+                xtype: 'component'
+              },
+              {
+                name: 'dateFrom',
+                xtype: 'ubdatefield',
+                labelWidth: 150,
+                fieldLabel: UB.i18n('Дата початку періоду'),
+                allowBlank: true
+              },
+              {
+                name: 'dateTo',
+                xtype: 'ubdatefield',
+                labelWidth: 150,
+                fieldLabel: UB.i18n('Дата закінчення періоду'),
+                allowBlank: true
+              },
+              {
+                xtype: 'combobox',
+                fieldLabel: UB.i18n('Тип навчання'),
+                labelWidth: 150,
+                width: 400,
+                name: 'typeStudy',
+                valueField: 'code',
+                store: Ext.create('Ext.data.Store', {
+                  fields: ['code', 'name'],
+                  data: [
+                    {
+                      code: '1',
+                      name: UB.i18n('Бюджет')
+                    },
+                    {
+                      code: '3',
+                      name: UB.i18n('Контракт')
+                    }
+                  ]
+                }),
+                displayField: 'name'
+              },
+              {
+                xtype: 'combobox',
+                fieldLabel: UB.i18n('Форма навчання'),
+                labelWidth: 150,
+                width: 400,
+                name: 'formStudy',
+                valueField: 'code',
+                store: Ext.create('Ext.data.Store', {
+                  fields: ['code', 'name'],
+                  data: [
+                    {
+                      code: '1',
+                      name: UB.i18n('Денна')
+                    },
+                    {
+                      code: '2',
+                      name: UB.i18n('Вечірня')
+                    },
+                    {
+                      code: '3',
+                      name: UB.i18n('Заочна')
+                    }
+                  ]
+                }),
+                displayField: 'name'
+              },
+              {
+                xtype: 'boxselect',
+                name: 'semester',
+                fieldLabel: UB.i18n('Семестр'),
+                labelWidth: 150,
+                width: 400,
+                displayField: 'name',
+                valueField: 'code',
+                multiSelect: true,
+                allowBlank: true,
+                store: Ext.create('Ext.data.Store', {
+                  fields: ['code', 'name'],
+                  data: [
+                    { code: '1', name: '1' },
+                    { code: '2', name: '2' },
+                    { code: '3', name: '3' },
+                    { code: '4', name: '4' },
+                    { code: '5', name: '5' },
+                    { code: '6', name: '6' },
+                    { code: '7', name: '7' },
+                    { code: '8', name: '8' },
+                    { code: '9', name: '9' },
+                    { code: '10', name: '10' },
+                    { code: '11', name: '11' },
+                    { code: '12', name: '12' },
+                    { code: '13', name: '13' },
+                    { code: '14', name: '14' },
+                    { code: '15', name: '15' },
+                    { code: '16', name: '16' },
+                    { code: '17', name: '17' },
+                    { code: '18', name: '18' },
+                    { code: '19', name: '19' },
+                    { code: '20', name: '20' }
+                  ]
+                })
+              },
+              {
+                name: 'dateFromStipend',
+                xtype: 'ubdatefield',
+                labelWidth: 150,
+                fieldLabel: UB.i18n('Дата початку нарахування стипендії'),
+                allowBlank: false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('З JSON файлу'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.applyAndClose(true)
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.commandConfig.deferred.resolve(null)
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Застосувати'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.applyAndClose()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.applyAndClose = function (loadFromFile) {
+      if (me.customParams && me.customParams.mode === 'dismiss') {
+        if (!me.attr.dateFrom.getValue()) {
+          me.attr.dateFrom.markInvalid(UB.i18n(me.attr.dateFrom.blankText))
+          AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказана дата початку'))
+          return
+        }
+        if (!me.attr.dateTo.getValue()) {
+          me.attr.dateTo.markInvalid(UB.i18n(me.attr.dateTo.blankText))
+          AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказана дата закінчення'))
+          return
+        }
+      }
+      if (me.customParams && me.customParams.mode === 'active') {
+        if (!me.attr.dateFromStipend.getValue()) {
+          me.attr.dateFromStipend.markInvalid(UB.i18n(me.attr.dateFromStipend.blankText))
+          AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказана дата початку нарахування стипендії'))
+          return
+        }
+      }
+      const params = {
+        typeStudy: me.attr.typeStudy.getValue(),
+        formStudy: me.attr.formStudy.getValue(),
+        dateFrom: me.attr.dateFrom.getValue(),
+        dateTo: me.attr.dateTo.getValue(),
+        dateFromStipend: me.attr.dateFromStipend.getValue(),
+        semester: me.attr.semester.getValue(),
+        loadFromFile
+      }
+      me.commandConfig.deferred.resolve(params)
+      me.up('window').close()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      const win = this.window
+      if (win) {
+        if (!win.height || win.height < 350) {
+          win.height = 350
+        }
+        if (!win.width || win.width < 450) {
+          win.width = 450
+        }
+      }
+      me.attr = {
+        dateFrom: me.down('[name=dateFrom]'),
+        dateTo: me.down('[name=dateTo]'),
+        typeStudy: me.down('[name=typeStudy]'),
+        formStudy: me.down('[name=formStudy]'),
+        semester: me.down('[name=semester]'),
+        dateFromStipend: me.down('[name=dateFromStipend]')
+      }
+      if (me.customParams && me.customParams.mode === 'active') {
+        me.attr.dateFrom.hide()
+        me.attr.dateTo.hide()
+        me.attr.dateFromStipend.setAllowBlank(false)
+      }
+      if (me.customParams && me.customParams.mode === 'dismiss') {
+        me.attr.dateFrom.setDisabled(false)
+        me.attr.dateTo.setDisabled(false)
+        me.attr.dateFrom.show()
+        me.attr.dateTo.show()
+        me.attr.dateFrom.setAllowBlank(false)
+        me.attr.dateTo.setAllowBlank(false)
+        me.attr.dateFromStipend.hide()
+      }
+      me.attr.typeStudy.setValue('1')
+      me.attr.formStudy.setValue('1')
+      me.attr.dateFromStipend.setValue(AC.dateService.firstDayOfMonth(AC.dateService.addMonths(appAC.globalApplicationDate(), 1)))
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

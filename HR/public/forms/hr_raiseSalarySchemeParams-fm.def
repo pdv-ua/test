@@ -1,0 +1,265 @@
+/* global UB Ext UB AC */
+
+exports.formDef = 'HR.raiseSalarySchemeParam'
+
+Ext.define('HR.raiseSalarySchemeParam', {
+  extend: 'Ext.form.Panel',
+  width: 600,
+  height: 550,
+  layout: 'border',
+  alias: 'widget.raiseSalarySchemeParam',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'panel',
+            layout: { type: 'vbox' },
+            region: 'center',
+            items: [
+              {
+                name: 'dateFrom',
+                xtype: 'ubdatefield',
+                margin: '30 0 0 15',
+                labelWidth: 200,
+                fieldLabel: UB.i18n('З якої дати'),
+                allowBlank: false
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'label',
+                    text: UB.i18n('Змінити'),
+                    cls: 'x-form-item-label',
+                    margin: '10 0 0 15',
+                    width: 170
+                  },
+                  {
+                    xtype: 'radiogroup',
+                    name: 'valuationKind',
+                    columns: 1,
+                    vertical: true,
+                    listeners: {
+                      change: (ctrl, value) => {
+                        const me = ctrl.up('form')
+                        if (value.valuation === 'SUM') {
+                          me.attr.value.setFieldLabel(UB.i18n('Сума підвищення'))
+                        } else if (value.valuation === 'PRC') {
+                          me.attr.value.setFieldLabel(UB.i18n('Відсоток підвищення'))
+                        }
+                      }
+                    },
+                    items: [
+                      {
+                        name: 'valuation',
+                        boxLabel: UB.i18n('На відсоток'),
+                        inputValue: 'PRC',
+                        width: 250,
+                        checked: true
+                      },
+                      {
+                        name: 'valuation',
+                        boxLabel: UB.i18n('На суму'),
+                        inputValue: 'SUM',
+                        width: 250
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                xtype: 'numberfield',
+                name: 'value',
+                labelWidth: 200,
+                fieldLabel: UB.i18n('Відсоток підвищення'),
+                allowDecimals: true,
+                allowExponential: false,
+                hideTrigger: true,
+                allowBlank: false,
+                vtype: 'floatValidator',
+                decimalPrecision: 2,
+                width: 400
+              },
+              {
+                xtype: 'ubcombobox',
+                fieldLabel: UB.i18n('Заокруглювати значення'),
+                labelWidth: 200,
+                width: 400,
+                name: 'roundUpTo',
+                hideEntityItemInContext: true,
+                valueField: 'code',
+                ubRequest: {
+                  entity: 'ubm_enum',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['ID', 'name', 'code', 'eGroup', 'sortOrder'],
+                  whereList: {
+                    enumGroupFilter: {
+                      expression: '[eGroup]',
+                      condition: 'equal',
+                      values: {
+                        val: 'HR_ROUND'
+                      }
+                    }
+                  },
+                  orderList: {
+                    orderBy: { expression: 'sortOrder', order: 'asc' }
+                  }
+                }
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'label',
+                    text: UB.i18n('Заокруглювати'),
+                    cls: 'x-form-item-label',
+                    margin: '10 0 0 15',
+                    width: 170
+                  },
+                  {
+                    xtype: 'radiogroup',
+                    name: 'roundingCtrl',
+                    columns: 1,
+                    vertical: true,
+                    items: [
+                      {
+                        name: 'roundingWay',
+                        boxLabel: UB.i18n('арифметичне заокруглення'),
+                        inputValue: 'DEF',
+                        width: 250,
+                        checked: true
+                      },
+                      {
+                        name: 'roundingWay',
+                        boxLabel: UB.i18n('в меншу сторону'),
+                        inputValue: 'DOWN',
+                        width: 250
+                      },
+                      {
+                        name: 'roundingWay',
+                        boxLabel: UB.i18n('в більшу сторону'),
+                        inputValue: 'UP',
+                        width: 250
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                xtype: 'label',
+                text: UB.i18n('Змінити'),
+                cls: 'x-form-item-label',
+                margin: '10 0 0 15',
+                width: 170
+              },
+              {
+                xtype: 'checkbox',
+                fieldLabel: UB.i18n('Сума окладу (мін)'),
+                labelWidth: 200,
+                name: 'isAccrualSumMin'
+              },
+              {
+                xtype: 'checkbox',
+                fieldLabel: UB.i18n('Сума окладу (макс)'),
+                labelWidth: 200,
+                name: 'isAccrualSumMax'
+              },
+              {
+                xtype: 'checkbox',
+                labelWidth: 200,
+                fieldLabel: UB.i18n('Рекомендоване значення окладу'),
+                name: 'isAccrualSum'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.commandConfig.deferred.resolve(null)
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Застосувати'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.applyAndClose()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.applyAndClose = function () {
+      const params = {
+        valuation: me.attr.valuationKind.getChecked()[0].inputValue,
+        value: me.attr.value.getValue(),
+        roundUpTo: me.attr.roundUpTo.getValue(),
+        roundingMode: me.attr.roundingMode.getChecked()[0].inputValue,
+        isAccrualSumMin: me.down('[name=isAccrualSumMin]').getValue(),
+        isAccrualSumMax: me.down('[name=isAccrualSumMax]').getValue(),
+        isAccrualSum: me.down('[name=isAccrualSum]').getValue(),
+        dateFrom: me.attr.dateFrom.getValue()
+      }
+      if (!me.attr.dateFrom.getValue()) {
+        me.attr.dateFrom.markInvalid(UB.i18n(me.attr.dateFrom.blankText))
+        AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказана дата підвищення'))
+        return
+      }
+      if (!me.attr.value.getValue()) {
+        me.attr.value.markInvalid(UB.i18n(me.attr.value.blankText))
+        AC.viewUtils.showToast(UB.i18n('Помилка'), params.valuation === 'SUM' ? UB.i18n('Не вказана сума підвищення') : UB.i18n('Не вказано відсоток підвищення'))
+        return
+      }
+      if (!params.isAccrualSumMin && !params.isAccrualSumMax && !params.isAccrualSum) {
+        AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не обрано значення для зміни'))
+        return
+      }
+      me.commandConfig.deferred.resolve(params)
+      me.up('window').close()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      const win = this.window
+      if (win) {
+        if (!win.height || win.height < 550) {
+          win.height = 550
+        }
+        if (!win.width || win.width < 600) {
+          win.width = 600
+        }
+      }
+      me.attr = {
+        dateFrom: me.down('[name=dateFrom]'),
+        roundUpTo: me.down('[name=roundUpTo]'),
+        valuationKind: me.down('[name=valuationKind]'),
+        value: me.down('[name=value]'),
+        roundingMode: me.down('[name=roundingCtrl]')
+      }
+      // me.attr.dateFrom.setValue(AC.dateService.firstDayOfMonth(AC.dateService.currentDate()))
+      me.attr.roundUpTo.setValueById('1')
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,51 @@
+/* global UB Ext appAC UB $App _ AC */
+
+exports.formDef = 'HR.massPosSearch'
+
+Ext.define('HR.massPosSearch', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 675,
+  layout: 'fit',
+  alias: 'widget.massPosSearch',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        xtype: 'positionsearchcontrol',
+        onSelectData: (data) => {
+          me.customParams.onSelectData && me.customParams.onSelectData(data)
+        }
+      }
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      const win = me.window
+      if (win) {
+        if (!win.height || win.height < 675) {
+          win.height = 675
+        }
+        if (!win.width || win.width < 1100) {
+          win.width = 1100
+        }
+      }
+      me.positionSearchControl = me.down('[xtype=positionsearchcontrol]')
+      if (Array.isArray(me.customParams.positionType)) {
+        if (me.customParams.positionType.length) {
+          me.positionSearchControl.params.positionTypeText = me.customParams.positionType.reduce((res, item) => {
+            res += item.description + ';'
+            return res
+          }, '')
+          me.positionSearchControl.attr.positionTypeText.setValue(me.positionSearchControl.params.positionTypeText)
+          me.positionSearchControl.params.positionType = me.customParams.positionType
+          const btn = me.positionSearchControl.down('[name=posTypeSelectBtn]')
+          btn && btn.setDisabled(true)
+        }
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

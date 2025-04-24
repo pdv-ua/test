@@ -1,0 +1,115 @@
+{
+  "caption": "Індивідуальна програма підвищення рівня професійної компетентності",
+  "description": "Індивідуальна програма підвищення рівня професійної компетентності",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "allowNull": false
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ"
+    },
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада"
+    },
+    {
+      "name": "groupCategory",
+      "dataType": "Enum",
+      "enumGroup": "HR_TRAINING_GROUP_CATEGORY",
+      "caption": "Група категорій",
+      "documentation": "Група категорій",
+      "description": "Група категорій",
+      "allowNull": false
+    },
+    {
+      "name": "docText",
+      "dataType": "Text",
+      "caption": "Збережений текст",
+      "documentation": "Збережений текст",
+      "description": "Збережений текст",
+      "allowNull": true
+    },
+    {
+      "name": "document",
+      "dataType": "Document",
+      "caption": "PDF образ",
+      "documentation": "PDF образ",
+      "description": "PDF образ",
+      "allowNull": true
+    },
+    {
+      "name": "posName",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Посада",
+      "description": "Посада",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pos.name from hr_position pos where pos.mi_data_id = {self}.positionID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pos.name from hr_position pos where pos.mi_data_id = {self}.positionID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "depName",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 dep.name from hr_department dep where dep.mi_data_id = {self}.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dep.name from hr_department dep where dep.mi_data_id = {self}.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

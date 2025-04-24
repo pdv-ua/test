@@ -1,0 +1,251 @@
+/* global appHR UB */
+exports.formDef = {
+  requiredFields: ['description', 'orderRegistryID', 'orderRegistryID.organizationID', 'orderRegistryID.periodID',
+    'orderRegistryID.periodID.dateFrom', 'orderRegistryID.periodID.dateTo', 'flagsRec', 'flagsFix', 'orderState',
+    'empOrderID', 'empOrderID.description', 'accrualDt' ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'calcHourPay'
+        },
+        {
+          orderId: 7,
+          actionId: 'analytic'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 140 },
+          flex: 1,
+          items: [
+            { attributeName: 'employeeID', hidden: true },
+            { attributeName: 'employeeNumberID', hidden: true },
+            { attributeName: 'orderDate', hidden: true },
+            { attributeName: 'accrualDt', hidden: true },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'employeePositionID',
+                  fieldList: ['ID', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'dateFrom', 'dateTo',
+                    'employeeNumberID.dateFrom', 'vacancyDateFrom', 'vacancyDateTo', 'employeeNumberID.dateTo', 'workPlace',
+                    'depName', 'posName', 'planHours', 'payElID.methodID.code'],
+                  orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                  xtype: 'empPositionCombobox',
+                  addWorkPlace: true,
+                  addDateTo: true,
+                  flex: 1,
+                  listeners: {
+                    change: function (ctrl) {
+                      let me = ctrl.up('form')
+                      me.setEmployeeData(me)
+                    }
+                  }
+                },
+                {
+                  attributeName: 'workPlaceOnly',
+                  labelWidth: 150,
+                  width: 170
+                }
+              ]
+            },
+            {
+              attributeName: 'dictWorkTypeID',
+              fieldList: ['ID', 'description', 'payElID']
+            },
+            {
+              attributeName: 'payElID',
+              fieldList: ['ID', 'description', 'methodID.code', 'codeSort', 'calcAvgType'],
+              orderList: { orderBy: { expression: 'codeSort' } }
+            },
+            {
+              attributeName: 'periodSalaryID',
+              allowBlank: false,
+              pageSize: 50,
+              fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+              orderList: {
+                orderBy: {
+                  expression: 'dateFrom',
+                  order: 'desc'
+                }
+              },
+              listeners: {
+                expand: appHR.periodExpand
+              }
+            }
+          ]
+        },
+        {
+          layout: { type: 'vbox' },
+          defaults: { labelWidth: 140 },
+          flex: 1,
+          items: [
+            { attributeName: 'dateFrom' },
+            { attributeName: 'baseSum', width: 260, flagsFix: 1 << 0, enableKeyEvents: true },
+            { attributeName: 'hours', width: 260, flagsFix: 1 << 7, enableKeyEvents: true },
+            { attributeName: 'paySum', width: 260, flagsFix: 1 << 1, readOnly: true }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Додаткові відомості'),
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 140 },
+          items: [
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  defaults: { labelWidth: 140 },
+                  flex: 1,
+                  items: [
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        {
+                          xtype: 'ubdatefield',
+                          name: 'positionDateFrom',
+                          fieldLabel: UB.i18n('Період з'),
+                          labelWidth: 140,
+                          readOnly: true
+                        },
+                        {
+                          xtype: 'ubdatefield',
+                          name: 'positionDateTo',
+                          fieldLabel: UB.i18n('По'),
+                          labelWidth: 140,
+                          readOnly: true
+                        }
+                      ]
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        {
+                          xtype: 'numberfield',
+                          name: 'hourRight',
+                          fieldLabel: UB.i18n('Годин дозволено'),
+                          decimalPrecision: 2,
+                          labelWidth: 140,
+                          width: 260,
+                          hideTrigger: true,
+                          readOnly: true
+                        },
+                        {
+                          xtype: 'numberfield',
+                          name: 'hourWork',
+                          fieldLabel: UB.i18n('Відпрацьовано'),
+                          decimalPrecision: 2,
+                          labelWidth: 140,
+                          width: 260,
+                          hideTrigger: true,
+                          readOnly: true
+                        }
+                      ]
+                    },
+                    {
+                      xtype: 'ubtextfield',
+                      name: 'depName',
+                      fieldLabel: UB.i18n('Підрозділ'),
+                      readOnly: true
+                    },
+                    {
+                      xtype: 'ubtextfield',
+                      name: 'posName',
+                      fieldLabel: UB.i18n('Посада'),
+                      readOnly: true
+                    }
+                  ]
+                },
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  defaults: { labelWidth: 140 },
+                  flex: 1,
+                  items: [
+                    {
+                      xtype: 'panel',
+                      name: 'employeeData',
+                      margin: '5 15 0 15'
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додаткові параметри'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'dictFundSourceID',
+              hideEntityItemInContext: true
+            },
+            {
+              attributeName: 'dictProgClassID',
+              hideEntityItemInContext: true
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додатки'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'docAttachment',
+              entity: 'hr_orderAttachment',
+              detailFields: 'documentID',
+              masterFields: 'ID',
+              showOriginal: true,
+              minHeight: 55,
+              maxHeight: 140,
+              height: 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

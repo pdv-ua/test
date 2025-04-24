@@ -1,0 +1,376 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+/* eslint-disable no-unused-vars */
+/* global Ext AC $App HR _ UB appAC UB */
+exports.formDef = 'HR.empListExpOrderCertification'
+
+Ext.define('HR.empListExpOrderCertification', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.empListExpOrderCertification',
+  layout: { type: 'border' },
+  width: 1100,
+  height: 600,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            name: 'orderID',
+            xtype: 'ubcombobox',
+            fieldLabel: UB.i18n('Наказ'),
+            displayField: 'description',
+            labelWidth: 130,
+            ubRequest: {
+              entity: 'hr_empOrder',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['ID', 'description', 'entryDate'],
+              whereList: {
+                orderState: {
+                  expression: '[orderState]',
+                  condition: '=',
+                  values: {
+                    orderState: 'PROJECT'
+                  }
+                },
+                orderType: {
+                  expression: '[empOrderType]',
+                  condition: '=',
+                  values: {
+                    orderState: 'CERTIFICATION'
+                  }
+                }
+              }
+            }
+          },
+          {
+            xtype: 'ubfieldset',
+            border: 1,
+            title: UB.i18n('За наказом'),
+            margin: '0 15 0 15',
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            items: [
+              {
+                xtype: 'ubcombobox',
+                labelWidth: 115,
+                width: 635,
+                fieldLabel: UB.i18n('Установа, яка видала'),
+                allowBlank: false,
+                gridFieldList: ['name', 'code'],
+                name: 'destOrganizationName',
+                ubRequest: {
+                  entity: 'ac_contractor',
+                  fieldList: ['ID', 'name'],
+                  orderList: { orderBy: { 'expression': 'name', 'order': 'asc' } }
+                },
+                maxLength: 200,
+                displayField: 'name',
+                allowCustomText: true,
+                disableModifyEntity: true,
+                triggerCls: 'hr-list-trigger',
+                listeners: {
+                  focus: ctrl => {
+                    ctrl.inputEl.dom.setAttribute('maxlength', 200)
+                  },
+                  select: ctrl => {
+                    const ctrlReco = AC.gridUtils.getCurrentRecord(ctrl)
+                    ctrlReco && (me.destOrganizationID = ctrlReco.get('ID'))
+                    ctrl.setValue(ctrl.rawValue)
+                    me.destOrganizationName = ctrl.rawValue
+                  },
+                  change: ctrl => {
+                    let oldValue = me.destOrganizationName
+                    if (oldValue !== ctrl.rawValue) {
+                      me.destOrganizationName = ctrl.rawValue ? ctrl.rawValue : null
+                      me.destOrganizationID = null
+                    }
+                  },
+                  blur: ctrl => {
+                    ctrl.setValue(ctrl.rawValue)
+                    me.destOrganizationName = ctrl.rawValue
+                  }
+                }
+              },
+              {
+                layout: {
+                  type: 'hbox',
+                  align: 'middle'
+                },
+                items: [
+                  {
+                    name: 'orderNumber',
+                    xtype: 'ubtextfield',
+                    fieldLabel: UB.i18n('Наказ')
+                  },
+                  {
+                    name: 'orderDate',
+                    xtype: 'ubdatefield',
+                    fieldLabel: UB.i18n('від')
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            layout: {
+              type: 'hbox',
+              align: 'middle'
+            },
+            items: [
+              {
+                flex: 1,
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                items: [
+                  {
+                    name: 'certificationType',
+                    fieldList: ['code', 'name'],
+                    xtype: 'ubcombobox',
+                    fieldLabel: UB.i18n('Вид атестації'),
+                    labelWidth: 130,
+                    allowBlank: false,
+                    valueField: 'code',
+                    ubRequest: {
+                      entity: 'ubm_enum',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'name', 'code', 'eGroup'],
+                      whereList: {
+                        enumGroupFilter: {
+                          expression: '[eGroup]',
+                          condition: 'equal',
+                          values: {
+                            val: 'HR_CERTIFICATION_TYPE'
+                          }
+                        },
+                        code: {
+                          expression: '[code]',
+                          condition: 'in',
+                          value: ['ASSIGN', 'PROLONG']
+                        }
+                      }
+                    },
+                    listeners: {
+                      change: ctrl => {
+                        if (ctrl.getValue() === 'ASSIGN') {
+                          me.attr.dictEmpCategoryID.clearValue()
+                        }
+                      }
+                    }
+                  },
+                  {
+                    name: 'dictEmpCategoryID',
+                    xtype: 'ubcombobox',
+                    fieldLabel: UB.i18n('Категорія'),
+                    displayField: 'description',
+                    allowBlank: false,
+                    labelWidth: 130,
+                    ubRequest: {
+                      entity: 'hr_dictEmpCategory',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'name', 'description', 'dictTarifCoeffID']
+                    }
+                  },
+                  {
+                    layout: {
+                      type: 'hbox',
+                      align: 'middle'
+                    },
+                    items: [
+                      {
+                        name: 'dateFrom',
+                        xtype: 'ubdatefield',
+                        labelWidth: 130,
+                        fieldLabel: UB.i18n('Дата присвоєння'),
+                        allowBlank: false
+                      },
+                      {
+                        name: 'dateTo',
+                        xtype: 'ubdatefield',
+                        labelWidth: 130,
+                        fieldLabel: UB.i18n('Терміном до')
+                      },
+                      {
+                        name: 'docNumber',
+                        labelWidth: 130,
+                        fieldLabel: UB.i18n('Номер посвідчення'),
+                        flex: 1,
+                        xtype: 'ubtextfield'
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            name: 'dictSpecialtyID',
+            xtype: 'ubcombobox',
+            allowBlank: false,
+            fieldLabel: UB.i18n('Спеціальність'),
+            labelWidth: 130,
+            ubRequest: {
+              entity: 'hr_specialty',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['ID', 'name'],
+              whereList: {
+                specialityType: {
+                  expression: '[specialityType]',
+                  condition: 'equal',
+                  value: '2'
+
+                }
+              }
+            }
+          },
+          {
+            name: 'info',
+            xtype: 'ubtextfield',
+            labelWidth: 130,
+            fieldLabel: UB.i18n('Додатково')
+          },
+          {
+            name: 'reason',
+            xtype: 'ubtextarea',
+            labelWidth: 130,
+            fieldLabel: UB.i18n('Підстава')
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 150,
+            height: 30,
+            iconCls: 'u-icon-close',
+            cls: 'red-action',
+            margin: '10 10 10 0',
+            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+            handler: function () {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Створити наказ'),
+            width: 150,
+            height: 30,
+            margin: '10 10 10 0',
+            iconCls: 'u-icon-save-and-close',
+            cls: 'blue-action',
+            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+            handler: function () {
+              me.createOrder()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.createOrder = function () {
+      const notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Увага'), notValidParams.msg)
+        return
+      }
+      const execParams = {
+        orgID: appAC.globalOrganization(),
+        masterOrganizationName: appAC.globalOrganizationName(),
+        masterOrganizationID: appAC.globalOrganization(),
+        orderID: me.attr.orderID.getValue(),
+        destOrganizationName: me.destOrganizationName,
+        destOrganizationID: me.destOrganizationID,
+        orderNumber: me.attr.orderNumber.getValue(),
+        orderDate: me.attr.orderDate.getValue(),
+        certificationType: me.attr.certificationType.getValue(),
+        reason: me.attr.reason.getValue(),
+        info: me.attr.info.getValue(),
+        dictSpecialtyID: me.attr.dictSpecialtyID.getValue(),
+        dictEmpCategoryID: me.attr.dictEmpCategoryID.getValue(),
+        dateFrom: me.attr.dateFrom.getValue(),
+        dateTo: me.attr.dateTo.getValue(),
+        docNumber: me.attr.docNumber.getValue(),
+        empPositions: me.empNumbers.items.map(o => o.get('employeePositionID'))
+      }
+
+      $App.connection.run({
+        entity: 'hr_empListEmpExperience',
+        method: 'createOrderCertification',
+        execParams: execParams
+      }).then(response => {
+        if (response && response.execParams && response.execParams.orderID) {
+          $App.doCommand({
+            cmdType: 'showForm',
+            entityName: 'hr_empOrder',
+            entity: 'hr_empOrder',
+            isModal: false,
+            tabId: 'hr_empOrder' + response.execParams.orderID,
+            target: $App.getViewport().centralPanel,
+            instanceID: response.execParams.orderID
+          })
+        }
+        me.up('window').close()
+      })
+    }
+
+    me.validateParams = () => {
+      let res
+      const params = []
+      const requiredParams = ['destOrganizationName', 'certificationType', 'dictEmpCategoryID', 'dateFrom', 'dictSpecialtyID']
+      requiredParams.forEach(attr => {
+        if (!me.attr[attr].isValid()) {
+          params.push(AC.viewUtils.formatFieldLabel(`"${me.attr[attr].fieldLabel}"`))
+        }
+      })
+      if (params.length) {
+        res = {
+          msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+        }
+      }
+      return res
+    }
+
+    me.on('afterrender', () => {
+      me.attr = {
+        orderID: me.down('[name=orderID]'),
+        destOrganizationName: me.down('[name=destOrganizationName]'),
+        orderNumber: me.down('[name=orderNumber]'),
+        orderDate: me.down('[name=orderDate]'),
+        certificationType: me.down('[name=certificationType]'),
+        reason: me.down('[name=reason]'),
+        info: me.down('[name=info]'),
+        dictSpecialtyID: me.down('[name=dictSpecialtyID]'),
+        dictEmpCategoryID: me.down('[name=dictEmpCategoryID]'),
+        dateFrom: me.down('[name=dateFrom]'),
+        dateTo: me.down('[name=dateTo]'),
+        docNumber: me.down('[name=docNumber]')
+      }
+
+      if (me.caption) { me.up('window').setTitle(me.caption) }
+
+      const ctrlList = ['dictEmpCategoryID']
+      ctrlList.forEach(attr => {
+        if (me.attr[attr]) {
+          HR.orderManager.disableContextMenuItems(me.attr[attr], ['addItem', 'editItem', 'showLookup'])
+        }
+      })
+      me.destOrganizationID = null
+      me.destOrganizationName = null
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

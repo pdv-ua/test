@@ -1,0 +1,190 @@
+/* global  Ext */
+
+exports.formDef = {
+  requiredFields: ['descriptionExperience', 'employeeID', 'organizationID', 'respEmployeeFIO'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [{
+    region: 'north',
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    items: [
+      {
+        layout: { type: 'hbox', align: 'middle' },
+        items: [
+          {
+            attributeName: 'dateFixExperience',
+            readOnly: true
+          },
+          {
+            attributeName: 'expOnDate',
+            readOnly: true
+          }
+        ]
+      },
+      {
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        items: [
+          {
+            attributeName: 'reason',
+            fieldLabel: UB.i18n('Документ підстава'),
+            flex: 3
+
+          },
+          {
+            attributeName: 'orderFixExperienceNum',
+            fieldLabel: '№',
+            labelWidth: 20,
+            flex: 1
+          },
+          {
+            fieldLabel: UB.i18n('від'),
+            labelWidth: 30,
+            attributeName: 'orderFixExperienceDate'
+          }
+
+        ]
+      },
+      {
+        attributeName: 'comment'
+      },
+      {
+        attributeName: 'respEmployeeNumID',
+        readOnly: true
+      }
+
+    ]
+  },
+  {
+    region: 'center',
+    layout: 'fit',
+    flex: 1,
+    name: 'employeeExperiences',
+    xtype: 'grid',
+    cls: 'ub-entity-grid',
+    store: {
+      type: 'array',
+      store: [],
+      fields: [{
+        name: 'ID',
+        type: 'int'
+      },
+      {
+        name: 'name',
+        type: 'string'
+      },
+      {
+        name: 'employeeID',
+        type: 'int'
+      },
+      {
+        name: 'employeeExperienceID',
+        type: 'int'
+      },
+      {
+        name: 'onDate',
+        type: 'date'
+      },
+      {
+        name: 'calcDate',
+        type: 'date'
+      },
+      {
+        name: 'years',
+        type: 'int'
+      },
+      {
+        name: 'months',
+        type: 'int'
+      },
+      {
+        name: 'days',
+        type: 'int'
+      }
+      ]
+    },
+    columns: [{
+      text: UB.i18n('Вид стажу'),
+      dataIndex: 'name',
+      width: 250
+    },
+    {
+      text: UB.i18n('Приведена дата початку'),
+      dataIndex: 'calcDate',
+      xtype: 'datecolumn',
+      format: 'd.m.Y',
+      width: 180,
+      align: 'center'
+    },
+    {
+      text: UB.i18n('Років'),
+      dataIndex: 'years',
+      width: 100,
+      align: 'center'
+    },
+    {
+      text: UB.i18n('Місяців'),
+      dataIndex: 'months',
+      width: 100,
+      align: 'center'
+    },
+    {
+      text: UB.i18n('Днів'),
+      dataIndex: 'days',
+      width: 100,
+      align: 'center'
+    }
+    ],
+    listeners: {
+      afterrender: grid => {
+        // const me = grid.up('form')
+        // grid.reload = me.loadEmployeeExperience
+        /* grid.contextMenu = new Ext.menu.Menu({
+                          name: 'gridContextMenu',
+                          items: [{
+                            text: UB.i18n('Edit') + ' (Ctrl+E)',
+                            iconCls: 'fa fa-edit',
+                            scope: grid,
+                            handler: () => {
+                              me.openForm(grid)
+                            }
+                          }]
+                        }) */
+        grid.keyMap = new Ext.util.KeyMap({
+          target: grid.getEl(),
+          binding: [{
+            key: Ext.EventObject.E,
+            ctrl: true,
+            fn: function (keyCode, e) {
+              e.stopEvent()
+              // me.openForm(grid)
+            }
+          }]
+        })
+        grid.getView().on('itemdblclick', () => {
+          // const me = grid.up('form')
+        })
+      },
+      itemcontextmenu: (view, record, item, index, event) => {
+        // const grid = view.up('grid')
+        // event.stopEvent()
+        // grid.contextMenu.showAt(event.getXY())
+      }
+    }
+  }
+  ]
+
+}

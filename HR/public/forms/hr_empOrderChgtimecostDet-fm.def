@@ -1,0 +1,97 @@
+// eslint-disable-next-line no-unused-vars
+/* global appAC */
+exports.formDef = {
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    defaults: {
+      labelWidth: 170
+    }
+  },
+  requiredFields: ['empOrderType', 'initialOrderID', 'oldDictTimeCostID', 'orderID', 'employeeNumberID', 'employeePositionID', 'employeeID', 'positionID', 'organizationID', 'departmentID'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [{
+    name: 'initialOrderID',
+    xtype: 'ubcombobox',
+    disableContextMenu: true,
+    fieldLabel: UB.i18n('Наказ'),
+    isFormField: true,
+    allowBlank: false,
+    ubRequest: {
+      entity: 'hr_empOrderChgtimecostDet',
+      method: 'search',
+      fieldList: ['ID', 'description']
+    },
+    listeners: {
+      change: function (ctrl, value) {
+        if (ctrl.skipChange) {
+          delete ctrl.skipChange
+          return
+        }
+        let me = ctrl.up('form')
+        me.record.set('initialOrderID', value)
+        me.filterOrderDet({
+          orderID: value,
+          isClear: true,
+          isReload: true
+        })
+      }
+    }
+  },
+  {
+    attributeName: 'initialParaID',
+    disableContextMenu: true,
+    fieldLabel: UB.i18n('Рядок наказу'),
+    displayField: 'employeeFullName',
+    fieldList: ['ID', 'employeeFullName', 'empOrderType', 'employeeNumberID'],
+    whereList: {
+      type: {
+        expression: '[empOrderType]',
+        condition: 'notEqual',
+        value: 'TASK'
+      },
+      isGroup: {
+        expression: '[isGroup]',
+        condition: 'equal',
+        value: false
+      }
+    }
+  },
+  {
+    attributeName: 'dictTimeCostID',
+    disableContextMenu: true,
+    displayField: 'displayField',
+    fieldList: ['ID', 'displayField', 'orderClassID', 'orderClassID.entityName'],
+    fieldLabel: UB.i18n('Новий елемент обліку'),
+    whereList: {
+      isEmpOrder: {
+        expression: '[orderClassID.entityName]',
+        condition: 'equal',
+        value: 'hr_empOrder'
+      }
+    }
+  },
+  {
+    attributeName: 'orderID.mi_modifyUser.employeeNumberID.description',
+    fieldLabel: UB.i18n('Користувач, що виконав зміну'),
+    hidden: true,
+    readOnly: true,
+    allowBlank: true
+  },
+  {
+    attributeName: 'orderID.mi_modifyDate',
+    fieldLabel: UB.i18n('Дата/час зміни'),
+    hidden: true,
+    readOnly: true,
+    allowBlank: true
+
+  }
+
+  ]
+}

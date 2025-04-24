@@ -1,0 +1,109 @@
+/* global Ext UB $App */
+exports.formDef = 'HR.payRollPayOut'
+
+Ext.define('HR.payRollPayOut', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_payRollPayOut',
+  width: 400,
+  height: 150,
+  layout: { type: 'vbox', align: 'stretch' },
+  readOnly: true,
+  checkPaySum: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'ubcombobox',
+        name: 'employeePayOut',
+        fieldLabel: UB.i18n('Шаблон виплати'),
+        labelWidth: 100,
+        width: 200,
+        ubRequest: {
+          entity: 'hr_employeePayOut',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: [ 'ID', 'payOutID.name', 'bankID.name' ],
+          whereList: Object.assign({
+            employeeNumberID: {
+              expression: '[employeeNumberID]',
+              condition: '=',
+              value: me.employeeNumberID
+            },
+            state: {
+              expression: '[paymentMethod]',
+              condition: '=',
+              value: '1'
+            },
+            dateFrom: {
+              expression: '[dateFrom]',
+              condition: '<=',
+              value: me.dateTo
+            },
+            dateTo: {
+              expression: '[dateTo]',
+              condition: '>=',
+              value: me.dateFrom
+            }
+          }, me.employeePayOutID ? {
+            employeePayOutID: {
+              expression: '[ID]',
+              condition: '<>',
+              value: me.employeePayOutID
+            }
+          } : {})
+        },
+        tpl: new Ext.XTemplate('<ul class="x-list-plain"><tpl for="."><li role="option" unselectable="on" class="boundlist-{[xindex % 2 === 0 ? "even" : "odd"]}  x-boundlist-item " ><span>{[values[\'payOutID.name\']]} ({[values[\'bankID.name\']]})</span></li></tpl></ul>')
+        // displayTpl: new Ext.XTemplate(`<tpl for=".">{[values['payOutID.name']]} ({[values['bankID.name']]})</tpl>`)
+      },
+      {
+        xtype: 'numberfield',
+        name: 'paySum',
+        fieldLabel: UB.i18n('Сума'),
+        decimalPrecision: 2,
+        hideTrigger: true,
+        labelWidth: 100,
+        width: 200,
+        minValue: 0,
+        maxValue: me.paySum
+      },
+      {
+        layout: { type: 'hbox', pack: 'end' },
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Продовжити'),
+            width: 120,
+            height: 30,
+            margin: '10 20 20 0',
+            handler: function () {
+              me.saveAndClose()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        paySum: me.down('[name=paySum]'),
+        employeePayOut: me.down('[name=employeePayOut]')
+      }
+    }, me)
+
+    me.saveAndClose = () => {
+      if (me.attr.paySum.getValue() && me.attr.employeePayOut.getValue()) {
+        if (me.attr.paySum.getValue() > me.paySum) {
+          $App.dialogInfo(UB.i18n(`На поточному рахунку є тільки {0}! Перенести більшу суму не можна!`, me.paySum))
+          return
+        }
+        me.onSave({
+          'employeePayOutID.payOutID.name': me.attr.employeePayOut.getFieldValue('payOutID.name'),
+          employeePayOutID: me.attr.employeePayOut.getValue(),
+          paySum: me.attr.paySum.getValue()
+        })
+        me.up('window').close()
+      }
+    }
+    me.callParent(arguments)
+  }
+})

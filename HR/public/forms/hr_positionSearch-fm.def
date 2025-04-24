@@ -1,0 +1,301 @@
+// @isModal true
+/* global UB Ext AC _ appAC */
+
+exports.formDef = 'HR.positionSearch'
+
+Ext.define('HR.positionSearch', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.positionSearch',
+  initComponent: function () {
+    let me = this
+    let grid
+    let store = Ext.create('Ext.data.ArrayStore', {
+      fields: [
+        { name: 'mi_data_id' },
+        { name: 'code' },
+        { name: 'name' },
+        { name: 'parentUnitID.name' },
+        { name: 'dictPositionID.dictProfessionID.name' },
+        { name: 'dictStaffCatID.name' },
+        { name: 'mi_dateFrom' },
+        { name: 'mi_dateTo' },
+        { name: 'description' }
+      ],
+      data: []
+    })
+    me.items = [
+      Ext.widget('panel', {
+        xtype: 'panel',
+        region: 'north',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            name: 'depID',
+            fieldLabel: UB.i18n('Підрозділ'),
+            valueField: 'mi_data_id',
+            displayField: 'caption',
+            ubRequest: {
+              entity: 'hr_department',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['mi_data_id', 'name', 'parentUnitID', 'orgID', 'mi_treePath', 'caption'],
+              __mip_ondate: appAC.globalApplicationDate(),
+              whereList: {
+                state: {
+                  expression: '[state]',
+                  condition: '=',
+                  values: {
+                    state: 'ACTIVE'
+                  }
+                }
+              }
+            },
+            listeners: {
+              change: () => {
+                me.setPositions()
+              }
+            }
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'ubcombobox',
+                name: 'dictProfessionID',
+                fieldLabel: UB.i18n('Державна класифікація'),
+                flex: 2,
+                ubRequest: {
+                  entity: 'hr_dictProfession',
+                  fieldList: ['ID', 'description']
+                },
+                listeners: {
+                  change: () => {
+                    me.setPositions()
+                  }
+                }
+              }
+            ]
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'ubcombobox',
+                name: 'dictStaffCatID',
+                fieldLabel: UB.i18n('Категорія персоналу'),
+                flex: 2,
+                ubRequest: {
+                  entity: 'hr_dictStaffCat',
+                  fieldList: ['ID', 'description']
+                },
+                listeners: {
+                  change: () => {
+                    me.setPositions()
+                  }
+                }
+              }
+            ]
+          },
+          {
+            xtype: 'checkboxfield',
+            name: 'activeOnly',
+            fieldLabel: UB.i18n('Тільки ті, що діють на поточну дату'),
+            labelWidth: 250,
+            checked: true,
+            listeners: {
+              change: () => {
+                me.setPositions()
+              }
+            }
+          }
+        ]
+      }),
+      grid = Ext.widget('grid', {
+        xtype: 'grid',
+        stripeRows: true,
+        store: store,
+        autoScroll: true,
+        flex: 1,
+        split: true,
+        region: 'center',
+        title: UB.i18n('Всі елементи'),
+        selModel: Ext.create('Ext.selection.CheckboxModel', {
+          selType: 'rowmodel',
+          showHeaderCheckbox: false
+        }),
+        tbar: Ext.create('Ext.toolbar.Toolbar', {
+          height: 40,
+          items: [
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Вибрати'),
+              iconCls: 'fas fa-share-square',
+              cls: 'save-action',
+              handler: function (btn) {
+                if (me.onSelect) {
+                  const data = []
+                  const selModel = grid.getSelectionModel()
+                  selModel.selected.each(record => {
+                    data.push(record.getData())
+                  })
+                  me.onSelect(data)
+                }
+                me.up('window').close()
+              }
+            },
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Відмітити всі'),
+              iconCls: 'u-icon-check',
+              cls: 'green-action',
+              listeners: {
+                click: function () {
+                  grid.getSelectionModel().selectAll(true)
+                }
+              }
+            },
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Очистити відмітки'),
+              iconCls: 'u-icon-close',
+              cls: 'red-action',
+              listeners: {
+                click: function () {
+                  grid.getSelectionModel().deselectAll(true)
+                }
+              }
+            }
+          ]
+
+        }),
+        columns: [
+          {
+            header: UB.i18n('Код'),
+            tooltip: UB.i18n('Код'),
+            dataIndex: 'code',
+            width: 80
+          },
+          {
+            header: UB.i18n('Назва'),
+            tooltip: UB.i18n('Назва'),
+            dataIndex: 'name',
+            flex: 1
+          },
+          {
+            header: UB.i18n('Підрозділ'),
+            tooltip: UB.i18n('Підрозділ'),
+            dataIndex: 'parentUnitID.name',
+            flex: 1
+          },
+          {
+            header: UB.i18n('Державна класифікація'),
+            tooltip: UB.i18n('Державна класифікація'),
+            dataIndex: 'dictPositionID.dictProfessionID.name',
+            flex: 1
+          },
+          {
+            header: UB.i18n('Категорія персоналу'),
+            tooltip: UB.i18n('Категорія персоналу'),
+            dataIndex: 'dictStaffCatID.name',
+            flex: 1
+          },
+          {
+            header: UB.i18n('Діє з'),
+            tooltip: UB.i18n('Діє з'),
+            dataIndex: 'mi_dateFrom',
+            renderer: Ext.util.Format.dateRenderer('d.m.Y')
+          },
+          {
+            header: UB.i18n('Діє по'),
+            tooltip: UB.i18n('Діє по'),
+            dataIndex: 'mi_dateTo',
+            renderer: (value) => {
+              if (_.isDate(value)) {
+                if (AC.dateService.shiftDate(value) < AC.dateService.maxDate()) {
+                  return AC.dateService.formatDate(value)
+                } else {
+                  return ''
+                }
+              } else {
+                return value
+              }
+            }
+
+          }
+        ]
+      })
+    ]
+
+    me.setPositions = () => {
+      const pDate = appAC.globalApplicationDate()
+      store.removeAll()
+      let positions = UB.Repository('hr_position')
+        .attrs(['mi_data_id', 'code', 'name', 'parentUnitID.name', 'dictPositionID.dictProfessionID.name', 'dictStaffCatID.name', 'mi_dateFrom', 'mi_dateTo', 'description'])
+        .where('[orgID]', '=', me.orgID)
+        .joinCondition('[parentUnitID.mi_unityEntity]', '=', 'hr_department')
+        .where('state', '=', 'ACTIVE')
+        .joinCondition('parentUnitID.mi_dateFrom', '<=', pDate)
+        .joinCondition('parentUnitID.mi_dateTo', '>=', pDate)
+        .joinCondition('parentUnitID.mi_deleteDate', '>=', '#maxdate')
+        .joinCondition('parentUnitID.state', '=', 'ACTIVE')
+
+      if (me.attr.depID.getValue()) {
+        positions = positions.where('parentUnitID', '=', me.attr.depID.getValue())
+      }
+
+      if (me.attr.dictProfessionID.getValue()) {
+        positions = positions.where('dictPositionID.dictProfessionID', '=', me.attr.dictProfessionID.getValue())
+      }
+
+      if (me.attr.dictStaffCatID.getValue()) {
+        positions = positions.where('dictStaffCatID', '=', me.attr.dictStaffCatID.getValue())
+      }
+
+      if (me.attr.activeOnly.getValue()) {
+        positions = positions.misc({ __mip_ondate: pDate })
+      } else {
+        positions = positions.misc({ __mip_recordhistory_all: true })
+      }
+
+      positions.selectAsObject().then(data => {
+        store.loadData(data)
+        if (me.selectData) {
+          grid.getSelectionModel().select(store.data.items.filter(o => me.selectData.includes(o.data.mi_data_id)))
+        } else {
+          grid.getSelectionModel().selectAll(true)
+        }
+      })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        depID: me.down('[name=depID]'),
+        dictProfessionID: me.down('[name=dictProfessionID]'),
+        dictStaffCatID: me.down('[name=dictStaffCatID]'),
+        activeOnly: me.down('[name=activeOnly]')
+      }
+      AC.viewUtils.setFilterValue(me.attr.depID, { orgID: me.orgID })
+
+      if (me.defaultValues) {
+        _.forEach(me.attr, attr => {
+          if (me.defaultValues[attr.name]) {
+            attr[attr.setValueById ? 'setValueById' : 'setValue'](attr.xtype === 'ubdatefield' ? new Date(me.defaultValues[attr.name]) : me.defaultValues[attr.name])
+            attr.setReadOnly(true)
+          }
+        })
+      }
+      if (me.readOnlyAttr) {
+        me.readOnlyAttr.forEach(attrName => {
+          me.attr[attrName].setReadOnly(true)
+        })
+      }
+      me.setPositions()
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

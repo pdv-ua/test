@@ -1,0 +1,310 @@
+/* global Ext AC UB appAC $App appHR */
+
+exports.formDef = 'HR.empOrderSicknessList'
+
+Ext.define('HR.empOrderSicknessList', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empOrderSicknessList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        layout: 'fit',
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            autoScroll: true,
+            name: 'dataGrid',
+            layout: 'fit',
+            flex: 1,
+            cmdType: 'showList',
+            cmdData: {
+              params: [{
+                entity: 'hr_empOrderSickness',
+                method: 'select',
+                fieldList: [
+                  { name: 'description', description: UB.i18n('Документ') },
+                  { name: 'employeeNumberID.description', description: UB.i18n('Працівник'), simpleFilter: true },
+                  { name: 'illnessReasonID.name', description: UB.i18n('Причина непрацездатності') },
+                  { name: 'parentID.description', description: UB.i18n('Первинний/продовжений'), config: { align: 'center' } },
+                  { name: 'dateFrom', config: { align: 'center' } },
+                  { name: 'dateTo', config: { align: 'center' } },
+                  { name: 'sicknessMeeting' },
+                  { name: 'sicknessRequis' },
+                  { name: 'payRoll' },
+                  { name: 'mi_createDate', config: { align: 'center' }, description: UB.i18n('Дата створення') },
+                  { name: 'orderState', description: UB.i18n('Статус'), config: { align: 'center' } },
+                  { name: 'loadType' }
+                ],
+                orderList: {
+                  orderBy: { expression: 'orderDate', order: 'desc' }
+                }
+              }]
+            },
+            cmpInitConfig: {
+              customActions: [
+                {
+                  xtype: 'button',
+                  iconCls: 'fas fa-arrow-alt-circle-down',
+                  scale: 'medium',
+                  cls: 'fill-action',
+                  text: UB.i18n('Завантажити з файлу'),
+                  handler: ctrl => {
+                    if (!AC.entityUtils.verifyRightsMethod('hr_empOrderSickness', 'insert')) {
+                      return
+                    }
+                    Ext.create('AC.controls.acUploadFileAjax', {
+                      scope: this,
+                      height: 300,
+                      customArea: {
+                        xtype: 'panel',
+                        region: 'center',
+                        height: 140,
+                        items: [
+                          { xtype: 'label', text: `${UB.i18n('З вибраного файлу будуть завантажені тільки лікарняні, що мають статус "Готовий до сплати" та з дати закінчення яких пройшло 7 днів')}`, cls: 'x-form-item-label', margin: '5 0 0 17', width: 380 },
+                          { xtype: 'label', text: `${UB.i18n('Виключення становлять лікарняні по вагітності та пологам, що будуть завантажені через 7 днів від дати початку незалежно від статусу')}`, cls: 'x-form-item-label', margin: '5 0 0 17', width: 380 }
+                        ]
+                      },
+                      listeners: {
+                        afterrender: function (cmp) {
+                          this.fieldFile.fileInputEl.set({
+                            accept: '.xml'
+                          })
+                        }
+                      },
+                      upLoad: function (btn) {
+                        me.setLoading(true)
+                        const dialogWindow = btn.up('window')
+                        const inputDom = this.fieldFile.fileInputEl.dom
+                        if (inputDom.files.length === 0) {
+                          return
+                        }
+                        const file = inputDom.files[0]
+                        if (file.name.toLowerCase().indexOf('.xml', file.name.length - 4) === -1) {
+                          $App.dialogInfo(UB.i18n('Невірний формат файлу, для завантаження використовується формат xml'))
+                          me.setLoading(false)
+                          return
+                        }
+
+                        UB.connection.post('loadImportEmpOrderSickness', file, {
+                          params: {
+                            entityName: 'hr_empOrderSickness',
+                            orgID: appAC.globalOrganization(),
+                            onDate: appAC.globalApplicationDate(),
+                            encoding: 'UTF-8',
+                            fileName: file.name
+                          },
+                          headers: { 'Content-Type': 'application/octet-stream' }
+                        }).then(response => {
+                          me.setLoading(false)
+                          me.attr.dataGrid.onRefresh()
+                          let data = response.data || {}
+                          $App.doCommand({
+                            cmdType: 'showForm',
+                            formCode: 'hr_empOrderSicknessLoad',
+                            entity: 'hr_empOrderSicknessLoad',
+                            cmpInitConfig: {
+                              resultData: data
+                            }
+                          })
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        }).finally(() => {
+                          me.setLoading(false)
+                        })
+                        dialogWindow.close()
+                      }
+                    })
+                  }
+                },
+                {
+                  xtype: 'button',
+                  iconCls: 'u-icon-list-success',
+                  name: 'remarkButton',
+                  scale: 'medium',
+                  cls: 'red-action', // 'fill-action',
+                  text: UB.i18n('Помилки'),
+                  handler: () => {
+                    $App.doCommand({
+                      entity: 'hr_sicknessLog',
+                      cmdType: 'showList',
+                      description: UB.i18n('Помилки'),
+                      isModal: true,
+                      hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew', 'itemSelect'],
+                      cmdData: {
+                        params: [{
+                          entity: 'hr_sicknessLog',
+                          method: 'select',
+                          fieldList: [
+                            { name: 'loadDate' },
+                            { name: 'msgType' },
+                            { name: 'periodCalcID.name', description: UB.i18n('Розрахунковий період завантаження') },
+                            { name: 'orderDescription', description: UB.i18n('Лікарняний') },
+                            { name: 'employee' },
+                            { name: 'description' },
+                            { name: 'empOrderSicknessID.description', description: UB.i18n('Лист непрацездатності') },
+                            { name: 'userID.name', description: UB.i18n('Користувач') }
+                          ],
+                          whereList: {
+                            orgID: {
+                              expression: '[orgID]',
+                              condition: 'equal',
+                              value: appAC.globalOrganization()
+                            }
+                          },
+                          orderList: {
+                            loadDate: { expression: '[loadDate]', order: 'DESC' },
+                            msgType: { expression: '[msgType]', order: 'ASC' },
+                            employee: { expression: '[employee]', order: 'ASC' },
+                            description: { expression: '[description]', order: 'ASC' }
+                          }
+                        }]
+                      }
+                    })
+                  }
+                },
+                {
+                  xtype: 'button',
+                  name: 'remarkButton',
+                  scale: 'medium',
+                  iconCls: 'far fa-trash-alt',
+                  cls: 'delete-action',
+                  hidden: !AC.entityUtils.verifyRightsMethod('hr_empOrderSickness', 'deleteLastLoad'),
+                  text: UB.i18n('Видалити останне завантаження'),
+                  handler: () => {
+                    if (!AC.entityUtils.verifyRightsMethod('hr_empOrderSickness', 'deleteLastLoad')) {
+                      return
+                    }
+                    $App.dialogYesNo('Попередження', UB.i18n(`Видалити останне завантаження?`)).then(res => {
+                      if (res) {
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_empOrderSickness',
+                          method: 'deleteLastLoad',
+                          orgID: appAC.globalOrganization()
+                        }).then(() => {
+                          me.attr.dataGrid.store.load()
+                          me.setLoading(false)
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      }
+                    })
+                  }
+                },
+                {
+                  xtype: 'button',
+                  scale: 'medium',
+                  iconCls: 'fas fa-file-excel',
+                  cls: 'green-action',
+                  name: 'exportExcel',
+                  text: UB.i18n('Експорт'),
+                  handler: () => {
+                    me.attr.dataGrid.onExportXls()
+                  }
+                }
+              ],
+              disableAutoLoadStore: true,
+              hideActions: ['showDetail', 'addNewByCurrent'],
+              getRowClass: function (row) {
+                let res
+                switch (row.get('orderState')) {
+                  case 'POSTED':
+                    res = 'ub-row-green'
+                    break
+                  case 'PROCESSED':
+                    res = 'ub-row-yellow'
+                    break
+                  default:
+                    res = 'ub-row-lightgrey'
+                    break
+                }
+                return res
+              },
+              afterInit: function () {
+                AC.gridUtils.setGlobalOrganization(this, 'organizationID')
+                AC.gridUtils.tuneGridColumns(this, {
+                  parentID: {
+                    renderer: function (value) {
+                      return value ? 'Продовжений' : 'Первинний'
+                    }
+                  }
+                })
+              }
+            }
+          }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      me.attr = {
+        dataGrid: me.down('[name=dataGrid]'),
+        remarkButton: me.down('[name=remarkButton]')
+      }
+      me.globalOrganizationChange = () => {
+        me.attr.remarkButton.removeCls('red-action')
+        me.attr.remarkButton.addCls('fill-action')
+        appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+          UB.Repository('hr_sicknessLog')
+            .attrs(['MAX([loadDate])'])
+            .where('orgID', '=', appAC.globalOrganization())
+            .where('periodCalcID', '=', response.ID)
+            .selectScalar().then(loadDate => {
+              if (loadDate) {
+                UB.Repository('hr_sicknessLog')
+                  .attrs(['COUNT([ID])'])
+                  .where('orgID', '=', appAC.globalOrganization())
+                  .where('periodCalcID', '=', response.ID)
+                  .where('loadDate', '=', loadDate)
+                  .where('msgType', '!=', '0')
+                  .selectScalar().then(count => {
+                    if (count) {
+                      me.attr.remarkButton.removeCls('fill-action')
+                      me.attr.remarkButton.addCls('red-action')
+                    }
+                  })
+              }
+            })
+        })
+      }
+      me.attr.dataGrid.getExportTitle = function () {
+        let title = UB.i18n('Листи тимчасової непрацездатності')
+        if (this.store.filters.length) {
+          const filtersCaption = AC.gridUtils.getFiltersCaption(this)
+          if (filtersCaption && filtersCaption.length) {
+            title = `${title}\r\n(${filtersCaption.map(o => `${o.filterLabel}: ${o.filterValue}`).join(', ')})`
+          }
+        }
+        return `${title}\r\nДата вивантаження: ${AC.dateService.formatDate(new Date(), 'dd.mm.yyyy hh:nn:ss')}`
+      }
+
+      me.globalOrganizationChange()
+    }, me)
+    me.on('destroy', () => {
+
+    }, me)
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,108 @@
+{
+  "caption": "Нарахування",
+  "description": "Нарахування до пункту наказу",
+  "descriptionAttribute": "payElID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "empOrderDetID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Наказ. Деталь",
+      "description": "Наказ. Деталь",
+      "documentation": "Наказ. Деталь",
+      "allowNull": false,
+      "defaultView": false
+    },
+    {
+      "name": "empOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ",
+      "allowNull": false,
+      "defaultView": false
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид нарахування",
+      "description": "Вид нарахування",
+      "documentation": "Вид нарахування",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "qtty",
+      "dataType": "Int",
+      "caption": "Кількість",
+      "description": "Кількість",
+      "documentation": "Кількість"
+    },
+    {
+      "name": "accrualSum",
+      "dataType": "Currency",
+      "caption": "Сума",
+      "description": "Сума",
+      "documentation": "Сума"
+    },
+    {
+      "name": "accrualRate",
+      "dataType": "Currency",
+      "caption": "Відсоток",
+      "description": "Відсотока",
+      "documentation": "Відсоток"
+    },
+    {
+      "name": "isAutoNotClose",
+      "dataType": "Boolean",
+      "caption": "Додано автоматично",
+      "description": "Додано автоматично",
+      "documentation": "Додано автоматично",
+      "defaultValue": "0"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

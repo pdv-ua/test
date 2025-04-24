@@ -1,0 +1,429 @@
+/* global Ext UB $App appAC AC COA Ext _ */
+exports.formDef = 'HR.avgDimensionEdit'
+
+Ext.define('HR.avgDimensionEdit', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_avgDimensionEdit',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  readOnly: true,
+  checkPaySum: true,
+  initComponent: function () {
+    let me = this
+    me.copyAttrNames = ['accountID', 'dictFundSourceID', 'dictProgClassID', 'dictProjectID', 'departmentID']
+    me.items = [
+      {
+        xtype: 'panel',
+        name: 'gridPanel',
+        region: 'center',
+        layout: 'fit',
+        items: []
+      }
+    ]
+    me.on('afterrender', () => {
+      const me = this
+
+      me.attr = {
+        gridPanel: me.down('[name=gridPanel]')
+      }
+      me.detailData = {}
+      me.createData()
+    }, me)
+
+    me.createData = () => {
+      me.detailData.data = []
+      me.detailData.dimension = {}
+      me.days = 0
+      let index = 0
+      me.data.forEach(row => {
+        const rowAccrualDt = JSON.parse(row.accrualDt || '[]')
+        const baseParams = {
+          periodID: row.periodID,
+          flagsFix: row.flagsFix,
+          'periodID.name': row['periodID.name']
+        }
+        if (rowAccrualDt.length) {
+          rowAccrualDt.forEach(aDt => {
+            const rowData = Object.assign(aDt, baseParams)
+            me.detailData.data.push(rowData)
+            for (let i = 0; i < 10; i++) {
+              if (rowData[`d${i}`]) {
+                if (!me.detailData.dimension[rowData[`d${i}`]]) {
+                  me.detailData.dimension[rowData[`d${i}`]] = Object.assign({ index }, COA.dimsById[rowData[`d${i}`]])
+                  index++
+                }
+              }
+            }
+          })
+        } else {
+          me.detailData.data.push(Object.assign({ paySum: row.opSum }, baseParams))
+        }
+        me.days += (me.calcEarnings !== 'HOUR' ? row.opDays : row.opHours) || 0
+      })
+      $App.connection.run({
+        entity: 'hr_rl',
+        method: 'getDimension',
+        params: JSON.stringify(me.detailData.data),
+        orgID: me.orgID || appAC.globalOrganization(),
+        fundSourceName: true
+      }).then(response => {
+        const resultData = JSON.parse(response.resultData)
+
+        resultData.forEach((row, idx) => {
+          const dData = Object.keys(me.detailData.dimension).reduce((res, dimID) => {
+            res[`d${me.detailData.dimension[dimID].index}`] = me.detailData.dimension[dimID].ID
+            res[`d${me.detailData.dimension[dimID].index}Value`] = null
+            res[`d${me.detailData.dimension[dimID].index}Value.name`] = null
+            for (let i = 0; i < 10; i++) {
+              if (me.detailData.data[idx][`d${i}`] === me.detailData.dimension[dimID].ID && me.detailData.data[idx][`d${i}Value`]) {
+                res[`d${me.detailData.dimension[dimID].index}Value`] = me.detailData.data[idx][`d${i}Value`]
+                res[`d${me.detailData.dimension[dimID].index}Value.name`] = row[`d${i}Value`]
+              }
+            }
+            return res
+          }, {})
+          for (let i = 0; i < 10; i++) {
+            if (dData[`d${i}`]) {
+              me.detailData.data[idx][`d${i}`] = dData[`d${i}`]
+              me.detailData.data[idx][`d${i}Value`] = dData[`d${i}Value`]
+              me.detailData.data[idx][`d${i}Value.name`] = dData[`d${i}Value.name`]
+            } else {
+              delete me.detailData.data[idx][`d${i}`]
+              delete me.detailData.data[idx][`d${i}Value`]
+            }
+            me.detailData.data[idx] = Object.assign(me.detailData.data[idx], dData)
+          }
+          me.copyAttrNames.forEach(attrName => {
+            me.detailData.data[idx][`${attrName}.name`] = row[attrName]
+          })
+        })
+        me.createGrid()
+      })
+    }
+
+    me.createGrid = () => {
+      me.detailData.fields = [
+        { name: 'periodID' },
+        { name: 'flagsFix' },
+        { name: 'accrualDt' },
+        {
+          name: 'periodID.name',
+          columnConfig: {
+            text: UB.i18n('Місяць'),
+            width: 120,
+            filterBy: 'string'
+          }
+        },
+        {
+          name: 'paySum',
+          columnConfig: {
+            text: UB.i18n('Заробіток'),
+            width: 120,
+            align: 'right',
+            sortBy: 'Number',
+            filterBy: 'float',
+            floatFormat: 2,
+            renderer: (value, meta, record) => {
+              if (record.get('flagsFix') & 1) {
+                meta.tdCls = 'grd-color-blue'
+              }
+              if (_.isNumber(value)) {
+                return Ext.util.Format.currency(value, '', 2).replace(/ /g, '')
+              } else return value
+            },
+            editor: {
+              dataType: 'Currency',
+              decimalPrecision: 2,
+              minValue: 0,
+              flagsFix: 1 << 0
+            }
+          }
+        },
+        {
+          name: 'accountID.name',
+          columnConfig: {
+            text: UB.i18n('Рахунок'),
+            width: 180,
+            filterBy: 'string',
+            editor: {
+              dataType: 'Entity',
+              hideEntityItemInContext: true,
+              associatedEntity: 'gl_account',
+              storeAttributeValueField: 'accountID',
+              fieldList: ['ID', 'code']
+            }
+          }
+        },
+        {
+          name: 'accountID'
+        },
+        {
+          name: 'dictFundSourceID.name',
+          columnConfig: {
+            text: UB.i18n('Джерело фінансування'),
+            width: 140,
+            filterBy: 'string',
+            editor: {
+              dataType: 'Entity',
+              hideEntityItemInContext: true,
+              associatedEntity: 'ac_fundSource',
+              storeAttributeValueField: 'dictFundSourceID',
+              fieldList: ['ID', 'name']
+            }
+          }
+        },
+        {
+          name: 'dictFundSourceID'
+        },
+        {
+          name: 'dictProgClassID.name',
+          columnConfig: {
+            text: UB.i18n('КПК'),
+            width: 140,
+            filterBy: 'string',
+            editor: {
+              dataType: 'Entity',
+              hideEntityItemInContext: true,
+              associatedEntity: 'ac_dictProgClass',
+              storeAttributeValueField: 'dictProgClassID',
+              fieldList: ['ID', 'description']
+            }
+          }
+        },
+        {
+          name: 'dictProgClassID'
+        },
+        {
+          name: 'dictProjectID.name',
+          columnConfig: { text: UB.i18n('Проєкт'),
+            width: 140,
+            filterBy: 'string',
+            editor: {
+              dataType: 'Entity',
+              hideEntityItemInContext: true,
+              associatedEntity: 'ac_dictProject',
+              storeAttributeValueField: 'dictProjectID',
+              fieldList: ['ID', 'name']
+            }
+          }
+        },
+        {
+          name: 'dictProjectID'
+        },
+        {
+          name: 'departmentID.name',
+          columnConfig: { text: UB.i18n('Підрозділ'),
+            width: 140,
+            filterBy: 'string',
+            editor: {
+              dataType: 'Entity',
+              hideEntityItemInContext: true,
+              associatedEntity: 'hr_department',
+              storeAttributeValueField: 'departmentID',
+              storeAttributeFieldName: 'mi_data_id',
+              displayField: 'name',
+              valueField: 'name',
+              fieldList: ['mi_data_id', 'name'],
+              useForGridEdit: false,
+              whereList: {
+                orgID: {
+                  expression: '[orgID]',
+                  condition: '=',
+                  value: me.orgID || appAC.globalOrganization()
+                },
+                state: {
+                  expression: '[state]',
+                  condition: '=',
+                  value: 'ACTIVE'
+                }
+              }
+            }
+          }
+        },
+        {
+          name: 'departmentID'
+        }
+      ]
+      Object.keys(me.detailData.dimension).forEach((dimID, idx) => {
+        const whereList = {
+          dimension: {
+            expression: '[dimension]',
+            condition: '=',
+            value: me.detailData.dimension[dimID].ID
+          }
+        }
+        if (me.detailData.dimension[dimID].entityName === 'org_employee' && me.employeeID) {
+          whereList.ID = {
+            expression: '[ID]',
+            condition: '=',
+            value: me.employeeID
+          }
+        }
+
+        me.detailData.fields.push({
+          name: `d${idx}`
+        })
+        me.detailData.fields.push({
+          name: `d${idx}Value`
+        })
+        me.detailData.fields.push({
+          name: `d${idx}Value.name`,
+          groupHeaderText: UB.i18n('Аналітика'),
+          columnConfig: { text: UB.i18n(me.detailData.dimension[dimID].description),
+            width: 140,
+            filterBy: 'string',
+            editor: {
+              dataType: 'Entity',
+              hideEntityItemInContext: true,
+              associatedEntity: 'gl_dimValue',
+              storeAttributeValueField: `d${idx}Value`,
+              fieldList: ['ID', 'caption'],
+              useForGridEdit: false,
+              whereList
+            }
+          }
+        })
+      })
+
+      me.detailData.grid = Ext.create('AC.controls.AcGrid', {
+        xtype: 'acGrid',
+        flex: 1,
+        autoScroll: true,
+        storeType: 'local',
+        cellEditing: true,
+        disablePaging: true,
+        notWriteChanges: true,
+        showToolBar: true,
+        enableMultifilter: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'del', 'edit'],
+        viewConfig: {
+          markDirty: false
+        },
+        fields: me.detailData.fields,
+        baseSummary: true,
+        summary: {
+          paySum: 'sum',
+          'periodID.name': () => {
+            return UB.i18n(me.calcEarnings !== 'HOUR' ? 'Днів' : 'Годин') + ': ' + AC.currencyService.round(me.days, 4)
+          },
+          'accountID.name': (records) => {
+            return UB.i18n('Середній') + ': ' + AC.currencyService.round(me.days ? records.reduce((sum, row) => {
+              return sum + (row.get('paySum') ? (row.get('paySum') || 0) : 0)
+            }, 0) / me.days : 0)
+          }
+        },
+
+        onBeforeEdit: () => {
+          if (me.readOnly) {
+            return false
+          }
+        },
+        edit: (control, context) => {
+          context.record.set('flagsFix', context.record.get('flagsFix') | me.setFlagsFix)
+        },
+        customToolBarActions: [
+          {
+            name: 'saveButton',
+            tooltip: UB.i18n('saveAndClose'),
+            iconCls: 'fas fa-share-square',
+            scale: 'medium',
+            cls: 'save-action',
+            injectActions: 'first',
+            hidden: me.readOnly,
+            handler: function () {
+              me.saveAndClose()
+            }
+          }
+        ],
+        customPopupMenuItems: [].concat(me.readOnly ? [] : [
+          {
+            iconCls: 'u-icon-add',
+            text: UB.i18n('actionAdd'),
+            handler: function (context) {
+              let record = context.up('').record || AC.gridUtils.getCurrentRecord(me.detailData.grid)
+              if (!record) {
+                $App.dialogInfo('selectRowFirst')
+                return
+              }
+              let index = me.detailData.grid.getStore().indexOf(record)
+              const data = record.getData()
+              data.paySum = 0
+              data.flagsFix = data.flagsFix | me.setFlagsFix
+              me.detailData.grid.getStore().insert(index, data)
+            }
+          },
+          {
+            text: UB.i18n('Delete'),
+            iconCls: 'u-icon-delete',
+            cls: 'delete-action',
+            handler: function (context) {
+              let record = context.up('').record || AC.gridUtils.getCurrentRecord(me.detailData.grid)
+              if (!record) {
+                $App.dialogInfo('selectRowFirst')
+                return
+              }
+              const allRecord = me.detailData.grid.getStore().snapshot || me.detailData.grid.getStore().data
+              const periodRows = allRecord.items.filter(o => o.get('periodID') === record.get('periodID'))
+              if (periodRows.length < 2) {
+                $App.dialogInfo(UB.i18n(`Для періоду {0} быльше не існує записів. Видалення не можливе.`, record.get('periodID.name')))
+                return
+              }
+              $App.dialogYesNo('deletionDialogConfirmCaption', UB.i18n('Буде видалено запис. Ви впевнені?')
+              ).then(res => {
+                if (!res) return
+                me.detailData.grid.getStore().remove(record)
+                periodRows.forEach(rowRecord => {
+                  rowRecord.set('flagsFix', rowRecord.get('flagsFix') | me.setFlagsFix)
+                })
+              })
+            }
+          }
+
+        ])
+
+      })
+      me.attr.gridPanel.add(me.detailData.grid)
+      AC.gridUtils.setGridColumnVisible(me.detailData.grid, ['dictProgClassID.name'], AC.settings.get('hrProgClassAcc', me.orgID || appAC.globalOrganization()))
+      AC.gridUtils.setGridColumnVisible(me.detailData.grid, ['dictProjectID.name'], AC.settings.get('hrProjectAcc', me.orgID || appAC.globalOrganization()))
+      me.detailData.grid.setLocalStoreData(me.detailData.data)
+    }
+
+    me.saveAndClose = () => {
+      const data = me.detailData.grid.getData()
+      const resultData = []
+      me.data.forEach(row => {
+        const details = data.filter(o => o.periodID === row.periodID)
+        const accrualDt = []
+        let flagsFix = 0
+        let paySum = 0
+        details.forEach(det => {
+          const aDt = {}
+          flagsFix = flagsFix | (det.flagsFix || 0)
+          me.copyAttrNames.forEach(attrName => {
+            aDt[attrName] = det[attrName]
+          })
+          for (let i = 0; i < 10; i++) {
+            if (det[`d${i}`]) {
+              aDt[`d${i}`] = det[`d${i}`]
+              aDt[`d${i}Value`] = det[`d${i}Value`] || null
+            }
+          }
+          aDt.paySum = det.paySum
+          accrualDt.push(aDt)
+          paySum = AC.currencyService.round(paySum + (det.paySum || 0))
+        })
+        if ((flagsFix & me.setFlagsFix) === me.setFlagsFix) {
+          row.flagsFix = row.flagsFix | me.setFlagsFix
+          row.accrualDt = JSON.stringify(accrualDt)
+          row.paySum = paySum
+        }
+        resultData.push(row)
+      })
+      me.onSave(resultData)
+      me.up('window').close()
+    }
+
+    me.callParent(arguments)
+  }
+})

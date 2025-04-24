@@ -1,0 +1,110 @@
+/* global Ext AC $App */
+exports.formDef = 'HR.repParamListEmpExperience'
+
+Ext.define('HR.repParamListEmpExperience', {
+  extend: 'Ext.form.Panel',
+  height: 190,
+  width: 700,
+  layout: 'border',
+  alias: 'widget.repParamListEmpExperience',
+  isModal: true,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            name: 'increaseQualifications',
+            xtype: 'checkboxfield',
+            labelWidth: 320,
+            fieldLabel: UB.i18n('Виводити колонки Підвищення кваліфікації'),
+            value: true
+          },
+          {
+            name: 'showDepInRow',
+            xtype: 'checkboxfield',
+            labelWidth: 320,
+            fieldLabel: UB.i18n('Виводити назви підрозділів як підзаголовки'),
+            value: false
+          },
+          {
+            layout: { type: 'vbox', align: 'center' },
+            items: [
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'button',
+                    text: UB.i18n('Формувати'),
+                    iconCls: 'iconDoc',
+                    width: 120,
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      const me = btn.up('form')
+                      if (me.runReport()) {
+                        me.closeForm()
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    text: UB.i18n('Відмінити'),
+                    iconCls: 'fa fa-ban',
+                    width: 120,
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      const me = btn.up('form')
+                      me.closeForm()
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.runReport = () => {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_empListEmpExperience',
+        method: 'generatePlanXLSX',
+        viewData: me.viewData,
+        dictStaffCatID: me.dictStaffCatID,
+        fileName: me.fileName,
+        onDate: me.onDate,
+        dateFrom: me.dateFrom,
+        organizationID: me.organizationID,
+        increaseQualifications: me.attr.increaseQualifications.getValue(),
+        showDepInRow: me.attr.showDepInRow.getValue()
+      }).then(response => {
+        const data = JSON.parse(response.data)
+        AC.filesService.saveAsByBase64Buffer(data, `План ${me.fileName}.xlsx`, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+        me.setLoading(false)
+      }, function (err) {
+        me.setLoading(false)
+        throw err
+      })
+
+      return true
+    }
+
+    me.closeForm = () => {
+      me.up('window').close()
+    }
+
+    me.callParent(arguments)
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        increaseQualifications: me.down('[name=increaseQualifications]'),
+        showDepInRow: me.down('[name=showDepInRow]')
+      }
+    }, me)
+  }
+})

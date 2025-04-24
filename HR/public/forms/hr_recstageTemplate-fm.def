@@ -1,0 +1,80 @@
+/* global AC UB */
+exports.formDef = {
+  size: {
+    width: 500,
+    height: 300
+  },
+  requiredFields: ['organizationID'],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  items: [{
+    xtype: 'tabpanel',
+    items: [{
+      title: UB.i18n('Загальні'),
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+
+      items: [
+        {
+          attributeName: 'empOrderType',
+          disableContextMenu: false,
+          fieldLabel: UB.i18n('Вид наказу'),
+          flex: 1
+        },
+        {
+          attributeName: 'name',
+          flex: 1
+        }]
+    },
+    {
+      title: UB.i18n('Права на шаблон'),
+      hidden: true,
+      items: [{}]
+    }
+
+    ]
+  },
+  {
+    xtype: 'ubdetailgrid',
+    name: 'recstage',
+    autoScroll: true,
+    disableSearchBar: true,
+    disableMenuItemDetails: true,
+    hideActions: [
+      'addNewByCurrent'
+    ],
+    flex: 1,
+    entityConfig: {
+      entity: 'hr_recstage',
+      method: 'select',
+      fieldList: [{
+        name: 'ID',
+        visibility: false
+      },
+      {
+        name: 'stageKind',
+        flex: 1,
+        description: UB.i18n('Вид')
+      },
+      {
+        name: 'employeeList',
+        flex: 3,
+        description: UB.i18n('Виконавці')
+      }
+      ]
+    },
+    masterFields: ['ID'],
+    detailFields: ['recstageTemplateID'],
+    onBeforeEdit: function (editor, context) {
+      AC.viewUtils.setWhereListProperty(editor.editor.query('[name=stageKind]')[0], [['code', 'notIn', ['INFO', 'ACQUAINTANCELIST_SIGN']]], undefined, ['clearStore', 'clearWhereList'])
+      return true
+    }
+  }
+  ]
+}

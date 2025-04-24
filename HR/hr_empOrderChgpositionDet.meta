@@ -1,0 +1,155 @@
+{
+  "caption": "Наказ про зміну призначень",
+  "description": "Наказ про зміну призначень",
+  "descriptionAttribute": "orderID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "itemIdx",
+      "dataType": "Int",
+      "caption": "№",
+      "description": "№ за порядком",
+      "documentation": "№ за порядком"
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ про зміну призначень",
+      "description": "Наказ про зміну призначень",
+      "documentation": "Наказ про зміну призначень",
+      "allowNull": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultView": false
+    },
+    {
+      "name": "cancelOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Скасовано наказом",
+      "description": "Наказ, що скасував даний пункт",
+      "documentation": "Наказ, що скасував даний пункт"
+    },
+    {
+      "name": "cancelParaID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Скасовано пунктом",
+      "description": "Пункт, що скасував даний пункт",
+      "documentation": "Пункт, що скасував даний пункт"
+    },
+
+    {
+      "name": "title",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада"
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false,
+      "defaultValue": "CHGPOSITION"
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Інформація",
+      "documentation": "Інформація",
+      "description": "Інформація",
+      "allowNull": false
+    },
+    {
+      "name": "actionType",
+      "dataType": "Enum",
+      "enumGroup": "HR_ACTION_CHANGE_TYPE",
+      "caption": "Дія",
+      "documentation": "Дія",
+      "description": "Дія",
+      "allowNull": false,
+      "defaultValue": "UPDATE"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": true
+    },
+    {
+      "name": "isTemporary",
+      "dataType": "Boolean",
+      "caption": "Тимчасове",
+      "documentation": "Тимчасове",
+      "description": "Тимчасове",
+      "defaultValue": "0"
+    },
+    {
+      "name": "planDateTo",
+      "dataType": "Date",
+      "caption": "Планова дата закінчення",
+      "description": "Планова дата закінчення",
+      "documentation": "Планова дата закінчення"
+    },
+    {
+      "name": "changedValues",
+      "dataType": "Text",
+      "caption": "Дані змінені при проведенні",
+      "description": "Дані змінені при проведенні",
+      "documentation": "Дані змінені при проведенні"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "unity": {
+      "entity": "hr_empOrderDet",
+      "attributeList": [
+        "changedValues",
+        "organizationID",
+        "empOrderType",
+        "orderID",
+        "orderState",
+        "cancelOrderID",
+        "cancelParaID",
+        "title",
+        "description",
+        "dateFrom",
+        "itemIdx"
+      ],
+      "defaults": {
+        "isExternal": "0",
+        "isGroup": "1"
+      },
+      "mapping": {
+        "title": "title"
+      }
+    }
+  }
+}

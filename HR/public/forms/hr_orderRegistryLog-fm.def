@@ -1,0 +1,239 @@
+/* global UB Ext */
+
+exports.formDef = 'HR.hr_orderRegistryLog'
+
+Ext.define('HR.hr_orderRegistryLog', {
+  extend: 'Ext.form.Panel',
+  width: 1500,
+  height: 650,
+  layout: 'border',
+  alias: 'widget.hr_orderRegistryLog',
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        layout: { type: 'vbox' },
+        region: 'center',
+        items: [
+          {
+            xtype: 'acGrid',
+            name: 'gridInsertedRows',
+            flex: 1,
+            autoScroll: true,
+            storeType: 'local',
+            showToolBar: true,
+            hideActions: ['addNew', 'edit', 'del', 'addNewByCurrent'],
+            disablePaging: true,
+            readOnly: true,
+            customToolBarActions: [
+              {
+                name: 'showAll',
+                xtype: 'checkbox',
+                boxLabel: UB.i18n('Показати всі'),
+                listeners: {
+                  change: async function (checkbox, newValue) {
+                    const endRes = []
+                    const lastestDownload = await UB.Repository('hr_orderRegistryLog')
+                      .attrs('downloadNumber')
+                      .where('orderID', '=', me.customParams.instanceID)
+                      .orderByDesc('downloadNumber')
+                      .selectSingle()
+                    if (lastestDownload) {
+                      if (me.customParams && me.customParams.instanceID) {
+                        const resultRequest = await UB.Repository('hr_orderRegistryLog')
+                          .attrs('*')
+                          .where('orderID', '=', me.customParams.instanceID)
+                          .whereIf(!newValue, 'downloadNumber', '=', lastestDownload.downloadNumber)
+                          .selectAsObject()
+
+                        resultRequest.forEach(itemRes => {
+                          if (Number(itemRes.msgType) === 1) {
+                            itemRes.msgType = 'Помилка'
+                          } else if (Number(itemRes.msgType) === 2) {
+                            itemRes.msgType = 'Зауваження'
+                          } else {
+                            itemRes.msgType = ''
+                          }
+                          if (!itemRes.params) {
+                            endRes.push({
+                              downloadNumber: itemRes.downloadNumber,
+                              fileLineNumber: itemRes.fileLineNumber,
+                              msgType: itemRes.msgType,
+                              description: itemRes.description
+                            })
+                          } else {
+                            endRes.push({
+                              downloadNumber: itemRes.downloadNumber,
+                              fileLineNumber: itemRes.fileLineNumber,
+                              fileTabNumber: itemRes.params.fileTabNumber,
+                              fileTAXCODE: itemRes.params.fileTAXCODE,
+                              fileTotal: itemRes.params.fileTotal,
+                              fileRate: itemRes.params.fileRate,
+                              fileDepartmentID: itemRes.params.fileDepartmentID,
+                              filePosName: itemRes.params.filePosName,
+                              msgType: itemRes.msgType,
+                              description: itemRes.description
+                            })
+                          }
+                        })
+                        me.down('[name=gridInsertedRows]').setLocalStoreData(endRes)
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            exportExcel: {
+              title: UB.i18n('Завантаження премій. Додані записи'),
+              fileName: UB.i18n('Завантаження премій. Додані записи')
+            },
+            loadMaskMessage: UB.i18n('Завантаження даних...'),
+            fields: [
+              {
+                name: 'downloadNumber',
+                columnConfig: {
+                  text: UB.i18n('Номер завантаження'),
+                  width: 150
+                }
+              },
+              {
+                name: 'fileLineNumber',
+                columnConfig: {
+                  text: UB.i18n('Номер рядка файлу'),
+                  width: 150
+                }
+              },
+              {
+                name: 'fileTabNumber',
+                columnConfig: {
+                  text: UB.i18n('Таб.номер'),
+                  width: 150
+                }
+              },
+              {
+                name: 'fileTAXCODE',
+                columnConfig: {
+                  text: UB.i18n('РНОКПП'),
+                  width: 150
+                }
+              },
+              {
+                name: 'fileTotal',
+                columnConfig: {
+                  text: UB.i18n('Сума'),
+                  width: 150
+                }
+              },
+              {
+                name: 'fileRate',
+                columnConfig: {
+                  text: UB.i18n('Відсоток'),
+                  width: 150
+                }
+              },
+              {
+                name: 'fileDepartmentID',
+                columnConfig: {
+                  text: UB.i18n('Підрозділ'),
+                  width: 150
+                }
+              },
+              {
+                name: 'filePosName',
+                columnConfig: {
+                  text: UB.i18n('Місце роботи'),
+                  width: 150
+                }
+              },
+              {
+                name: 'msgType',
+                columnConfig: {
+                  text: UB.i18n('Тип повідомлення'),
+                  width: 150
+                }
+              },
+              {
+                name: 'description',
+                columnConfig: {
+                  text: UB.i18n('Текст повідомлення'),
+                  flex: 1
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Закрити'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.up('window').close()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.on('afterrender', async function () {
+      const me = this
+      const endRes = []
+      const lastestDownload = await UB.Repository('hr_orderRegistryLog')
+        .attrs('downloadNumber')
+        .where('orderID', '=', me.customParams.instanceID)
+        .orderByDesc('downloadNumber')
+        .selectSingle()
+      if (lastestDownload) {
+        if (me.customParams && me.customParams.instanceID) {
+          const resultRequest = await UB.Repository('hr_orderRegistryLog')
+            .attrs('*')
+            .where('orderID', '=', me.customParams.instanceID)
+            .whereIf(lastestDownload, 'downloadNumber', '=', lastestDownload.downloadNumber)
+            .selectAsObject()
+
+          resultRequest.forEach(itemRes => {
+            if (Number(itemRes.msgType) === 1) {
+              itemRes.msgType = 'Помилка'
+            } else if (Number(itemRes.msgType) === 2) {
+              itemRes.msgType = 'Зауваження'
+            } else {
+              itemRes.msgType = ''
+            }
+            if (!itemRes.params) {
+              endRes.push({
+                downloadNumber: itemRes.downloadNumber,
+                fileLineNumber: itemRes.fileLineNumber,
+                msgType: itemRes.msgType,
+                description: itemRes.description
+              })
+            } else {
+              endRes.push({
+                downloadNumber: itemRes.downloadNumber,
+                fileLineNumber: itemRes.fileLineNumber,
+                fileTabNumber: itemRes.params.fileTabNumber,
+                fileTAXCODE: itemRes.params.fileTAXCODE,
+                fileTotal: itemRes.params.fileTotal,
+                fileRate: itemRes.params.fileRate,
+                fileDepartmentID: itemRes.params.fileDepartmentID,
+                filePosName: itemRes.params.filePosName,
+                msgType: itemRes.msgType,
+                description: itemRes.description
+              })
+            }
+          })
+          me.down('[name=gridInsertedRows]').setLocalStoreData(endRes)
+        }
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,1349 @@
+/* global Ext $App appAC appHR AC UB */
+exports.formDef = 'HR.paySummary'
+
+Ext.define('HR.paySummary', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_paySummary',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    const labelStyleLink = 'color: #2f7c94; cursor:pointer'
+    const fieldStyleLink = 'cursor:pointer'
+
+    const debtSummaryListeners = {
+      click: {
+        element: 'body',
+        fn: function () {
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'hr_debtSummary',
+            entity: 'hr_service',
+            tabId: 'hr_debtSummary',
+            target: $App.getViewport().centralPanel,
+            cmpInitConfig: {
+              periodID: me.attr.periodID.getValue(),
+              dictFundSourceID: me.isFilter ? me.attr.dictFundSourceID.getValue() : null,
+              dictProgClassID: me.isFilter ? me.attr.dictProgClassID.getValue() : null,
+              dictProjectID: me.isFilter ? me.attr.dictProjectID.getValue() : null,
+              departmentID: me.isFilter ? me.attr.departmentID.getValue() : null,
+              childDep: me.isFilter ? me.attr.childDep.getValue() : null,
+              isFilter: me.isFilter
+            }
+          })
+        }
+      }
+    }
+
+    me.dockedItems = [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        ubID: 'mainToolbar',
+        enableOverflow: true,
+        items: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Оновити'),
+            iconCls: 'u-icon-refresh',
+            handler: function () {
+              me.getData()
+            }
+          },
+          {
+            xtype: 'button',
+            name: 'iconExport',
+            text: 'SAP',
+            hidden: true,
+            handler: function () {
+              $App.doCommand({
+                cmdType: 'showForm',
+                formCode: 'hr_settingsExportMethodSap',
+                cmpInitConfig: {
+                  ID: me.instanceID,
+                  periodID: me.attr.periodID.getFieldValue('ID'),
+                  period: me.attr.periodID.getFieldValue('name'),
+                  accOperation: me.down('[name=accOperation]'),
+                  onEditData: () => {
+                    me.onRefresh()
+                  }
+                }
+              })
+            }
+          },
+          {
+            xtype: 'button',
+            name: 'exportExpress',
+            text: 'Express',
+            hidden: true,
+            handler: function () {
+              $App.doCommand({
+                cmdType: 'showForm',
+                formCode: 'hr_settingsExportMethodExpress',
+                cmpInitConfig: {
+                  ID: me.instanceID,
+                  periodID: me.attr.periodID.getFieldValue('ID'),
+                  period: me.attr.periodID.getFieldValue('name'),
+                  accOperation: me.down('[name=accOperation]'),
+                  onEditData: () => {
+                    me.onRefresh()
+                  }
+                }
+              })
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Розрахувати'),
+            name: 'reCalculate',
+            hidden: true,
+            iconCls: 'fas fa-calculator',
+            cls: 'green-action',
+            handler: function () {
+              me.packCalc()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Фільтр'),
+            name: 'filterButton',
+            iconCls: 'u-icon-layers',
+            handler: function (btn) {
+              me.isFilter = !me.isFilter
+              me.attr.filterPanel[me.isFilter ? 'show' : 'hide']()
+              btn.addCls(me.isFilter ? 'custom-action_btn' : '')
+              btn.removeCls(!me.isFilter ? 'custom-action_btn' : '')
+              btn.setTooltip(me.isFilter ? UB.i18n('Виключити параметри фільтрації показників') : UB.i18n('Включити параметри фільтрації показників'))
+            }
+          },
+          {
+            xtype: 'label',
+            cls: 'x-form-item-label field-label-red',
+            text: UB.i18n('Автоматичний розрахунок зарплати зупинено'),
+            name: 'hrOffRecalculate',
+            hidden: true
+          }
+        ]
+      }
+    ]
+
+    me.items = [
+      {
+        region: 'north',
+        layout: { type: 'vbox', align: 'stretch' },
+        // split: true,
+        items: [
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'label',
+                text: UB.i18n('Період:'),
+                cls: 'x-form-item-label',
+                margin: '8 0 0 15',
+                width: 130
+              },
+              {
+                xtype: 'button',
+                text: '<',
+                margin: '2 0 0 0',
+                tooltip: UB.i18n('Попередній період'),
+                width: 30,
+                handler: () => {
+                  const priorID = me.attr.periodID.getFieldValue('priorPeriodID')
+                  if (priorID) {
+                    me.attr.periodID.setValueById(priorID)
+                  }
+                }
+              },
+              {
+                xtype: 'ubcombobox',
+                name: 'periodID',
+                fieldLabel: '',
+                labelWidth: 160,
+                margin: '2 0 0 5',
+                pageSize: 50,
+                width: 300,
+                hideEntityItemInContext: true,
+                selectOnFocus: true,
+                ubRequest: {
+                  entity: 'hr_dictPeriod',
+                  fieldList: ['ID', 'description', 'name', 'dateFrom', 'dateTo', 'orgID', 'isCurrent', 'isClosed',
+                    'priorPeriodID', 'nextPeriodID', 'priorPeriodID.isCurrent', 'nextPeriodID.isCurrent'],
+                  orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                },
+                listeners: {
+                  expand: appHR.periodExpand,
+                  change: function (ctrl, value) {
+                    me.down('[name=postingAction]').setDisabled(true)
+                    me.down('[name=cancelPostingAction]').setDisabled(true)
+                    me.attr.departmentID.store.ubRequest.__mip_ondate = AC.dateService.shiftDate(me.attr.periodID.getFieldValue('dateTo'))
+                    if (value) {
+                      me.getData()
+                    }
+                  }
+                }
+              },
+              {
+                xtype: 'button',
+                text: '>',
+                margin: '2 15 0 0',
+                tooltip: UB.i18n('Наступний період'),
+                width: 30,
+                handler: () => {
+                  const nextID = me.attr.periodID.getFieldValue('nextPeriodID')
+                  if (nextID) {
+                    me.attr.periodID.setValueById(nextID)
+                  }
+                }
+              },
+              {
+                layout: { type: 'hbox', pack: 'end' },
+                flex: 1,
+                items: [
+                  {
+                    xtype: 'progressbar',
+                    margin: '8 15 5 15',
+                    name: 'percentProgressBar',
+                    interval: 100,
+                    increment: 1,
+                    width: 200
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Стан розрахунку'),
+                    iconCls: 'u-icon-circle-info',
+                    width: 35,
+                    cls: 'green-action',
+                    listeners: {
+                      click: function () {
+                        $App.doCommand({
+                          cmdType: 'showForm',
+                          formCode: 'hr_paySummaryCalcState',
+                          entity: 'hr_service',
+                          cmpInitConfig: {
+                            periodID: me.attr.periodID.getValue()
+                          }
+                        })
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubdatetimefield',
+                    name: 'dateCalc',
+                    fieldLabel: UB.i18n('виконано'),
+                    labelWidth: 80,
+                    fieldStyle: 'text-align: right',
+                    readOnly: true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            name: 'filterPanel',
+            // split: true,
+            margin: '0 0 8 0',
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'departmentID',
+                        fieldLabel: UB.i18n('Підрозділ'),
+                        labelWidth: 160,
+                        width: 570,
+                        displayField: 'caption',
+                        valueField: 'mi_data_id',
+                        allowBlank: true,
+                        ubRequest: {
+                          entity: 'hr_department',
+                          method: 'select',
+                          fieldList: ['mi_data_id', 'caption']
+                        },
+                        listeners: {
+                          change: function (ctrl, value) {
+                            if (!value) {
+                              me.attr.childDep.setValue(false)
+                              me.attr.childDep.setReadOnly(true)
+                              me.skipGetData = true
+                            } else {
+                              me.attr.childDep.setReadOnly(!!me.defaultValues)
+                            }
+                            if (!me.skipGetData) {
+                              me.getData()
+                            }
+                            me.skipGetData = false
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'childDep',
+                        fieldLabel: UB.i18n('з підлеглими'),
+                        labelWidth: 100,
+                        value: true,
+                        listeners: {
+                          change: function () {
+                            me.getData()
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictFundSourceID',
+                        fieldLabel: UB.i18n('Джерело фінансування'),
+                        labelWidth: 160,
+                        width: 570,
+                        displayField: 'name',
+                        valueField: 'ID',
+                        multiSelect: true,
+                        allowBlank: true,
+                        ubRequest: {
+                          entity: 'ac_fundSource',
+                          method: 'selectByOrg',
+                          fieldList: ['ID', 'name']
+                        },
+                        listeners: {
+                          blur: (fld) => {
+                            me.attr.dictFundSourceID.setValue(fld.getValue() ? fld.getValue().split(',').map(id => parseInt(id)) : [])
+                            me.getData()
+                          },
+                          afterrender: function (ctrl) {
+                            ctrl.store.ubRequest.orgID = appAC.globalOrganization()
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictProgClassID',
+                        fieldLabel: UB.i18n('КПК'),
+                        labelWidth: 60,
+                        width: 570,
+                        displayField: 'description',
+                        valueField: 'ID',
+                        multiSelect: true,
+                        hidden: true,
+                        allowBlank: true,
+                        ubRequest: {
+                          entity: 'ac_dictProgClass',
+                          method: 'selectByOrg',
+                          fieldList: ['ID', 'description']
+                        },
+                        listeners: {
+                          blur: (fld) => {
+                            me.attr.dictProgClassID.setValue(fld.getValue() ? fld.getValue().split(',').map(id => parseInt(id)) : [])
+                            me.getData()
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictProjectID',
+                        fieldLabel: UB.i18n('Проєкт'),
+                        labelWidth: 60,
+                        width: 570,
+                        displayField: 'description',
+                        valueField: 'ID',
+                        multiSelect: true,
+                        hidden: true,
+                        allowBlank: true,
+                        ubRequest: {
+                          entity: 'ac_dictProject',
+                          method: 'selectByOrg',
+                          fieldList: ['ID', 'description']
+                        },
+                        listeners: {
+                          blur: (fld) => {
+                            me.attr.dictProjectID.setValue(fld.getValue() ? fld.getValue().split(',').map(id => parseInt(id)) : [])
+                            me.getData()
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'tabpanel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        items: [
+          {
+            xtype: 'panel',
+            title: UB.i18n('Зарплата'),
+            layout: 'border',
+            flex: 1,
+            items: [
+              {
+                layout: { type: 'hbox' },
+                region: 'north',
+                listeners: debtSummaryListeners,
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'displayfield',
+                        name: 'balanceIn',
+                        fieldLabel: UB.i18n('Вхідний залишок'),
+                        labelWidth: 130,
+                        width: 300,
+                        renderer: AC.gridUtils.rendererToCurrency,
+                        fieldStyle: fieldStyleLink,
+                        labelStyle: labelStyleLink
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'displayfield',
+                        name: 'debtOrgSumIn',
+                        fieldLabel: UB.i18n('Борг підприємства'),
+                        labelWidth: 130,
+                        width: 300,
+                        renderer: AC.gridUtils.rendererToCurrency,
+                        fieldStyle: fieldStyleLink,
+                        labelStyle: labelStyleLink
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox', pack: 'end' },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'displayfield',
+                        name: 'debtEmployeeSumIn',
+                        fieldLabel: UB.i18n('Борг працівників'),
+                        labelWidth: 130,
+                        width: 300,
+                        renderer: AC.gridUtils.rendererToCurrency,
+                        fieldStyle: fieldStyleLink,
+                        labelStyle: labelStyleLink
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                xtype: 'acGrid',
+                name: 'accrual',
+                stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_paySummary_accrual'),
+                flex: 1,
+                autoScroll: true,
+                region: 'center',
+                storeType: 'local',
+                disablePaging: true,
+                notWriteChanges: true,
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                hideDefaultAction: true,
+                showToolBar: true,
+                enableMultifilter: true,
+                summary: { paySum: (store, dataIndex) => {
+                  const allRecord = store.data
+                  return allRecord.items.reduce((sum, row) => {
+                    return sum + (['141', '201', '202', '203'].includes(row.get('methodCode')) ? 0 : row.get('ignoreInCalcPay') ? 0 : (row.get(dataIndex) || 0))
+                  }, 0)
+                } },
+                getRowClass: (record) => {
+                  if (['141', '201', '202', '203'].includes(record.get('methodCode')) || record.get('ignoreInCalcPay')) {
+                    return 'grd-color-grey'
+                  }
+                },
+                onItemDoubleClick: function (row, record) {
+                  $App.doCommand({
+                    cmdType: 'showForm',
+                    formCode: 'hr_paySummaryPayEl',
+                    tabId: 'hr_paySummary' + record.get('payElID'),
+                    target: $App.getViewport().centralPanel,
+                    cmpInitConfig: {
+                      defaultValues: {
+                        dictFundSourceID: me.isFilter ? me.attr.dictFundSourceID.getValue() : null,
+                        dictProgClassID: me.isFilter ? me.attr.dictProgClassID.getValue() : null,
+                        dictProjectID: me.isFilter ? me.attr.dictProjectID.getValue() : null,
+                        departmentID: me.isFilter ? me.attr.departmentID.getValue() : null,
+                        childDep: me.isFilter ? me.attr.childDep.getValue() : null,
+                        payElName: `${record.get('code')} ${record.get('name')}`,
+                        periodID: me.attr.periodID.getValue(),
+                        periodName: me.attr.periodID.getFieldValue('description'),
+                        payElID: record.get('payElID'),
+                        openFrom: 'PaySummary'
+                      }
+                    }
+                  })
+                },
+                fields: [
+                  { name: 'ID' },
+                  { name: 'periodID' },
+                  { name: 'payElID' },
+                  { name: 'methodCode' },
+                  { name: 'ignoreInCalcPay' },
+                  { name: 'code', columnConfig: { text: UB.i18n('Код'), width: 50, sortBy: 'Number', filterBy: 'int' } },
+                  {
+                    name: 'name',
+                    columnConfig: {
+                      text: UB.i18n('Нарахування'),
+                      flex: 1,
+                      filterBy: 'string',
+                      renderer: (value, meta, record) => {
+                        if (record.get('payElDeleted')) { meta.tdCls = 'grd-line-through' }
+                        if (record.get('ignoreInCalcPay')) { meta.tdCls = 'grd-color-grey' }
+                        return value
+                      }
+                    }
+                  },
+                  { name: 'payElDeleted' },
+                  { name: 'paySum', columnConfig: { text: UB.i18n('Сума'), width: 150, align: 'right', floatFormat: 2, sortBy: 'Number', filterBy: 'float' } }
+                ]
+              },
+              {
+                xtype: 'acGrid',
+                name: 'retention',
+                stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_paySummary_retention'),
+                flex: 1,
+                autoScroll: true,
+                split: true,
+                region: 'east',
+                width: '50%',
+                storeType: 'local',
+                disablePaging: true,
+                notWriteChanges: true,
+                showToolBar: true,
+                enableMultifilter: true,
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                summary: { paySum: (store, dataIndex) => {
+                  const allRecord = store.data
+                  return allRecord.items.reduce((sum, row) => {
+                    return sum + (row.get('ignoreInCalcPay') ? 0 : (row.get(dataIndex) || 0))
+                  }, 0)
+                } },
+                getRowClass: (record) => {
+                  if (record.get('ignoreInCalcPay')) {
+                    return 'grd-color-grey'
+                  }
+                },
+                onItemDoubleClick: function (row, record) {
+                  $App.doCommand({
+                    cmdType: 'showForm',
+                    formCode: 'hr_paySummaryPayEl',
+                    tabId: 'hr_paySummary' + record.get('payElID'),
+                    target: $App.getViewport().centralPanel,
+                    cmpInitConfig: {
+                      defaultValues: {
+                        dictFundSourceID: me.isFilter ? me.attr.dictFundSourceID.getValue() : null,
+                        dictProgClassID: me.isFilter ? me.attr.dictProgClassID.getValue() : null,
+                        dictProjectID: me.isFilter ? me.attr.dictProjectID.getValue() : null,
+                        departmentID: me.isFilter ? me.attr.departmentID.getValue() : null,
+                        childDep: me.isFilter ? me.attr.childDep.getValue() : null,
+                        payElName: `${record.get('code')} ${record.get('name')}`,
+                        periodID: me.attr.periodID.getValue(),
+                        periodName: me.attr.periodID.getFieldValue('description'),
+                        payElID: record.get('payElID'),
+                        openFrom: 'PaySummary'
+                      }
+                    }
+                  })
+                },
+                fields: [
+                  { name: 'ID' },
+                  { name: 'periodID' },
+                  { name: 'payElID' },
+                  { name: 'code', columnConfig: { text: UB.i18n('Код'), width: 50, sortBy: 'Number', filterBy: 'int' } },
+                  {
+                    name: 'name',
+                    columnConfig: {
+                      text: UB.i18n('Утримання'),
+                      flex: 1,
+                      filterBy: 'string',
+                      renderer: (value, meta, record) => {
+                        if (record.get('payElDeleted')) { meta.tdCls = 'grd-line-through' }
+                        if (record.get('ignoreInCalcPay')) { meta.tdCls = 'grd-color-grey' }
+                        return value
+                      }
+                    }
+                  },
+                  { name: 'payElDeleted' },
+                  { name: 'ignoreInCalcPay' },
+                  { name: 'paySum', columnConfig: { text: UB.i18n('Сума'), width: 150, align: 'right', floatFormat: 2, sortBy: 'Number', filterBy: 'float' } }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                region: 'south',
+                split: true,
+                listeners: debtSummaryListeners,
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'displayfield',
+                        name: 'balanceOut',
+                        fieldLabel: UB.i18n('Вихідний залишок'),
+                        labelWidth: 130,
+                        width: 300,
+                        renderer: AC.gridUtils.rendererToCurrency,
+                        fieldStyle: fieldStyleLink,
+                        labelStyle: labelStyleLink
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'displayfield',
+                        name: 'debtOrgSumOut',
+                        fieldLabel: UB.i18n('Борг підприємства'),
+                        labelWidth: 130,
+                        width: 300,
+                        renderer: AC.gridUtils.rendererToCurrency,
+                        fieldStyle: fieldStyleLink,
+                        labelStyle: labelStyleLink
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox', pack: 'end' },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'displayfield',
+                        name: 'debtEmployeeSumOut',
+                        fieldLabel: UB.i18n('Борг працівників'),
+                        labelWidth: 130,
+                        width: 300,
+                        renderer: AC.gridUtils.rendererToCurrency,
+                        fieldStyle: fieldStyleLink,
+                        labelStyle: labelStyleLink
+                      }
+                    ]
+                  }
+
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            title: UB.i18n('Нарахування на зарплату'),
+            layout: 'border',
+            flex: 1,
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'accrualFund',
+                stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_paySummary_accrualFund'),
+                flex: 1,
+                autoScroll: true,
+                region: 'center',
+                storeType: 'local',
+                disablePaging: true,
+                notWriteChanges: true,
+                showToolBar: true,
+                enableMultifilter: true,
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                exportExcel: {
+                  title: UB.i18n('Нарахування на зарплату'),
+                  fileName: UB.i18n('Нарахування на зарплату')
+                },
+                summary: { paySum: (store, dataIndex) => {
+                  const allRecord = store.data
+                  return allRecord.items.reduce((sum, row) => {
+                    return sum + (row.get('isRecSum') ? 0 : (row.get(dataIndex) || 0))
+                  }, 0)
+                } },
+                getRowClass: (record) => {
+                  if (record.get('isRecSum')) {
+                    return 'grd-color-grey'
+                  }
+                },
+                onItemDoubleClick: function (row, record) {
+                  $App.doCommand({
+                    cmdType: 'showForm',
+                    formCode: 'hr_paySummaryPayFund',
+                    tabId: 'hr_paySummary' + record.get('payFundID'),
+                    target: $App.getViewport().centralPanel,
+                    cmpInitConfig: {
+                      defaultValues: {
+                        dictFundSourceID: me.isFilter ? me.attr.dictFundSourceID.getValue() : null,
+                        dictProgClassID: me.isFilter ? me.attr.dictProgClassID.getValue() : null,
+                        dictProjectID: me.isFilter ? me.attr.dictProjectID.getValue() : null,
+                        departmentID: me.isFilter ? me.attr.departmentID.getValue() : null,
+                        childDep: me.isFilter ? me.attr.childDep.getValue() : null,
+                        payFundName: `${record.get('code')} ${record.get('name')}`,
+                        periodID: me.attr.periodID.getValue(),
+                        periodName: me.attr.periodID.getFieldValue('description'),
+                        payFundID: record.get('payFundID'),
+                        openFrom: 'PaySummary'
+                      }
+                    }
+                  })
+                },
+                fields: [
+                  { name: 'ID' },
+                  { name: 'periodID' },
+                  { name: 'payFundID' },
+                  { name: 'isRecSum' },
+                  { name: 'code', columnConfig: { text: UB.i18n('Код'), width: 50, sortBy: 'Number', filterBy: 'int' } },
+                  { name: 'name', columnConfig: { text: UB.i18n('Назва'), flex: 1, sortBy: 'String', filterBy: 'string' } },
+                  { name: 'paySum', columnConfig: { text: UB.i18n('Сума'), width: 150, align: 'right', floatFormat: 2, sortBy: 'Number', filterBy: 'float' } }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            title: UB.i18n('Проводки'),
+            layout: 'border',
+            flex: 1,
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'accOperation',
+                flex: 1,
+                autoScroll: true,
+                region: 'center',
+                storeType: 'local',
+                disablePaging: true,
+                notWriteChanges: true,
+                showToolBar: true,
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                summary: { sumOperation: 'sum' },
+                multilineRows: true,
+                enableExpandableRows: true,
+                summaryDataOnClient: true,
+                grouping: {
+                  groupField: 'code',
+                  columnName: 'name',
+                  features: [{
+                    id: 'group',
+                    ftype: 'grouping',
+                    groupHeaderTpl: ['{[this.groupHeaderData(values)]}', {
+                      groupHeaderData: function (values) {
+                        const sum = Ext.util.Format.currency(values.rows[0].data.sumGroupOperation, '', 2)
+                        // Ext.util.Format.currency(values.rows.reduce((r, d) => r + d.data.sumOperation, 0), '', 2)
+                        return `<TABLE style="width:100%"><TR><TD>${values.rows[0].data.code} ${values.rows[0].data.name}</TD>
+                                <TD style="width:150px; text-align: center;" >${values.rows[0].data.dtCode || ''}</TD>
+                                <TD style="width:150px; text-align: center;" >${values.rows[0].data.ktCode || ''}</TD>
+                                <TD style="width:150px; text-align: right;" ></TD>
+                                <TD style="width:150px; text-align: right;" ></TD>
+                                <TD style="width:150px; text-align: right;" ></TD>
+                                <TD style="width:150px; text-align: right;" >${sum}</TD></TR></TABLE> `
+                      }
+                    }],
+                    enableGroupingMenu: false,
+                    hideGroupHeader: true,
+                    startCollapsed: true
+                  }]
+                },
+                getRowClass: () => {},
+                onItemDoubleClick: function (row, record) {
+                  $App.connection.run({
+                    entity: 'hr_paySummary',
+                    method: 'getDataByOperation',
+                    periodID: me.attr.periodID.getValue(),
+                    operationID: record.get('ID')
+                  }).then(response => {
+                    const data = JSON.parse(response.resultData)
+                    $App.doCommand({
+                      cmdType: 'showForm',
+                      formCode: 'hr_paySummaryOperation',
+                      isModal: true,
+                      cmpInitConfig: {
+                        defaultValues: {
+                          accrual: data,
+                          operationName: `${record.get('code')} ${record.get('name')}`
+                        }
+                      }
+                    })
+                  })
+                },
+                customToolBarActions: [
+                  {
+                    xtype: 'button',
+                    name: 'postingAction',
+                    scale: 'medium',
+                    iconCls: 'iconApprove',
+                    cls: 'add-new-action',
+                    tooltip: UB.i18n('Провести'),
+                    disabled: !AC.entityUtils.verifyRightsMethod('hr_paySummary', 'doPosting'),
+                    handler: () => { me.doPosting() }
+                  },
+                  {
+                    xtype: 'button',
+                    name: 'cancelPostingAction',
+                    scale: 'medium',
+                    iconCls: 'iconReject',
+                    cls: 'red-action',
+                    tooltip: UB.i18n('Відмінити проведення'),
+                    disabled: !AC.entityUtils.verifyRightsMethod('hr_paySummary', 'doCancelPosting'),
+                    handler: () => { me.doCancelPosting() }
+                  },
+                  {
+                    xtype: 'button',
+                    scale: 'medium',
+                    iconCls: 'fas fa-file-excel',
+                    tooltip: UB.i18n('Експорт'),
+                    cls: 'green-action',
+                    handler: () => { me.exportXLSX() }
+                  },
+                  {
+                    xtype: 'checkbox',
+                    name: 'withoutFundSource',
+                    boxLabelAlign: 'after',
+                    fieldLabel: UB.i18n('Передати без джерел фінансування'),
+                    labelWidth: 250
+                  }
+                ],
+                expandedRowConfig: {
+                  onExpandBody: function (rowNode, record, expandRow, eOpts) {
+                    let detail = `<td class="x-grid-cell-rowbody" colspan="10"><div class="x-grid-rowbody ">
+            <div width: 100%"><TABLE style="width:100%">
+            <TR><TD style="width:24%"><em><b>${UB.i18n('Рахунок Дт')}</b></em></TD>
+            <TD style="width:25%"><em><b>${record.get('dtDescription') || ''}</b></em></TD>
+            <TD style="width:2%"></TD>
+            <TD style="width:24%"><em><b>${UB.i18n('Рахунок Кт')}</b></em></TD>
+            <TD style="width:25%"><em><b>${record.get('ktDescription') || ''}</b></em></TD></TR>`
+                    for (let i = 0; i < 10; i++) {
+                      if (record.get(`dimensionDt${i}`) || record.get(`dimensionKt${i}`)) {
+                        detail += `<TR><TD style="width:24%"><em>${(record.get(`dimensionDt${i}`) || '&nbsp')}
+                </em></TD>
+                <TD style="width:25%"><em>${(record.get(`dimensionDt${i}Value`) || ' ')}</em></TD>
+                <TD style="width:2%"></TD>
+                <TD style="width:24%"><em>${(record.get(`dimensionKt${i}`) || '&nbsp')}</em></TD>
+                <TD style="width:25%"><em>${(record.get(`dimensionKt${i}Value`) || '&nbsp')}
+                </em></TD></TR>`
+                      }
+                    }
+
+                    detail += '</TABLE></div></td>'
+                    expandRow.innerHTML = detail
+                  }
+                },
+
+                fields: [
+                  { name: 'ID' },
+                  { name: 'dtDescription' },
+                  { name: 'ktDescription' },
+                  { name: 'dimensionDt0' }, { name: 'dimensionDt0Value' }, { name: 'dimensionDt1' }, { name: 'dimensionDt1Value' },
+                  { name: 'dimensionDt2' }, { name: 'dimensionDt2Value' }, { name: 'dimensionDt3' }, { name: 'dimensionDt3Value' },
+                  { name: 'dimensionDt4' }, { name: 'dimensionDt4Value' }, { name: 'dimensionDt5' }, { name: 'dimensionDt5Value' },
+                  { name: 'dimensionDt6' }, { name: 'dimensionDt6Value' }, { name: 'dimensionDt7' }, { name: 'dimensionDt7Value' },
+                  { name: 'dimensionDt8' }, { name: 'dimensionDt8Value' }, { name: 'dimensionDt9' }, { name: 'dimensionDt9Value' },
+                  { name: 'dimensionKt0' }, { name: 'dimensionKt0Value' }, { name: 'dimensionKt1' }, { name: 'dimensionKt1Value' },
+                  { name: 'dimensionKt2' }, { name: 'dimensionKt2Value' }, { name: 'dimensionKt3' }, { name: 'dimensionKt3Value' },
+                  { name: 'dimensionKt4' }, { name: 'dimensionKt4Value' }, { name: 'dimensionKt5' }, { name: 'dimensionKt5Value' },
+                  { name: 'dimensionKt6' }, { name: 'dimensionKt6Value' }, { name: 'dimensionKt7' }, { name: 'dimensionKt7Value' },
+                  { name: 'dimensionKt8' }, { name: 'dimensionKt8Value' }, { name: 'dimensionKt9' }, { name: 'dimensionKt9Value' },
+                  { name: 'code', columnConfig: { text: UB.i18n('Код'), width: 50, sortBy: 'Number', filterBy: 'int' } },
+                  { name: 'name', columnConfig: { text: UB.i18n('Бухгалтерська операція'), flex: 1, filterBy: 'string' } },
+                  { name: 'dtCode', columnConfig: { text: UB.i18n('Дебет'), width: 150, sortBy: 'Number', filterBy: 'float' } },
+                  { name: 'ktCode', columnConfig: { text: UB.i18n('Кредит'), width: 150, sortBy: 'Number', filterBy: 'float' } },
+                  { name: 'dictFundSourceIDName', columnConfig: { text: UB.i18n('Джерело фінансування'), width: 150, filterBy: 'string' } },
+                  { name: 'dictProgClassIDName', columnConfig: { text: UB.i18n('КПК'), width: 150, filterBy: 'string', hidden: !AC.settings.get('hrProgClassAcc', appAC.globalOrganization()) } },
+                  { name: 'dictProjectIDName', columnConfig: { text: UB.i18n('Проєкт'), width: 150, filterBy: 'string', hidden: !AC.settings.get('hrProjectAcc', appAC.globalOrganization()) } },
+                  {
+                    name: 'sumGroupOperation'
+                  },
+                  {
+                    name: 'sumOperation',
+                    columnConfig: {
+                      text: UB.i18n('Сума'),
+                      width: 150,
+                      align: 'right',
+                      floatFormat: 2,
+                      sortBy: (firstItem, secondItem, rFirstItem, rSecondItem) => {
+                        if (firstItem.sumGroupOperation < secondItem.sumGroupOperation) {
+                          return -1
+                        } else if (firstItem.sumGroupOperation > secondItem.sumGroupOperation) {
+                          return 1
+                        } else if (Number(String(rFirstItem || '0').replace(/,/g, '.').replace(/[^\d-.]/g, '') || 0) < Number(String(rSecondItem || '0').replace(/,/g, '.').replace(/[^\d-.]/g, '') || 0)) {
+                          return -1
+                        } else if (Number(String(rFirstItem || '0').replace(/,/g, '.').replace(/[^\d-.]/g, '') || 0) > Number(String(rSecondItem || '0').replace(/,/g, '.').replace(/[^\d-.]/g, '') || 0)) {
+                          return 1
+                        }
+                      },
+                      filterBy: 'float'
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            title: UB.i18n('Платежі'),
+            layout: 'border',
+            flex: 1,
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'paymentOrder',
+                stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_paySummary_paymentOrder'),
+                flex: 1,
+                autoScroll: true,
+                region: 'center',
+                storeType: 'local',
+                disablePaging: true,
+                notWriteChanges: true,
+                showToolBar: true,
+                enableMultifilter: true,
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                exportExcel: {
+                  title: UB.i18n('Платежі'),
+                  fileName: UB.i18n('Платежі')
+                },
+                summary: { paySum: 'sum' },
+                getRowClass: function (row) {
+                  if (row.get('orderState') === 'POSTED') {
+                    return 'grd-color-lightgreen'
+                  } else if (!row.get('payRollName')) {
+                    return 'grd-color-blue'
+                  }
+                },
+                onItemDoubleClick: function (row, record) {
+                  UB.Repository('hr_paymentOrderDt')
+                    .attrs(['ID', 'employeeNumberID', 'employeeNumberID.description', 'paySum', 'employeeNumberID.posName', 'employeeNumberID.depName'])
+                    .where('paymentOrderID', '=', record.get('ID'))
+                    .selectAsObject({
+                      'employeeNumberID.posName': 'posName',
+                      'employeeNumberID.depName': 'depName'
+                    })
+                    .then(paymentOrderDt => {
+                      $App.doCommand({
+                        cmdType: 'showForm',
+                        formCode: 'hr_paymentOrder',
+                        tabId: 'hr_paySummary' + record.get('ID'),
+                        target: $App.getViewport().centralPanel,
+                        cmpInitConfig: {
+                          readOnlyAttr: ['payer'],
+                          defaultValues: {
+                            payObligatoryName: record.get('name'),
+                            payer: record.get('payerName'),
+                            contractor: record.get('contractorName'),
+                            contrAccount: record.get('contrAccountName'),
+                            paySum: record.get('paySum'),
+                            payRollName: record.get('payRollName'),
+                            payRollDate: record.get('payRollDate'),
+                            paymentOrderDt: paymentOrderDt,
+                            orderState: record.get('orderState'),
+                            periodID: me.attr.periodID.getValue(),
+                            periodName: me.attr.periodID.getFieldValue('description'),
+                            payObligatoryID: record.get('payObligatoryID'),
+                            openFrom: 'PaySummary'
+                          }
+                        }
+                      })
+                    })
+                },
+                fields: [
+                  { name: 'ID' },
+                  { name: 'payerName' },
+                  { name: 'payRollName' },
+                  { name: 'payObligatoryID' },
+                  { name: 'payRollDate' },
+                  { name: 'paymentOrderDt' },
+                  { name: 'name', columnConfig: { text: UB.i18n('Призначення платежу'), flex: 1, filterBy: 'string' } },
+                  { name: 'contractorName', columnConfig: { text: UB.i18n('Отримувач'), flex: 1, filterBy: 'string' } },
+                  { name: 'contrAccountName', columnConfig: { text: UB.i18n('Р/р отримувача'), flex: 1, filterBy: 'string' } },
+                  { name: 'docDescription', columnConfig: { text: UB.i18n('Документ-підстава'), flex: 1, filterBy: 'string' } },
+                  { name: 'orderState', columnConfig: { text: UB.i18n('Стан'), flex: 1, sortByRendered: true, enumGroup: 'HR_ORDER_STATE', filterBy: 'string', sortBy: 'String' } },
+                  { name: 'paySum', columnConfig: { text: UB.i18n('Сума'), width: 150, align: 'right', floatFormat: 2, sortBy: 'Number', filterBy: 'float' } }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            title: UB.i18n('Статистика'),
+            layout: 'border',
+            flex: 1,
+            defaults: { labelWidth: 90 },
+            items: [
+              {
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    xtype: 'textfield',
+                    name: 'employees',
+                    fieldLabel: UB.i18n('Працівників'),
+                    width: 300,
+                    fieldStyle: fieldStyleLink,
+                    labelStyle: labelStyleLink,
+                    readOnly: true,
+                    listeners: {
+                      focus: function () {
+                        $App.doCommand({
+                          cmdType: 'showForm',
+                          formCode: 'hr_employeeNumberList',
+                          entity: 'hr_employeeNumberList',
+                          customParams: {
+                            baseDate: me.attr.periodID.getFieldValue('dateTo'),
+                            firstPeriodDay: me.attr.periodID.getFieldValue('dateFrom'),
+                            paySummaryFilter: 'employees',
+                            departmentIDs: me.departmentIDs
+                          },
+                          tabId: `hr_empEmployee`,
+                          target: $App.getViewport().centralPanel
+                        })
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'textfield',
+                    name: 'hired',
+                    fieldLabel: UB.i18n('Прийнято'),
+                    fieldStyle: fieldStyleLink,
+                    labelStyle: labelStyleLink,
+                    width: 230,
+                    readOnly: true,
+                    listeners: {
+                      focus: function (e, t, options) {
+                        if (me.attr.periodID.getValue()) {
+                          $App.doCommand({
+                            cmdType: 'showForm',
+                            formCode: 'hr_employeeNumberList',
+                            entity: 'hr_employeeNumberList',
+                            customParams: {
+                              baseDate: me.attr.periodID.getFieldValue('dateTo'),
+                              paySummaryFilter: 'hired',
+                              firstPeriodDay: me.attr.periodID.getFieldValue('dateFrom'),
+                              departmentIDs: me.departmentIDs
+                            },
+                            tabId: `hr_empHired`,
+                            target: $App.getViewport().centralPanel
+                          })
+                        }
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'textfield',
+                    name: 'quitted',
+                    fieldLabel: UB.i18n('Звільнено'),
+                    width: 230,
+                    fieldStyle: fieldStyleLink,
+                    labelStyle: labelStyleLink,
+                    readOnly: true,
+                    listeners: {
+                      focus: function (e, t, options) {
+                        if (me.attr.periodID.getValue()) {
+                          $App.doCommand({
+                            cmdType: 'showForm',
+                            formCode: 'hr_employeeNumberList',
+                            entity: 'hr_employeeNumberList',
+                            customParams: {
+                              baseDate: appAC.globalApplicationDate() > AC.dateService.shiftDate(me.attr.periodID.getFieldValue('dateTo'))
+                                ? AC.dateService.shiftDate(me.attr.periodID.getFieldValue('dateTo')) : appAC.globalApplicationDate(),
+                              paySummaryFilter: 'quitted',
+                              firstPeriodDay: AC.dateService.shiftDate(me.attr.periodID.getFieldValue('dateFrom')),
+                              departmentIDs: me.departmentIDs
+                            },
+                            tabId: `hr_empQuitted`,
+                            target: $App.getViewport().centralPanel
+                          })
+                        }
+                      }
+                    }
+                  }
+                ]
+
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.packCalc = () => {
+      $App.connection.run({
+        entity: 'hr_paySummary',
+        method: 'setPackCalc',
+        orgID: appAC.globalOrganization()
+      }).then(() => {
+        me.getData()
+      })
+    }
+
+    me.getData = () => {
+      if (!me.attr.periodID.getValue()) {
+        return
+      }
+      me.down('[name=hrOffRecalculate]')[AC.settings.get('hrOffRecalculate', appAC.globalOrganization()) ? 'show' : 'hide']()
+
+      me.attr.accrual.setLocalStoreData([])
+      me.attr.retention.setLocalStoreData([])
+      me.attr.accrualFund.setLocalStoreData([])
+      me.setLoading(true)
+      me.down('[name=postingAction]').setDisabled(true)
+      me.down('[name=cancelPostingAction]').setDisabled(true)
+      $App.connection.run({
+        entity: 'hr_paySummary',
+        method: 'getPaySummary',
+        periodID: me.attr.periodID.getValue(),
+        departmentID: me.isFilter ? me.attr.departmentID.getValue() : null,
+        childDep: me.isFilter ? me.attr.childDep.getValue() : null,
+        dictFundSourceID: me.isFilter ? me.attr.dictFundSourceID.getValue() : null,
+        dictProgClassID: me.isFilter ? me.attr.dictProgClassID.getValue() : null,
+        dictProjectID: me.isFilter ? me.attr.dictProjectID.getValue() : null
+      }).then(response => {
+        me.attr.percentProgressBar.updateProgress(response.percent / 100, UB.i18n(`Розрахунок - {0}%`, response.percent), true)
+        const resultData = JSON.parse(response.resultData)
+        if (me.currentPeriod && (response.currentPeriod.ID !== me.currentPeriod.ID && me.currentPeriod.ID === me.attr.periodID.getValue())) {
+          me.attr.periodID.setValueById(response.currentPeriod.ID)
+          me.currentPeriod = response.currentPeriod
+        }
+        if (me.attr.periodID.getFieldValue('isClosed')) {
+          me.down('[name=postingAction]').setDisabled(!resultData.entry.posting)
+          me.down('[name=cancelPostingAction]').setDisabled(!resultData.entry.cancelPosting)
+        }
+        if (!resultData.balanceOut) {
+          resultData.balanceOut = {}
+        }
+        me.departmentIDs = resultData.departmentIDs
+
+        me.attr.employees.setValue(resultData.balanceOut.employees || 0)
+        me.attr.hired.setValue(resultData.balanceOut.hired || 0)
+        me.attr.quitted.setValue(resultData.balanceOut.quitted || 0)
+        me.attr.dateCalc.setValue(resultData.balanceOut.dateCalc ? AC.dateService.unshiftDate(resultData.balanceOut.dateCalc) : null)
+        me.attr.debtOrgSumIn.setValue(resultData.balanceIn.debtOrgSum || 0)
+        me.attr.debtEmployeeSumIn.setValue(resultData.balanceIn.debtEmployeeSum || 0)
+        me.attr.debtOrgSumOut.setValue(resultData.balanceOut.debtOrgSum || 0)
+        me.attr.debtEmployeeSumOut.setValue(resultData.balanceOut.debtEmployeeSum || 0)
+        me.attr.balanceIn.setValue(AC.currencyService.round(((resultData.balanceIn.debtEmployeeSum || 0) - (resultData.balanceIn.debtOrgSum || 0)) *
+          (((resultData.balanceIn.debtEmployeeSum || 0) - (resultData.balanceIn.debtOrgSum || 0)) < 0 ? -1 : 1)
+        ))
+
+        me.attr.balanceOut.setValue(AC.currencyService.round(((resultData.balanceOut.debtEmployeeSum || 0) - (resultData.balanceOut.debtOrgSum || 0)) *
+          (((resultData.balanceOut.debtEmployeeSum || 0) - (resultData.balanceOut.debtOrgSum || 0)) < 0 ? -1 : 1)
+        ))
+        me.setGridData(resultData)
+        me.setLoading(false)
+      }, (err) => {
+        me.setLoading(false)
+        if (err.config && err.config.timeout) {
+          $App.dialogInfo(UB.i18n('Зараз відбувається перерахунок, спробуйте пізніше'))
+        } else {
+          throw err
+        }
+      })
+    }
+
+    me.setGridData = (data) => {
+      const accrual = []
+      const retention = []
+      const accrualFund = []
+
+      data.accrual.filter(o => o.payType === 'PAYMENT').forEach(row => {
+        accrual.push(row)
+      })
+      data.accrual.filter(o => o.payType !== 'PAYMENT').forEach(row => {
+        retention.push(row)
+      })
+      data.accrualFund.forEach(row => {
+        accrualFund.push(row)
+      })
+      me.attr.accrual.setLocalStoreData(accrual)
+      me.attr.retention.setLocalStoreData(retention)
+      me.attr.accrualFund.setLocalStoreData(accrualFund)
+      me.attr.paymentOrder.setLocalStoreData(data.paymentOrder)
+      const groupSum = []
+      data.accOperation.forEach(row => {
+        if (!groupSum[row.code]) {
+          groupSum[row.code] = data.accOperation.reduce((r, d) => r + (row.code === d.code ? d.sumOperation : 0), 0)
+        }
+        row.sumGroupOperation = groupSum[row.code]
+      })
+      me.attr.accOperation.setLocalStoreData(data.accOperation)
+    }
+    me.showEditForm = (data) => {
+    }
+
+    me.exportXLSX = () => {
+      $App.connection.run({
+        entity: 'hr_paySummary',
+        method: 'postingXLSX',
+        periodID: me.attr.periodID.getValue()
+      }).then(response => {
+        const data = JSON.parse(response.data)
+        AC.filesService.saveAsByBase64Buffer(data, response.fileName, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+        me.setLoading(false)
+      }, function (err) {
+        me.setLoading(false)
+        throw err
+      })
+    }
+    me.doPosting = () => {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_paySummary',
+        method: 'doPosting',
+        periodID: me.attr.periodID.getValue(),
+        withoutFundSource: me.attr.withoutFundSource.getValue()
+      }).then(response => {
+        $App.dialogInfo(response.message !== '' ? response.message : UB.i18n('Проведення створені'))
+        if (response.message === '') {
+          me.down('[name=postingAction]').setDisabled(true)
+          me.down('[name=cancelPostingAction]').setDisabled(false)
+        }
+        me.setLoading(false)
+      }, function (err) {
+        me.setLoading(false)
+        throw err
+      })
+    }
+    me.doCancelPosting = () => {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_paySummary',
+        method: 'doCancelPosting',
+        periodID: me.attr.periodID.getValue()
+      }).then(response => {
+        $App.dialogInfo(response.message !== '' ? response.message : UB.i18n('Проведення скасовані'))
+        if (response.message === '') {
+          me.down('[name=cancelPostingAction]').setDisabled(true)
+          me.down('[name=postingAction]').setDisabled(false)
+        }
+        me.setLoading(false)
+      }, function (err) {
+        me.setLoading(false)
+        throw err
+      })
+    }
+    me.calcEntry = () => {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_paySummary',
+        method: 'calcEntry',
+        periodID: me.attr.periodID.getValue(),
+        orgID: appAC.globalOrganization()
+      }).then(response => {
+        me.setLoading(false)
+        $App.dialogInfo(UB.i18n('Виконано'))
+      }, function (err) {
+        me.setLoading(false)
+        throw err
+      })
+    }
+
+    me.changeGlobal = () => {
+      const globalOrganization = appAC.globalOrganization()
+      me.attr.periodID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization })
+      me.attr.periodID.clearValue()
+      appHR.getCurrentPeriod(globalOrganization).then(response => { me.attr.periodID.setValueById(response.ID) })
+
+      AC.viewUtils.setWhereListProperty(me.attr.departmentID, [
+        ['orgID', '=', globalOrganization || 0],
+        ['state', '=', 'ACTIVE']
+      ], null, ['clearStore', 'clearWhereList', 'clearValue'])
+    }
+
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+
+    me.on('afterrender', () => {
+      const me = this
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+      me.attr = {
+        periodID: me.down('[name=periodID]'),
+        dictFundSourceID: me.down('[name=dictFundSourceID]'),
+        dictProgClassID: me.down('[name=dictProgClassID]'),
+        dictProjectID: me.down('[name=dictProjectID]'),
+        childDep: me.down('[name=childDep]'),
+        departmentID: me.down('[name=departmentID]'),
+        employees: me.down('[name=employees]'),
+        hired: me.down('[name=hired]'),
+        quitted: me.down('[name=quitted]'),
+        dateCalc: me.down('[name=dateCalc]'),
+        debtOrgSumIn: me.down('[name=debtOrgSumIn]'),
+        debtEmployeeSumIn: me.down('[name=debtEmployeeSumIn]'),
+        debtOrgSumOut: me.down('[name=debtOrgSumOut]'),
+        debtEmployeeSumOut: me.down('[name=debtEmployeeSumOut]'),
+        accrual: me.down('[name=accrual]'),
+        retention: me.down('[name=retention]'),
+        accrualFund: me.down('[name=accrualFund]'),
+        paymentOrder: me.down('[name=paymentOrder]'),
+        accOperation: me.down('[name=accOperation]'),
+        balanceOut: me.down('[name=balanceOut]'),
+        balanceIn: me.down('[name=balanceIn]'),
+        percentProgressBar: me.down('[name=percentProgressBar]'),
+        filterButton: me.down('[name=filterButton]'),
+        filterPanel: me.down('[name=filterPanel]'),
+        iconExport: me.down('[name=iconExport]'),
+        exportExpress: me.down('[name=exportExpress]'),
+        withoutFundSource: me.down('[name=withoutFundSource]')
+      }
+      me.isFilter = !!me.isFilter
+      me.attr.filterButton.addCls(me.isFilter ? 'custom-action_btn' : '')
+      me.attr.filterButton.removeCls(!me.isFilter ? 'custom-action_btn' : '')
+      me.attr.filterButton.setTooltip(me.isFilter ? UB.i18n('Виключити параметри фільтрації показників') : UB.i18n('Включити параметри фільтрації показників'))
+      me.attr.filterPanel[me.isFilter ? 'show' : 'hide']()
+      const globalOrganizationID = appAC.globalOrganization()
+      UB.Repository('hr_exportMethod')
+        .attrs(['ID', 'typeFile'])
+        .where('[orgID]', '=', globalOrganizationID)
+        .where('[typeFile]', 'in', ['fileSAP', 'fileExpress'])
+        .where('[isActive]', '=', 1)
+        .selectAsObject().then(data => {
+          if (data.find(o => o['typeFile'] === 'fileSAP')) {
+            me.attr.iconExport.show()
+          }
+          if (data.find(o => o['typeFile'] === 'fileExpress')) {
+            me.attr.exportExpress.show()
+          }
+        })
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganizationID })
+      me.attr.dictFundSourceID.store.ubRequest.orgID = globalOrganizationID
+      me.attr.dictFundSourceID.store.ubRequest.emptyValue = true
+      me.attr.dictProgClassID.store.ubRequest.emptyValue = true
+      me.attr.dictProjectID.store.ubRequest.emptyValue = true
+      me.attr.dictProgClassID[AC.settings.get('hrProgClassAcc', appAC.globalOrganization()) ? 'show' : 'hide']()
+      me.attr.dictProjectID[AC.settings.get('hrProjectAcc', appAC.globalOrganization()) ? 'show' : 'hide']()
+      if (me.defaultValues) {
+        me.defaultValues.periodID && me.attr.periodID.setValueById(me.defaultValues.periodID)
+      } else {
+        appHR.getCurrentPeriod(globalOrganizationID).then(response => {
+          me.attr.periodID.setValueById(response.ID)
+        })
+      }
+
+      if (!me.attr.departmentID.getValue()) {
+        me.attr.childDep.setReadOnly(true)
+        me.attr.childDep.setValue(false)
+      }
+
+      AC.viewUtils.setWhereListProperty(me.attr.departmentID, [
+        ['orgID', '=', globalOrganizationID || 0],
+        ['state', '=', 'ACTIVE']
+      ], null, ['clearStore', 'clearWhereList', 'clearValue'])
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

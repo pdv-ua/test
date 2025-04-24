@@ -1,0 +1,155 @@
+{
+  "caption": "Ранг держслужбовця",
+  "description": "Ранг держслужбовця",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 50,
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код",
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 50,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "infoText",
+      "dataType": "String",
+      "size": 200,
+      "caption": "В текст",
+      "description": "В текст",
+      "documentation": "В текст",
+      "allowNull": true
+    },
+    {
+      "name": "printName",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Назва для друку",
+      "description": "Назва для друку",
+      "documentation": "Назва для друку",
+      "allowNull": true
+    },
+    {
+      "name": "printNameGen",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Назва для друку (родовий)",
+      "description": "Назва для друку в родовому відмінку",
+      "documentation": "Назва для друку в родовому відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 120,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["name"],
+        "compositeSeparator": " "
+      }
+    },
+    {
+      "name": "rankType",
+      "dataType": "Enum",
+      "enumGroup": "HR_RANK_TYPE",
+      "caption": "Тип рангу",
+      "documentation": "Тип рангу",
+      "description": "Тип рангу",
+      "defaultView": false,
+      "allowNull": true,
+      "defaultValue": "COMMON"
+    },
+    {
+      "name": "isActive",
+      "dataType": "Boolean",
+      "caption": "Ознака дії",
+      "description": "Ознака дії",
+      "documentation": "Ознака дії",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": true
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "codeAsNumber",
+      "dataType": "Int",
+      "caption": "Ранг",
+      "description": "Ранг",
+      "documentation": "Ранг",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "dbo.remove_chars_from_string({self}.code)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "remove_chars_from_string({self}.code)"
+        }
+      ]
+    },
+	{
+      "name": "dictRankNextID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictRank",
+      "caption": "Наступний ранг",
+      "description": "Наступний ранг",
+      "documentation": "Наступний ранг",
+      "allowNull": true
+    },
+    {
+      "name": "nextRankMonth",
+      "dataType": "Int",
+      "caption": "Наступне присвоєння (міс.)",
+      "description": "Наступне присвоєння (міс.)",
+      "documentation": "Наступне присвоєння (міс.)"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

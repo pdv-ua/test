@@ -1,0 +1,294 @@
+{
+  "caption": "Розрахунковий період",
+  "description": "Розрахунковий період",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "pYear",
+      "dataType": "Int",
+      "caption": "Рік",
+      "description": "Рік",
+      "documentation": "Рік",
+      "allowNull": false
+    },
+    {
+      "name": "dictMonthID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictMonth",
+      "caption": "Місяць",
+      "description": "Місяць",
+      "documentation": "Місяць",
+      "allowNull": false
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "documentation": "Організаційна одиниця",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата з",
+      "description": "Дата з",
+      "documentation": "Дата з",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата по",
+      "description": "Дата по",
+      "documentation": "Дата по",
+      "allowNull": false
+    },
+    {
+      "name": "isClosed",
+      "dataType": "Boolean",
+      "caption": "Закритий",
+      "description": "Закритий",
+      "documentation": "Закритий",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "isCurrent",
+      "dataType": "Boolean",
+      "caption": "Поточний",
+      "description": "Поточний",
+      "documentation": "Поточний",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "isBlock",
+      "dataType": "Boolean",
+      "caption": "Блокувати зміну даних особових рахунків та табеля",
+      "description": "Блокувати зміну даних особових рахунків та табеля",
+      "documentation": "Блокувати зміну даних особових рахунків та табеля",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Коментар",
+      "description": "Коментар",
+      "documentation": "Коментар"
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 40,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 40,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "allowNull": false
+    },
+    {
+      "name": "priorPeriodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Попередній період",
+      "description": "Попередній період",
+      "documentation": "Попередній період"
+    },
+    {
+      "name": "nextPeriodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Наступний період",
+      "description": "Наступний період",
+      "documentation": "Наступний період"
+    },
+    {
+      "name": "currentPlusMonth",
+      "dataType": "Int",
+      "caption": "Поточний період + один місяць",
+      "description": "Поточний період + один місяць",
+      "documentation": "Поточний період + один місяць",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE WHEN  (select DATEADD(month, 1, COALESCE(max(p.dateFrom), GETDATE())) from hr_dictPeriod p where p.orgID = {self}.orgID and p.isCurrent = 1 and p.mi_deleteDate >= '9999-12-31') >= {self}.dateFrom THEN 1 ELSE 0 END )"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE WHEN (select COALESCE(max(p.dateFrom), CURRENT_DATE) + interval '1 month'  from hr_dictPeriod p where p.orgID = {self}.orgID and p.isCurrent = 1 and p.mi_deleteDate >= '9999-12-31') >= {self}.dateFrom THEN 1 ELSE 0 END )"
+        }
+      ]
+    },
+
+    {
+      "name": "employees",
+      "dataType": "Int",
+      "caption": "Чисельність",
+      "description": "Чисельність",
+      "documentation": "Чисельність",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select ps.employees from hr_paySummary ps where ps.periodID = {self}.ID and ps.orgID = {self}.orgID and ps.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "hired",
+      "dataType": "Int",
+      "caption": "Прийнято на роботу",
+      "description": "Прийнято на роботу",
+      "documentation": "Прийнято на роботу",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select ps.hired from hr_paySummary ps where ps.periodID = {self}.ID and ps.orgID = {self}.orgID and ps.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "quitted",
+      "dataType": "Int",
+      "caption": "Звільнено з роботи",
+      "description": "Звільнено з роботи",
+      "documentation": "Звільнено з роботи",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select ps.quitted from hr_paySummary ps where ps.periodID = {self}.ID and ps.orgID = {self}.orgID and ps.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "accruedSum",
+      "dataType": "Currency",
+      "caption": "Нараховано",
+      "description": "Нараховано",
+      "documentation": "Нараховано",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select ps.accruedSum from hr_paySummary ps where ps.periodID = {self}.ID and ps.orgID = {self}.orgID and ps.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "deductedSum",
+      "dataType": "Currency",
+      "caption": "Утримано",
+      "description": "Утримано",
+      "documentation": "Утримано",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select ps.deductedSum from hr_paySummary ps where ps.periodID = {self}.ID and ps.orgID = {self}.orgID and ps.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "paidSum",
+      "dataType": "Currency",
+      "caption": "Виплачено",
+      "description": "Виплачено",
+      "documentation": "Виплачено",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select ps.paidSum from hr_paySummary ps where ps.periodID = {self}.ID and ps.orgID = {self}.orgID and ps.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "debtOrgSum",
+      "dataType": "Currency",
+      "caption": "Борг підприємства",
+      "description": "Борг підприємства",
+      "documentation": "Борг підприємства",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select ps.debtOrgSum from hr_paySummary ps where ps.periodID = {self}.ID and ps.orgID = {self}.orgID and ps.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "debtEmployeeSum",
+      "dataType": "Currency",
+      "caption": "Борг працівників",
+      "description": "Борг працівників",
+      "documentation": "Борг працівників",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select ps.debtEmployeeSum from hr_paySummary ps where ps.periodID = {self}.ID and ps.orgID = {self}.orgID and ps.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "fundSum",
+      "dataType": "Currency",
+      "caption": "Фонди",
+      "description": "Фонди",
+      "documentation": "Фонди",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select ps.fundSum from hr_paySummary ps where ps.periodID = {self}.ID and ps.orgID = {self}.orgID and ps.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    }
+  ],
+  "dbExtensions": {
+    "UIDX_HR_DICTPERIOD": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "pYear": {
+            "sort": "ASC"
+          },
+          "dictMonthID": {
+            "sort": "ASC"
+          },
+          "orgID": {
+            "sort": "ASC"
+          },
+          "mi_deleteDate": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": true
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

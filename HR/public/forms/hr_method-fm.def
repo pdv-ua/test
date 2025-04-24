@@ -1,0 +1,240 @@
+/* global UB AC */
+
+exports.formDef = {
+  requiredFields: ['methodGroupID.groupType'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: []
+    }
+  ],
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'north',
+      split: true,
+      autoScroll: true,
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    { attributeName: 'code', flex: 1 },
+                    { attributeName: 'name', flex: 2 }
+                  ]
+                },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      attributeName: 'methodGroupID',
+                      fieldList: ['ID', 'name', 'groupType'],
+                      hideEntityItemInContext: true,
+                      flex: 1
+                    },
+                    {
+                      xtype: 'label',
+                      name: 'groupType',
+                      margin: '15 10 5 5',
+                      width: 120
+                    }
+                  ]
+                },
+                {
+                  attributeName: 'payElEntryType',
+                  xtype: 'ubboxselect',
+                  hideEntityItemInContext: true,
+                  enumGroupFilter: 'HR_PAY_TYPE',
+                  valueField: 'code',
+                  displayField: 'name',
+                  ubRequest: {
+                    entity: 'ubm_enum',
+                    method: UB.core.UBCommand.methodName.SELECT,
+                    fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                    whereList: {
+                      eGroup: {
+                        expression: '[eGroup]',
+                        condition: 'equal',
+                        values: { 'eGroup': 'HR_PAY_TYPE' }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              items: [
+                {
+                  attributeName: 'valuation'
+                },
+                {
+                  attributeName: 'dayAccumCondition'
+                },
+                {
+                  attributeName: 'dayAverageCondition'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Атрибути'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'methodPanel',
+              autoScroll: true,
+              hideActions: [],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_methodCfgAttr',
+                method: 'select',
+                fieldList: [
+                  { name: 'attrName' },
+                  { name: 'notAllowBlank' }
+                ]
+              },
+              masterFields: ['ID'],
+              detailFields: ['methodID']
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Панелі параметрів'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'methodPanel',
+              autoScroll: true,
+              hideActions: [],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_methodCfgPanel',
+                method: 'select',
+                fieldList: [
+                  { name: 'cfgPanelID.code', description: UB.i18n('Панель налаштування') },
+                  { name: 'cfgPanelID.name', description: UB.i18n('Назва') },
+                  { name: 'cfgPanelNameID.name', visibility: false },
+                  { name: 'sortOrder' }
+                ]
+              },
+              cmpInitConfig: {
+                customInit: function () {
+                  AC.gridUtils.tuneGridColumns(this, {
+                    'cfgPanelID.name': {
+                      renderer: function (value, meta, record) {
+                        if (!record || !record.get) return value
+                        return record.data['cfgPanelNameID.name'] || value
+                      }
+                    }
+                  })
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['methodID']
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Скрипт розрахунку'),
+          layout: 'fit',
+          items: [
+            {
+              attributeName: 'script',
+              xtype: 'ubcodemirror',
+              mode: 'application/x-javascript',
+              flex: 1,
+              height: '100%',
+              width: '100%'
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Методи розрахунку'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'payElEntrySum',
+              xtype: 'ubboxselect',
+              maxLength: 500,
+              multiSelect: true,
+              valueField: 'code',
+              displayField: 'name',
+              ubRequest: {
+                entity: 'hr_method',
+                fieldList: ['code', 'name']
+              }
+            },
+            {
+              attributeName: 'payElEntryMinSum',
+              xtype: 'ubboxselect',
+              maxLength: 500,
+              multiSelect: true,
+              valueField: 'code',
+              displayField: 'name',
+              ubRequest: {
+                entity: 'hr_method',
+                fieldList: ['code', 'name']
+              }
+            },
+            {
+              attributeName: 'payElEntryTime',
+              xtype: 'ubboxselect',
+              maxLength: 500,
+              multiSelect: true,
+              valueField: 'code',
+              displayField: 'name',
+              ubRequest: {
+                entity: 'hr_method',
+                fieldList: ['code', 'name']
+              }
+            },
+            {
+              attributeName: 'payElEntryPlanSum',
+              xtype: 'ubboxselect',
+              maxLength: 500,
+              multiSelect: true,
+              valueField: 'code',
+              displayField: 'name',
+              ubRequest: {
+                entity: 'hr_method',
+                fieldList: ['code', 'name']
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

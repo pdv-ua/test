@@ -1,0 +1,164 @@
+// @isModal true
+/* global Ext AC */
+
+exports.formDef = 'HR.employeeNumberSave'
+
+Ext.define('HR.employeeNumberSave', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.employeeNumberSave',
+  initComponent: function () {
+    let me = this
+    let grid
+    let store = Ext.create('Ext.data.ArrayStore', {
+      fields: [
+        { name: 'attrName' },
+        { name: 'oldValue' },
+        { name: 'newValue' }
+      ],
+      data: []
+    })
+    me.items = [
+      Ext.widget('panel', {
+        xtype: 'panel',
+        region: 'north',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'ubdatefield',
+                name: 'entryDate',
+                allowBlank: false,
+                labelWidth: 100,
+                width: 250,
+                fieldLabel: UB.i18n('Змінити з')
+              },
+              {
+                xtype: 'textfield',
+                name: 'orderNumber',
+                labelWidth: 70,
+                width: 300,
+                fieldLabel: UB.i18n('Наказ №')
+              },
+              {
+                xtype: 'ubdatefield',
+                name: 'orderDate',
+                labelWidth: 100,
+                width: 250,
+                fieldLabel: UB.i18n('Дата наказу')
+              },
+              {
+                xtype: 'ubdatefield',
+                name: 'dateToPosition',
+                labelWidth: 100,
+                width: 250,
+                fieldLabel: UB.i18n('Дата по')
+              }
+            ]
+          }
+        ]
+      }),
+      grid = Ext.widget('grid', {
+        xtype: 'grid',
+        stripeRows: true,
+        store: store,
+        autoScroll: true,
+        flex: 1,
+        split: true,
+        region: 'center',
+        columns: [
+          {
+            header: UB.i18n('Атрибут'),
+            tooltip: UB.i18n('Атрибут'),
+            dataIndex: 'attrName',
+            flex: 1
+          },
+          {
+            header: UB.i18n('До зміни'),
+            tooltip: UB.i18n('До зміни'),
+            dataIndex: 'oldValue',
+            flex: 1
+          },
+          {
+            header: UB.i18n('Після зміни'),
+            tooltip: UB.i18n('Після зміни'),
+            dataIndex: 'newValue',
+            flex: 1
+          }
+        ]
+      }),
+      Ext.widget('panel', {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 100,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: () => {
+              me.forceClose = true
+              me.onSaveData({
+                result: false
+              })
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Зберегти'),
+            width: 100,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: () => {
+              me.save()
+            }
+          }
+        ]
+      })
+    ]
+
+    me.save = () => {
+      if (me.isValid()) {
+        me.onSaveData({
+          result: true,
+          entryDate: AC.dateService.shiftDate(me.attr.entryDate.getValue()),
+          orderNumber: me.attr.orderNumber.getValue(),
+          orderDate: (me.attr.orderDate.getValue() && me.attr.orderDate.isValid()) ? AC.dateService.shiftDate(me.attr.orderDate.getValue()) : null,
+          dateToPosition: (me.attr.dateToPosition.getValue() && me.attr.dateToPosition.isValid()) ? AC.dateService.shiftDate(me.attr.dateToPosition.getValue()) : null
+        })
+        me.forceClose = true
+        me.up('window').close()
+      }
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        entryDate: me.down('[name=entryDate]'),
+        orderNumber: me.down('[name=orderNumber]'),
+        orderDate: me.down('[name=orderDate]'),
+        dateToPosition: me.down('[name=dateToPosition]')
+      }
+      if (me.entryDate) {
+        me.attr.entryDate.setValue(me.entryDate)
+      }
+      if (me.orderNumber) {
+        me.attr.orderNumber.setValue(me.orderNumber)
+      }
+      if (me.orderDate) {
+        me.attr.orderDate.setValue(me.orderDate)
+      }
+      store.loadData(me.changeData || [])
+    }, me)
+
+    me.callParent(arguments)
+  }
+
+})

@@ -1,0 +1,618 @@
+/* global Ext AC $App appAC appHR UB */
+
+exports.formDef = 'HR.empOrderForCalcAll'
+
+const empOrderTypeForUnProcessed = ['MISSION', 'MISSION_G', 'BOUNTY', 'BOUNTY_HELP', 'VACATION',
+  'SICKNESSMEETING', 'CWSRELAXDONOR', 'DISM', 'VACATIONCOMP', 'RISKPAY', 'ADDPAY', 'APPOINT', 'TRAINING',
+  'VACATIONPROLONG', 'MILSERVICE', 'VACATIONREVOKE', 'MEDEXAMINATION', 'CHANGEMISSION', 'MOVE', 'AVERAGEPAY'] // На опрацювання
+
+const empOrderTypeForObserve = ['APPOINT_MOVE', 'ACTING', 'ACTINGORD', 'VACATIONRET', 'CWSWORKHOUR', 'PROLONG', 'CWSHD',
+  'ADDSALARY', 'ADDSALARYGOV', 'CANCELSALARY', 'APPOINT_LIQ', 'CHGPOSITION', 'PLURALIST', 'VACATIONPROLONGL', 'TEMPSUSPEND',
+  'CHGEMPLOYEE', 'OUTPLURAL', 'CWS', 'CWSRELAXHD', 'MILSERVICERET', 'DOWNTIME', 'CERTIFICATION', 'RANK', 'OVERPAY', 'ACTINGCLOSE', 'RECALL',
+  'STAFFTABLEMOVE', 'STAFFLIST', 'CHGSALARY', 'CHGSALARYPOS', 'CHGSALARYEMP', 'STAFFTABLEMOVE_TARIF', 'INTERNSHIP'
+] // До ознайомлення
+
+Ext.define('HR.empOrderForCalcAll', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empOrderForCalcAll',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        layout: 'fit',
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            name: 'ubdetailgrid',
+            autoScroll: true,
+            layout: 'fit',
+            flex: 1,
+            selModel: Ext.create('Ext.selection.CheckboxModel', {
+              selType: 'checkboxmodel',
+              showHeaderCheckbox: true,
+              mode: 'SIMPLE'
+            }),
+            forceDataLoad: true,
+            disableAutoLoadStore: true,
+            hideActions: ['addNew', 'addNewByCurrent', 'del', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+            cmdType: 'showList',
+            cmdData: {
+              params: [{
+                entity: 'hr_order',
+                method: 'select',
+                fieldList: [
+                  { name: 'empOrderType', description: UB.i18n('Тип документу'), simpleFilter: true },
+                  { name: 'orderDate', description: UB.i18n('Дата наказу'), format: 'd.m.Y' },
+                  { name: 'orderNumber' },
+                  { name: 'description', description: UB.i18n('Наказ') },
+                  { name: 'empOrderID.employeeList', description: UB.i18n('Список осіб') },
+                  { name: 'comment', description: UB.i18n('Коментар') },
+                  { name: 'respEmployeePositionID.description', description: UB.i18n('Підписав'), simpleFilter: true },
+                  { name: 'respEmployeeNumID.description', description: UB.i18n('Відповідальний'), simpleFilter: true },
+                  { name: 'periodCalcID.description', description: UB.i18n('Період опрацювання'), simpleFilter: true },
+                  { name: 'state', description: UB.i18n('Стан') },
+                  { name: 'orderClass.entityName', visibility: false },
+                  { name: 'hasPosted', visibility: false },
+                  { name: 'allowPosting', visibility: false },
+                  { name: 'orderRegistryState', visibility: false },
+                  { name: 'orderState', visibility: false }
+                ],
+                whereList: {
+                },
+                orderList: {
+                  orderBy: { expression: 'orderDate', order: 'desc' }
+                }
+              }]
+            },
+            cmpInitConfig: {
+              disableAutoLoadStore: true,
+              customInit: function () {
+                AC.gridUtils.tuneGridColumns(this, {
+                  entityName: {
+                    renderer: function (orderState) {
+                      return $App.domainInfo.entities[orderState].caption
+                    }
+                  },
+                  empOrderType: {
+                    renderer: function (empOrderType) {
+                      if (empOrderType.includes('VACATIONPRO')) {
+                        return UB.i18n('Продовження, перенесення, скасування відпустки')
+                      } else if (empOrderType.includes('VACATIONREVOKE')) {
+                        return UB.i18n('Відкликання з відпустки')
+                      } else if (empOrderType.includes('VACATIONCOMP')) {
+                        return UB.i18n('Компенсація відпустки')
+                      } else if (empOrderType.includes('VACATIONKID')) {
+                        return UB.i18n('Відпустка по догляду')
+                      } else if (empOrderType.includes('VACATION')) {
+                        return UB.i18n('Надання відпустки')
+                      } else return UB.core.UBEnumManager.getStore('HR_EMPORDRETYPE').getById(empOrderType).get('name')
+                    }
+                  },
+                  state: {
+                    renderer: function (value, col, record) {
+                      if (value === 'PROCESSED') {
+                        return UB.i18n('Опрацьовано')
+                      } else if (value === 'PROJECT' && record.get('allowPosting') === 1) {
+                        return UB.i18n('Дозволено проведення')
+                      } else if (empOrderTypeForUnProcessed.includes(record.get('empOrderType'))) {
+                        return UB.i18n('На опрацювання')
+                      } else if (empOrderTypeForObserve.includes(record.get('empOrderType'))) {
+                        return UB.i18n('До ознайомлення')
+                      }
+                      return ''
+                    }
+                  }
+                })
+              },
+              getRowClass: function (record) {
+                if (record.get('orderState') === 'POSTED') {
+                  if (empOrderTypeForObserve.find(type => type === record.get('empOrderType'))) {
+                    if (record.get('periodCalcID.description')) {
+                      return 'grd-color-blue'
+                    } else {
+                      return 'grd-color-blue-bold'
+                    }
+                  } else return 'org-node'
+                } else if (record.get('orderState') !== 'PROCESSED' && record.get('orderState') !== 'POSTED' && record.get('orderState') !== 'PROJECT') {
+                  return 'grd-color-grey'
+                } else if (record.get('orderState') === 'PROCESSED') {
+                  return record.get('hasPosted') || record.get('orderRegistryState') === 'POSTED' ? 'grd-color-lightgreen-bold' : 'grd-color-lightgreen'
+                } else if (record.get('orderState') === 'PROJECT') {
+                  return record.get('allowPosting') ? 'grd-color-red-bold' : 'grd-color-grey'
+                }
+              },
+              afterInit: function () {
+                const grid = this
+                const tb = grid.down('toolbar')
+                AC.gridUtils.setGlobalOrganization(grid, 'organizationID')
+                const dictPeriodFilter = Ext.create('UB.ux.form.field.UBComboBox',
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'dictPeriodFilter',
+                    hideEntityItemInContext: true,
+                    fieldLabel: UB.i18n('Період'),
+                    displayField: 'description',
+                    valueField: 'ID',
+                    pageSize: 50,
+                    width: 400,
+                    labelWidth: 60,
+                    ubRequest: {
+                      entity: 'hr_dictPeriod',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'description', 'orgID', 'dateFrom', 'dateTo', 'isCurrent']
+                    },
+                    listeners: {
+                      expand: appHR.periodExpand
+                    }
+                  })
+                tb.insert(6, dictPeriodFilter)
+                const allActions = tb && tb.query('[menuId=AllActions]')[0]
+                if (allActions) {
+                  allActions.menu.add({
+                    xtype: 'menuseparator'
+                  })
+                  allActions.menu.add({
+                    text: 'Виправлення стану наказів',
+                    handler: function () {
+                      $App.connection.run({
+                        entity: 'hr_orderRegistry',
+                        method: 'correctionOrderState',
+                        orgID: appAC.globalOrganization()
+                      }).then(resp => {
+                        let errorMessages = JSON.parse(resp.errorMessages)
+                        if (errorMessages.length) {
+                          $App.dialogInfo(errorMessages.join('<br>'))
+                        } else {
+                          $App.dialogInfo('Виправлення стану наказів виконано успішно')
+                        }
+                      })
+                    }
+                  })
+                }
+
+                AC.viewUtils.setFilterValue(dictPeriodFilter, { orgID: appAC.globalOrganization() })
+                dictPeriodFilter.store.sort('dateFrom', 'DESC')
+
+                dictPeriodFilter.on('change', (ctrl) => {
+                  me.setFilters(grid, true, ctrl)
+                })
+
+                appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+                  dictPeriodFilter.setValueById(response.ID)
+                })
+              },
+              customActions: [
+                {
+                  xtype: 'button',
+                  width: 130,
+                  showText: true,
+                  actionText: UB.i18n('Усі документи'),
+                  enableToggle: true,
+                  text: UB.i18n('Усі документи'),
+                  name: 'showAllBtn',
+                  handler: function (btn) {
+                    btn.addCls('custom-action_btn')
+                    btn.isActiveBtn = true
+                    me.down('[name=showPostedBtn]').isActiveBtn = false
+                    me.down('[name=showProcessedBtn]').isActiveBtn = false
+                    me.down('[name=showProjectOrderBtn]').isActiveBtn = false
+                    me.down('[name=showPostedBtn]').removeCls('custom-action_btn')
+                    me.down('[name=showProcessedBtn]').removeCls('custom-action_btn')
+                    me.down('[name=showProjectOrderBtn]').removeCls('custom-action_btn')
+
+                    const store = me.attr.grid.getStore()
+                    store.ubRequest.whereList.orderState.condition = 'in'
+                    store.ubRequest.whereList.orderState.value = ['PROJECT', 'POSTED', 'ON_RECONCILATION', 'RECONCILED', 'RETURNED_FROM_RECONCILATION', 'ON_COMPLETION', 'REJECTED', 'PROCESSED', 'ON_PROCESSING']
+                    store.ubRequest.whereList.empOrderType = {
+                      expression: '[empOrderType]',
+                      condition: 'in',
+                      value: empOrderTypeForUnProcessed.concat(empOrderTypeForObserve)
+                    }
+                    store.currentPage = 1
+                    me.setFilters(me.attr.grid, true)
+                  }
+                },
+                {
+                  xtype: 'button',
+                  width: 125,
+                  showText: true,
+                  actionText: UB.i18n('Проєкти наказів'),
+                  enableToggle: true,
+                  text: UB.i18n('Проєкти наказів'),
+                  name: 'showProjectOrderBtn',
+                  handler: function (btn) {
+                    btn.addCls('custom-action_btn')
+                    btn.isActiveBtn = true
+                    me.down('[name=showPostedBtn]').isActiveBtn = false
+                    me.down('[name=showAllBtn]').isActiveBtn = false
+                    me.down('[name=showProcessedBtn]').isActiveBtn = false
+                    me.down('[name=showPostedBtn]').removeCls('custom-action_btn')
+                    me.down('[name=showAllBtn]').removeCls('custom-action_btn')
+                    me.down('[name=showProcessedBtn]').removeCls('custom-action_btn')
+                    const store = me.attr.grid.getStore()
+                    store.ubRequest.whereList.orderState = {
+                      expression: '[orderState]',
+                      condition: 'in',
+                      value: ['PROJECT', 'ON_RECONCILATION', 'RETURNED_FROM_RECONCILATION', 'RECONCILED']
+                    }
+                    let empOrderTypeFullList = empOrderTypeForUnProcessed.concat(empOrderTypeForObserve)
+                    store.ubRequest.whereList.empOrderType = {
+                      expression: '[empOrderType]',
+                      condition: 'in',
+                      value: empOrderTypeFullList
+                    }
+                    store.currentPage = 1
+                    me.setFilters(me.attr.grid, true)
+                  }
+                },
+                {
+                  xtype: 'button',
+                  width: 140,
+                  showText: true,
+                  actionText: UB.i18n('Неопрацьовані'),
+                  cls: 'custom-action_btn',
+                  enableToggle: true,
+                  text: UB.i18n('Неопрацьовані'),
+                  name: 'showPostedBtn',
+                  isActiveBtn: true,
+                  handler: function (btn) {
+                    btn.addCls('custom-action_btn')
+                    btn.isActiveBtn = true
+                    me.down('[name=showAllBtn]').isActiveBtn = false
+                    me.down('[name=showProcessedBtn]').isActiveBtn = false
+                    me.down('[name=showProjectOrderBtn]').isActiveBtn = false
+                    me.down('[name=showAllBtn]').removeCls('custom-action_btn')
+                    me.down('[name=showProcessedBtn]').removeCls('custom-action_btn')
+                    me.down('[name=showProjectOrderBtn]').removeCls('custom-action_btn')
+                    const store = me.attr.grid.getStore()
+                    store.ubRequest.whereList.orderState = {
+                      expression: '[orderState]',
+                      condition: '=',
+                      value: 'POSTED'
+                    }
+                    store.ubRequest.whereList.empOrderType = {
+                      expression: '[empOrderType]',
+                      condition: 'in',
+                      value: empOrderTypeForUnProcessed.concat(empOrderTypeForObserve)
+                    }
+                    store.currentPage = 1
+                    me.setFilters(me.attr.grid, true)
+                  }
+                },
+                {
+                  xtype: 'button',
+                  width: 120,
+                  showText: true,
+                  actionText: UB.i18n('Опрацьовані'),
+                  enableToggle: true,
+                  text: UB.i18n('Опрацьовані'),
+                  name: 'showProcessedBtn',
+                  handler: function (btn) {
+                    btn.addCls('custom-action_btn')
+                    btn.isActiveBtn = true
+                    me.down('[name=showPostedBtn]').isActiveBtn = false
+                    me.down('[name=showAllBtn]').isActiveBtn = false
+                    me.down('[name=showProjectOrderBtn]').isActiveBtn = false
+                    me.down('[name=showPostedBtn]').removeCls('custom-action_btn')
+                    me.down('[name=showAllBtn]').removeCls('custom-action_btn')
+                    me.down('[name=showProjectOrderBtn]').removeCls('custom-action_btn')
+                    const store = me.attr.grid.getStore()
+                    store.ubRequest.whereList.orderState = {
+                      expression: '[orderState]',
+                      condition: '=',
+                      value: 'PROCESSED'
+                    }
+                    let empOrderTypeFullList = empOrderTypeForUnProcessed.concat(empOrderTypeForObserve)
+                    store.ubRequest.whereList.empOrderType = {
+                      expression: '[empOrderType]',
+                      condition: 'in',
+                      value: empOrderTypeFullList
+                    }
+                    store.currentPage = 1
+                    me.setFilters(me.attr.grid, true)
+                  }
+                },
+                {
+                  xtype: 'button',
+                  iconCls: 'iconApprove',
+                  cls: 'green-action',
+                  text: UB.i18n('Опрацювати'),
+                  disabled: !AC.entityUtils.verifyRightsMethod('hr_orderRegistry', 'createPayOrder'),
+                  handler: () => {
+                    const selection = me.attr.grid.getSelectionModel().selected.items
+                    const items = []
+                    const itemsForAllow = []
+                    for (const item in selection) {
+                      if (selection[item].data.orderState === 'POSTED') {
+                        items.push(selection[item])
+                      }
+                      if (selection[item].data.orderState === 'PROJECT') {
+                        itemsForAllow.push(selection[item])
+                      }
+                    }
+                    if (items.length > 0) {
+                      me.setLoading(true)
+                      me.createPayOrder(me.attr.grid, items, 0)
+                    }
+                    if (itemsForAllow.length > 0) {
+                      me.setLoading(true)
+                      me.setAllowPostingForOrders(me.attr.grid, itemsForAllow, 0, true)
+                    }
+                  }
+                },
+                {
+                  xtype: 'button',
+                  iconCls: 'iconReject',
+                  cls: 'green-action',
+                  text: UB.i18n('Відкликати'),
+                  disabled: !AC.entityUtils.verifyRightsMethod('hr_orderRegistry', 'cancelPayOrder'),
+                  handler: (ctrl) => {
+                    const selection = me.attr.grid.getSelectionModel().selected.items
+                    const items = []
+                    const itemsForAllow = []
+                    for (const item in selection) {
+                      if (selection[item].data.orderState === 'PROCESSED') {
+                        items.push(selection[item])
+                      }
+                      if (selection[item].data.orderState === 'PROJECT') {
+                        itemsForAllow.push(selection[item])
+                      }
+                    }
+                    if (items.length > 0) {
+                      me.setLoading(true)
+                      me.cancelPayOrder(me.attr.grid, items, 0)
+                    }
+                    if (itemsForAllow.length > 0) {
+                      me.setLoading(true)
+                      me.setAllowPostingForOrders(me.attr.grid, itemsForAllow, 0, false)
+                    }
+                  }
+                }
+              ],
+              onItemDblClick: function (grid, record) {
+                const ubdetailgrid = grid.up('ubdetailgrid')
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: record.get('orderClass.entityName'),
+                  entity: record.get('orderClass.entityName'),
+                  isModal: false,
+                  instanceID: record.get('ID'),
+                  tabId: record.get('orderClass.entityName') + record.get('ID'),
+                  target: $App.getViewport().centralPanel,
+                  sender: ubdetailgrid.getView(),
+                  store: ubdetailgrid.store
+                })
+              }
+            }
+          }
+        ]
+      }
+    ]
+    me.createPayOrder = function (grid, records, currEl) {
+      $App.connection.run({
+        entity: 'hr_orderRegistry',
+        method: 'createPayOrder',
+        empOrderID: records[currEl].get('ID')
+      }).then(resp => {
+        const resultData = JSON.parse(resp.resultData)
+        if (resultData.errorMessages.length) {
+          $App.dialogInfo(resultData.errorMessages.join('<br>'))
+        } else {
+          grid.getStore().remove(records[currEl])
+          AC.viewUtils.showToast(UB.i18n(`Проведено "{0}"`, records[currEl].get('description')))
+          if (Array.isArray(resultData.warningMessages) && resultData.warningMessages.length) {
+            $App.dialogInfo(resultData.warningMessages.join('<br>'))
+          }
+        }
+        if (currEl < records.length - 1) {
+          me.createPayOrder(grid, records, currEl + 1)
+        } else {
+          me.setLoading(false)
+        }
+      }, err => {
+        me.setLoading(false)
+        if (err.config && err.config.timeout) {
+          grid.getStore().remove(records[currEl])
+          $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+        } else {
+          throw err
+        }
+      })
+    }
+
+    me.setAllowPostingForOrders = function (grid, records, currEl, value) {
+      $App.connection.run({
+        entity: 'hr_orderRegistry',
+        method: 'setAllowPostingForOrders',
+        value: value,
+        empOrderID: records[currEl].get('ID')
+      }).then(resp => {
+        const resultData = JSON.parse(resp.resultData)
+        if (value) {
+          if (resultData.errorMessages.length) {
+            $App.dialogInfo(resultData.errorMessages.join('<br>'))
+          } else {
+            grid.getStore().remove(records[currEl])
+            AC.viewUtils.showToast(UB.i18n(`Дозволено проведення "{0}"`, records[currEl].get('description')))
+            if (Array.isArray(resultData.warningMessages) && resultData.warningMessages.length) {
+              $App.dialogInfo(resultData.warningMessages.join('<br>'))
+            }
+          }
+        } else {
+          if (resultData.errorMessages.length) {
+            $App.dialogInfo(UB.i18n(`Неможливо скасувати дозвіл<br> {0}`, resultData.errorMessages.join('<br>')))
+          } else {
+            grid.getStore().remove(records[currEl])
+            AC.viewUtils.showToast(UB.i18n(`Скасовано дозвіл "{0}"`, records[currEl].get('description')))
+          }
+        }
+        if (currEl < records.length - 1) {
+          me.setAllowPostingForOrders(grid, records, currEl + 1, value)
+        } else {
+          me.setLoading(false)
+          me.down('grid').getStore().load()
+        }
+      }, err => {
+        me.setLoading(false)
+        me.down('grid').getStore().load()
+        if (err.config && err.config.timeout) {
+          grid.getStore().remove(records[currEl])
+          $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+        } else {
+          throw err
+        }
+      })
+    }
+
+    me.setFilters = function (grid, isLoad, ctrl) {
+      const globalOrganization = appAC.globalOrganization()
+      let ubRequest = grid.store.ubRequest
+      ubRequest.whereList.organizationID.value = globalOrganization
+      if (me.attr.dictPeriodFilter.getValue()) {
+        delete ubRequest.logicalPredicates
+        delete ubRequest.whereList.periodIsEmpty
+        delete ubRequest.whereList.periodID
+        if (me.attr.dictPeriodFilter.getFieldValue('isCurrent')) {
+          ubRequest.whereList.periodID = {
+            expression: '[periodCalcID]',
+            condition: '=',
+            value: me.attr.dictPeriodFilter.getValue()
+          }
+          if (me.attr.grid.down('[name=showPostedBtn]').isActiveBtn || me.attr.grid.down('[name=showAllBtn]').isActiveBtn || me.attr.grid.down('[name=showProjectOrderBtn]').isActiveBtn) {
+            ubRequest.whereList.periodIsEmpty = {
+              expression: '[periodCalcID]',
+              condition: 'isNull'
+            }
+            ubRequest.logicalPredicates = ['([periodID] OR [periodIsEmpty])']
+          }
+        } else {
+          delete ubRequest.logicalPredicates
+          delete ubRequest.whereList.periodIsEmpty
+          ubRequest.whereList.periodID = {
+            expression: '[periodCalcID]',
+            condition: '=',
+            value: me.attr.dictPeriodFilter.getValue()
+          }
+        }
+      } else {
+        delete ubRequest.whereList.periodFrom
+        delete ubRequest.whereList.periodTo
+        delete ubRequest.whereList.periodID
+        delete ubRequest.logicalPredicates
+        delete ubRequest.whereList.periodIsEmpty
+      }
+      if (!ubRequest.whereList.orderClass) {
+        UB.Repository('hr_orderClass')
+          .attrs(['ID'])
+          .where('entityName', 'in', ['hr_empOrder', 'hr_sicknessMeeting'])
+          .selectAsObject().then(orderClass => {
+            ubRequest.whereList.orderClass = {
+              expression: '[orderClass]',
+              condition: 'in',
+              value: orderClass.length ? orderClass.map(o => o.ID) : [0]
+            }
+            if (!ubRequest.whereList.empOrderType) {
+              ubRequest.whereList.empOrderType = {
+                expression: '[empOrderType]',
+                condition: 'in',
+                value: empOrderTypeForUnProcessed.concat(empOrderTypeForObserve)
+              }
+            }
+            if (!ubRequest.whereList.orderState) {
+              ubRequest.whereList.orderState = {
+                expression: '[orderState]',
+                condition: '=',
+                value: 'POSTED'
+              }
+            }
+            if (isLoad) {
+              grid.store.load()
+            }
+          })
+      } else {
+        if (!ubRequest.whereList.empOrderType) {
+          ubRequest.whereList.empOrderType = {
+            expression: '[empOrderType]',
+            condition: 'in',
+            value: empOrderTypeForUnProcessed.concat(empOrderTypeForObserve)
+          }
+        }
+        if (!ubRequest.whereList.orderState) {
+          ubRequest.whereList.orderState = {
+            expression: '[orderState]',
+            condition: '=',
+            value: 'POSTED'
+          }
+        }
+        if (isLoad) {
+          grid.store.load()
+        }
+      }
+    }
+
+    me.cancelPayOrder = function (grid, records, currEl) {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_orderRegistry',
+        method: 'cancelPayOrder',
+        empOrderID: records[currEl].get('ID')
+      }).then(resp => {
+        const resultData = JSON.parse(resp.resultData)
+        if (resultData.errorMessages.length) {
+          $App.dialogInfo(UB.i18n(`Неможливо відмінити опрацювання<br> {0}`, resultData.errorMessages.join('<br>')))
+        } else {
+          grid.getStore().remove(records[currEl])
+          AC.viewUtils.showToast(UB.i18n(`Відкликано "{0}"`, records[currEl].get('description')))
+        }
+        if (currEl < records.length - 1) {
+          me.cancelPayOrder(grid, records, currEl + 1)
+        } else {
+          me.setLoading(false)
+        }
+      }, err => {
+        me.setLoading(false)
+        if (err.config && err.config.timeout) {
+          grid.getStore().remove(records[currEl])
+          $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+        } else {
+          throw err
+        }
+      })
+    }
+
+    me.changeGlobal = function () {
+      AC.viewUtils.setFilterValue(me.attr.dictPeriodFilter, { orgID: appAC.globalOrganization() })
+      Ext.defer(() => {
+        me.attr.dictPeriodFilter.store.sort('dateFrom', 'DESC')
+        appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+          me.attr.dictPeriodFilter.setValueById(response.ID)
+        })
+      }, 500)
+    }
+
+    me.on('afterrender', () => {
+      me.attr = {
+        grid: me.down('[name=ubdetailgrid]'),
+        dictPeriodFilter: me.down('[name=dictPeriodFilter]')
+      }
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+    me.callParent(arguments)
+  }
+})

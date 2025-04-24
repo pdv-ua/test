@@ -1,0 +1,139 @@
+{
+  "caption": "Право на відпустку",
+  "description": "Право на відпустку",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orderDetID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Пункт наказу",
+      "description": "Пункт наказу",
+      "documentation": "Пункт наказу",
+      "allowNull": false
+    },
+    {
+      "name": "dictVacationKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictVacationKind",
+      "caption": "Вид відпустки",
+      "description": "Вид відпустки",
+      "documentation": "Вид відпустки",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Період надання відпустки з",
+      "description": "Період надання відпустки з",
+      "documentation": "Період надання відпустки з",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Період надання відпустки по",
+      "description": "Період надання відпустки по",
+      "documentation": "Період надання відпустки по",
+      "allowNull": false
+    },
+    {
+      "name": "dateEnd",
+      "dataType": "Date",
+      "caption": "Закінчення права на відпустку",
+      "description": "Закінчення права на відпустку",
+      "documentation": "Закінчення права на відпустку"
+    },
+    {
+      "name": "dayCount",
+      "dataType": "Int",
+      "caption": "Днів відпустки за період",
+      "description": "Днів відпустки за період",
+      "documentation": "Днів відпустки за період",
+      "allowNull": false
+    },
+    {
+      "name": "isRest",
+      "dataType": "Boolean",
+      "caption": "Залишок за попередній період",
+      "description": "Залишок за попередній період",
+      "documentation": "Залишок за попередній період",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isMainPart",
+      "dataType": "Boolean",
+      "caption": "Використано безперервну частину",
+      "description": "Використано безперервну частину",
+      "documentation": "Використано безперервну частину",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dayFact",
+      "dataType": "Int",
+      "caption": "Використано днів",
+      "description": "Використано днів",
+      "documentation": "Використано днів",
+      "defaultView": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "allowNull": true,
+      "customSettings": {
+        "compositeFields": [
+          "dictVacationKindID.name",
+          "dayCount"
+        ],
+        "compositeSeparator": " = "
+      }
+    },
+    {
+      "name": "dateEndEmpty",
+      "dataType": "Date",
+      "caption": "Закінчення права на відпустку",
+      "description": "Закінчення права на відпустку",
+      "documentation": "Закінчення права на відпустку",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateEnd) WHEN 9999 THEN null when 2099 then null ELSE {self}.dateEnd END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateEnd) WHEN 9999 THEN null when 2099 then null ELSE {self}.dateEnd END)"
+        }
+      ]
+    },
+    {
+      "name": "dateEndNotEmpty",
+      "dataType": "Date",
+      "caption": "Закінчення права на відпустку",
+      "description": "Закінчення права на відпустку",
+      "documentation": "Закінчення права на відпустку",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "COALESCE({self}.dateEnd, '9999-12-31')"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

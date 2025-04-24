@@ -1,0 +1,367 @@
+/* global HR UB AC $App*/
+exports.formDef = {
+  requiredFields: ['requestType', 'requestNumber', 'employeeNumberID', 'employeeNumberID.orgID', 'employeeNumberID.posName',
+    'requestDescription', 'requestReason', 'lastName', 'firstName', 'middleName', 'vacationKindID', 'dateFrom', 'dateTo',
+    'dayCount', 'requestKind', 'reasonDocument', 'requestState', 'comment', 'orderID', 'requestResponse', 'orderState', 'organizationID',
+    'reportSettings', 'document', 'empOrderType', 'attachment', 'docText', 'supervisorID.description', 'recipientID.description',
+    'dictRequestKindID.isDateFrom', 'dictRequestKindID.procRule', 'dictRequestKindID.isDateTo',
+    'docLastChangeDate', 'fieldLastChangeDate'
+  ],
+  parentConfig: {
+    hideActions: ['docActiondocument'],
+    postOnlySimpleAttributes: true,
+    autoScroll: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 7,
+          actionId: 'agreedAction'
+        },
+        {
+          orderId: 8,
+          actionId: 'rejectAction'
+        },
+        {
+          orderId: 9,
+          actionId: 'createOrderAction'
+        },
+        {
+          orderId: 10,
+          actionId: 'startReconciliation'
+        },
+        {
+          orderId: 11,
+          actionId: 'stopReconciliation'
+        },
+        {
+          orderId: 12,
+          actionId: 'toCompletion'
+        },
+        {
+          orderId: 13,
+          actionId: 'renewTask'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      listeners: {
+        tabchange: function (tabPanel, activeTab) {
+          let me = tabPanel.up('form')
+          if (activeTab.ubID === 'report') {
+            if (!me.isPdfCreated) {
+              if (!me.record.get('docText')) {
+                HR.reportTab.editHtml(me)
+              } else {
+                HR.reportTab.setReportMode(me, 'view')
+              }
+            }
+            me.isPdfCreated = true
+          } else if (me.isNewInstance) {
+            me.saveForm().then(result => {
+              if (result === -1) {
+                me.down('tabpanel').setActiveTab(0)
+              }
+            })
+          }
+        }
+      },
+      items: [
+        {
+          title: UB.i18n('Заява'),
+          layout: { type: 'vbox', align: 'stretch' },
+          autoScroll: true,
+          flex: 1,
+          items: [
+            /* eslint-disable no-template-curly-in-string */
+            AC.viewUtils.getCollapsiblePanel(
+              '<span>${UB.i18n("Заявник")}</span><br>' +
+                '<span style="color:#2196F3;font-size:12pt;">${me.attr.employeeNumberID.getFieldValue(`description`)}</span><br />' +
+                '${get("employeeNumberID.posName")}' +
+                '<br/> ${me.attr["employeeNumberID.orgID"].getFieldValue("description") || "" }',
+              {
+                expandTitle: UB.i18n('Заявник'),
+                layout: { type: 'vbox', align: 'stretch' },
+                margin: '5 15 5 10',
+                padding: '0 0 5 0',
+                collapsed: true,
+                defaults: { labelWidth: 130 },
+                items: [
+                  {
+                    attributeName: 'employeeNumberID',
+                    fieldList: ['ID', 'description', 'employeeID', 'employeeID.genName', 'employeeID.fullFIO'],
+                    xtype: 'empNumComboBox',
+                    showEntityName: 'hr_employee',
+                    showFormCode: 'hr_employee',
+                    instanceAttr: 'employeeID',
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                    gridFieldList: ['description'],
+                    allowBlank: false,
+                    readOnly: true
+                  },
+                  {
+                    attributeName: 'employeeNumberID.posName',
+                    xtype: 'ubtextfield',
+                    readOnly: true,
+                    allowBlank: true
+                  },
+                  {
+                    attributeName: 'employeeNumberID.orgID',
+                    fieldList: ['ID', 'description', 'mi_data_id'],
+                    valueField: 'mi_data_id',
+                    readOnly: true,
+                    allowBlank: true
+                  }
+                ]
+              }
+            ),
+            /* eslint-disable no-template-curly-in-string */
+            AC.viewUtils.getCollapsiblePanel(
+              '${get("requestKind.name")}</span>' +
+                '<span>&nbsp;&nbsp;№</span> ${requestNumber}' +
+                ' ${UB.i18n("від")} ${AC.dateService.formatDate(get("mi_createDate"), "DD.MM.YYYY")}' +
+                ' (<span style="color:#2196F3;">${get("requestState.name")}</span>)<br/>' +
+                '${UB.i18n("Адресат")}: ${get("recipientID.description")}<br/>' +
+                '${get("supervisorID") ? UB.i18n("Погоджувач")+": " + get("supervisorID.description") : ""}',
+              {
+                expandTitle: UB.i18n('Реквізити'),
+                layout: { type: 'vbox', align: 'stretch' },
+                margin: '5 15 5 10',
+                padding: '0 0 5 0',
+                collapsed: true,
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        attributeName: 'requestKind',
+                        readOnly: false,
+                        labelWidth: 130,
+                        allowBlank: true,
+                        width: 300
+                      },
+                      {
+                        attributeName: 'requestNumber',
+                        readOnly: true,
+                        allowBlank: true,
+                        labelWidth: 130,
+                        width: 300
+                      },
+                      {
+                        attributeName: 'mi_createDate',
+                        readOnly: true,
+                        allowBlank: true,
+                        fieldLabel: UB.i18n('Дата створення'),
+                        labelWidth: 120
+                      }
+                    ]
+                  },
+                  {
+                    attributeName: 'requestState',
+                    readOnly: true,
+                    labelWidth: 130,
+                    allowBlank: true
+                  }
+                ]
+              }
+            ),
+            {
+              xtype: 'fieldset',
+              layout: { type: 'vbox', align: 'stretch' },
+              margin: '5 15 5 10',
+              padding: '5 0 10 0',
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'requestType',
+                  readOnly: false,
+                  allowBlank: true
+                },
+                {
+                  attributeName: 'requestDescription',
+                  readOnly: true,
+                  allowBlank: true
+                },
+                {
+                  attributeName: 'lastName',
+                  readOnly: true,
+                  allowBlank: true
+                },
+                {
+                  attributeName: 'firstName',
+                  readOnly: true,
+                  allowBlank: true
+                },
+                {
+                  attributeName: 'middleName',
+                  readOnly: true,
+                  allowBlank: true
+                },
+                {
+                  attributeName: 'vacationKindID',
+                  fieldList: ['ID', 'name', 'isDay'],
+                  readOnly: true,
+                  allowBlank: true
+                },
+                {
+                  layout: { type: 'hbox' },
+                  defaults: { labelWidth: 130, width: 250 },
+                  items: [
+                    {
+                      attributeName: 'dateFrom',
+                      readOnly: true,
+                      allowBlank: true
+                    },
+                    {
+                      attributeName: 'dateTo',
+                      readOnly: true,
+                      labelWidth: 140,
+                      allowBlank: true
+                    },
+                    {
+                      attributeName: 'dayCount',
+                      readOnly: true,
+                      allowBlank: true,
+                      labelWidth: 140,
+                      width: 220
+                    }
+                  ]
+                },
+                {
+                  attributeName: 'requestReason',
+                  readOnly: true,
+                  allowBlank: true
+                },
+                {
+                  attributeName: 'reasonDocument',
+                  readOnly: true,
+                  allowBlank: true
+                },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    { xtype: 'label', text: UB.i18n('Додаток:'), cls: 'x-form-item-label', margin: '5 0 0 17', width: 130 },
+                    { attributeName: 'attachment', margin: '5 0 5 5' }
+                  ]
+                }
+              ]
+            },
+            {
+              xtype: 'fieldset',
+              layout: { type: 'vbox', align: 'stretch' },
+              margin: '5 15 5 10',
+              padding: '5 0 10 0',
+              title: UB.i18n(' Результат'),
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'orderID',
+                  fieldList: ['ID', 'description', 'organizationID'],
+                  readOnly: false,
+                  allowBlank: true
+                },
+                {
+                  attributeName: 'requestResponse',
+                  readOnly: false,
+                  allowBlank: true
+                },
+                {
+                  attributeName: 'comment',
+                  readOnly: false,
+                  allowBlank: true
+                }
+              ]
+            }
+          ]
+        },
+        HR.reportTab.getTabConfig({ getRepName: 'getReportName', repTabIndex: 1 }),
+        {
+          title: UB.i18n('Маршрут'),
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          tbar: {
+            items: [{
+              xtype: 'button',
+              name: 'btnPrint',
+              itemId: 'btnPrint',
+              iconCls: 'fas fa-print',
+              cls: 'blue-action',
+              text: UB.i18n('Друкувати'),
+              handler: btn => {
+                let me = btn.up('form')
+                const reportCode = 'hr_printReconciliation'
+                $App.doCommand({
+                  cmdType: 'showReport',
+                  tabId: reportCode + Date.now(),
+                  caption: `${UB.i18n('Друкована форма')}`,
+                  target: $App.getViewport().centralPanel,
+                  cmdData: {
+                    reportCode: reportCode,
+                    reportType: 'html',
+                    reportParams: {
+                      instanceID: me.instanceID
+                    },
+                    reportOptions: {
+                      allowExportToExcel: true,
+                      isModal: false
+                    }
+                  }
+                })
+              }
+            }]
+          },
+          items: [
+            {
+              xtype: 'recpanel',
+              name: 'recpanel'
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Історія змін'),
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          items: [
+            {
+              name: 'stateHistory',
+              xtype: 'ubdetailgrid',
+              disableSearchBar: true,
+              readOnly: true,
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_orderStateHistory',
+                method: 'select',
+                fieldList: [
+                  { name: 'actionType' },
+                  { name: 'comments' },
+                  { name: 'orderState' },
+                  { name: 'userID.name', description: UB.i18n('Користувач') },
+                  { name: 'actionDateTime' }
+                ]
+              },
+              masterFields: ['ID'],
+              detailFields: ['orderID'],
+              cmpInitConfig: {
+                onItemDblClick: () => {}
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

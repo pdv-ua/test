@@ -1,0 +1,96 @@
+/* global Ext $App UB */
+/* global AC, _, UB, COA */
+
+exports.formDef = 'HR.hr_empSearch'
+
+Ext.define('HR.hr_empSearch', {
+  extend: 'Ext.form.Panel',
+  width: 450,
+  height: 300,
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+    me.on('afterrender', () => {
+    })
+    const buttons = []
+     buttons.push(
+      {
+        xtype: 'button',
+        name: 'search',
+        text: UB.i18n('Пошук'),
+        margin: '10 5 10 5',
+        iconCls: 'el-icon-search',
+        cls: 'green-action',
+        handler: function () {
+          const entityName = me.down('[name=entityName]').getValue()
+          me.setLoading(true)
+          AC.entityUtils.showgEntity(entityName)
+          me.up('window').close()
+        }
+      }
+    )
+    me.items = [
+      {
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            name: 'entityName',
+            fieldLabel: UB.i18n('Розділ картки працівника'),
+            xtype: 'combobox',
+            allowBlank: false,
+            displayField: 'name',
+            valueField: 'code',
+            store: Ext.create('Ext.data.Store', {
+              fields: [
+                { name: 'code' },
+                { name: 'name' }
+              ],
+              data: [
+                { code: 'hr_employeeContact', name: UB.i18n('Інші контакти') },
+                { code: 'hr_employeeFamily', name: UB.i18n('Члени сім\'ї') },
+                { code: 'hr_employeeChange', name: UB.i18n('Зміна облікових даних') },
+                { code: 'hr_employeeDocs', name: UB.i18n('Документи') },
+                { code: 'hr_employeeBenefits', name: UB.i18n('Право на пільги') },
+                { code: 'hr_employeeDisability', name: UB.i18n('Інвалідність') },
+                { code: 'hr_employeeWorkbook', name: UB.i18n('Трудова книжка') },
+                { code: 'hr_employeeExperience', name: UB.i18n('Стаж') },
+                { code: 'hr_publServRang', name: UB.i18n('Ранг держслужбовця') },
+                { code: 'hr_empStateMilitary', name: UB.i18n('Військовий облік') },
+                { code: 'hr_empConscription', name: UB.i18n('Призов на ВС') },
+                { code: 'hr_empMilitaryContract', name: UB.i18n('Контракт') },
+                { code: 'hr_employeeEducation', name: UB.i18n('Освіта') },
+                { code: 'hr_employeeLanguage', name: UB.i18n('Володіння мовами') },
+                { code: 'hr_empRangeScience', name: UB.i18n('Науковий ступінь') },
+                { code: 'hr_empAcademStatus', name: UB.i18n('Вчене звання') },
+                { code: 'hr_empCertificatnUp', name: UB.i18n('Прифесійне навчання') },
+                { code: 'hr_empCertificationAcc', name: UB.i18n('Атестація/Кваліфікація') },
+                { code: 'hr_employeeSuccess', name: UB.i18n('Патенти публікації') },
+                { code: 'hr_employeePosition', name: UB.i18n('Історія змін') },
+                { code: 'hr_empVacationPlan', name: UB.i18n('Право на відпустку') },
+                { code: 'hr_employeeAccrual', name: UB.i18n('Постійні нарахування') },
+                { code: 'hr_employeeDocAudit', name: UB.i18n('Спецперевірка') },
+                { code: 'hr_empAddInform', name: UB.i18n('Додаткова інформація') },
+                { code: 'hr_employeeAccessInfo', name: UB.i18n('Форма допуску до інформації') },
+                { code: 'hr_empCheckMedical', name: UB.i18n('Медогляд') }
+              ]
+            })
+          },
+          {
+            layout: {
+              type: 'hbox', pack: 'end'
+            },
+            items: buttons
+          }
+        ]
+      }
+    ]
+    me.loadData = async function () {
+
+    }
+    me.on('afterrender', async function () {
+      me.loadData()
+    })
+    me.callParent(arguments)
+  }
+})

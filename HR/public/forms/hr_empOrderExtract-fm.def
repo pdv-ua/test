@@ -1,0 +1,461 @@
+/* jshint maxerr: 10000 */
+
+/* global $App AC Ext UB HR appAC */
+
+exports.formDef = (function () {
+  return {
+    customParams: {
+      empOrderType: 'BONUS'
+    },
+    requiredFields: ['orderState', 'description', 'empOrderType', 'organizationID.mi_data_id', 'organizationID',
+      'organizationID.description', 'respEmployeePositionID.description', 'employeeNumberID', 'orderID.masterOrganizationID',
+      'respEmployeeNumID', 'respEmployeeNumID.description', 'document', 'mi_createUser', 'entryDate', 'masterOrganizationID'
+    ],
+    parentConfig: {
+      hideActions: ['docActiondocument'],
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    dockedItems: [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [{
+        orderId: 6,
+        actionId: 'postingAction'
+      },
+      {
+        orderId: 6,
+        actionId: 'cancelPostingAction'
+      },
+      {
+        orderId: 6,
+        actionId: 'printDocumentAction',
+        iconCls: 'fas fa-print',
+        cls: 'blue-action'
+      },
+      {
+        orderId: 6,
+        actionId: 'showStructure',
+        text: UB.i18n('Структура'),
+        iconCls: 'iconParams',
+        // showIf: (c, me) => me.isEditMode,
+        hidden: true,
+        handler: btn => {
+          const me = btn.up('form')
+          $App.doCommand({
+            cmdType: 'showForm',
+            entity: me.entity,
+            formCode: 'hr_empOrder-tree',
+            isModal: true,
+            customParams: {
+              orderID: me.record.get('ID'),
+              orderForm: me
+            }
+          })
+        }
+      },
+      {
+        orderId: 6,
+        actionId: 'startReconciliation'
+      },
+      {
+        orderId: 6,
+        actionId: 'stopReconciliation'
+      },
+      {
+        orderId: 6,
+        actionId: 'toCompletion'
+      },
+      {
+        orderId: 6,
+        actionId: 'renewTask'
+      }
+      ].reverse()
+    }],
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      listeners: {
+        tabchange: function (tabPanel, activeTab) {
+          const me = tabPanel.up('form')
+          if (me.isInternalTabSet) {
+            return
+          }
+          if (activeTab.ubID === 'report') {
+            if (!me.isPdfCreated) {
+              if (!me.record.get('docText') && me.record.get('orderState') === 'PROJECT') {
+                HR.reportTab.editHtml(me)
+              } else {
+                HR.reportTab.setReportMode(me, 'view')
+              }
+            }
+            me.isPdfCreated = true
+          } else if (activeTab.ubID === 'orderstructure') {
+            let orderStructure = activeTab.down('orderstructure')
+            if (!orderStructure) {
+              UB.inject('models/HR/controls/orderStructure.js').then(function () {
+                orderStructure = Ext.create('HR.controls.orderStructure', {
+                  orderID: me.instanceID,
+                  orderForm: me
+                })
+                activeTab.add(orderStructure)
+                orderStructure.appendItems()
+              })
+            }
+          }
+        }
+      },
+      items: [{
+        title: UB.i18n('Загальне'),
+        layout: {
+          type: 'border'
+        },
+        items: [{
+          region: 'north',
+          autoScroll: false,
+          // split: true,
+          items: [{
+            flex: 1,
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            items: [
+              {
+                xtype: 'label',
+                name: 'warningLabel',
+                text: 'Увага! При формуванні витягу з наказу НЕ ВРАХОВУЮТЬСЯ виправлення тексту документу, які внесені вручну! В такому випадку у зформований текст витягу потрібно вручну внести аналогічні виправлення.',
+                cls: 'x-form-item-label field-label-red',
+                margin: '10 10 10 10'
+              },
+              {
+                name: 'masterOrganizationName',
+                xtype: 'ubtextfield',
+                readOnly: true,
+                fieldLabel: UB.i18n('Головна організація'),
+                flex: 1
+              },
+              {
+                attributeName: 'organizationID',
+                fieldList: ['ID', 'description', 'mi_data_id'],
+                valueField: 'mi_data_id',
+                displayField: 'description',
+                fieldLabel: UB.i18n('Організація')
+              },
+              {
+                attributeName: 'orderNumber',
+                allowBlank: true,
+                maxWidth: 232,
+                flex: 1
+              },
+              {
+                attributeName: 'orderDate',
+                listeners: {
+                  focus: ctrl => {
+                    ctrl._oldValue = ctrl.getValue()
+                  }
+                }
+              },
+              {
+                attributeName: 'orderID',
+                fieldList: ['ID', 'description', 'entryDate', 'respPositionID', 'respEmployeePositionID', 'empOrderType'],
+                listeners: {
+                  select: ctrl => {
+                    const me = ctrl.up('form')
+                    me.filterDepartmentAndEmployee(ctrl.getValue(), ctrl.getFieldValue('entryDate')).then(() => {
+                      me.record.set('employeePositionID', null)
+                      me.record.set('departmentID', null)
+                      me.attr.employeePositionID.setRawValue('')
+                      me.attr.departmentID.setRawValue('')
+                    })
+                    me.record.set('entryDate', ctrl.getFieldValue('entryDate'))
+                    me.attr.respPositionID.setValueById(ctrl.getFieldValue('respPositionID'), false, () => {
+                      setTimeout(() => {
+                        me.attr.respPositionID.clearIsPhantom()
+                      }, 100)
+                    })
+                    me.attr.respEmployeePositionID.setValueById(ctrl.getFieldValue('respEmployeePositionID'), false, () => {
+                      setTimeout(() => {
+                        me.attr.respEmployeePositionID.clearIsPhantom()
+                      }, 100)
+                    })
+                  },
+                  change: ctrl => {
+                    if (!ctrl.getValue()) {
+                      ctrl.up('form').filterDepartmentAndEmployee().then(() => {
+
+                      })
+                    }
+                  }
+                }
+
+              },
+              {
+                attributeName: 'employeePositionID',
+                fieldList: ['ID', 'description', 'employeeNumberID', 'departmentID', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+                xtype: 'empPositionCombobox',
+                addWorkPlace: true,
+                listeners: {
+                  select: ctrl => {
+                    const me = ctrl.up('form')
+                    me.record.set('departmentID', null)
+                    me.record.set('employeeNumberID', ctrl.getFieldValue('employeeNumberID'))
+                  },
+                  change: ctrl => {
+
+                  }
+                }
+              },
+              {
+                attributeName: 'departmentID',
+                listeners: {
+                  select: ctrl => {
+                    ctrl.up('form').record.set('employeeNumberID', null)
+                  },
+                  change: ctrl => {
+
+                  }
+                }
+              },
+
+              {
+                xtype: 'fieldset',
+                layout: { type: 'vbox', align: 'stretch' },
+                margin: '5 0 5 10',
+                padding: '0 0 5 0',
+                style: 'border-color: #2f7c94',
+                items: [
+                  {
+                    attributeName: 'respPositionID',
+                    disableContextMenu: true,
+                    fieldList: ['mi_data_id', 'description', 'state'],
+                    labelWidth: 100,
+                    valueField: 'mi_data_id',
+                    displayField: 'description',
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                    gridFieldList: ['description'],
+                    __mip_recordhistory_all: true,
+                    whereList: {
+                      state: {
+                        expression: '[state]',
+                        condition: '=',
+                        value: 'ACTIVE'
+                      },
+                      isOrgBoss: {
+                        expression: '',
+                        condition: 'subquery',
+                        subQueryType: 'exists',
+                        value: {
+                          entity: 'hr_orgRespPosition',
+                          fieldList: ['ID'],
+                          method: 'select',
+                          whereList: {
+                            cond: {
+                              expression: '[positionID]=[{master}.mi_data_id]',
+                              condition: 'custom'
+                            },
+                            mi_deleteDate: {
+                              condition: 'equal',
+                              expression: '[mi_deleteDate]',
+                              value: '#maxdate'
+                            },
+                            organizationID: {
+                              condition: 'custom',
+                              expression: '[organizationID]=[{master}.orgID]'
+                            }
+                          }
+                        }
+                      },
+                      positionCategory: {
+                        expression: '[positionCategory]',
+                        condition: '=',
+                        value: '1'
+                      }
+                    },
+                    listeners: {
+                      render: ctrl => {
+                        setTimeout(function () { ctrl.clearIsPhantom() }, 1000)
+                      }
+                    }
+                  },
+                  {
+                    attributeName: 'respEmployeePositionID',
+                    disableContextMenu: true,
+                    labelWidth: 100,
+                    valueField: 'ID',
+                    displayField: 'description',
+                    fieldList: ['description', 'positionID', 'employeeID', 'employeeNumberID'],
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                    gridFieldList: ['description']
+                  }
+                ]
+              },
+              {
+                xtype: 'empNumComboBox',
+                showEntityName: 'hr_employee',
+                showFormCode: 'hr_employee',
+                instanceAttr: 'employeeID',
+                attributeName: 'respEmployeeNumID',
+                fieldList: ['ID', 'description', 'employeeID'],
+                hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                gridFieldList: ['description'],
+                allowBlank: true
+              },
+              { attributeName: 'comment' }
+            ]
+          }
+          ]
+        }
+        ]
+      },
+      HR.reportTab.getTabConfig({
+        getRepName: 'getReportName'
+      }),
+      {
+        title: UB.i18n('Додатки'),
+        autoScroll: true,
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        flex: 1,
+        items: [{
+          xtype: 'docAttachment',
+          entity: 'hr_orderAttachment',
+          detailFields: 'documentID',
+          masterFields: 'ID',
+          showOriginal: true,
+          minHeight: 55,
+          maxHeight: 140,
+          height: 95
+        }]
+      },
+      {
+        title: UB.i18n('Маршрут'),
+        autoScroll: true,
+        layout: 'fit',
+        flex: 1,
+        items: [{
+          xtype: 'recpanel',
+          name: 'recpanel'
+        }]
+      },
+      {
+        title: UB.i18n('Лист ознайомлення'),
+        autoScroll: true,
+        layout: 'fit',
+        flex: 1,
+        items: [{
+          title: UB.i18n('Лист ознайомлення'),
+          name: 'acquaintanceList',
+          xtype: 'ubdetailgrid',
+          // forceDataLoad: true,
+          rowEditing: true,
+          // notWriteChanges: true,
+          disableSearchBar: true,
+          // hidePagingBar: true,
+          // sortableColumns: false,
+          enableColumnHide: false,
+          hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+          flex: 1,
+          entityConfig: {
+            entity: 'hr_acquaintanceList',
+            method: 'select',
+            fieldList: [{
+              name: 'employeePositionID.description',
+              description: UB.i18n('Працівник'),
+              config: {
+                width: 500
+              },
+              editor: {
+                fieldList: ['ID', 'description'],
+                gridFieldList: ['description'],
+                allowBlank: false,
+                hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+              }
+            },
+            {
+              name: 'employeeID.description',
+              description: UB.i18n('Особа'),
+              config: {
+                width: 500
+              },
+              editor: {
+                fieldList: ['ID', 'description'],
+                gridFieldList: ['description'],
+                allowBlank: true,
+                hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                whereList: {
+                  organizationID: {
+                    expression: '[organizationID]',
+                    condition: '=',
+                    values: {
+                      organizationID: appAC.globalOrganization()
+                    }
+                  }
+                }
+              }
+            },
+            {
+              name: 'evaluationType',
+              config: {
+                width: 240
+              },
+              editor: {
+                // readOnly: true
+              }
+            },
+            {
+              name: 'comment',
+              config: {
+                width: 600
+              },
+              editor: {
+                // readOnly: true
+              }
+            }
+            ]
+          },
+          masterFields: ['ID'],
+          detailFields: ['orderID'], /*
+          cmpInitConfig: {
+            customActions: [{
+              tooltip: UB.i18n('Додати з наказу'),
+              text: UB.i18n('Додати з наказу'),
+              iconCls: 'fas fa-tasks',
+              actionId: 'addFromOrder',
+              handler: async function (btn) {
+                const me = btn.up('form')
+                await me.fillAcquaintanceList(me)
+              }
+            }]
+          }, */
+          onBeforeEdit: function (editor, context) {
+            const evaluationType = context.record.get('evaluationType')
+
+            // me.setIsDirty(true)
+            const onDate = appAC.globalApplicationDate()
+            AC.viewUtils.setWhereListProperty(editor.editor.query('[name=employeePositionID.description]')[0], [
+              ['organizationID', '=', appAC.globalOrganization()],
+              ['dateFrom', '<=', onDate],
+              ['dateTo', '>=', onDate]
+            ])
+            if (evaluationType === null) {
+              context.record.set('evaluationType', 'INFO')
+            }
+            return true
+          },
+          optimizeColumnWidth: function () {
+            // /!* do nothing for manual column width tunning *!/
+          }
+        }]
+      }]
+    }]
+  }
+})()

@@ -1,0 +1,625 @@
+/* global UB AC $App Ext */
+exports.formDef = {
+  requiredFields: [ 'description', 'orderRegistryID', 'orderRegistryID.organizationID',
+    'flagsRec', 'flagsFix', 'orderState', 'empOrderID', 'empOrderID.description',
+    'periodSalaryID.dateFrom', 'periodSalaryID.dateTo',
+    'orderRegistryID.periodID', 'employeeNumberID.dateFrom', 'employeeNumberID.dateTo',
+    'orderRegistryID.payElID', 'orderRegistryID.payElID.description',
+    'orderRegistryID.payElID.code', 'orderRegistryID.payElID.name'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'empNumAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'trfWorkPlace'
+        },
+        {
+          orderId: 6,
+          actionId: 'rlAction'
+        },
+        {
+          orderId: 7,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 8,
+          actionId: 'cancelPostingAction'
+        },
+        /* {
+          orderId: 8,
+          actionId: 'printDocumentAction'
+        }, */
+        {
+          orderId: 9,
+          actionId: 'calcShift'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 100 },
+          flex: 1,
+          items: [
+            { attributeName: 'employeeID', hidden: true },
+            { attributeName: 'employeeNumberID', fieldList: ['ID', 'description', 'mainEmpNumberID', 'empWorkPlace'], hidden: true },
+            { attributeName: 'orderRegistryDtID', hidden: true },
+            { attributeName: 'orderDate', hidden: true },
+            { attributeName: 'orderNumber', hidden: true },
+
+            {
+              fieldLabel: UB.i18n('Документ-підстава'),
+              xtype: 'textfield',
+              name: 'orderDescription',
+              fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+              flex: 1,
+              hidden: true,
+              readOnly: true
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  flex: 2,
+                  defaults: { labelWidth: 100 },
+                  items: [
+                    {
+                      layout: { type: 'hbox' },
+                      defaults: { labelWidth: 100 },
+                      items: [
+                        {
+                          attributeName: 'employeePositionID',
+                          fieldList: [
+                            'ID', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'dateFrom', 'dateTo',
+                            'employeeNumberID.dateFrom', 'employeeNumberID.dateTo', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo',
+                            'dictPositionID',
+                            'workScheduleID', 'workScheduleID.daysWork',
+                            'dictPositionID.workNormID',
+                            'dictTarifCoeffID', 'dictFundSourceID', 'dictProgClassID'
+                          ],
+                          orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                          addWorkPlace: true,
+                          addDateTo: true,
+                          flex: 1,
+                          xtype: 'empPositionCombobox'
+                          // skipSetReadOnly: true
+                        },
+                        {
+                          attributeName: 'workPlaceOnly',
+                          labelWidth: 150,
+                          width: 170
+                        }
+                      ]
+                    },
+                    {
+                      xtype: 'empNumComboBox',
+                      attributeName: 'linkEmployeeNumberID',
+                      fieldList: ['ID', 'description', 'employeeID', 'dateFrom', 'dateTo'],
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                      gridFieldList: ['description'],
+                      allowBlank: true,
+                      hidden: true
+                    },
+                    {
+                      attributeName: 'dictPositionID',
+                      fieldLabel: UB.i18n('Посада'),
+                      selectOnFocus: true,
+                      fieldList: ['ID', 'caption', 'positionType', 'dictStaffCatID.accCategory'],
+                      readOnly: true,
+                      skipSetReadOnly: true
+                      /* listeners: {
+                        beforeQuerySend: function () {
+                          const me = this
+                          const rawValue = me.rawValue
+                          if (rawValue && rawValue.length > 0 && Number(rawValue[0])) {
+                            me.store.ubRequest.orderList = { orderBy: { expression: 'codeSort' } }
+                          } else {
+                            me.store.ubRequest.orderList = { orderBy: { expression: 'name' } }
+                          }
+                        }
+                      } */
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      flex: 1,
+                      items: [
+                        { attributeName: 'dictTarifCoeffID',
+                          fieldList: ['ID', 'name'],
+                          flex: 1,
+                          labelWidth: 100
+                        },
+                        // {
+                        //   attributeName: 'workScheduleID',
+                        //   fieldList: ['ID', 'name'],
+                        //   flex: 1
+                        // }
+                        {
+                          attributeName: 'workNormID',
+                          fieldList: ['ID', 'weekHours'],
+                          flex: 1
+                        }
+                      ]
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      flex: 1,
+                      items: [
+                        { attributeName: 'rateType',
+                          flex: 1,
+                          labelWidth: 100
+                        },
+                        {
+                          attributeName: 'calcTimeType',
+                          flex: 1
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  flex: 3,
+                  defaults: { labelWidth: 120 },
+                  items: [
+                    {
+                      layout: { type: 'hbox' },
+                      defaults: { labelWidth: 120 },
+                      flex: 1,
+                      items: [
+                        {
+                          attributeName: 'periodSalaryID',
+                          fieldList: ['ID', 'name'],
+                          fieldLabel: UB.i18n('Період заміни'),
+                          labelWidth: 100,
+                          readOnly: true,
+                          skipSetReadOnly: true,
+                          width: 250
+                        },
+                        {
+                          attributeName: 'dateFrom',
+                          fieldLabel: UB.i18n('З'),
+                          labelWidth: 100,
+                          // skipSetReadOnly: true,
+                          enableKeyEvents: true,
+                          flex: 1
+                        },
+                        {
+                          attributeName: 'dateTo',
+                          fieldLabel: UB.i18n('по'),
+                          enableKeyEvents: true,
+                          labelWidth: 30,
+                          // skipSetReadOnly: true,
+                          flex: 1
+                        }
+                      ]
+                    },
+                    {
+                      attributeName: 'trfPositionID',
+                      fieldLabel: UB.i18n('на посаді'),
+                      fieldList: ['ID', 'description', 'workPlaceID.employeeNumberID', 'dictTarifCoeffID',
+                        'dictFundSourceID', 'dictFundSourceID.name',
+                        'dictProgClassID', 'dictProgClassID.description',
+                        'workPlaceID.state', 'workPlaceID.documentID.type',
+                        'workPlaceID.dateFrom', 'workPlaceID.dateTo'
+                      ],
+                      orderList: {
+                        orderBy: {
+                          expression: 'description',
+                          order: 'desc'
+                        }
+                      },
+                      hidden: true
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      defaults: { labelWidth: 100 },
+                      items: [
+                        {
+                          attributeName: 'orderDate',
+                          fieldLabel: UB.i18n('Дата наказу'),
+                          enableKeyEvents: true,
+                          width: 250
+                        },
+                        {
+                          attributeName: 'orderNumber',
+                          fieldLabel: UB.i18n('Номер'),
+                          enableKeyEvents: true,
+                          width: 250
+                        }
+                      ]
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      name: 'byDays',
+                      defaults: { labelWidth: 100 },
+                      items: [
+                        {
+                          attributeName: 'planDays',
+                          selectOnFocus: true,
+                          fieldLabel: UB.i18n('План днів'),
+                          hidden: true,
+                          readOnly: true,
+                          width: 250
+                        },
+                        {
+                          attributeName: 'days',
+                          selectOnFocus: true,
+                          fieldLabel: UB.i18n('Днів'),
+                          width: 250
+                        }
+                      ]
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      name: 'byHours',
+                      defaults: { labelWidth: 100 },
+                      items: [
+                        {
+                          attributeName: 'planHours',
+                          fieldLabel: UB.i18n('План годин'),
+                          selectOnFocus: true,
+                          hidden: true,
+                          readOnly: true,
+                          width: 250
+                        },
+                        {
+                          attributeName: 'hours',
+                          selectOnFocus: true,
+                          fieldLabel: UB.i18n('Годин'),
+                          width: 250
+                        },
+                        {
+                          attributeName: 'dictPositionExID',
+                          fieldList: ['ID', 'caption', 'dictTarifCoeffID', 'workNormID'],
+                          flex: 1
+                        }
+                      ]
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      defaults: { labelWidth: 100 },
+                      items: [
+                        {
+                          attributeName: 'paySum',
+                          readOnly: true,
+                          skipSetReadOnly: true,
+                          width: 250
+                        },
+                        {
+                          attributeName: 'addPaySum',
+                          fieldLabel: UB.i18n('в т.ч. додаткові нарахування'),
+                          readOnly: true,
+                          skipSetReadOnly: true,
+                          width: 250
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              attributeName: 'docError',
+              fieldLabel: '',
+              readOnly: true,
+              fieldStyle: 'font-weight: bold; color: red; text-align:center;',
+              skipSetReadOnly: true,
+              rows: 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      margin: '4, 0, 0, 0',
+      items: [
+        {
+          xtype: 'acGrid',
+          name: 'orderRegistryDt',
+          title: UB.i18n('Розрахунок'),
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          includeCustomReadOnly: ['fillBtn', 'addBtn'],
+          includeContextMenuReadOnly: [],
+          summary: { paySum: 'sum' },
+          summaryDataOnClient: true,
+          hideActions: ['addNewByCurrent'],
+          entity: 'hr_orderRegistryDt',
+          formCode: 'hr_docRegShiftDt',
+          viewConfig: {
+            markDirty: false
+          },
+          enableMultifilter: true,
+          onSaveEditData: function (me, grid, record, formData) {
+            me.setAccrual(me, grid, record, formData)
+          },
+          beforeOpenForm: function (grid) {
+            const me = grid.up('form')
+            return (me.attr.dateFrom.getValue() && me.attr.dateTo.getValue() && me.attr.employeePositionID.getValue())
+          },
+          customToolBarActions: [
+            {
+              xtype: 'button',
+              name: 'fillBtn',
+              tooltip: UB.i18n('Заповнити'),
+              iconCls: 'fas fa-angle-double-down',
+              cls: 'fill-action',
+              handler: function (btn) {
+                const me = btn.up('form')
+                const count = me.attr.orderRegistryDt.getStore().snapshot ? me.attr.orderRegistryDt.getStore().snapshot.getCount() : me.attr.orderRegistryDt.getStore().count()
+                if (count) {
+                  $App.dialogYesNo('Попередження', UB.i18n('Увага! Наявні записи будуть видалені! Продовжити?'))
+                    .then(res => {
+                      if (res) {
+                        me.addAutoAccruals = true
+                        me.calcShift({ me, reload: true })
+                      }
+                    })
+                } else {
+                  me.addAutoAccruals = true
+                  me.calcShift({ me, reload: true })
+                }
+              }
+            },
+            {
+              xtype: 'button',
+              name: 'addBtn',
+              iconCls: 'u-icon-list-success',
+              cls: 'fill-action',
+              scale: 'medium',
+              tooltip: UB.i18n('Додати списком'),
+              handler: function (btn) {
+                const me = btn.up('form')
+                me.setPayElList(me)
+              }
+            }
+          ],
+          customPopupMenuItems: [
+            {
+              text: UB.i18n('Аналітика'),
+              iconCls: 'el-icon-notebook-2',
+              name: 'dimension',
+              cls: 'blue-action',
+              handler: (context) => {
+                const me = context.up('').grid.up('form')
+                let record = context.up('').record || AC.gridUtils.getCurrentRecord(me.attr.orderRegistryDt)
+                me.getDimension(me, record)
+              }
+            },
+            {
+              xtype: 'menuseparator'
+            },
+            {
+              text: UB.i18n('Видалити запис'),
+              iconCls: 'fa fa-trash-o',
+              ubID: 'itemDelete',
+              handler: function (context) {
+                const me = context.up('').grid.up('form')
+                const grid = me.attr.orderRegistryDt
+                const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                if (record) {
+                  $App.dialogYesNo(UB.i18n('Видалення'), UB.i18n('Видалити запис?'))
+                    .then(res => {
+                      if (res) {
+                        Ext.suspendLayouts()
+                        grid.suspendEvents()
+                        grid.getStore().suspendEvents()
+                        grid.getStore().remove(record)
+                        grid.getStore().removed = grid.getStore().removed.concat(record.getData())
+                        // grid.down('[name=delBtn]').setDisabled(grid.getCheckedRow().length === 0)
+                        grid.resumeEvents()
+                        grid.getStore().resumeEvents()
+                        Ext.resumeLayouts(true)
+                        grid.getView().refreshView()
+                        grid.GridSummary.dataBind()
+                        me.setIsDirty(true)
+                      }
+                    })
+                }
+              }
+            }
+          ],
+          fields: [
+            { name: 'ID' },
+            { name: 'mi_modifyDate' },
+            { name: 'orderRegistryID' },
+            { name: 'orderID' },
+            { name: 'orderNumber' },
+            { name: 'employeeNumberID' },
+            { name: 'periodCalcID' },
+            { name: 'periodSalaryID' },
+            { name: 'periodCalc' },
+            { name: 'periodSalary' },
+            { name: 'payElID' },
+            { name: 'mask' },
+            { name: 'maskAdd' },
+            { name: 'flagsFix' },
+            { name: 'flagsRec' },
+            { name: 'accrualDt' },
+            { name: 'payElID.methodID.code' },
+            { name: 'payElID.codeSort' },
+            {
+              name: 'payElID.description',
+              columnConfig: {
+                text: UB.i18n('Нарахування'),
+                filterBy: 'string',
+                flex: 1
+              }
+            },
+            {
+              name: 'dateFrom'
+              /*   columnConfig: {
+                text: UB.i18n('З'),
+                width: 50,
+                dateFormat: 'd',
+                dataType: 'Date'
+              } */
+            },
+            {
+              name: 'dateTo'
+              /* columnConfig: {
+                text: UB.i18n('По'),
+                width: 50,
+                dateFormat: 'd',
+                dataType: 'Date'
+              } */
+            },
+            {
+              name: 'dictFundSourceID.name',
+              columnConfig: {
+                text: UB.i18n('Фінансування'),
+                filterBy: 'string',
+                flex: 1
+              }
+            },
+            { name: 'dictFundSourceID' },
+            {
+              name: 'dictProgClassID.description',
+              columnConfig: {
+                text: UB.i18n('КПК'),
+                filterBy: 'string',
+                flex: 1
+              }
+            },
+            { name: 'dictProgClassID' },
+            {
+              name: 'baseSum',
+              columnConfig: {
+                text: UB.i18n('Сума для розрахунку'),
+                width: 150,
+                floatFormat: 2,
+                sortBy: 'Number',
+                filterBy: 'float',
+                align: 'right',
+                dataType: 'Currency'
+              }
+            },
+            {
+              name: 'planDays',
+              columnConfig: {
+                text: UB.i18n('Норма днів'),
+                width: 150,
+                floatFormat: 2,
+                sortBy: 'Number',
+                filterBy: 'float',
+                align: 'right',
+                dataType: 'Currency',
+                hidden: true
+              }
+            },
+            {
+              name: 'days',
+              columnConfig: {
+                text: UB.i18n('Тривалість днів'),
+                width: 150,
+                floatFormat: 2,
+                sortBy: 'Number',
+                filterBy: 'float',
+                align: 'right',
+                dataType: 'Currency',
+                hidden: true
+              }
+            },
+            {
+              name: 'planHours',
+              columnConfig: {
+                text: UB.i18n('Норма годин'),
+                width: 150,
+                floatFormat: 2,
+                sortBy: 'Number',
+                filterBy: 'float',
+                align: 'right',
+                dataType: 'Currency'
+              }
+            },
+            {
+              name: 'hours',
+              columnConfig: {
+                text: UB.i18n('Тривалість годин'),
+                width: 150,
+                floatFormat: 2,
+                sortBy: 'Number',
+                filterBy: 'float',
+                align: 'right',
+                dataType: 'Currency'
+              }
+            },
+            {
+              name: 'rate',
+              columnConfig: {
+                text: '%',
+                width: 100,
+                floatFormat: 2,
+                sortBy: 'Number',
+                filterBy: 'float',
+                align: 'right'
+              }
+            },
+            {
+              name: 'paySum',
+              columnConfig: {
+                text: UB.i18n('Сума'),
+                width: 150,
+                floatFormat: 2,
+                sortBy: 'Number',
+                filterBy: 'float',
+                align: 'right',
+                dataType: 'Currency'
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додатки'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'docAttachment',
+              entity: 'hr_orderAttachment',
+              detailFields: 'documentID',
+              masterFields: 'ID',
+              showOriginal: true,
+              minHeight: 55,
+              maxHeight: 140,
+              height: 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,455 @@
+/* global appHR UB AC HR */
+exports.formDef = {
+  requiredFields: ['orderState', 'description', 'organizationID', 'filterParams', 'empOrderID', 'hasPosted', 'hasProject',
+    'payElID.methodID.valuation', 'payElID.methodID.code', 'empOrderID', 'empOrderID.description'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'exportExcel'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          layout: { type: 'hbox' },
+          flex: 1,
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  flex: 1,
+                  items: [
+                    {
+                      attributeName: 'name',
+                      xtype: 'textfield',
+                      labelWidth: 130,
+                      flex: 2
+                    },
+                    {
+                      attributeName: 'orderNumber',
+                      fieldLabel: UB.i18n('Номер'),
+                      labelWidth: 60,
+                      allowBlank: true,
+                      flex: 1
+                    },
+                    {
+                      attributeName: 'orderType',
+                      hidden: true,
+                      flex: 1
+                    }
+                  ]
+                },
+                {
+                  attributeName: 'payElID',
+                  allowBlank: false,
+                  fieldList: ['ID', 'description', 'periodType', 'methodID.methodGroupID.code', 'methodID.code',
+                    'methodID.valuation', 'calcSumType', 'codeSort'],
+                  orderList: { orderBy: { expression: 'codeSort' } },
+                  skipSetReadOnly: true
+                },
+                {
+                  attributeName: 'periodSalaryID',
+                  allowBlank: false,
+                  pageSize: 50,
+                  fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+                  orderList: {
+                    orderBy: {
+                      expression: 'dateFrom',
+                      order: 'desc'
+                    }
+                  },
+                  listeners: {
+                    expand: appHR.periodExpand
+                  }
+                },
+                {
+                  layout: { type: 'hbox' },
+                  flex: 1,
+                  items: [
+                    {
+                      attributeName: 'docNumber',
+                      allowBlank: false,
+                      fieldLabel: UB.i18n('Наказ №'),
+                      labelWidth: 130,
+                      flex: 1,
+                      skipSetReadOnly: true
+                    },
+                    {
+                      attributeName: 'orderDate',
+                      fieldLabel: UB.i18n('від'),
+                      labelWidth: 40,
+                      flex: 1,
+                      skipSetReadOnly: true
+                    }
+                  ]
+                },
+                {
+                  fieldLabel: UB.i18n('Документ-підстава'),
+                  xtype: 'textfield',
+                  name: 'orderDescription',
+                  fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+                  flex: 1,
+                  hidden: true,
+                  readOnly: true
+                }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              defaults: { labelWidth: 100 },
+              items: [
+                {
+                  attributeName: 'periodID',
+                  fieldLabel: UB.i18n('Період створення'),
+                  flex: 2,
+                  pageSize: 50,
+                  fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+                  orderList: {
+                    orderBy: {
+                      expression: 'dateFrom',
+                      order: 'desc'
+                    }
+                  },
+                  listeners: {
+                    expand: appHR.periodExpand
+                  }
+                },
+                {
+                  attributeName: 'baseSum',
+                  enableKeyEvents: true,
+                  decimalPrecision: 2,
+                  flagsFix: 1,
+                  flex: 1,
+                  skipSetReadOnly: true
+                },
+                {
+                  attributeName: 'rate',
+                  enableKeyEvents: true,
+                  decimalPrecision: 2,
+                  flagsFix: 1 << 9,
+                  flex: 1,
+                  skipSetReadOnly: true
+                },
+                {
+                  attributeName: 'dailyWage',
+                  labelWidth: 160
+                },
+                {
+                  attributeName: 'checkBalance',
+                  labelWidth: 160
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'acGrid',
+      name: 'orderRegistryDt',
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_orderRegistryRequestEmp_orderRegistryDt'),
+      region: 'center',
+      flex: 1,
+      autoScroll: true,
+      cellEditing: true,
+      notWriteChanges: true,
+      storeType: 'local',
+      showToolBar: true,
+      disablePaging: true,
+      loadMaskMessage: UB.i18n('Завантаження даних...'),
+      summary: { paySum: 'sum' },
+      summaryDataOnClient: true,
+      ignoreAttr: ['posName', 'depName'],
+      hideActions: ['addNewByCurrent'],
+      includeContextMenuReadOnly: [],
+      ignoreAttrNewByCurrent: ['posName', 'depName', 'employeeNumberID.description', 'employeeNumberID'],
+      onBeforeEdit: (control, context) => {
+        const me = context.grid.up('form')
+        return me.beforeGridEdit(me, context)
+      },
+      edit: (control, context) => {
+        const me = context.grid.up('form')
+        return me.onGridEdit(me, context)
+      },
+      customContextActions: [
+        HR.orderManager.getOrderRegistryRlAction(null),
+        HR.orderManager.getOrderRegistryEmployeeAction(null),
+        {
+          text: UB.i18n('Аналітика'),
+          iconCls: 'el-icon-notebook-2',
+          name: 'dimension',
+          cls: 'blue-action',
+          handler: (context) => {
+            const me = context.up('').grid.up('form')
+            let record = context.up('').record || AC.gridUtils.getCurrentRecord(me.attr.orderRegistryDt)
+            me.getDimension(me, record)
+          }
+        }
+      ],
+      getRowClass: function (record) {
+        let cls = ''
+        if (record.get('paySum') !== record.get('paySumAccrual')) {
+          cls = 'grd-color-blue'
+        }
+        return cls
+      },
+      customToolBarActions: [
+        {
+          name: 'calc',
+          iconCls: 'fas fa-calculator',
+          cls: 'fill-action',
+          scale: 'medium',
+          tooltip: UB.i18n('Розрахувати'),
+          handler: function (btn) {
+            const me = btn.up('form')
+            let reCalcRate = !!me.attr.rate.getValue()
+            const store = me.attr.orderRegistryDt.getStore()
+            const allRecords = store.snapshot || store.data
+            const baseSum = me.attr.baseSum.getValue()
+            const rate = me.attr.rate.getValue()
+            allRecords.each(record => {
+              let flagsFix = record.get('flagsFix')
+              if (rate) {
+                record.set('flagsFix', ((flagsFix & ~2) & ~me.attr.baseSum.flagsFix) | me.attr.rate.flagsFix)
+                record.set('rate', rate)
+                record.set('baseSum', null)
+              } else if (baseSum) {
+                record.set('flagsFix', (flagsFix & ~me.attr.rate.flagsFix) | me.attr.baseSum.flagsFix)
+                record.set('baseSum', baseSum)
+                record.set('rate', null)
+              }
+            })
+            me.reCalc(me, null, reCalcRate)
+          }
+        },
+        {
+          name: 'addList',
+          iconCls: 'u-icon-list-success',
+          cls: 'fill-action',
+          scale: 'medium',
+          tooltip: UB.i18n('Додати списком'),
+          handler: function (btn) {
+            const me = btn.up('form')
+            me.setEmployeeNumbers(me)
+          }
+        }
+      ],
+      dockedItemsCreated: function (grid) {
+        const toolBarItems = grid.dockedItems[0].items
+        const oldIdx = toolBarItems.findIndex(item => item.name === 'addNew')
+        const newIdx = toolBarItems.findIndex(item => item.name === 'addList')
+        if (oldIdx >= 0 && newIdx >= 0) {
+          AC.dataService.arraymove(toolBarItems, oldIdx, newIdx)
+        }
+      },
+      enableMultifilter: true,
+      fields: [
+        { name: 'ID' },
+        { name: 'employeeNumberID.dateToEmpty' },
+        { name: 'employeeNumberID.workPlaceCode' },
+        { name: 'employeeNumberID.mi_deleteUser' },
+        {
+          name: 'tabNum',
+          columnConfig: {
+            text: UB.i18n('Таб.№'),
+            width: 70,
+            filterBy: 'string'
+          }
+        },
+        {
+          name: 'employeeNumberID.description',
+          columnConfig: {
+            text: UB.i18n('Працівник'),
+            flex: 1,
+            editor: {
+              dataType: 'Entity',
+              hideEntityItemInContext: true,
+              associatedEntity: 'hr_employeeNumberSR',
+              storeAttributeValueField: 'employeeNumberID',
+              allowBlank: false,
+              fieldList: ['ID', 'description', 'orgID', 'dateFrom', 'dateTo', 'posName', 'depName', 'employeeID', 'dateToEmpty', 'workPlaceCode', 'mi_deleteUser', 'tabNum']
+            },
+            filterBy: 'string'
+          }
+        },
+        { name: 'employeeNumberID' },
+        { name: 'periodCalcID' },
+        { name: 'periodSalaryID' },
+        { name: 'payElID' },
+        { name: 'payElID.methodID.code' },
+        {
+          name: 'baseSum',
+          columnConfig: {
+            text: UB.i18n('Сума для розрахунку'),
+            width: 150,
+            floatFormat: 2,
+            align: 'right',
+            sortBy: 'Number',
+            editor: {
+              dataType: 'Currency',
+              decimalPrecision: 2,
+              flagsFix: 1
+            },
+            filterBy: 'float'
+          }
+        },
+        {
+          name: 'rate',
+          columnConfig: {
+            text: UB.i18n('Відсоток'),
+            width: 150,
+            floatFormat: 2,
+            align: 'right',
+            sortBy: 'Number',
+            editor: {
+              dataType: 'Currency',
+              decimalPrecision: 2,
+              flagsFix: 1 << 9
+            },
+            filterBy: 'float'
+          }
+        },
+        {
+          name: 'paySumAccrual',
+          columnConfig: {
+            text: UB.i18n('Розрахована сума'),
+            width: 150,
+            floatFormat: 2,
+            align: 'right',
+            sortBy: 'Number',
+            filterBy: 'float'
+          }
+        },
+        {
+          name: 'paySum',
+          columnConfig: {
+            text: UB.i18n('До утримання'),
+            width: 150,
+            floatFormat: 2,
+            align: 'right',
+            sortBy: 'Number',
+            editor: {
+              dataType: 'Currency',
+              decimalPrecision: 2,
+              flagsFix: 2
+            },
+            filterBy: 'float'
+          }
+        },
+        {
+          name: 'posName',
+          columnConfig: {
+            text: UB.i18n('Посада'),
+            width: 150,
+            filterBy: 'string'
+          }
+        },
+        { name: 'depName',
+          columnConfig: {
+            text: UB.i18n('Підрозділ'),
+            width: 150,
+            filterBy: 'string'
+          }
+        },
+        {
+          name: 'mi_createDate',
+          columnConfig: {
+            text: UB.i18n('Дата створення'),
+            dateFormat: 'd.m.Y H:i:s',
+            dataType: 'Date',
+            width: 120,
+            editor: {
+              dataType: 'Date',
+              allowBlank: false,
+              hidden: true
+            },
+            filterBy: 'date'
+          }
+        },
+        {
+          name: 'mi_createUser.fullName',
+          columnConfig: {
+            text: UB.i18n('Користувач, що створив'),
+            width: 150,
+            filterBy: 'string',
+            hidden: true
+          }
+        },
+        {
+          name: 'mi_modifyDate',
+          columnConfig: {
+            text: UB.i18n('Дата останнього коригування'),
+            dateFormat: 'd.m.Y H:i:s',
+            dataType: 'Date',
+            width: 120,
+            filterBy: 'date',
+            hidden: true
+          }
+        },
+        {
+          name: 'mi_modifyUser.fullName',
+          columnConfig: {
+            text: UB.i18n('Користувач, що останнім коригував'),
+            width: 150,
+            filterBy: 'string',
+            hidden: true
+          }
+        },
+        { name: 'periodCalcID' },
+        { name: 'periodCalc' },
+        { name: 'periodSalaryID' },
+        { name: 'periodSalary' },
+        { name: 'flagsFix' },
+        { name: 'flagsRec' },
+        { name: 'dateFrom' },
+        { name: 'dateTo' },
+        { name: 'mask' },
+        { name: 'days' },
+        { name: 'hours' },
+        { name: 'planHours' },
+        { name: 'planDays' },
+        { name: 'dateFromAvg' },
+        { name: 'dateToAvg' },
+        { name: 'extraRate' },
+        { name: 'calcSum' },
+        { name: 'dictFundSourceID' },
+        { name: 'accrualDt' }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+/* global Ext AC appAC $App UB */
+
+exports.formDef = 'HR.positionListAll'
+
+Ext.define('HR.positionListAll', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.positionListAll',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        layout: 'fit',
+        flex: 1,
+        hideActions: ['addNew', 'addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        stateful: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_positionListAll_grid'),
+        cmdType: 'showList',
+        description: UB.i18n('Посада'),
+        entity: 'hr_position',
+        cmdData: {
+          params: [{
+            entity: 'hr_position',
+            method: 'select',
+            fieldList: [
+              { name: 'name', description: UB.i18n('Назва') },
+              { name: 'parentUnitID.name', description: UB.i18n('Підпорядкування') },
+              { name: 'positionType', description: UB.i18n('Тип посади') },
+              { name: 'dictWagePayID.name', description: UB.i18n('Тип посади держслужбовця') },
+              { name: 'psCategory', description: UB.i18n('Категорія посади держслужбовця') },
+              { name: 'dictStatePayID.name', description: UB.i18n('Група оплати праці держслужбовців') },
+              { name: 'payElID.name', description: UB.i18n('Вид оплати') },
+              { name: 'accrualSum', description: UB.i18n('Сума') },
+              { name: 'dictPositionID.dictProfessionID.code', description: UB.i18n('Державний класифікатор') },
+              { name: 'code', description: UB.i18n('Код') },
+              { name: 'state', description: UB.i18n('Стан') },
+              { name: 'dictTarifCoeffID.name', description: UB.i18n('Тарифний розряд') },
+              { name: 'fundSourceName', description: UB.i18n('Джерело фінансування') },
+              { name: 'mi_dateFrom', description: UB.i18n('Дата початку дії'), format: 'd.m.Y' },
+              { name: 'dateToEmpty', description: UB.i18n('Дата закінчення дії'), format: 'd.m.Y' },
+              { name: 'entryOrderID.description', description: UB.i18n('Наказ') },
+              { name: 'staffOrderID.description', description: UB.i18n('Штатний розпис') },
+              { name: 'description', description: UB.i18n('Опис'), visibility: false }
+            ],
+            __mip_recordhistory_all: true,
+            whereList: {
+              parentIsNew: {
+                expression: '[parentUnitID.state]',
+                condition: '=',
+                value: 'NEW'
+              },
+              parentDateFrom: {
+                expression: '[parentUnitID.mi_dateFrom]',
+                condition: 'lessEqual',
+                value: appAC.globalApplicationDate()
+              },
+              parentDateTo: {
+                expression: '[parentUnitID.mi_dateTo]',
+                condition: 'moreEqual',
+                value: appAC.globalApplicationDate()
+              },
+              parentState: {
+                expression: '[parentUnitID.state]',
+                condition: '=',
+                value: 'ACTIVE'
+              },
+              dateFrom: {
+                expression: '[mi_dateFrom]',
+                condition: 'lessEqual',
+                value: appAC.globalApplicationDate()
+              },
+              dateTo: {
+                expression: '[mi_dateTo]',
+                condition: 'moreEqual',
+                value: appAC.globalApplicationDate()
+              },
+              parentMiDeleteD: {
+                expression: '[parentUnitID.mi_deleteDate]',
+                condition: 'moreEqual',
+                value: '#maxdate'
+              }
+            },
+            logicalPredicates: ['([parentIsNew] OR ([parentState] AND [parentDateFrom] AND [parentDateTo]))']
+          }]
+        },
+        cmpInitConfig: {
+          afterInit: function () {
+            AC.gridUtils.setGlobalOrganization(this, 'orgID')
+            if (!AC.entityUtils.verifyRightsMethod(this.entityName, 'delete')) {
+              this.hideAction('del', true)
+            }
+          }
+        }
+      }
+    ]
+  },
+
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+    me.changeGlobal = function () {
+      const store = me.down('ubdetailgrid').getStore()
+      const globalDate = appAC.globalApplicationDate()
+      // store.ubRequest.whereList.parentDateFrom.value = globalDate
+      // store.ubRequest.whereList.parentDateTo.value = globalDate
+      store.ubRequest.whereList.dateFrom.value = globalDate
+      store.ubRequest.whereList.dateTo.value = globalDate
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      $App.on('ac:app:operationDateChanged', me.changeGlobal)
+    }, me)
+    me.on('destroy', () => {
+      $App.un('ac:app:operationDateChanged', me.changeGlobal)
+    }, me)
+    me.callParent(arguments)
+  }
+})

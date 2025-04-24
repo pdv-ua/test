@@ -1,0 +1,418 @@
+{
+  "caption": "Наказ про відпустку",
+  "description": "Наказ про відпустку",
+  "descriptionAttribute": "orderID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "itemIdx",
+      "dataType": "Int",
+      "caption": "№",
+      "description": "№ за порядком",
+      "documentation": "№ за порядком"
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ",
+      "allowNull": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultView": false
+    },
+    {
+      "name": "orderStateEx",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT coalesce({self}.orderState, 'UNKNOWN'))"
+        }
+      ]
+    },
+    {
+      "name": "cancelOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Скасовано наказом",
+      "description": "Наказ, що скасував даний пункт",
+      "documentation": "Наказ, що скасував даний пункт"
+    },
+    {
+      "name": "cancelParaID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Скасовано пунктом",
+      "description": "Пункт, що скасував даний пункт",
+      "documentation": "Пункт, що скасував даний пункт"
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ"
+    },
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада",
+      "allowNull": true
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "allowNull": false
+    },
+    {
+      "name": "dictVacationKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictVacationKind",
+      "caption": "Вид відпустки",
+      "description": "Вид відпустки",
+      "documentation": "Вид відпустки",
+      "allowNull": true
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "allowNull": false
+    },
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "allowNull": false
+    },
+    {
+      "name": "firstName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Ім'я",
+      "description": "Ім'я",
+      "documentation": "Ім'я",
+      "allowNull": false
+    },
+    {
+      "name": "lastName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Прізвище",
+      "description": "Прізвище",
+      "documentation": "Прізвище",
+      "allowNull": false
+    },
+    {
+      "name": "middleName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "По батькові",
+      "description": "По батькові",
+      "documentation": "По батькові"
+    },
+    {
+      "name": "empNameCase",
+      "dataType": "String",
+      "size": 200,
+      "caption": "ПІБ для друку",
+      "allowNull": true
+    },
+    {
+      "name": "title",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада"
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false,
+      "defaultValue": "VACATION"
+    },
+    {
+      "name": "isRst",
+      "dataType": "Boolean",
+      "caption": "Пропорційно до відпрацьованого часу",
+      "description": "Пропорційно до відпрацьованого часу",
+      "documentation": "Пропорційно до відпрацьованого часу",
+      "defaultValue": "0",
+      "allowNull": false
+    },
+    {
+      "name": "isMoneyHelp",
+      "dataType": "Boolean",
+      "caption": "Матеріальна допомога",
+      "description": "Матеріальна допомога",
+      "documentation": "Матеріальна допомога",
+      "defaultValue": "0",
+      "allowNull": false
+    },
+    {
+      "name": "moneyHelpPayElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати для матеріальної допомоги",
+      "description": "Вид оплати для матеріальної допомоги",
+      "documentation": "Вид оплати для матеріальної допомоги"
+    },
+    {
+      "name": "dayCount",
+      "dataType": "Int",
+      "caption": "Тривалість",
+      "documentation": "Тривалість",
+      "description": "Тривалість",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата з",
+      "description": "Дата з",
+      "documentation": "Дата з",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата по",
+      "description": "Дата по",
+      "documentation": "Дата по",
+      "allowNull": false
+    },
+    {
+      "name": "periodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Звітній період",
+      "description": "Звітній період",
+      "documentation": "Звітній період"
+    },
+    {
+      "name": "reason",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Причина надання відпустки",
+      "description": "Причина надання відпустки",
+      "documentation": "Причина надання відпустки",
+      "allowNull": true
+    },
+    {
+      "name": "reasonDoc",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Підстава",
+      "description": "Підстава",
+      "documentation": "Підстава",
+      "allowNull": true
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Інформація",
+      "documentation": "Інформація",
+      "description": "Інформація",
+      "allowNull": false
+    },
+    {
+      "name": "descriptionExt",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Опис",
+      "documentation": "Опис",
+      "description": "Опис"
+    },
+    {
+      "name": "changedValues",
+      "dataType": "Text",
+      "caption": "Дані змінені при проведенні",
+      "description": "Дані змінені при проведенні",
+      "documentation": "Дані змінені при проведенні"
+    },
+    {
+      "name": "isGroup",
+      "dataType": "Boolean",
+      "caption": "Груповий",
+      "documentation": "Чи являється наказ груповим",
+      "description": "Чи являється наказ груповим",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "isContinuous",
+      "dataType": "Boolean",
+      "caption": "Безперервна відпустка",
+      "description": "Безперервна відпустка",
+      "documentation": "Безперервна відпустка",
+      "defaultValue": "0"
+    },
+    {
+      "name": "errorText",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Виявлені помилки",
+      "documentation": "Виявлені помилки",
+      "description": "Виявлені помилки"
+    },
+    {
+      "name": "calcDateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення за розрахунком",
+      "description": "Дата закінчення за розрахунком",
+      "documentation": "Дата закінчення за розрахунком",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT MAX(l.dateTo) FROM hr_empOrderVacationListDet l WHERE l.paraID = {self}.ID and l.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "calcDayCount",
+      "dataType": "Int",
+      "caption": "Тривалість за розрахунком",
+      "description": "Тривалість за розрахунком",
+      "documentation": "Тривалість за розрахунком",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT SUM(l.dayCount) FROM hr_empOrderVacationListDet l WHERE l.paraID = {self}.ID and l.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "isRevokeOrProlongRef",
+      "dataType": "Boolean",
+      "caption": "Є посилання в проведених наказах про відкликання або продовження відпустки",
+      "description": "Є посилання в проведених наказах про відкликання або продовження відпустки",
+      "documentation": "Є посилання в проведених наказах про відкликання або продовження відпустки",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE WHEN EXISTS (SELECT 1 FROM hr_empOrderVacationrevokeDet r INNER JOIN hr_empOrder o on o.ID = r.orderID and o.mi_deleteDate >= '9999-12-31' INNER JOIN hr_empOrderVacationListDet l ON l.paraID = r.id and l.mi_deleteDate >= '9999-12-31' INNER JOIN hr_empOrderDet od ON od.id = l.sourceParaID WHERE od.paraID = {self}.ID and r.mi_deleteDate >= '9999-12-31' and o.orderState in ('POSTED', 'PROCESSED')) THEN 1 WHEN EXISTS (SELECT 1 FROM hr_empOrderVacationprolongDet p INNER JOIN hr_empOrder o on o.ID = p.orderID and o.mi_deleteDate >= '9999-12-31' WHERE p.grantVacationParaID = {self}.ID and p.mi_deleteDate >= '9999-12-31' and o.orderState in ('POSTED', 'PROCESSED')) THEN 1 ELSE 0 END)"
+        }
+      ]
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_EMPORDERVACDET_EMPNUM": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "dateFrom": { "sort": "ASC" },
+          "dateTo": { "sort": "ASC" },
+          "employeeNumberID": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_EMPORDERVACDET_EMP": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeeID": { "sort": "ASC" },
+          "dateFrom": { "sort": "ASC" },
+          "dateTo": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_EMPORDERVACDET_EMPPOS": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeePositionID": { "sort": "ASC" },
+          "dateFrom": { "sort": "ASC" },
+          "dateTo": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "unity": {
+      "entity": "hr_empOrderDet",
+      "attributeList": [
+        "organizationID",
+        "departmentID",
+        "positionID",
+        "empOrderType",
+        "orderID",
+        "orderState",
+        "cancelOrderID",
+        "cancelParaID",
+        "employeePositionID",
+        "employeeNumberID",
+        "employeeID",
+        "dateFrom",
+        "dateTo",
+        "firstName",
+        "lastName",
+        "middleName",
+        "title",
+        "description",
+        "empNameCase",
+        "changedValues",
+        "itemIdx",
+        "isGroup"
+      ],
+      "defaults": {
+        "isExternal": "0"
+      }
+    }
+  }
+}

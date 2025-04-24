@@ -1,0 +1,306 @@
+/* global Ext AC $App appAC appHR UB */
+
+exports.formDef = 'HR.empOrderForCalcSpec'
+
+Ext.define('HR.empOrderForCalcSpec', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empOrderForCalcSpec',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        layout: 'fit',
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            name: 'ubdetailgrid',
+            autoScroll: true,
+            layout: 'fit',
+            flex: 1,
+            selModel: Ext.create('Ext.selection.CheckboxModel', {
+              selType: 'checkboxmodel',
+              showHeaderCheckbox: true
+            }),
+            hideActions: ['addNew', 'addNewByCurrent', 'del', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+            cmdType: 'showList',
+            cmdData: {
+              params: [{
+                entity: 'hr_order',
+                method: 'select',
+                fieldList: [
+                  { name: 'empOrderType' },
+                  { name: 'orderDate', description: UB.i18n('Дата наказу'), format: 'd.m.Y' },
+                  { name: 'orderNumber' },
+                  { name: 'description', description: UB.i18n('Наказ') },
+                  { name: 'respEmployeePositionID.description', description: UB.i18n('Підписав') },
+                  { name: 'respEmployeeNumID.description', description: UB.i18n('Відповідальний') },
+                  { name: 'periodCalcID.description', description: UB.i18n('Період опрацювання') },
+                  { name: 'periodCalcID', visibility: false },
+                  { name: 'orderState', description: UB.i18n('Стан') },
+                  { name: 'orderClass.entityName', visibility: false }
+                ],
+                whereList: {
+                  entityName: {
+                    expression: '[orderClass.entityName]',
+                    condition: 'in',
+                    value: ['hr_empOrder', 'hr_sicknessMeeting']
+                  },
+                  empOrderType: {
+                    expression: '[empOrderType]',
+                    condition: 'in',
+                    value: ['MISSION', 'MISSION_G', 'BOUNTY', 'BOUNTY_HELP', 'VACATION', 'SICKNESSMEETING', 'CWSRELAXDONOR', 'DISM', 'VACATIONREVOKE', 'VACATIONCOMP', 'RISKPAY', 'VACATIONPROLONG', 'APPOINT', 'APPOINT_MOVE']
+                  },
+                  orderState: {
+                    expression: '[orderState]',
+                    condition: 'In',
+                    value: ['POSTED']
+                  },
+                  notExists: {
+                    expression: '',
+                    condition: 'subquery',
+                    subQueryType: 'notExists',
+                    value: {
+                      entity: 'hr_orderRegistryDt',
+                      fieldList: [],
+                      method: 'select',
+                      whereList: {
+                        cond: {
+                          expression: '[empOrderID]=[{master}.ID]',
+                          condition: 'custom'
+                        },
+                        miDel: {
+                          expression: '[mi_deleteUser]',
+                          condition: 'isNull'
+                        }
+                      }
+                    }
+                  }
+                },
+                orderList: {
+                  orderBy: { expression: 'orderDate', order: 'desc' }
+                }
+              }]
+            },
+            cmpInitConfig: {
+              disableAutoLoadStore: true,
+              customInit: function () {
+                AC.gridUtils.tuneGridColumns(this, {
+                  entityName: {
+                    renderer: function (orderState) {
+                      return $App.domainInfo.entities[orderState].caption
+                    }
+                  },
+                  orderState: {
+                    renderer: function (orderState) {
+                      if (orderState === 'POSTED') {
+                        return UB.i18n('На опрацювання')
+                      } else if (orderState === 'PROCESSED') {
+                        return UB.i18n('Опрацьовано')
+                      } else {
+                        return UB.i18n('До відома')
+                      }
+                    }
+                  }
+                })
+              },
+              getRowClass: function (record) {
+                if (record.get('orderState') === 'POSTED') {
+                  return 'org-node'
+                } else if (record.get('orderState') === 'PROCESSED') {
+                  return 'grd-color-lightgreen ub-row-green'
+                } else {
+                  return 'grd-color-blue'
+                }
+              },
+              afterInit: function () {
+                const grid = this
+                AC.gridUtils.setGlobalOrganization(grid, 'organizationID')
+              },
+              customActions: [
+                {
+                  xtype: 'button',
+                  iconCls: 'el-icon-receiving',
+                  cls: 'grey-action',
+                  text: UB.i18n('Усі документи'),
+                  handler: function (ctrl) {
+                    const store = me.attr.grid.getStore()
+                    store.ubRequest.whereList.orderState.condition = 'in'
+                    store.ubRequest.whereList.orderState.value = ['PROJECT', 'POSTED', 'ON_RECONCILATION', 'RECONCILED', 'RETURNED_FROM_RECONCILATION', 'ON_COMPLETION', 'REJECTED', 'PROCESSED', 'ON_PROCESSING']
+                    store.load()
+                  }
+                },
+                {
+                  xtype: 'button',
+                  iconCls: 'fa fa-vcard',
+                  cls: 'black-action',
+                  text: UB.i18n('Неопрацьовані'),
+                  handler: function () {
+                    const store = me.attr.grid.getStore()
+                    store.ubRequest.whereList.orderState.condition = 'in'
+                    store.ubRequest.whereList.orderState.value = ['POSTED']
+                    store.load()
+                  }
+                },
+                {
+                  xtype: 'button',
+                  iconCls: 'fa fa-vcard-o',
+                  cls: 'green-action',
+                  text: UB.i18n('Опрацьовані'),
+                  handler: function () {
+                    const store = me.attr.grid.getStore()
+                    store.ubRequest.whereList.orderState.condition = 'in'
+                    store.ubRequest.whereList.orderState.value = ['PROCESSED']
+                    store.load()
+                  }
+                },
+                {
+                  xtype: 'button',
+                  iconCls: 'el-icon-document',
+                  cls: 'blue-action',
+                  text: UB.i18n('До відома'),
+                  handler: function () {
+                    const store = me.attr.grid.getStore()
+                    store.ubRequest.whereList.orderState.condition = 'notIn'
+                    store.ubRequest.whereList.orderState.value = ['PROCESSED', 'POSTED']
+                    store.load()
+                  }
+                },
+                {
+                  xtype: 'button',
+                  iconCls: 'iconApprove',
+                  cls: 'green-action',
+                  text: UB.i18n('Провести'),
+                  handler: () => {
+                    const selection = me.attr.grid.getSelectionModel().selected.items
+                    const items = []
+                    for (const item in selection) {
+                      if (selection[item].data.orderState === 'POSTED') {
+                        items.push(selection[item])
+                      }
+                    }
+                    if (items.length > 0) {
+                      me.setLoading(true)
+                      me.changeOrderState(me.attr.grid, items, 'PROCESSED')
+                    }
+                  }
+                },
+                {
+                  xtype: 'button',
+                  iconCls: 'iconReject',
+                  cls: 'green-action',
+                  text: UB.i18n('Відкликати'),
+                  handler: () => {
+                    const selection = me.attr.grid.getSelectionModel().selected.items
+                    let items = []
+                    const orderIDs = []
+                    for (const item in selection) {
+                      if (selection[item].data.orderState === 'PROCESSED') {
+                        orderIDs.push(selection[item].data.ID)
+                        items.push(selection[item])
+                      }
+                    }
+
+                    appHR.getCurrentPeriod(appAC.globalOrganization()).then(res => {
+                      if (res) {
+                        Promise.all([
+                          UB.Repository('hr_orderRegistry')
+                            .attrs(['ID', 'empOrderID'])
+                            .where('empOrderID', 'in', orderIDs)
+                            .selectAsObject(),
+                          UB.Repository('hr_orderRegistryDt')
+                            .attrs(['ID', 'empOrderID'])
+                            .where('empOrderID', 'in', orderIDs)
+                            .selectAsObject()
+                        ]).then(([orderRegistry, orderRegistryDt]) => {
+                          orderRegistry.forEach(el => {
+                            items = items.filter(function (item) {
+                              return item.data.ID !== el.empOrderID
+                            })
+                          })
+                          orderRegistryDt.forEach(el => {
+                            items = items.filter(function (item) {
+                              return item.data.ID !== el.empOrderID
+                            })
+                          })
+                          items = items.filter(function (item) {
+                            return item.data.periodCalcID === res.ID
+                          })
+                          if (items.length > 0) {
+                            me.setLoading(true)
+                            me.changeOrderState(me.attr.grid, items, 'POSTED')
+                          }
+                        })
+                      }
+                    })
+                  }
+                }
+              ],
+              onItemDblClick: function (grid, record) {
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: record.get('orderClass.entityName'),
+                  entity: record.get('orderClass.entityName'),
+                  isModal: false,
+                  instanceID: record.get('ID'),
+                  tabId: record.get('orderClass.entityName') + record.get('ID'),
+                  target: $App.getViewport().centralPanel,
+                  sender: me.attr.grid.getView(),
+                  store: me.attr.grid.store
+                })
+              }
+            }
+          }
+        ]
+      }
+    ]
+
+    me.changeOrderState = function (grid, records, newState) {
+      $App.connection.run({
+        entity: 'hr_orderRegistry',
+        method: 'changeEmpOrderState',
+        organizationID: appAC.globalOrganization(),
+        orderState: newState,
+        orderIDs: records.map(o => o.get('ID'))
+      }).then(resp => {
+        me.setLoading(false)
+        me.attr.grid.getSelectionModel().clearSelections()
+        me.attr.grid.onRefresh()
+        const resultData = JSON.parse(resp.resultData)
+        if (resultData.errorMessages.length) {
+          $App.dialogInfo(resultData.errorMessages.join('<br>'))
+        }
+      }, err => {
+        me.setLoading(false)
+        me.attr.grid.onRefresh()
+        if (err.config && err.config.timeout) {
+          $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+        } else {
+          throw err
+        }
+      })
+    }
+
+    me.on('afterrender', () => {
+      me.attr = {
+        grid: me.down('[name=ubdetailgrid]')
+      }
+    }, me)
+    me.on('destroy', () => {
+
+    }, me)
+    me.callParent(arguments)
+  }
+})

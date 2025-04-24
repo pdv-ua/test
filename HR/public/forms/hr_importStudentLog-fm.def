@@ -1,0 +1,223 @@
+/* global UB Ext */
+
+exports.formDef = 'HR.importStudentLog'
+
+Ext.define('HR.importStudentLog', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 650,
+  layout: 'border',
+  alias: 'widget.importStudentLog',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        xtype: 'tabpanel',
+        layout: { type: 'vbox' },
+        region: 'center',
+        items: [
+          {
+            title: UB.i18n('Додані'),
+            layout: 'fit',
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'gridInsertedRows',
+                flex: 1,
+                autoScroll: true,
+                storeType: 'local',
+                showToolBar: true,
+                hideActions: ['addNew', 'edit', 'del', 'addNewByCurrent'],
+                disablePaging: true,
+                readOnly: true,
+                exportExcel: {
+                  title: UB.i18n('Завантаження студентів. Додані записи'),
+                  fileName: UB.i18n('Завантаження студентів. Додані записи')
+                },
+                loadMaskMessage: UB.i18n('Завантаження даних...'),
+                fields: [
+                  {
+                    name: 'row',
+                    columnConfig: {
+                      text: UB.i18n('№ запису'),
+                      width: 150
+                    }
+                  },
+                  {
+                    name: 'message',
+                    columnConfig: {
+                      text: UB.i18n('Опис'),
+                      flex: 1
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            title: UB.i18n('Оновлені'),
+            layout: 'fit',
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'gridUpdatedRows',
+                flex: 1,
+                autoScroll: true,
+                storeType: 'local',
+                showToolBar: true,
+                hideActions: ['addNew', 'edit', 'del', 'addNewByCurrent'],
+                disablePaging: true,
+                readOnly: true,
+                exportExcel: {
+                  title: UB.i18n('Завантаження студентів. Оновлені записи'),
+                  fileName: UB.i18n('Завантаження студентів. Оновлені записи')
+                },
+                loadMaskMessage: UB.i18n('Завантаження даних...'),
+                fields: [
+                  {
+                    name: 'row',
+                    columnConfig: {
+                      text: UB.i18n('№ запису'),
+                      width: 150
+                    }
+                  },
+                  {
+                    name: 'message',
+                    columnConfig: {
+                      text: UB.i18n('Опис'),
+                      flex: 1
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            title: UB.i18n('Закриті'),
+            layout: 'fit',
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'gridDeletedRows',
+                flex: 1,
+                autoScroll: true,
+                storeType: 'local',
+                showToolBar: true,
+                hideActions: ['addNew', 'edit', 'del', 'addNewByCurrent'],
+                disablePaging: true,
+                readOnly: true,
+                exportExcel: {
+                  title: UB.i18n('Завантаження студентів. Закриті записи'),
+                  fileName: UB.i18n('Завантаження студентів. Закриті записи')
+                },
+                loadMaskMessage: UB.i18n('Завантаження даних...'),
+                fields: [
+                  {
+                    name: 'row',
+                    columnConfig: {
+                      text: UB.i18n('№ запису'),
+                      width: 150
+                    }
+                  },
+                  {
+                    name: 'message',
+                    columnConfig: {
+                      text: UB.i18n('Опис'),
+                      flex: 1
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            title: UB.i18n('Помилки'),
+            layout: 'fit',
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'gridErrorRows',
+                flex: 1,
+                autoScroll: true,
+                storeType: 'local',
+                showToolBar: true,
+                hideActions: ['addNew', 'edit', 'del', 'addNewByCurrent'],
+                disablePaging: true,
+                readOnly: true,
+                exportExcel: {
+                  title: UB.i18n('Завантаження студентів. Помилки'),
+                  fileName: UB.i18n('Завантаження студентів. Помилки')
+                },
+                loadMaskMessage: UB.i18n('Завантаження даних...'),
+                fields: [
+                  {
+                    name: 'row',
+                    columnConfig: {
+                      text: UB.i18n('№ запису'),
+                      width: 150
+                    }
+                  },
+                  {
+                    name: 'message',
+                    columnConfig: {
+                      text: UB.i18n('Опис'),
+                      flex: 1
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Закрити'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.commandConfig.deferred.resolve(null)
+              me.up('window').close()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      if (me.customParams && me.customParams.instanceID) {
+        UB.Repository('hr_importStudentLog')
+          .attrs('result')
+          .limit(1)
+          .selectById(me.customParams.instanceID)
+          .then(item => {
+            if (item && item.result) {
+              if (item.result.inserted) {
+                me.down('[name=gridInsertedRows]').setLocalStoreData(item.result.inserted)
+              }
+              if (item.result.updated) {
+                me.down('[name=gridUpdatedRows]').setLocalStoreData(item.result.updated)
+              }
+              if (item.result.deleted) {
+                me.down('[name=gridDeletedRows]').setLocalStoreData(item.result.deleted)
+              }
+              if (item.result.error) {
+                me.down('[name=gridErrorRows]').setLocalStoreData(item.result.error)
+              }
+            }
+          })
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

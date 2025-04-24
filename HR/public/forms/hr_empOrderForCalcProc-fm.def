@@ -1,0 +1,168 @@
+/* global Ext AC $App UB */
+
+exports.formDef = 'HR.empOrderForCalcProc'
+
+Ext.define('HR.empOrderForCalcProc', {
+  extend: 'Ext.panel.Panel',
+  height: 400,
+  width: 800,
+  layout: 'border',
+  alias: 'widget.empOrderForCalcProc',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        layout: 'fit',
+        flex: 1,
+        hideActions: ['addNew', 'addNewByCurrent', 'del', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        cmdType: 'showList',
+        cmdData: {
+          params: [{
+            entity: 'hr_order',
+            method: 'select',
+            fieldList: [
+              { name: 'empOrderType' },
+              { name: 'orderDate', description: UB.i18n('Дата наказу'), format: 'd.m.Y' },
+              { name: 'orderNumber' },
+              { name: 'description', description: UB.i18n('Наказ') },
+              { name: 'respEmployeePositionID.description', description: UB.i18n('Підписав') },
+              { name: 'respEmployeeNumID.description', description: UB.i18n('Відповідальний') },
+              { name: 'orderState', visibility: false },
+              { name: 'orderClass.entityName', visibility: false }
+            ],
+            whereList: {
+              entityName: {
+                expression: '[orderClass.entityName]',
+                condition: 'in',
+                value: ['hr_empOrder', 'hr_sicknessMeeting']
+              },
+              empOrderType: {
+                expression: '[empOrderType]',
+                condition: 'in',
+                value: ['MISSION', 'MISSION_G', 'BOUNTY', 'VACATION', 'SICKNESSMEETING', 'CWSRELAXDONOR', 'DISM', 'VACATIONREVOKE']
+              },
+              orderState: {
+                expression: '[orderState]',
+                condition: '=',
+                value: 'PROCESSED'
+              }
+            },
+            orderList: {
+              orderBy: { expression: 'orderDate', order: 'desc' }
+            }
+          }]
+        },
+        cmpInitConfig: {
+          disableAutoLoadStore: true,
+          afterInit: function () {
+            const grid = this
+            AC.gridUtils.setGlobalOrganization(grid, 'organizationID')
+            let actCol = Ext.create('Ext.grid.column.Column', {
+              xtype: 'actioncolumn',
+              text: UB.i18n('Дія'),
+              width: 50,
+              align: 'center',
+              filterable: false,
+              sortable: false,
+              renderer: function (value, meta, record) {
+                let id = Ext.id()
+                Ext.defer(function () {
+                  Ext.widget('button', {
+                    renderTo: Ext.query('#' + id)[0],
+                    tooltip: UB.i18n('Відмінити опрацювання'),
+                    scale: 'small',
+                    iconCls: 'fas fa-times-circle',
+                    cls: 'red-action',
+                    handler: function () {
+                      UB.Repository('hr_empOrder')
+                        .attrs(['periodCalcID', 'periodCalcID.isClosed'])
+                        .selectById(record.get('ID')).then(data => {
+                          if (data && data.periodCalcID && data['periodCalcID.isClosed']) {
+                            $App.dialogInfo(UB.i18n('Наказ опрацьовано у попередніх періодах! Відміна опрацювання неможлива!'), UB.i18n('Увага'))
+                          } else {
+                            $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Ви дійсно бажаєти відмінити опрацювання наказу?'))
+                              .then(res => {
+                                if (res) {
+                                  const form = grid.up('[formCode=hr_empOrderForCalcProc]')
+                                  if (form) form.cancelPayOrder(grid, record)
+                                }
+                              })
+                          }
+                        })
+                    }
+                  })
+                }, 50)
+                return Ext.String.format('<div id="{0}"></div>', id)
+              }
+            })
+            grid.headerCt.insert(0, actCol)
+            grid.columns.unshift(actCol)
+          },
+          onItemDblClick: function (grid, record) {
+            let ubdetailgrid = grid.up('ubdetailgrid')
+            $App.doCommand({
+              cmdType: 'showForm',
+              formCode: record.get('orderClass.entityName'),
+              entity: record.get('orderClass.entityName'),
+              isModal: false,
+              instanceID: record.get('ID'),
+              tabId: record.get('orderClass.entityName') + record.get('ID'),
+              target: $App.getViewport().centralPanel,
+              sender: ubdetailgrid.getView(),
+              store: ubdetailgrid.store
+            })
+          }
+        }
+      }
+    ]
+  },
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+    me.cancelPayOrder = function (grid, record) {
+      if (['MISSION', 'MISSION_G', 'BOUNTY', 'VACATION', 'SICKNESSMEETING', 'CWSRELAXDONOR', 'DISM', 'VACATIONREVOKE'].includes(record.get('empOrderType'))) {
+        me.setLoading(true)
+        $App.connection.run({
+          entity: 'hr_orderRegistry',
+          method: 'cancelPayOrder',
+          empOrderID: record.get('ID')
+        }).then(resp => {
+          const resultData = JSON.parse(resp.resultData)
+          if (resultData.errorMessages.length) {
+            $App.dialogInfo(UB.i18n(`Неможливо відмінити опрацювання<br> {0}`, resultData.errorMessages.join('<br>')))
+          } else {
+            grid.getStore().remove(record)
+            AC.viewUtils.showToast(UB.i18n('Відмінено опрацювання'))
+          }
+          me.setLoading(false)
+        }, err => {
+          me.setLoading(false)
+          if (err.config && err.config.timeout) {
+            grid.getStore().remove(record)
+            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+          } else {
+            throw err
+          }
+        })
+      }
+    }
+
+    me.on('afterrender', () => {
+
+    }, me)
+    me.callParent(arguments)
+  }
+})

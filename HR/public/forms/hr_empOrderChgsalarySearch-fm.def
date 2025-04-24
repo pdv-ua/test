@@ -1,0 +1,349 @@
+// @isModal true
+/* global UB Ext AC _ appAC */
+
+exports.formDef = 'HR.empOrderChgsalarySearch'
+
+Ext.define('HR.empOrderChgsalarySearch', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empOrderChgsalarySearch',
+  initComponent: function () {
+    let me = this
+    let grid
+    let store = Ext.create('Ext.data.ArrayStore', {
+      fields: [
+        { name: 'posName' },
+        { name: 'empPosDateFrom' },
+        { name: 'posDateFrom' },
+        { name: 'employeeNumberID' },
+        { name: 'employeeID' },
+        { name: 'employeePositionID' },
+        { name: 'employeeID.fullFIO' },
+        { name: 'positionID' },
+        { name: 'posAccrualSum' },
+        { name: 'previousAccrualSum' },
+        { name: 'contractType.name' }
+      ],
+      data: []
+    })
+    me.items = [
+      Ext.widget('panel', {
+        xtype: 'panel',
+        region: 'north',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'ubcombobox',
+                name: 'positionType',
+                fieldLabel: UB.i18n('Тип посади'),
+                valueField: 'code',
+                displayField: 'name',
+                labelWidth: 160,
+                width: 500,
+                ubRequest: {
+                  entity: 'ubm_enum',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['ID', 'name', 'code', 'eGroup'],
+                  whereList: {
+                    enumGroupFilter: {
+                      expression: '[eGroup]',
+                      condition: 'equal',
+                      values: {
+                        val: 'HR_POSITION_TYPE'
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'depID',
+                    fieldLabel: UB.i18n('Підрозділ'),
+                    valueField: 'mi_data_id',
+                    displayField: 'caption',
+                    labelWidth: 160,
+                    flex: 1,
+                    ubRequest: {
+                      entity: 'hr_department',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['mi_data_id', 'caption', 'parentUnitID', 'orgID', 'mi_treePath'],
+                      whereList: {
+                        state: {
+                          expression: '[state]',
+                          condition: '=',
+                          values: {
+                            state: 'ACTIVE'
+                          }
+                        }
+                      }
+                    },
+                    listeners: {
+                      change: () => {
+                        store.removeAll()
+                      }
+                    }
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'dictFundSourceID',
+                        fieldLabel: UB.i18n('Джерело фінансування'),
+                        labelWidth: 160,
+                        width: 500,
+                        hideEntityItemInContext: true,
+                        gridFieldList: ['ID', 'name', 'description'],
+                        valueField: 'ID',
+                        displayField: 'name',
+                        ubRequest: {
+                          entity: 'ac_fundSource',
+                          method: 'selectByOrg',
+                          fieldList: ['ID', 'name']
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'contractType',
+                        fieldLabel: UB.i18n('Тип договору'),
+                        labelWidth: 100,
+                        hideEntityItemInContext: true,
+                        flex: 1,
+                        valueField: 'code',
+                        ubRequest: {
+                          entity: 'ubm_enum',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'name', 'code', 'eGroup'],
+                          whereList: {
+                            enumGroupFilter: {
+                              expression: '[eGroup]',
+                              condition: 'equal',
+                              values: {
+                                val: 'HR_CONTRACT_TYPE'
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                xtype: 'checkboxfield',
+                name: 'childDep',
+                fieldLabel: UB.i18n('з підлеглими'),
+                labelWidth: 100,
+                listeners: {
+                  change: () => {
+                    store.removeAll()
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }),
+      grid = Ext.widget('grid', {
+        xtype: 'grid',
+        stripeRows: true,
+        store: store,
+        autoScroll: true,
+        flex: 1,
+        split: true,
+        region: 'center',
+        title: UB.i18n('Всі елементи'),
+        selModel: Ext.create('Ext.selection.CheckboxModel', {
+          selectionMode: 'MULTI',
+          showHeaderCheckbox: true,
+          checkOnly: true,
+          selType: 'checkboxmodel'
+        }),
+        tbar: Ext.create('Ext.toolbar.Toolbar', {
+          height: 40,
+          items: [
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Заповнити'),
+              iconCls: 'fas fa-angle-double-down',
+              cls: 'fill-action',
+              handler: function (btn) {
+                me.setEmployeeNumbers()
+              }
+            }
+          ]
+        }),
+        columns: [
+          {
+            header: UB.i18n('Призначено з'),
+            tooltip: UB.i18n('Призначено з'),
+            dataIndex: 'empPosDateFrom',
+            width: 100,
+            renderer: (value) => {
+              return _.isDate(value) ? AC.dateService.formatDate(value) : ''
+            }
+          },
+          {
+            header: UB.i18n('ПІБ'),
+            tooltip: UB.i18n('ПІБ'),
+            dataIndex: 'employeeID.fullFIO',
+            flex: 1
+          },
+          {
+            header: UB.i18n('Посада'),
+            tooltip: UB.i18n('Посада'),
+            dataIndex: 'posName',
+            flex: 1
+          },
+          {
+            header: UB.i18n('Дата встановлення оклада посади'),
+            tooltip: UB.i18n('Дата встановлення оклада посади'),
+            dataIndex: 'posDateFrom',
+            width: 100,
+            renderer: (value) => {
+              return _.isDate(value) ? AC.dateService.formatDate(value) : ''
+            }
+          },
+          {
+            header: UB.i18n('Оклад Посади'),
+            tooltip: UB.i18n('Оклад Посади'),
+            dataIndex: 'posAccrualSum',
+            width: 150
+          },
+          {
+            header: UB.i18n('Оклад Призначення'),
+            tooltip: UB.i18n('Оклад Призначення'),
+            dataIndex: 'previousAccrualSum',
+            width: 150
+          }
+        ]
+      }),
+      Ext.widget('panel', {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 100,
+            height: 30,
+            margin: '10 10 20 0',
+            handler: function () {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Вибрати'),
+            width: 100,
+            height: 30,
+            margin: '10 10 20 0',
+            handler: function () {
+              if (me.onSelect) {
+                const data = []
+                const selModel = grid.getSelectionModel()
+                selModel.selected.each(record => {
+                  data.push(record.getData())
+                })
+                me.onSelect(data)
+              }
+              me.up('window').close()
+            }
+          }
+        ]
+      })
+    ]
+
+    me.setEmployeeNumbers = () => {
+      me.setLoading(true)
+
+      store.removeAll()
+      UB.Repository('hr_employeePositionS')
+        .attrs(['ID', 'dateFrom', 'employeeNumberID', 'employeeID', 'employeeID.fullFIO', 'posName', 'positionID',
+          'posAccrualSum', 'accrualSum', 'posDateFrom', 'contractType', 'contractType.name'])
+        .where('organizationID', '=', me.orgID)
+        .whereIf(me.attr.depID.getValue() && !me.attr.childDep.getValue(), 'departmentID', '=', me.attr.depID.getValue())
+        .whereIf(me.attr.depID.getValue() && me.attr.childDep.getValue(), 'departmentID.mi_treePath', 'startWith', me.attr.depID.getFieldValue('mi_treePath'))
+        .whereIf(me.attr.positionType.getValue(), 'positionType', '=', me.attr.positionType.getValue())
+        .where('dateTo', '>=', AC.dateService.shiftDate(me.onDate))
+        .where('positionID', 'isNotNull')
+        .whereIf(me.attr.contractType.getValue(), 'contractType', '=', me.attr.contractType.getValue())
+        .whereIf(me.attr.dictFundSourceID.getValue(), 'dictFundSourceID', '=', me.attr.dictFundSourceID.getValue())
+        .whereIf(me.employeeLimitedAccess && !AC.entityUtils.verifyRightsMethod('hr_employeeNumber', 'employeeLimitedAccess'), 'employeeNumberID.limitedAccess', '=', 0)
+        .orderBy('employeeNumberID')
+        .orderBy('dateFrom')
+        .selectAsObject({
+          'ID': 'employeePositionID',
+          'accrualSum': 'previousAccrualSum'
+        }).then(data => {
+          Ext.suspendLayouts()
+          const resultData = []
+          data.forEach(row => {
+            const lastRow = resultData[resultData.length - 1] || {}
+            if (row.employeeNumberID !== lastRow.employeeNumberID || row.positionID !== lastRow.positionID || row.previousAccrualSum !== lastRow.previousAccrualSum) {
+              if (AC.dateService.shiftDate(me.onDate) < AC.dateService.shiftDate(row.dateFrom)) {
+                row.empPosDateFrom = AC.dateService.shiftDate(row.dateFrom)
+              }
+              resultData.push(row)
+            }
+          })
+
+          store.loadData(resultData)
+          grid.getSelectionModel().selectAll(true)
+          me.setLoading(false)
+          Ext.resumeLayouts(true)
+        })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        positionType: me.down('[name=positionType]'),
+        contractType: me.down('[name=contractType]'),
+        depID: me.down('[name=depID]'),
+        childDep: me.down('[name=childDep]'),
+        dictFundSourceID: me.down('[name=dictFundSourceID]')
+      }
+      me.attr.depID.store.ubRequest.__mip_ondate = me.onDate ? AC.dateService.shiftDate(me.onDate) : appAC.globalApplicationDate()
+      AC.viewUtils.setFilterValue(me.attr.depID, { orgID: me.orgID })
+
+      me.attr.dictFundSourceID.store.ubRequest.orgID = me.orgID
+      me.attr.contractType.setValueById('1')
+      if (me.defaultValues) {
+        _.forEach(me.attr, attr => {
+          if (me.defaultValues[attr.name]) {
+            attr[attr.setValueById ? 'setValueById' : 'setValue'](attr.xtype === 'ubdatefield' ? new Date(me.defaultValues[attr.name]) : me.defaultValues[attr.name])
+            attr.setReadOnly(true)
+          }
+        })
+      }
+      if (me.readOnlyAttr) {
+        me.readOnlyAttr.forEach(attrName => {
+          me.attr[attrName].setReadOnly(true)
+        })
+      }
+      me.attr.depID.on('change', (value) => {
+        me.attr.childDep.setDisabled(!me.attr.depID.getValue())
+        if (!me.attr.depID.getValue()) me.attr.childDep.setValue()
+      })
+      me.attr.childDep.setDisabled(!me.attr.depID.getValue())
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

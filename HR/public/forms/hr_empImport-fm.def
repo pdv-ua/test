@@ -1,0 +1,1493 @@
+/* global Ext UB localStorage $App AC appAC */
+exports.formDef = 'HR.empImport'
+
+// noinspection JSAnnotator
+Ext.define(exports.formDef, {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.dictImport',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  align: 'stretch',
+  autoScroll: true,
+  isModal: true,
+  mainPanel: [{
+    xtype: 'panel',
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    region: 'north',
+    autoScroll: true,
+    split: true,
+    items: [{
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+      padding: '8px 8px 8px 8px',
+      items: [{
+        xtype: 'ubcombobox',
+        labelWidth: 130,
+        valueField: 'ID',
+        displayField: 'name',
+        fieldLabel: UB.i18n('Джерело'),
+        name: 'impSourceID',
+        allowBlank: false,
+        flex: 3,
+        ubRequest: {
+          entity: 'hr_import',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['code', 'name', 'ID']
+        },
+        listeners: {
+          select: ctrl => {
+            localStorage.setItem('impSourceID', ctrl.getValue() || null)
+          }
+        }
+      },
+      {
+        xtype: 'combo',
+        name: 'dict',
+        editable: false,
+        valueField: 'value',
+        fieldLabel: UB.i18n('Сутність'),
+        labelWidth: 80,
+        allowBlank: false,
+        flex: 3,
+        listeners: {
+          change: ctrl => {
+            let me = ctrl.up('form')
+            localStorage.setItem('impEntity' + me.mode, ctrl.getValue() || null)
+            let entName = ctrl.getValue()
+            let impOrgID = me.down('[name=impOrgID]')
+            impOrgID.setVisible(entName === 'hr_employee')
+            impOrgID.setAllowBlank(entName !== 'hr_employee')
+            let btn = me.down('[name=btnUpdateWorkbook]')
+            if (btn) {
+              btn.setVisible(entName === 'imp_hr_appoint')
+            }
+            btn = me.down('[name=btnFixExperience]')
+            if (btn) {
+              btn.setVisible(entName === 'hr_employeeExperience')
+            }
+            btn = me.down('[name=btnShowEmployee]')
+            if (btn) {
+              btn.setVisible(entName === 'hr_employee')
+            }
+            const allowChange = !!AC.settings.get('hrAllowChangeByMigration', null, null)
+            const checkBox = me.down('[name=isUpdateExisting]')
+            if (checkBox) {
+              if (entName === 'hr_employeeExperience') {
+                checkBox.setVisible(allowChange)
+                checkBox.setValue(false)
+              } else {
+                checkBox.setVisible(true)
+              }
+            }
+          }
+        }
+      },
+      {
+        xtype: 'button',
+        name: 'viewData',
+        text: UB.i18n('Перегляд'),
+        tooltip: UB.i18n('Переглянути завантажені дані по вибраній сутності по вибраному джерелу імпорту (або по всім джерелам, якщо джерело не вибрано)'),
+        // width: 35,
+        // height: 35,
+        handler: ctrl => {
+          let me = ctrl.up('form')
+          let impSourceID = me.getImpSourceID()
+          let entName = me.down('[name=dict]').getValue()
+          let cfg = {
+            whereList: []
+          }
+
+          if ($App.domainInfo.entities[entName].attributes['impID']) {
+            cfg.whereList.impID = {
+              expression: '[impID]',
+              condition: 'isNotNull'
+            }
+          }
+          if (impSourceID) {
+            cfg.whereList.impSourceID = {
+              expression: '[impSourceID]',
+              condition: 'equal',
+              value: impSourceID
+            }
+          }
+          if (entName) {
+            me.viewData(entName, cfg)
+          }
+        },
+        margin: '-2 -5 -3 -18',
+        frame: 1
+      },
+      {
+        xtype: 'checkbox',
+        name: 'isUpdateExisting',
+        value: false,
+        labelWidth: 220,
+        width: 230,
+        fieldLabel: UB.i18n('Змінювати завантажені раніше')
+      },
+      {
+        xtype: 'ubcombobox',
+        labelWidth: 100,
+        valueField: 'mi_data_id',
+        displayField: 'name',
+        fieldLabel: UB.i18n('Організація'),
+        name: 'impOrgID',
+        readOnly: true,
+        allowBlank: false,
+        flex: 3,
+        ubRequest: {
+          entity: 'hr_organization',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['mi_data_id', 'name', 'EDRPOUCode'],
+          whereList: {
+            dateFrom: {
+              expression: '[mi_dateFrom]',
+              condition: 'lessEqual',
+              value: appAC.globalApplicationDate()
+            },
+            dateTo: {
+              expression: '[mi_dateTo]',
+              condition: 'moreEqual',
+              value: appAC.globalApplicationDate()
+            },
+            state: {
+              expression: '[state]',
+              condition: 'equal',
+              value: 'ACTIVE'
+            }
+          }
+        },
+        listeners: {
+          change: ctrl => {
+            localStorage.setItem('impOrgID', ctrl.getValue() || null)
+          }
+        }
+      },
+      {
+        xtype: 'combo',
+        labelWidth: 100,
+        width: 250,
+        editable: false,
+        name: 'encoding',
+        fieldLabel: UB.i18n('Кодування'),
+        allowBlank: false,
+        store: Ext.create('Ext.data.Store', {
+          fields: ['text', 'value'],
+          data: [{
+            text: 'win1251',
+            value: 'win1251'
+          },
+          {
+            text: 'utf8',
+            value: 'utf8'
+          }
+          ]
+        })
+      },
+      {
+        xtype: 'button',
+        width: 130,
+        cls: 'fill-action',
+        text: UB.i18n('Імпорт csv'),
+        handler: ctrl => {
+          let me = ctrl.up('form')
+          let orgCtrl = me.down('[name=impOrgID]')
+          let entName = me.down('[name=dict]').getValue()
+          me.isChecking = false
+          if (entName !== 'hr_employee') {
+            uploadCsvHandler(ctrl)
+            return
+          }
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'hr_staffOrder-params',
+            sender: me,
+            customParams: {
+              onClose: ctrl => {},
+              onAccept: (paramsForm, resultData) => {
+                paramsForm.up('window').close()
+                let impSourceID = resultData.impSourceID
+                orgCtrl.setValueById(impSourceID, false, () => {
+                  uploadCsvHandler(ctrl)
+                })
+              },
+              onRender: (paramsForm) => {
+                paramsForm.window.setTitle(UB.i18n(`Виберіть організацію для завантаження осіб`))
+                paramsForm.query('[resultName]').forEach(ctrl => {
+                  if (ctrl.resultName === 'impSourceID') {
+                    ctrl.setValue()
+                  }
+                  ctrl.setVisible(ctrl.resultName === 'impSourceID')
+                  ctrl.setAllowBlank(ctrl.resultName !== 'impSourceID')
+                })
+                const impOrgCtrl = paramsForm.down('[name=impOrgID]')
+                if (impOrgCtrl) {
+                  impOrgCtrl.setValueById(appAC.globalOrganization('ID'))
+                }
+              }
+            }
+          })
+        }
+      }
+      ]
+    }]
+  },
+  {
+    xtype: 'panel',
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    region: 'center',
+    name: 'details',
+    autoScroll: true,
+    split: true,
+    items: []
+  }
+  ],
+  getImpSourceID: function ({
+    isShowError = false,
+    withText = false
+  } = {}) {
+    let me = this
+    let impSourceCtrl = me.mode === 'EMP' ? me.down('[name=impOrgID]') : me.down('[name=impSourceID]')
+    if (impSourceCtrl.hidden) {
+      return withText ? {
+        ID: null,
+        text: null
+      } : null
+    }
+
+    let result = impSourceCtrl.getValue()
+    if (!result && isShowError && !impSourceCtrl.allowBlank) {
+      AC.viewUtils.showToast(UB.i18n('Помилка'), me.mode === 'EMP' ? UB.i18n('Не вибрано організацію') : UB.i18n('Не вибрано джерело імпорту'))
+    }
+    return withText ? {
+      ID: result,
+      text: impSourceCtrl.getRawValue()
+    } : result
+  },
+  getFullFieldList: function (entityName, isRawID) {
+    const result = []
+
+    const attrs = $App.domainInfo.entities[entityName].attributes
+    for (let attrName in attrs) {
+      if (attrs.hasOwnProperty(attrName)) {
+        let
+          attr = attrs[attrName]
+        if (attr.associatedEntity && !isRawID) {
+          result.push(attrName + '.' + ($App.domainInfo.entities[attr.associatedEntity].descriptionAttribute || 'ID'))
+        } else {
+          result.push(attrName)
+        }
+      }
+    }
+    return result
+  },
+  viewData: function (entName, cfg) {
+    let me = this
+    cfg = cfg || {}
+    let
+      fList = cfg.fieldList || me.getFullFieldList(entName)
+
+    let win = Ext.create('Ext.window.Window', {
+      title: entName,
+      winCode: entName,
+      closable: true,
+      maximizable: true,
+      width: 1100,
+      height: 600,
+      layout: 'fit',
+      items: [{
+        xtype: 'ubdetailgrid',
+        name: entName + '_grid',
+        flex: 1,
+        // rowEditing: true,
+        autoScroll: true,
+
+        entityConfig: {
+          entity: entName,
+          method: 'select',
+          fieldList: fList,
+          whereList: cfg.whereList || null
+        },
+        cmpInitConfig: {
+          hideActions: ['addNew', 'addNewByCurrent', 'del', 'newVersion', 'edit'],
+          customInit: function () {
+            if (AC && AC.gridUtils) {
+              AC.gridUtils.tuneGridColumns(this)
+            }
+          },
+          customActions: [{
+            xtype: 'button',
+            hidden: !['imp_hr_organization', 'imp_hr_department', 'imp_hr_position'].includes(entName),
+            text: UB.i18n('Переглянути створені об\'єкти оргструктури'),
+            actionText: UB.i18n('Оргструктура'),
+            showText: true,
+            menu: [{
+              text: UB.i18n('Організації (hr_organization)'),
+              handler: () => {
+                me.viewData('hr_organization', cfg)
+              }
+            },
+            {
+              text: UB.i18n('Підрозділи (hr_department)'),
+              handler: () => {
+                me.viewData('hr_department', cfg)
+              }
+            },
+            {
+              text: UB.i18n('Посади (hr_position)'),
+              handler: () => {
+                me.viewData('hr_position', cfg)
+              }
+            }
+            ],
+            tooltip: UB.i18n('Переглянути створені об\'єкти оргструктури')
+          }],
+          onAddNew: function () {
+            $App.doCommand({
+              cmdType: 'showForm',
+              entity: entName
+            })
+          },
+          doOnEdit: function () {
+            let grid = this
+            let reco = AC.gridUtils.getCurrentRecord(grid)
+            let instanceID = reco ? reco.get('ID') : null
+            $App.doCommand({
+              cmdType: 'showForm',
+              entity: entName,
+              instanceID: instanceID
+            })
+          }
+        },
+        onItemDblClick: function (grid, record) {
+          let reco = record
+          if (reco) {
+            $App.doCommand({
+              cmdType: 'showForm',
+              instanceID: reco.get('ID'),
+              entity: this.entityName,
+              cmpInitConfig: {
+                listeners: {
+                  render: form => {
+                    form.on('recordloaded', () => {
+                      AC.viewUtils.setFormReadOnly(form, true, [], true)
+                    })
+                  }
+                }
+              }
+            })
+          }
+        }
+      }
+      ],
+      listeners: {
+        close: () => {
+
+        },
+        show: () => {
+          win.center()
+        }
+      }
+    })
+    win.show()
+  },
+  initComponent: function () {
+    const me = this
+    me.items = me.mainPanel
+    if (!me.customParams) {
+      me.customParams = {}
+    }
+    if (!me.customParams.mode) {
+      me.customParams.mode = 'STAFF'
+    }
+    me.mode = me.customParams.mode
+
+    me.on('afterrender', () => {
+      let impOrgCtrl = me.down('[name=impOrgID]')
+      let impSourceCtrl = me.down('[name=impSourceID]')
+      impOrgCtrl.setVisible(me.mode === 'EMP')
+      impSourceCtrl.setVisible(me.mode === 'STAFF')
+      me.setTitle(me.mode === 'STAFF' ? UB.i18n('Завантаження з файлу (Оргструктура)') : UB.i18n('Завантаження з файлу (працівники)'))
+      let impSourceID = localStorage.getItem('impSourceID')
+      if (impSourceID && me.mode === 'STAFF') {
+        impSourceCtrl.getStore().load().then(store => {
+          setTimeout(() => me.down('[name=impSourceID]').setValueById(Number(impSourceID)), 200)
+        })
+      }
+      if (me.mode === 'EMP') {
+        impOrgCtrl.setValueById(appAC.globalOrganization() || null)
+      }
+      getFullImportConfig(me).then(({
+        config
+      }) => {
+        const _config = JSON.parse(config)
+        me.fullConfig = _config.config
+        me.langs = _config.langs
+        me.down('[name=encoding]').setValue('utf8')
+        for (let entName in me.fullConfig) {
+          if (me.fullConfig.hasOwnProperty(entName)) {
+            if (me.fullConfig[entName].mode !== me.mode || me.fullConfig[entName].hidden) {
+              delete me.fullConfig[entName]
+            }
+          }
+        }
+        const storeData = Object.keys(me.fullConfig)
+          .filter(entityName => $App.domainInfo.entities[entityName])
+          .map(entityName => ({
+            text: UB.i18n(me.fullConfig[entityName].caption) || AC.entityUtils.getEntityCaption(entityName),
+            value: entityName
+          }))
+
+        const dict = me.down('[name=dict]')
+
+        dict.store = Ext.create('Ext.data.Store', {
+          fields: ['text', 'value'],
+          data: storeData
+        })
+        let impEntity = localStorage.getItem('impEntity' + me.mode)
+        if (impEntity) {
+          dict.setValue(impEntity)
+        }
+        dict.on('change', () => createGrid(me))
+        createGrid(me)
+      })
+    }, me)
+
+    me.callParent(arguments)
+  },
+  showProgress: function (impSourceID, message) {
+    let me = this
+    me.setLoading(message || UB.i18n('Завантаження ще триває, очікуйте...'))
+    $App.connection.run({
+      entity: 'hr_import',
+      method: 'getProgress',
+      impSourceID: impSourceID
+    }).then(mParams => {
+      if (mParams.message === 'DONE') {
+        me.setLoading(false)
+        $App.dialogInfo(UB.i18n('Завершено'))
+      } else {
+        setTimeout(() => {
+          me.showProgress(impSourceID, mParams.message)
+        }, 1000)
+      }
+    }).catch(e => {
+      if (e.message) {
+        me.setLoading(false)
+        AC.viewUtils.showToast(UB.i18n('Помилка'), e.message)
+      } else {
+        setTimeout(() => {
+          me.showProgress(impSourceID, UB.i18n('Ще трохи зачекайте...'))
+        }, 1000)
+      }
+    })
+  }
+})
+
+function getFullImportConfig (me) {
+  return $App.connection.run({
+    entity: 'ac_service',
+    method: 'getFullImportConfig',
+    params: {
+      type: 'emp'
+    }
+  })
+}
+
+function uploadCsvHandler (importCtrl) {
+  const me = importCtrl.up('form')
+  const encoding = me.down('[name=encoding]').getValue()
+  const dictEntityName = me.down('[name=dict]').getValue()
+  const entityAttrs = AC.entityUtils.getAttributes(dictEntityName)
+  if (!encoding) {
+    $App.dialogInfo(UB.i18n('Оберіть кодування файлу для завантаження'))
+    return
+  }
+
+  if (!dictEntityName) {
+    $App.dialogInfo(UB.i18n('Оберіть довідник'))
+    return
+  }
+
+  Ext.create('UB.view.UploadFileAjax', {
+    scope: this,
+    listeners: {
+      afterrender: function (cmp) {
+        this.fieldFile.fileInputEl.set({
+          accept: '.csv' // or w/e type
+        })
+      }
+    },
+    upLoad: function (btn) {
+      me.setLoading(true)
+      const dialogWindow = btn.up('window')
+      const inputDom = this.fieldFile.fileInputEl.dom
+      if (inputDom.files.length === 0) {
+        return
+      }
+      const file = inputDom.files[0]
+      if (file.name.toLowerCase().indexOf('.csv', file.name.length - 4) === -1) {
+        $App.dialogInfo(UB.i18n('Невірний формат файлу, для завантаження використовується формат csv'))
+        me.setLoading(false)
+        return
+      }
+
+      UB.connection.post('loadImportDataEx', file, {
+        params: {
+          entityName: '',
+          encoding: encoding,
+          fileName: file.name
+        },
+        headers: {
+          'Content-Type': 'application/octet-stream'
+        }
+      }).then(response => {
+        me.setLoading(false)
+        let data = response.data
+        let attrs = me.importConfig.attrs
+        let parsedData = []
+        data && data.forEach((item, key) => {
+          if (!/^\d+$/.test(item[0])) {
+            return
+          }
+          let row = {}
+          attrs.forEach((attr, idx) => {
+            switch (entityAttrs[attr].dataType) {
+              case 'Date':
+                row[attr] = item[idx] ? new Date(AC.moment(item[idx], 'DD.MM.YYYY').toDate()) : ''
+                break
+              case 'DateTime':
+                row[attr] = item[idx] ? new Date(AC.moment(item[idx], 'DD.MM.YYYY').toDate()) : ''
+                break
+              default:
+                row[attr] = item[idx] || ''
+            }
+          })
+          parsedData.push(row)
+        })
+
+        me.details.grid.setLocalStoreData(parsedData)
+        me.details.grid.parsedData = parsedData
+        me.setLoading(false)
+        if (!parsedData.length) {
+          $App.dialogInfo(UB.i18n('Нічого не завантажено, можливо, вибране невірне кодування'))
+        }
+      }, (err) => {
+        me.setLoading(false)
+        if (err.config && err.config.timeout) {
+          $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+        } else {
+          throw err
+        }
+      }).finally(() => {
+        me.setLoading(false)
+      })
+      dialogWindow.close()
+    }
+    /* upLoad: function (btn) {
+        me.setLoading(true)
+        const dialogWindow = btn.up('window')
+        const inputDom = this.fieldFile.fileInputEl.dom
+        if (inputDom.files.length === 0) {
+          return
+        }
+        const file = inputDom.files[0]
+
+        if (file.name.toLowerCase().indexOf('.csv', file.name.length - 4) === -1) {
+          $App.dialogInfo(UB.i18n('Невірний формат файлу, для завантаження використовується формат csv. Розширення файлу повинно бути csv'))
+          me.setLoading(false)
+          return
+        }
+        btn.disable()
+
+        let reader = new FileReader()
+        reader.onloadend = function () {
+          const dataBase64 = reader.result.split(',')[1]
+
+          $App.connection.run({
+            entity: 'ac_service',
+            method: 'parseCsv',
+            encoding: ecoding,
+            params: {
+              type: 'emp',
+              entityName: dictEntityName
+            },
+            data: dataBase64
+          }).then(({
+            result
+          }) => {
+            let parsedData = JSON.parse(result)
+            const entityAttrs = AC.entityUtils.getAttributes(dictEntityName)
+            let attrs = me.importConfig.attrs
+            parsedData = parsedData.map((item, key) => {
+              item.ID = ++key
+              attrs.forEach(attr => {
+                if (item[attr] === undefined) {
+                  item[attr] = ''
+                }
+              })
+
+              Object.keys(item)
+                .filter(attrName => entityAttrs[attrName] && _.includes(['Date', 'DateTime'], entityAttrs[attrName].dataType))
+                .forEach(attrName => {
+                  if (item[attrName]) {
+                    switch (entityAttrs[attrName].dataType) {
+                      case 'Enum':
+                        break
+                      case 'Date':
+                        item[attrName] = new Date(AC.moment(item[attrName], 'DD.MM.YYYY').toDate())
+                        break
+                      case 'DateTime':
+                        item[attrName] = new Date(AC.moment(item[attrName], 'DD.MM.YYYY H:i:s').toDate())
+                        break
+                    }
+                  }
+                })
+              return item
+            })
+
+            me.details.grid.setLocalStoreData(parsedData)
+            me.details.grid.parsedData = parsedData
+            me.setLoading(false)
+            if (!parsedData.length) {
+              $App.dialogInfo(UB.i18n('Нічого не завантажено, можливо, вибране невірне кодування'))
+            }
+          })
+          dialogWindow.close()
+        }
+        reader.readAsDataURL(file)
+      } */
+  })
+}
+
+function createGrid (me) {
+  const panel = me.down('[name=details]')
+
+  if (me.details && me.details.grid) {
+    panel.remove(me.details.grid, true)
+    delete me.details.grid
+  }
+
+  const dictEntityName = me.down('[name=dict]').getValue()
+
+  if (!dictEntityName) {
+    return
+  }
+
+  me.importConfig = me.fullConfig[dictEntityName]
+  me.details = {}
+
+  if (!me.importConfig) {
+    return
+  }
+
+  const entityAttrs = AC.entityUtils.getAttributes(dictEntityName)
+  me.details.fields = me.importConfig.attrs.reduce((r, attrName) => {
+    const fldConfig = entityAttrs[attrName]
+    if (!fldConfig) {
+      throw new Error(UB.i18n('Не знайдено атрибут ') + attrName)
+    }
+    const attrImportConfig = me.importConfig.attrsConfig ? me.importConfig.attrsConfig[attrName] : {}
+    let name = attrImportConfig && attrImportConfig.fieldName ? attrImportConfig.fieldName : attrName
+    const gridFld = {
+      name: name,
+      columnConfig: {
+        text: fldConfig.caption,
+        hidden: attrImportConfig ? attrImportConfig.hidden : false,
+        flex: 1,
+        editor: {
+          allowBlank: true,
+          readOnly: name === 'ID'
+        }
+      }
+    }
+
+    let editor = {}
+
+    switch (fldConfig.dataType) {
+      case 'String':
+        gridFld.columnConfig.editor.maxLength = fldConfig.size
+        gridFld.columnConfig.editor.enforceMaxLength = true
+        break
+      case 'DateTime':
+        gridFld.columnConfig.dateFormat = 'd.m.Y H:i:s'
+        editor = {
+          xtype: 'ubdatefield'
+        }
+        break
+      case 'Date':
+        gridFld.columnConfig.dateFormat = 'd.m.Y'
+        editor = {
+          xtype: 'ubdatefield'
+        }
+        break
+      case 'Currency':
+        editor = {
+          xtype: 'numberfield',
+          floatFormat: 2
+        }
+        break
+      case 'Float':
+        editor = {
+          xtype: 'numberfield',
+          floatFormat: 4
+        }
+        break
+      case 'Enum':
+        gridFld.name = attrName // `${attrName}.name`
+        /* _editor = {
+                                                                  xtype: 'ubcombobox',
+                                                                  dataType: UBDomain.ubDataTypes.Enum,
+                                                                  enumGroup: fldConfig.enumGroup,
+                                                                  valueField: attrImportConfig.valueFld,
+                                                                  storeAttributeFieldName: 'code',
+                                                                  storeAttributeValueField: attrImportConfig.storeAttributeValueField,
+                                                                  displayField: attrImportConfig.valueFld,
+                                                                  ubRequest: {
+                                                                    entity: 'ubm_enum',
+                                                                    method: UB.core.UBCommand.methodName.SELECT,
+                                                                    fieldList: ['code', 'name', 'eGroup', 'sortOrder']
+                                                                  }
+                                                                } */
+        break
+      case 'Entity':
+        // gridFld.columnConfig.tooltip = fldConfig.caption + ':' + fldConfig.dataType + (attrImportConfig.codeAttrName ? ' [' + attrImportConfig.codeAttrName + ']' : '')
+        break
+    }
+
+    gridFld.columnConfig.editor = Object.assign({}, gridFld.columnConfig.editor, editor)
+
+    r.push(gridFld)
+    if (fldConfig.isMultiLang) {
+      me.langs.forEach(lang => {
+        const langFld = {
+          name: attrName + '_' + lang + '^',
+          columnConfig: {
+            text: fldConfig.caption + ' [' + lang + ']',
+            flex: 1,
+            editor: {
+              allowBlank: fldConfig.allowNull
+            }
+          }
+        }
+        langFld.columnConfig.editor = Object.assign({}, gridFld.columnConfig.editor, editor)
+        r.push(langFld)
+      })
+    }
+
+    return r
+  }, [])
+
+  if (me.importConfig.attrsConfig) {
+    const entityColsIDs = Object.keys(me.importConfig.attrsConfig)
+      .filter(fldName => me.importConfig.attrsConfig[fldName].storeAttributeValueField)
+      .map(fldName => me.importConfig.attrsConfig[fldName].storeAttributeValueField)
+    me.details.fields.push(...entityColsIDs)
+  }
+
+  me.details.grid = Ext.create('AC.controls.AcGrid', {
+    xtype: 'acGrid',
+    name: 'docUnitIndexDetail',
+    onItemDoubleClick: function (grid, record) {
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: 'hr_import-edit',
+        sender: me,
+        cmpInitConfig: {
+          importConfig: me.importConfig,
+          record: record,
+          grid: me.details.grid,
+          entity: dictEntityName
+        }
+      })
+    },
+    flex: 1,
+    region: 'center',
+    autoScroll: true,
+    storeType: 'local',
+    disablePaging: false,
+    pagerConfig: {
+      pageSize: 100
+    },
+    disableMaxDataLength: true,
+    lineNumberColumn: 'lineNum',
+    showToolBar: true,
+    hideActions: ['addNew'],
+    // rowEditing: me.mode === 'EMP',
+    rowEditing: false,
+    // fa fa-refresh
+    customToolBarActions: [
+      {
+        xtype: 'button',
+        iconCls: 'u-icon-refresh',
+        tooltip: UB.i18n('Оновити'),
+        handler: function (btn) {
+          me.setLoading(true)
+          $App.connection.run({
+            entity: 'hr_import',
+            method: 'fakeRefresh'
+          }).then(mParams => {
+            setTimeout(function () {
+              me.setLoading(false)
+            }, 500)
+          })
+        }
+      },
+      {
+        xtype: 'button',
+        iconCls: 'fa fa-check-square-o',
+        tooltip: UB.i18n('Тільки перевірити дані, без завантаження'),
+        handler: function (btn) {
+          let data = me.details.grid.parsedData
+          if (!data || !data.length) {
+            AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Відсутні дані для перевірки'))
+            return
+          }
+          data = data.map(item => {
+            delete item.id
+            return item
+          })
+          me.setLoading(true)
+          /*
+                                          const data = me.details.grid.getData().map(item => {
+                                            delete item.id
+                                            return item
+                                          })
+                                  */
+
+          me.errorMessages = []
+          me.errorsCount = 0
+          me.notUniqueCount = 0
+          me.existing = []
+          insertData(me, data, dictEntityName, 0, 1000, true).then(result => {
+            if (result) {
+              if (me.existing.length) {
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: 'hr_import-selectExisting',
+                  customParams: {
+                    data: JSON.stringify(me.existing)
+                  }
+                })
+              /*                    $App.connection.run({
+                                  entity: 'hr_employee',
+                                  method: 'importSelect',
+                                  data: JSON.stringify(me.existing)
+                              }).then(mParams => {
+                                  DevUtils.inspect(mParams)
+                              })
+          */
+              }
+              me.isChecking = true
+            }
+          })
+        }
+      },
+      {
+        xtype: 'button',
+        iconCls: 'fas fa-arrows-alt',
+        tooltip: UB.i18n('Завантажити у базу'),
+        handler: function (btn) {
+          let data = me.details.grid.parsedData
+          if (!data || !data.length) {
+            AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Відсутні дані для завантаження'))
+            return
+          }
+          if (!me.isChecking) {
+            $App.dialogInfo(UB.i18n(`Спочатку необхідно здійснити перевірку даних`))
+            return
+          }
+
+          // if (data.length <= 1000) {
+          // data = me.details.grid.getData()
+          // }
+          data = data.map(item => {
+            delete item.id
+            return item
+          })
+
+          me.errorMessages = []
+          me.errorsCount = 0
+          me.notUniqueCount = 0
+          let chunkSize = 500
+          switch (dictEntityName) {
+            case 'imp_hr_appoint':
+              chunkSize = 10
+              break
+            case 'imp_hr_position':
+              chunkSize = 200
+              break
+          }
+          insertData(me, data, dictEntityName, 0, chunkSize, false)
+        }
+      },
+      {
+        xtype: 'button',
+        iconCls: 'fa fa-trash-o',
+        tooltip: UB.i18n('Видалити дані довідника із системи'),
+        handler: function (btn) {
+          let impSource = me.getImpSourceID({
+            withText: true
+          })
+          let impSourceID = impSource.ID
+          let text = impSourceID ? impSource.text : ''
+          let makeDelete = function () {
+            $App.dialogYesNo('Попередження', UB.i18n(`Усі дані сутності для джерела <b>{0}</b> буде видалено із системи. Продовжити?`, text))
+              .then(function (isYes) {
+                if (isYes) {
+                  me.setLoading(true)
+                  UB.Repository(dictEntityName === 'hr_empVacationPeriod' ? 'hr_empVacationPlan' : dictEntityName)
+                    .attrs('ID')
+                    .where('impSourceID', '=', impSourceID)
+                    .selectAsObject().then(data => {
+                      removeData(me, data.map(item => item.ID), dictEntityName === 'hr_empVacationPeriod' ? 'hr_empVacationPlan' : dictEntityName)
+                    })
+                }
+              })
+          }
+          if (!impSourceID) {
+            $App.doCommand({
+              cmdType: 'showForm',
+              formCode: 'hr_staffOrder-params',
+              sender: me,
+              customParams: {
+                onClose: () => {},
+                onAccept: (paramsForm, resultData) => {
+                  paramsForm.up('window').close()
+                  impSourceID = resultData.impSourceID
+                  text = resultData.impSourceID_text
+                  makeDelete()
+                },
+                onRender: (paramsForm) => {
+                  let caption = $App.domainInfo.entities[dictEntityName].caption
+                  paramsForm.window.setTitle(UB.i18n(`Виберіть організацію для сутності "{0}"`, caption))
+                  paramsForm.add({
+                    xtype: 'label',
+                    text: '',
+                    margin: '40 0 0 15',
+                    name: 'reccount'
+                  })
+                  let label = paramsForm.down('[name=reccount]')
+                  paramsForm.query('[resultName]').forEach(ctrl => {
+                    if (ctrl.resultName === 'impSourceID') {
+                      ctrl.on('change', ctrl => {
+                        let ID = ctrl.getValue()
+                        if (ID) {
+                          UB.Repository(dictEntityName)
+                            .attrs('count(1)')
+                            .where('impSourceID', '=', ID)
+                            .selectScalar().then(count => {
+                              label.update(count ? UB.i18n(`З сутності <b>"{0}" </b> буде видалено {1} записів`, caption, count) : UB.i18n('Записи відсутні'))
+                            })
+                        } else {
+                          label.setText('')
+                        }
+                      })
+                    }
+                    ctrl.setVisible(ctrl.resultName === 'impSourceID')
+                    ctrl.setAllowBlank(ctrl.resultName !== 'impSourceID')
+                  })
+                  const impOrgCtrl = paramsForm.down('[name=impOrgID]')
+                  if (impOrgCtrl) {
+                    impOrgCtrl.setValueById(appAC.globalOrganization('ID'))
+                  }
+                }
+              }
+            })
+          } else {
+            makeDelete()
+          }
+        }
+      },
+      {
+        xtype: 'button',
+        iconCls: 'el-icon-office-building',
+        name: 'btnMakeOrder',
+        tooltip: me.mode === 'STAFF' ? UB.i18n('Створити наказ штатного розкладу') : UB.i18n('Завантажити додаткові періоди відпусток'),
+        listeners: {
+          added: ctrl => {
+            me.btnMakeOrder = ctrl
+            let entName = me.down('[name=dict]').getValue()
+            ctrl.setVisible(me.mode === 'STAFF' || entName === 'hr_empVacationPeriod')
+          }
+        },
+        handler: function (btn) {
+          let entName = me.down('[name=dict]').getValue()
+          if (entName === 'hr_empVacationPeriod') {
+            $App.doCommand({
+              cmdType: 'showForm',
+              formCode: 'hr_staffOrder-params',
+              sender: me,
+              customParams: {
+                onClose: ctrl => {},
+                onAccept: (paramsForm, resultData) => {
+                  paramsForm.up('window').close()
+                  // let organizationID = resultData.impSourceID_record.mi_data_id
+                  let EDRPOUCode = resultData.organizationCode
+                  UB.Repository('hr_organization')
+                    .attrs('mi_data_id', 'name')
+                    .where('EDRPOUCode', '=', EDRPOUCode)
+                    .selectSingle().then(data => {
+                      let organizationID = data.mi_data_id
+                      if (!organizationID) {
+                        AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не не знайдена організація '))
+                      } else {
+                        $App.dialogYesNo('Завантаження відпусток', UB.i18n(`Виконати для "{0}"?`, data.name)).then(agree => {
+                          if (!agree) {
+                            return
+                          }
+                          me.setLoading(true)
+                          $App.connection.run({
+                            entity: 'hr_import',
+                            method: 'addVacancyPeriod',
+                            organizationID: organizationID
+                          }).then(mParams => {
+                            me.setLoading(false)
+                            AC.viewUtils.showToast(UB.i18n(`Звантажено записів-основної щорічної: {0}, за стаж держслужби: {1}`, mParams.countMain, mParams.countGov))
+                          }).catch(e => {
+                            me.setLoading(false)
+                            AC.viewUtils.showToast(UB.i18n('Помилка'), e.message)
+                          })
+                        })
+                      }
+                    })
+                },
+                onRender: (paramsForm) => {
+                  paramsForm.window.setTitle(UB.i18n(`Виберіть організацію`))
+                  paramsForm.query('[resultName]').forEach(ctrl => {
+                    if (ctrl.resultName === 'impSourceID') {
+                      ctrl.setValue()
+                    }
+                    ctrl.setVisible(ctrl.resultName === 'organizationCode')
+                    ctrl.setAllowBlank(ctrl.resultName !== 'organizationCode')
+                  })
+                }
+
+              }
+            })
+            return
+          }
+
+          let impSourceID = me.down('[name=impSourceID]').getValue()
+          if (!impSourceID && me.mode === 'STAFF') {
+            AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вибрано джерело імпорту'))
+            me.setLoading(false)
+            return
+          }
+          if (me.mode === 'STAFF') {
+            $App.doCommand({
+              cmdType: 'showForm',
+              formCode: 'hr_staffOrder-params',
+              sender: me,
+              customParams: {
+                onClose: () => {},
+                onAccept: (paramsForm, resultData) => {
+                  paramsForm.up('window').close()
+                  me.setLoading(true)
+                  $App.connection.run({
+                    entity: 'hr_import',
+                    method: 'loadOrgStructure',
+                    impSourceID: impSourceID,
+                    params: resultData
+                  }).then(mParams => {
+                    setTimeout(function () {
+                      me.setLoading(false)
+                    }, 500)
+                    let errorMessages = mParams.errors
+                    if (errorMessages.length) {
+                      AC.filesService.saveAsPlain(errorMessages.join(`\r\n`), UB.i18n(`Errors list Наказ.txt`), {
+                        type: 'text/plain'
+                      })
+                    }
+                  }).catch(e => {
+                    me.setLoading(false)
+                    if (e.message) {
+                      AC.viewUtils.showToast(UB.i18n('Помилка'), e.message)
+                      me.setLoading(false)
+                    } else {
+                      me.showProgress(impSourceID)
+                    }
+                  })
+                }
+              }
+            })
+          } else {
+            me.setLoading(true)
+            $App.connection.run({
+              entity: 'hr_import',
+              method: 'makeAppointOrder',
+              impSourceID: impSourceID
+            }).then(mParams => {
+              setTimeout(function () {
+                me.setLoading(false)
+              }, 500)
+              let errorMessages = mParams.errors
+              if (errorMessages.length) {
+                AC.filesService.saveAsPlain(errorMessages.join(`\r\n`), UB.i18n(`Errors list Наказ.txt`), {
+                  type: 'text/plain'
+                })
+              }
+            }).catch(e => {
+              AC.viewUtils.showToast(UB.i18n('Помилка'), e.message)
+              setTimeout(function () {
+                me.setLoading(false)
+              }, 500)
+            })
+          }
+        }
+      },
+      {
+        xtype: 'button',
+        iconCls: 'el-icon-office-building',
+        name: 'btnUpdateWorkbook',
+        tooltip: UB.i18n('Оновити трудову книжку'),
+        listeners: {
+          added: ctrl => {
+            me.btnUpdateWorkbook = ctrl
+            let entName = me.down('[name=dict]').getValue()
+            ctrl.setVisible(entName === 'imp_hr_appoint')
+          }
+        },
+        handler: function (btn) {
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'hr_staffOrder-params',
+            sender: me,
+            customParams: {
+              onClose: ctrl => {},
+              onAccept: (paramsForm, resultData) => {
+                paramsForm.up('window').close()
+                // let organizationID = resultData.impSourceID_record.mi_data_id
+                let EDRPOUCode = resultData.organizationCode
+                UB.Repository('hr_organization')
+                  .attrs('mi_data_id', 'name')
+                  .where('EDRPOUCode', '=', EDRPOUCode)
+                  .selectSingle().then(data => {
+                    let organizationID = data.mi_data_id
+                    if (!organizationID) {
+                      AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не не знайдена організація '))
+                    } else {
+                      $App.dialogYesNo('Оновлення трудової книжки', UB.i18n(`Виконати для "{0}"?`, data.name)).then(agree => {
+                        if (agree) {
+                          me.setLoading(UB.i18n('Завантаження...'))
+                          $App.connection.run({
+                            entity: 'hr_import',
+                            method: 'updateWorkbook',
+                            organizationID: organizationID
+                          }).then(mParams => {
+                            me.setLoading(false)
+                          }).catch(e => {
+                            AC.viewUtils.showToast(UB.i18n('Помилка'), e.message || UB.i18n('Невідома помилка'))
+                            me.setLoading(false)
+                          })
+                        }
+                      })
+                    }
+                  })
+              },
+              onRender: (paramsForm) => {
+                paramsForm.window.setTitle(UB.i18n(`Виберіть організацію`))
+                paramsForm.query('[resultName]').forEach(ctrl => {
+                  if (ctrl.resultName === 'impSourceID') {
+                    ctrl.setValue()
+                  }
+                  ctrl.setVisible(ctrl.resultName === 'organizationCode')
+                  ctrl.setAllowBlank(ctrl.resultName !== 'organizationCode')
+                })
+              }
+
+            }
+          })
+        }
+      },
+      {
+        xtype: 'button',
+        name: 'btnFixExperience',
+        iconCls: 'fas fa-envelope-open-text',
+        tooltip: UB.i18n('Зафіксувати стаж'),
+        hidden: true,
+        listeners: {
+          added: ctrl => {
+            me.btnFixExperience = ctrl
+            let entName = me.down('[name=dict]').getValue()
+            ctrl.setVisible(entName === 'hr_employeeExperience')
+          }
+        },
+        handler: ctrl => {
+          let entName = me.down('[name=dict]').getValue()
+          if (entName === 'hr_employeeExperience') {
+            $App.doCommand({
+              cmdType: 'showForm',
+              formCode: 'hr_staffOrder-params',
+              sender: me,
+              customParams: {
+                onClose: ctrl => {},
+                onAccept: (paramsForm, resultData) => {
+                  paramsForm.up('window').close()
+
+                  let organizationID = resultData.impSourceID_record.mi_data_id
+                  if (!organizationID) {
+                    AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не не знайдена організація '))
+                  } else {
+                    $App.dialogYesNo('Фіксація стажів', UB.i18n(`Виконати для "{0}"?`, resultData.impSourceID_record.name)).then(agree => {
+                      if (!agree) {
+                        return
+                      }
+                      me.setLoading(true)
+                      $App.connection.run({
+                        entity: 'hr_import',
+                        method: 'fixExperience',
+                        organizationID: organizationID,
+                        organizationName: resultData.impSourceID_record.name
+                      }).then(mParams => {
+                        me.setLoading(false)
+                        AC.viewUtils.showToast(UB.i18n(`Зафіксовано стажів - {0} для кількості осіб - {1}`, mParams.count || 0, mParams.employeeCount || 0))
+                      }).catch(e => {
+                        me.setLoading(false)
+                        AC.viewUtils.showToast(UB.i18n('Помилка'), e.message)
+                      })
+                    })
+                  }
+                },
+
+                /*
+                // let organizationID = resultData.impSourceID_record.mi_data_id
+                let EDRPOUCode = resultData.organizationCode
+                UB.Repository('hr_organization')
+                  .attrs('mi_data_id', 'name')
+                  .where('EDRPOUCode', '=', EDRPOUCode)
+                  .where('state', '=', 'ACTIVE')
+                  .selectSingle().then(data => {
+                    let organizationID = data ? data.mi_data_id : null
+                    if (!organizationID) {
+                      AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не не знайдена організація '))
+                    } else {
+                      $App.dialogYesNo('Фіксація стажів', UB.i18n(`Виконати для "{0}"?`, data.name)).then(agree => {
+                        if (!agree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_import',
+                          method: 'fixExperience',
+                          organizationID: organizationID,
+                          organizationName: data.name
+                        }).then(mParams => {
+                          me.setLoading(false)
+                          AC.viewUtils.showToast(UB.i18n(`Зафіксовано стажів - {0} для кількості осіб - {1}`, mParams.count || 0, mParams.employeeCount || 0))
+                        }).catch(e => {
+                          me.setLoading(false)
+                          AC.viewUtils.showToast(UB.i18n('Помилка'), e.message)
+                        })
+                      })
+                    }
+                  })
+                }, */
+                onRender: (paramsForm) => {
+                  paramsForm.window.setTitle(UB.i18n(`Виберіть організацію`))
+                  paramsForm.query('[resultName]').forEach(ctrl => {
+                    if (ctrl.resultName === 'impSourceID') {
+                      ctrl.setValue()
+                    }
+                    ctrl.setVisible(ctrl.resultName === 'impSourceID')
+                    ctrl.setAllowBlank(ctrl.resultName !== 'impSourceID')
+                  })
+                }
+              }
+            })
+          }
+        }
+      },
+      {
+        xtype: 'button',
+        name: 'btnShowEmployee',
+        iconCls: 'fas fa-ban',
+        tooltip: UB.i18n('Особи, шо не будуть оновлюватися'),
+        hidden: true,
+        listeners: {
+          added: ctrl => {
+            me.btnShowEmployee = ctrl
+            let entName = me.down('[name=dict]').getValue()
+            ctrl.setVisible(entName === 'hr_employee')
+          }
+        },
+        handler: ctrl => {
+          let entName = me.down('[name=dict]').getValue()
+          if (entName === 'hr_employee') {
+            $App.doCommand({
+              cmdType: 'showForm',
+              formCode: 'hr_import-selectExisting',
+              customParams: {
+              }
+            })
+          /*          $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: 'hr_staffOrder-params',
+                  sender: me,
+                  customParams: {
+                    onClose: ctrl => {},
+                    onAccept: (paramsForm, resultData) => {
+                      paramsForm.up('window').close()
+                      // let organizationID = resultData.impSourceID_record.mi_data_id
+                      let organizationID = resultData.impSourceID_record.mi_data_id
+                      if (!organizationID) {
+                        AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не не знайдена організація '))
+                      } else {
+                        $App.doCommand({
+                          cmdType: 'showForm',
+                          formCode: 'hr_import-selectExisting',
+                          customParams: {
+                            organizationID: organizationID
+                          }
+                        })
+                      }
+                    },
+                    onRender: (paramsForm) => {
+                      paramsForm.window.setTitle(UB.i18n(`Виберіть організацію`))
+                      paramsForm.query('[resultName]').forEach(ctrl => {
+                        if (ctrl.resultName === 'impSourceID') {
+                          ctrl.setValue()
+                        }
+                        ctrl.setVisible(ctrl.resultName === 'impSourceID')
+                        ctrl.setAllowBlank(ctrl.resultName !== 'impSourceID')
+                      })
+                    }
+
+                  }
+                }) */
+          }
+        }
+      }
+    ],
+    notWriteChanges: true,
+    summaryDataOnClient: true,
+    enableColumnHide: false,
+    fields: me.details.fields
+  })
+
+  panel.add(me.details.grid)
+}
+
+function removeData (me, ids, dictEntityName, currentIndex = 0, chunkSize = 1000) {
+  let allErrors = []
+  $App.connection.run({
+    entity: 'ac_service',
+    method: 'removeData',
+    params: {
+      type: 'emp',
+      entityName: dictEntityName,
+      data: ids
+    }
+  }).then(({ state, errors }) => {
+    errors = errors && JSON.parse(errors)
+    if (errors && errors.length) {
+      allErrors = allErrors.concat(errors)
+    }
+    currentIndex += chunkSize
+    if (currentIndex >= ids.length) {
+      me.setLoading(false)
+      return Promise.resolve()
+    }
+    removeData(me, ids, dictEntityName, currentIndex, chunkSize)
+    return Promise.resolve()
+  }).then(() => {
+    if (allErrors.length) {
+      AC.filesService.saveAsPlain(allErrors.map(err => err.message).join(`\r\n`), `Error list ${dictEntityName}.txt`, {
+        type: 'text/plain'
+      })
+      $App.dialogInfo(UB.i18n('При видаленні даних виникли помилки, див. лог файл'))
+    } else {
+      AC.viewUtils.showToast(UB.i18n('Видалення даних виконано успішно'))
+    }
+  })
+}
+
+async function insertData (me, data, dictEntityName, currentIndex, chunkSize, isCheckOnly, impSourceID) {
+  let impSourceCtrl = me.mode === 'EMP' ? me.down('[name=impOrgID]') : me.down('[name=impSourceID]')
+  if (!impSourceID) {
+    if (impSourceCtrl.allowBlank) {
+      impSourceID = null
+    } else {
+      impSourceID = me.getImpSourceID({
+        isShowError: true
+      })
+      if (!impSourceID) {
+        me.setLoading(false)
+        return false
+      }
+    }
+  }
+  if (!impSourceID) {
+    if (!await $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n(`Буде виконано {0} даних для Організації <b>{1}</b>. Продовжити?`,
+      isCheckOnly ? UB.i18n('перевірку') : UB.i18n('завантаження'), appAC.globalOrganizationName()))) {
+      me.setLoading(false)
+      return false
+    }
+    impSourceID = appAC.globalOrganization()
+  }
+  data = data.map((item, index) => {
+    return item
+  })
+
+  const params = {
+    type: 'emp',
+    entityName: dictEntityName,
+    currentIndex,
+    chunkSize,
+    data: JSON.stringify(data.slice(currentIndex, currentIndex + chunkSize)),
+    impSourceID: impSourceID,
+    isUpdateExisting: me.down('[name=isUpdateExisting]').getValue()
+  }
+  me.setLoading(UB.i18n('Завантаження...') + currentIndex)
+  return $App.connection.run({
+    entity: 'ac_service',
+    method: 'insertData',
+    validate: isCheckOnly,
+    'checkUnique': false,
+    params
+  }).then(({
+    state,
+    errors,
+    errorsCount,
+    existing
+  }) => {
+    me.setLoading(false)
+    me.existing = me.existing.concat(JSON.parse(existing))
+    currentIndex += chunkSize
+    if (errors) {
+      const errorMessages = JSON.parse(errors)
+      errorMessages.forEach(error => {
+        me.errorMessages.push(error)
+      })
+      me.errorsCount += errorsCount
+    }
+    if (currentIndex >= data.length) {
+      // validation is finished
+      let msg = isCheckOnly ? UB.i18n('Перевірка виконана') : UB.i18n('Завантаження виконано')
+      if (me.errorsCount > 0) {
+        AC.filesService.saveAsPlain(me.errorMessages.join(`\r\n`), `Error list ${dictEntityName}.txt`, {
+          type: 'text/plain'
+        })
+        AC.viewUtils.showToast(UB.i18n('Помилка'), msg + UB.i18n(' з помилками. Детальну інформацію дивіться в файлі помилок.'))
+      } else {
+        AC.viewUtils.showToast(msg)
+      }
+      me.setLoading(false)
+      return Promise.resolve(true)
+    }
+    return insertData(me, data, dictEntityName, currentIndex, chunkSize, isCheckOnly, impSourceID)
+  }).catch(e => {
+    AC.viewUtils.showToast(UB.i18n('Помилка'), e.message)
+    me.setLoading(false)
+    return Promise.resolve(false)
+  })
+}

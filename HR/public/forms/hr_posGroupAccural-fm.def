@@ -1,0 +1,91 @@
+// @isModal true
+
+/* global Ext appAC AC $App UB */
+exports.formDef = 'HR.posGroupAccural'
+
+Ext.define(exports.formDef, {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.posGroupAccural',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [{
+      name: 'posGroup',
+      xtype: 'ubdetailgrid',
+      autoScroll: true,
+      layout: 'fit',
+      flex: 1,
+      hideActions: ['addNewByCurrent', 'audit', 'newVersion', 'history', 'showPreview', 'itemLink',
+        'commandLink', 'showDetail'],
+      cmdType: 'showList',
+      description: UB.i18n('Відомість нарахувань зп по посадам'),
+      entity: 'hr_posGroup',
+      cmdData: {
+        params: [{
+          entity: 'hr_posGroup',
+          method: 'select',
+          orgID: appAC.globalOrganization(),
+          onDate: appAC.globalApplicationDate(),
+          fieldList: [
+            { name: 'name', description: UB.i18n('Назва групи посад') },
+            { name: 'ID', visibility: false }
+          ]
+        }]
+      },
+      cmpInitConfig: {
+        customInit: function () {},
+        afterInit: function () {
+          const grid = this
+          AC.gridUtils.setGlobalOrganization(grid, 'orgID')
+        },
+        onDeterminateForm: function (grid) {
+          let reco = AC.gridUtils.getCurrentRecord(grid)
+          return {
+            entityName: 'hr_posGroup',
+            formCode: 'hr_accrualReportPosGroup',
+            cmpInitConfig: {
+              posGroupName: reco && reco.get('name') ? reco.get('name') : null,
+              reportCode: 'hr_accrual-posGroup'
+            },
+            cmdData: {
+              reportCode: 'hr_accrual-posGroup'
+            }
+          }
+        }
+      }
+    }]
+  },
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+    me.changeGlobal = function () {
+      const store = me.down('ubdetailgrid').getStore()
+      store.ubRequest.onDate = appAC.globalApplicationDate()
+      store.ubRequest.orgID = appAC.globalOrganization()
+      store.load()
+    }
+    me.on('afterrender', () => {
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+      $App.on('ac:app:operationDateChanged', me.changeGlobal)
+    }, me)
+
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.changeGlobal)
+      $App.un('ac:app:operationDateChanged', me.changeGlobal)
+    }, me)
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,284 @@
+/* global UB AC $App HR */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'empOrderType', 'organizationID', 'isGroup', 'organizationID.mi_data_id',
+    'positionID', 'employeeNumberID', 'employeePositionID.employeeNumberID', 'employeeID', 'errorText', 'dictVacationKindID.code'
+  ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  defaults: {
+    layout: 'fit'
+  },
+  size: {
+    width: 1100,
+    height: 700
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'addIntComb'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      listeners: {
+        tabchange: function (tp, t) {}
+      },
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          ubID: 'tabMain',
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              layout: {
+                type: 'hbox'
+              },
+              padding: '10 0 0 0',
+              items: [
+                {
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  flex: 1,
+                  defaults: {
+                    labelWidth: 120
+                  },
+                  items: [{
+                    attributeName: 'employeePositionID',
+                    fieldList: ['ID', 'description', 'employeeNumberID', 'employeeID', 'positionID', 'workPlace', 'organizationID', 'vacancyDateFrom', 'vacancyDateTo'],
+                    orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                    xtype: 'empPositionCombobox',
+                    addWorkPlace: true,
+                    customContextActions: [{
+                      text: UB.i18n('Право на відпустки'),
+                      iconCls: 'u-icon-check',
+                      handler: function () {
+                        const ctrl = this
+                        const me = ctrl.up('form')
+                        let employeeID = me.record.get('employeeID')
+                        let employeeNumberID = me.record.get('employeeNumberID')
+                        let reco = AC.gridUtils.getCurrentRecord(ctrl)
+                        if (reco) {
+                          employeeID = reco.get('employeeID')
+                          employeeNumberID = reco.get('employeeNumberID')
+                        } else if (!employeeID || !employeeNumberID) {
+                          $App.dialogInfo(UB.i18n('Необхідно вибрати працівника'), UB.i18n('Увага'))
+                          return
+                        }
+                        HR.employeeTabs.runEmpCard({
+                          employeeID: employeeID,
+                          employeeNumberID: employeeNumberID,
+                          isModal: true,
+                          nodeId: 'hr_empVacationPlan',
+                          customParams: {
+                            visibleNodes: ['grpCommon', 'grpVac', 'hr_employee', 'hr_empVacationPlan'],
+                            readOnlyExceptActive: true
+                          }
+                        })
+                      }
+                    }]
+                  },
+                  {
+                    attributeName: 'dictVacationKindID',
+                    allowBlank: false,
+                    fieldList: ['code', 'name', 'payElTempExecutionID', 'isTempVacancy'],
+                    displayField: 'name',
+                    whereList: {
+                      isDay: {
+                        expression: '[isDay]',
+                        condition: 'equal',
+                        value: 0
+                      },
+                      dNot: {
+                        expression: '[code]',
+                        condition: 'equal',
+                        value: 'dNot'
+                      }
+                    },
+                    logicalPredicates: ['([isDay] OR [dNot])'],
+                    orderList: {
+                      orderBy: {
+                        expression: 'name',
+                        order: 'asc'
+                      }
+                    }
+                  },
+                  {
+                    attributeName: 'empOrderSicknessID',
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                    fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'days'],
+                    displayField: 'description',
+                    gridFieldList: ['description'],
+                    disabled: true,
+                    requiredIf: (ctrl, form) => form.record.get('dictVacationKindID.code') === 'dPrCh',
+                    disabledIf: (ctrl, form) => form.record.get('dictVacationKindID.code') !== 'dPrCh',
+                    whereList: {
+                      employeeID: {
+                        expression: '[employeeID]',
+                        condition: 'equal',
+                        value: 0
+                      },
+                      illnessReasonID: {
+                        expression: '[illnessReasonID.payElFSSUID.methodID.code]',
+                        condition: 'equal',
+                        value: '20' // Вагітність та пологи
+                      },
+                      orderState: {
+                        expression: '[orderState]',
+                        condition: 'notEqual',
+                        value: 'PROJECT'
+                      }
+                    },
+                    orderList: { orderBy: { expression: 'description' } }
+                  },
+                  {
+                    attributeName: 'dateFrom',
+                    fieldLabel: UB.i18n('Дата початку відпустки'),
+                    width: 250
+                  },
+                  {
+                    attributeName: 'dateTo',
+                    fieldLabel: UB.i18n('Дата закінчення відпустки'),
+                    labelWidth: 120,
+                    width: 250
+                  },
+                  {
+                    attributeName: 'dayCount',
+                    fieldLabel: UB.i18n('Днів відпустки'),
+                    width: 250,
+                    minWidth: 250,
+                    maxWidth: 250
+                  }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  width: 500,
+                  defaults: {
+                    labelWidth: 140
+                  },
+                  items: [
+                    {
+                      layout: {
+                        type: 'hbox',
+                        align: 'top'
+                      },
+                      items: [
+                        {
+                          attributeName: 'reason',
+                          fieldLabel: UB.i18n('Причина надання відпустки'),
+                          rows: 5,
+                          flex: 1
+                        },
+                        {
+                          xtype: 'button',
+                          cls: 'list-icon',
+                          name: 'reasonButton',
+                          tooltip: UB.i18n('Вибрати'),
+                          width: 35,
+                          height: 35,
+                          margin: '0 2 0 -45',
+                          handler: btn => {
+                            btn.up('form').getField('reason').selectHandler(btn)
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      layout: {
+                        type: 'hbox',
+                        align: 'top'
+                      },
+                      hidden: true,
+                      name: 'reasonDocPanel',
+                      items: [
+                        {
+                          attributeName: 'reasonDoc',
+                          fieldLabel: UB.i18n('Підстава (до пункту наказу)'),
+                          flex: 1,
+                          rows: 5
+                        },
+                        {
+                          xtype: 'button',
+                          cls: 'list-icon',
+                          name: 'reasonDocButton',
+                          tooltip: UB.i18n('Вибрати'),
+                          width: 35,
+                          height: 35,
+                          margin: '0 2 0 -45',
+                          handler: btn => {
+                            btn.up('form').getField('reasonDoc').selectHandler(btn)
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      attributeName: 'isTempVacancy',
+                      labelWidth: 200
+                    },
+                    {
+                      attributeName: 'isSuspendVacPlan',
+                      labelWidth: 200
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              name: 'errorText',
+              xtype: 'label',
+              cls: 'x-form-item-label field-label-red',
+              margin: '10 10 5 15'
+            },
+            {
+              xtype: 'tabpanel',
+              region: 'center',
+              layout: 'fit',
+              ubID: 'tpDetail',
+              flex: 1,
+              items: [
+                HR.orderManager.getActingParaGrid('hr_empOrderVacationDet', {
+                  title: UB.i18n('Виконуючі обов\'язки'),
+                  flex: 1,
+                  hidden: false,
+                  rowEditing: true,
+                  cmpInitConfig: {
+                    customInit: function () {
+                      const grid = this
+                      grid.on('changeData', (grd, event) => {
+                        const form = grd.up('form')
+                        form.validate(1)
+                      })
+                    }
+                  },
+                  onStartEdit: function (rowEditor, context) {
+                    rowEditor.grid.up('form').startActingGridEdit(rowEditor, context)
+                  }
+                })
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

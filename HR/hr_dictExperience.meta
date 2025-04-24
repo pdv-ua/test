@@ -1,0 +1,145 @@
+{
+  "caption": "Стаж роботи",
+  "description": "Стаж роботи",
+  "descriptionAttribute": "name",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 32,
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код",
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 150,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "printName",
+      "dataType": "String",
+      "size": 200,
+      "caption": "В наказ",
+      "description": "В наказ (назва в родовому відмінку)",
+      "documentation": "В наказ (назва в родовому відмінку)",
+      "allowNull": true
+    },	
+    {
+      "name": "methodExpID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_methodExp",
+      "caption": "Метод розрахунку",
+      "description": "Метод розрахунку",
+      "documentation": "Метод розрахунку",
+      "allowNull": true
+    },
+    {
+      "name": "experienceSpecID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictExperienceSpec",
+      "caption": "Код підстави обліку спецстажу",
+      "description": "Код підстави обліку спецстажу",
+      "documentation": "Код підстави обліку спецстажу"
+    },
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 150,
+      "caption": "Номер наказу про проведення атестації робочого місця",
+      "description": "Номер наказу про проведення атестації робочого місця",
+      "documentation": "Номер наказу про проведення атестації робочого місця"
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу наказу про проведення атестацію робочого місця",
+      "documentation": "Дата наказу наказу про проведення атестацію робочого місця",
+      "description": "Дата наказу наказу про проведення атестацію робочого місця"
+    },
+    {
+      "name": "experienceUnits",
+      "dataType": "Enum",
+      "enumGroup": "HR_EXPERIENCEUNITS",
+      "caption": "Одиниця виміру",
+      "description": "Одиниця виміру",
+      "defaultValue": "dayСalendar",
+      "allowNull": false
+    },
+    {
+      "name": "includeSecondJobs",
+      "dataType": "Boolean",
+      "caption": "Враховувати стаж внутрішнього сумісництва",
+      "description": "Враховувати стаж внутрішнього сумісництва",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "documentation": "Діє з",
+      "description": "Діє з",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "allowNull": false,
+      "defaultView": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "documentation": "Діє з",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

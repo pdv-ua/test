@@ -1,0 +1,315 @@
+/* global Ext $App UB appAC HR AC */
+exports.formDef = 'HR.taskList'
+
+Ext.define('HR.taskList', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.hr_task',
+  autoScroll: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'ubdetailgrid',
+        title: '',
+        name: 'taskList',
+        region: 'center',
+        autoScroll: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_task'),
+        // stateful: true,
+        entityConfig: {
+          entity: 'hr_task',
+          method: 'select',
+          fieldList: [
+            {
+              name: 'docID',
+              visibility: false
+            },
+            {
+              name: 'participantID',
+              visibility: false
+            },
+            {
+              name: 'docID.orderClass.entityName',
+              visibility: false
+            },
+            {
+              name: 'participantID.recStageID.docID',
+              visibility: false
+            },
+            {
+              name: 'checked',
+              description: '',
+              config: HR.orderManager.checkBoxColumnConfig(),
+              align: 'left',
+              visibility: $App.connection.userData().roles.toUpperCase().split(',').includes('ACC_MASSPROCESSINGMYTASK')
+            },
+            {
+              name: 'participantID.recStageID.stageKind',
+              description: UB.i18n('Тип')
+            },
+            {
+              name: 'docID.empOrderType',
+              description: UB.i18n('Документ')
+            },
+            {
+              name: 'docID.orderDate',
+              description: UB.i18n('Дата документа')
+            },
+            {
+              name: 'participantID.prevParticipantID.employeePosition.description',
+              description: UB.i18n('Попередній погоджувач')
+            },
+            {
+              name: 'participantID.executionDate',
+              description: UB.i18n('Погоджено')
+            },
+            {
+              name: 'docID.empOrderID.mi_createDate',
+              description: UB.i18n('Дата створення документа')
+            },
+            {
+              name: 'mi_createDate',
+              description: UB.i18n('Дата створення задачі')
+            },
+            {
+              name: 'docID.orderNumber',
+              description: UB.i18n('Номер документа')
+            },
+            {
+              name: 'employeePositionID.posName',
+              description: UB.i18n('Виконавець')
+            },
+            {
+              name: 'organizationID.name',
+              description: UB.i18n('Організація')
+            }
+          ],
+          whereList: {
+            state: {
+              expression: '[mi_wfState]',
+              condition: 'equal',
+              values: {
+                empOrderType: 'NEW'
+              }
+            },
+            /* entityClass: {
+              expression: '[docID.orderClass.entityName]',
+              condition: 'in',
+              value: ['hr_empOrder', 'hr_staffTable']
+            }, */
+            employeePositionID: {
+              expression: '[employeePositionID.employeeNumberID]',
+              condition: 'in',
+              value: [0]
+            }
+          }
+        },
+        cmpInitConfig: {
+          disableAutoLoadStore: true,
+          forceDataLoad: true,
+          afterInit: function () {
+            const me = this
+            const employeeNumberID = $App.connection.userData().employeeNumberID
+            UB.Repository('hr_empOrderActingDet')
+              .attrs('paraID.positionID.mi_data_id')
+              .where('employeeNumberID', '=', employeeNumberID || 0)
+              .where('orderID.orderState', '=', 'POSTED')
+              .where('dateFrom', '<=', new Date(appAC.globalApplicationDate()))
+              .where('dateTo', '>=', new Date(appAC.globalApplicationDate()))
+              .selectAsObject()
+              .then(positions => {
+                const pos = positions ? positions.map(p => p['paraID.positionID.mi_data_id']) : 0
+                return Promise.all([
+                  UB.Repository('hr_dictTempExecution')
+                    .attrs('employeePositionTempID.employeeNumberID')
+                    .where('employeePositionID.employeeNumberID', '=', employeeNumberID || 0)
+                    .where('dateFrom', '<=', new Date(appAC.globalApplicationDate()))
+                    .where('dateTo', '>=', new Date(appAC.globalApplicationDate()))
+                    .where('employeePositionTempID.employeeNumberID', 'isNotNull')
+                    .selectAsObject(),
+                  UB.Repository('hr_employeePositionS')
+                    .attrs('employeeNumberID')
+                    .where('positionID', 'in', pos)
+                    .selectAsObject(),
+                  UB.Repository('hr_empOrderDet')
+                    .attrs('paraID.employeeNumberID')
+                    .where('empOrderType', '=', 'ACTING')
+                    .where('orderID.orderState', '=', 'POSTED')
+                    .where('employeeNumberID', '=', employeeNumberID || 0)
+                    .where('dateFrom', '<=', new Date(appAC.globalApplicationDate()), 'df')
+                    .where('dateFrom', 'isNull', undefined, 'dfn')
+                    .where('dateTo', '>=', new Date(appAC.globalApplicationDate()), 'dt')
+                    .where('dateTo', 'isNull', undefined, 'dtn')
+                    .logic('(([df] or [dfn]) and ([dt] or [dtn]))')
+                    .selectAsObject()
+                ])
+              })
+              .then(([dictTempExecution, p2, empOrderDet]) => {
+                const dictTempExecutionIds = dictTempExecution ? dictTempExecution.map(i => i['employeePositionTempID.employeeNumberID'] || 0) : 0
+                const employeePositionIDs = p2 ? p2.map(i => i['employeeNumberID'] || 0) : 0
+                const empOrderEmpIDs = empOrderDet ? empOrderDet.map(i => i['paraID.employeeNumberID'] || 0) : 0
+                me.getStore().ubRequest.whereList
+                  .employeePositionID = {
+                    expression: '[employeePositionID.employeeNumberID]',
+                    condition: 'in',
+                    value: [employeeNumberID || 0, ...dictTempExecutionIds, ...employeePositionIDs, ...empOrderEmpIDs]
+                  }
+                me.getStore().load()
+              })
+          },
+          hideActions: ['addNew', 'showPreview', 'showDetail', 'audit', 'itemLink', 'edit', 'addNewByCurrent', 'del'],
+          onItemDblClick: function (grid, record) {
+            $App.doCommand({
+              cmdType: 'showForm',
+              entity: 'hr_task',
+              formCode: 'hr_task-main',
+              target: $App.getViewport().centralPanel,
+              tabId: 'hr_task-main' + Date.now(),
+              instanceID: record.data.ID,
+              sender: this
+            })
+          },
+          getRowClass: function (row) {
+
+          },
+          onAddNew: function () {
+            this.up('basepanel').onAddNewGrid(this)
+          },
+          onSelectionChange: function (selectionModel, selected) {
+          },
+          customInit: function () {
+
+          },
+          customActions: [
+            {
+              xtype: 'button',
+              cls: 'blue-action',
+              iconCls: 'far fa-paper-plane',
+              actionText: UB.i18n('&nbsp;&nbsp;Прийняти обрані'),
+              showText: true,
+              hidden: !$App.connection.userData().roles.toUpperCase().split(',').includes('ACC_MASSPROCESSINGMYTASK'),
+              actionId: 'acceptAll',
+              handler: async function (btn) {
+                const me = btn.up('form')
+                const data = me.attr.taskList.getData()
+                if (data.some(o => o.checked)) {
+                  onClickApprove(data.filter(o => o.checked))
+                } else {
+                  $App.dialogInfo(UB.i18n('Не вибрано жодного завдання для масового погодження'))
+                }
+              }
+            }
+          ]
+        },
+        masterFields: ['ID']
+      }
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      AC.viewUtils.setAttr(me)
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+    function onClickApprove (selectRows) {
+      UB.Repository('ac_settingsOrg')
+        .attrs(['value'])
+        .where('organizationID', '=', appAC.globalOrganization())
+        .where('[constantID.code]', '=', 'useCEP')
+        .selectScalar()
+        .then(r => r === '1').then(async (useCEPValue) => {
+          if (useCEPValue) {
+            isKeySignatureProcess(me.attr.taskList)
+          } else {
+            $App.connection.run({
+              entity: 'hr_task',
+              method: 'massProcessingTasks',
+              IDs: JSON.stringify(selectRows.map(o => o.ID)),
+              resolution: 'ACCEPTED'
+            })
+          }
+        }).then(function () {
+          if (me.attr.taskList.getStore()) {
+            me.attr.taskList.getStore().reload()
+          }
+        })
+    }
+    function asyncOperation (item, pki, privateKey, ownerInfo, serverTime) {
+      let signatureID
+      return $App.connection.getDocument({
+        entity: item['docID.orderClass.entityName'],
+        attribute: 'document',
+        ID: item.docID
+      }, {
+        bypassCache: true, resultIsBinary: true
+      }).then(docBin => {
+        const signedDoc = pki.sign(docBin, true)
+        return signedDoc
+      }).then(function (binSignature) {
+        return $App.connection.addNewAsObject({
+          entity: 'hr_empOrderSignature',
+          fieldList: ['ID']
+        }).then(rec => {
+          signatureID = rec.ID
+
+          return $App.connection.setDocument(binSignature, {
+            entity: 'hr_empOrderSignature',
+            attribute: 'signature',
+            ID: signatureID,
+            filename: signatureID + '.p7s'
+          })
+        })
+      }).then(signatureJSON => {
+        return $App.connection.runTrans([{
+          entity: 'hr_empOrderSignature',
+          method: 'insert',
+          execParams: {
+            ID: signatureID,
+            docID: item.docID,
+            participantID: item.participantID,
+            signature: signatureJSON
+          }
+        }, {
+          entity: 'hr_task',
+          method: 'setResolution',
+          ID: item.ID,
+          resolution: 'ACCEPTED'
+        },
+        {
+          entity: 'hr_empOrdListAppruv',
+          method: 'updateEmpOrdListAppruvList',
+          taskID: item.ID
+        }])
+      })
+    }
+    async function isKeySignatureProcess (grid) {
+      const items = grid.getData().filter(o => o.checked)
+      let pki = await $App.connection.pki()
+      const privateKey = await pki.readPrivateKey()
+      const ownerInfo = await pki.getPrivateKeyOwnerInfo()
+      const serverTime = await $App.connection.run({
+        entity: 'hr_request',
+        method: 'getCurrentTime'
+      })
+      const ownerPkiInfo = UB.i18n(`Підписано КЕП<br/>{0}<br/>{1}`, ownerInfo.GetSubjFullName(), serverTime.currentStrTime)
+      grid.setLoading(true)
+      let result = await items.reduce(async (prev, cur) => {
+        try {
+          return await asyncOperation(cur, pki, privateKey, ownerInfo, serverTime)
+        } catch (error) {
+          console.error()
+        }
+      }, Promise.resolve())
+      const cachingPrivateKey = AC.settings.get('cachingPrivateKey', appAC.globalOrganization())
+      if (!cachingPrivateKey) {
+        pki.closePrivateKey()
+      }
+      $App.dialogInfo(ownerPkiInfo)
+      grid.setLoading(false)
+      grid.getStore().reload()
+    }
+    me.callParent(arguments)
+  }
+})

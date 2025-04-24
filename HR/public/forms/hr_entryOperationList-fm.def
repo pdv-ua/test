@@ -1,0 +1,129 @@
+/* global Ext UB $App appAC */
+
+exports.formDef = 'HR.entryOperation'
+
+Ext.define('HR.entryOperation', {
+  extend: 'Ext.form.Panel',
+  height: 200,
+  width: 500,
+  alias: 'widget.entryOperation',
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        xtype: 'acGrid',
+        itemId: 'entryOperation',
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_entryOperation'),
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        showToolBar: true,
+        disablePaging: true,
+        storeType: 'local',
+        hideDefaultAction: true,
+        checkColumn: {},
+        viewConfig: {
+          markDirty: false
+        },
+        hideActions: ['addNewByCurrent', 'addNew', 'edit', 'del'],
+        listeners: {
+          itemclick: function (row, record) {
+          }
+        },
+        customToolBarActions: [
+          {
+            name: 'saveButton',
+            tooltip: UB.i18n('Зберегти та вийти'),
+            iconCls: 'u-icon-save-and-close',
+            scale: 'medium',
+            cls: 'save-and-close-action',
+            injectActions: 'first',
+            handler: function (btn) {
+              const result = {
+                add: [],
+                remove: []
+              }
+              const rows = btn.up('acGrid').getData()
+              rows.forEach(row => {
+                if (!me.sourceData.find(s => (s.listParamID === me.listParamID) && (s.valuesID === row.ID)) && row.isChecked) {
+                  result.add.push({
+                    listParamID: me.listParamID,
+                    orgID: appAC.globalOrganization(),
+                    entryOperationID: row.ID,
+                    userID: $App.connection.userData().userID || null
+                  })
+                }
+                const removeRow = me.sourceData.find(o => (o.valuesID === row.ID) && (o.listParamID === me.listParamID) && !row.isChecked)
+                if (removeRow && !row.isChecked) {
+                  result.remove.push(
+                    removeRow.ID
+                  )
+                }
+              })
+              const wnd = me.up('window')
+              if (me.onSelectData) {
+                me.onSelectData(result, wnd)
+              }
+              wnd.close()
+            }
+          },
+          {
+            xtype: 'textfield',
+            name: 'searchBox',
+            skipSetReadOnly: true,
+            labelWidth: 60,
+            fieldLabel: UB.i18n('filter'),
+            listeners: {
+              change: function (ctrl, value) {
+                const store = ctrl.up('acGrid').getStore()
+                store.clearFilter()
+                if (value === '') {
+                  return
+                }
+                if (store.sorters.items.length) {
+                  store.sorters.removeAll()
+                }
+                store.filter(row => {
+                  return (row.get('code') && row.get('code').toUpperCase().includes(value.toUpperCase())) ||
+                    (row.get('name') && row.get('name').toUpperCase().includes(value.toUpperCase()))
+                })
+              }
+            }
+          }
+        ],
+        fields: [
+          {
+            name: 'ID'
+          },
+          {
+            name: 'code',
+            columnConfig: { text: UB.i18n('Код'), width: 100 }
+          },
+          {
+            name: 'name',
+            columnConfig: { text: UB.i18n('Назва') }
+          }
+        ],
+        onAfterRender: function (grid) {
+          loadData(me, grid)
+        }
+      }
+    ]
+    async function loadData (me, grid) {
+      const data = await UB.Repository('hr_entryOperation')
+        .attrs(['ID', 'code', 'name', 'description'])
+        .selectAsObject()
+      grid.getStore().loadData(data.map(o => {
+        if (me.sourceData.length) {
+          const checkedRow = me.sourceData.find(s => s.valuesID === o.ID)
+          if (checkedRow) o.isChecked = true
+        }
+
+        return o
+      }))
+    }
+    me.callParent(arguments)
+  }
+})

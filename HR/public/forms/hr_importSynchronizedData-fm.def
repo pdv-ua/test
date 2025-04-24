@@ -1,0 +1,312 @@
+/* global Ext $App appAC UB AC HR Blob saveAs $App */
+exports.formDef = 'HR.hr_importSynchronizedData'
+
+Ext.define('HR.hr_importSynchronizedData', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_importSynchronizedData',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+    me.dockedItems = [
+      {
+        region: 'north',
+        autoScroll: true,
+        split: false,
+        layout: { type: 'vbox' },
+        margin: '10px 0px 0px',
+        items: [
+          {
+            xtype: 'combo',
+            labelWidth: 180,
+            name: 'encoding',
+            fieldLabel: UB.i18n('Зовнішня система'),
+            allowBlank: false,
+            width: 600,
+            listeners: {
+              afterRender: async function (control) {
+                const resultRequest = await UB.Repository('ac_integrateMap')
+                  .attrs('extrnlSystmCode')
+                  .groupBy('extrnlSystmCode')
+                  .selectAsObject()
+
+                if (resultRequest.length === 1) {
+                  control.setValue(resultRequest[0].extrnlSystmCode)
+                }
+              }
+            }
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'ubboxselect',
+                name: 'organizationID',
+                fieldLabel: UB.i18n('Організація'),
+                labelWidth: 180,
+                width: 600,
+                valueField: 'mi_data_id',
+                displayField: 'description',
+                multiSelect: true,
+                readOnly: !AC.entityUtils.verifyRightsMethod('ac_service', 'subOrg'),
+                listeners: {
+                  afterRender: function (control) {
+                    control.setValue(appAC.globalOrganization())
+                  }
+                },
+                ubRequest: {
+                  entity: 'hr_organization',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['mi_data_id', 'name', 'description'],
+                  whereList: {
+                    isActive: {
+                      expression: '[state]',
+                      condition: 'equal',
+                      value: 'ACTIVE'
+                    },
+                    mi_treePath: {
+                      expression: '[mi_data_id]',
+                      condition: 'in',
+                      value: $App.getUserData().userOrg
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            xtype: 'combo',
+            labelWidth: 180,
+            editable: false,
+            name: 'encoding1',
+            fieldLabel: UB.i18n('Сутність'),
+            width: 600,
+            ubRequest: {
+              entity: 'ac_integrateMap',
+              fieldList: ['entityName']
+            }
+          },
+          {
+            xtype: 'combo',
+            labelWidth: 180,
+            editable: false,
+            name: 'encoding2',
+            fieldLabel: UB.i18n('Відібрати'),
+            width: 600,
+            allowBlank: false,
+            store: Ext.create('Ext.data.Store', { fields: ['text', 'value'],
+              data: [
+                { text: 'Синхронізовані дані', value: true },
+                { text: 'Не синхронізовані дані', value: false }
+              ]
+            })
+          },
+          {
+            xtype: 'button',
+            scale: 'small',
+            icon: $App.getImagePath('download.png'),
+            tooltip: UB.i18n('Вивантажити у Excel'),
+            text: UB.i18n('Вивантажити у Excel'),
+            handler: async function takeInformIntegrate () {
+              function setStyles () {
+                defFont = stl.fonts.add({
+                  code: 'def',
+                  name: 'Calibri',
+                  fontSize: 11,
+                  scheme: 'minor'
+                })
+                stl.fonts.add({
+                  code: 'defBold',
+                  name: 'Calibri',
+                  fontSize: 11,
+                  scheme: 'minor',
+                  bold: true
+                })
+
+                borderFull = stl.borders.add({
+                  left: {
+                    style: 'thin'
+                  },
+                  right: {
+                    style: 'thin'
+                  },
+                  top: {
+                    style: 'thin'
+                  },
+                  bottom: {
+                    style: 'thin'
+                  }
+                })
+                stl.alignments.add({
+                  code: 'Hright',
+                  horizontal: 'right'
+                })
+                stl.alignments.add({
+                  code: 'Hcenter',
+                  horizontal: 'center',
+                  wrapText: '1'
+                })
+                stl.alignments.add({
+                  code: 'HVcenter',
+                  horizontal: 'center',
+                  vertical: 'center',
+                  wrapText: '1'
+                })
+                stl.alignments.add({
+                  code: 'wrapText',
+                  wrapText: '1'
+                })
+                styleCol = stl.getStyle({
+                  font: defFont,
+                  border: borderFull
+                })
+                styleNumCol = stl.getStyle({
+                  font: defFont,
+                  alignment: stl.alignments.named.Hright,
+                  border: borderFull,
+                  format: '0'
+                })
+                headerStyle = stl.getStyle({
+                  font: stl.fonts.named.defBold,
+                  alignment: stl.alignments.named.HVcenter,
+                  border: borderFull
+                })
+                rowHeaderStyle = stl.getStyle({
+                  font: stl.fonts.named.defBold,
+                  fill: 'EBEDED',
+                  border: borderFull,
+                  alignment: stl.alignments.named.HVcenter
+                })
+              }
+              me.setLoading(true)
+              let defFont, borderFull, headerStyle, rowHeaderStyle, styleCol, styleNumCol
+              let wb = new window.XLSX.XLSXWorkbook()
+              let fileName = 'excelFile'
+              let ws = wb.addWorkSheet({ caption: fileName, name: fileName })
+              let stl = wb.style
+              setStyles()
+              let extrnlSystmCodeValue = me.attr.encoding.getValue()
+              let valueOrganizationID = me.attr.organizationID.getValue()
+              let valueEntityName = me.attr.encoding1.getValue()
+              let valueSyncData = me.attr.encoding2.getValue()
+              let paramEnc1Name
+
+              if (!extrnlSystmCodeValue || !valueSyncData) {
+                $App.dialogError('Не заповнені обов\'язкові поля!')
+              } else {
+                if (valueEntityName) {
+                  valueEntityName = me.attr.encoding1.getStore().findRecord('text', me.attr.encoding1.getValue()).get('value')
+                  paramEnc1Name = me.attr.encoding1.getValue()
+                } else {
+                  paramEnc1Name = 'Всі'
+                }
+                valueSyncData = me.attr.encoding2.getStore().findRecord('text', me.attr.encoding2.getValue()).get('value')
+
+                ws.addRow({ value: 'Інформація про синхронізовані дані станом на ' + AC.dateService.formatDate(AC.dateService.currentDateTime(), 'dd.mm.yyyy hh:nn:ss'), column: 0 })
+
+                let OrgName = me.attr.organizationID.getRawValue()
+                if (OrgName === '') {
+                  OrgName = 'Всі'
+                }
+
+                ws.addRow({ value: 'Зовнішня система: ' + extrnlSystmCodeValue, column: 0 })
+                ws.addRow({ value: 'Організація: ' + OrgName, column: 0 })
+                ws.addRow({ value: 'Стуність: ' + paramEnc1Name, column: 0 })
+                ws.addRow({ value: 'Відібрати: ' + me.attr.encoding2.getValue(), column: 0 })
+
+                ws.addRow([{ value: 'Назва сутності', column: 0 }, { value: 'Ідентифікатор в А5', column: 1 }, { value: 'Опис', column: 2 }, { value: 'Зовнішня система', column: 3 }, { value: 'Ідентифікатор в зовнішній системі', column: 4 }, { value: 'Дата видалення', column: 5 }], {}, { height: 20 || 40 })
+                if (valueOrganizationID) {
+                  valueOrganizationID = me.attr.organizationID.getValue().split(',')
+                }
+                const mParams1 = {
+                  extrnlSystmCodeValue,
+                  valueOrganizationID,
+                  valueEntityName,
+                  valueSyncData
+                }
+
+                const result = await $App.connection.run({
+                  entity: 'hr_report',
+                  method: 'getImportData',
+                  resultData: '',
+                  params: mParams1
+                })
+
+                const resoultQuerry = JSON.parse(result.params.resultData)
+
+                resoultQuerry.forEach(element => ws.addRow([
+                  { value: element.entityName, column: 0, style: styleCol },
+                  { value: element.internalID, column: 1, style: styleNumCol },
+                  { value: element.description, column: 2, style: styleCol },
+                  { value: element.extrnlSystmCode, column: 3, style: styleCol },
+                  { value: element.externalID, column: 4, style: styleCol },
+                  { value: element.mi_deleteDate, column: 5, style: styleCol }], {}, { height: 20 || 40 }))
+
+                let colPropList = [
+                  { column: 0, width: 30 },
+                  { column: 1, width: 30 },
+                  { column: 2, width: 50 },
+                  { column: 3, width: 30 },
+                  { column: 4, width: 20 },
+                  { column: 5, width: 20 }
+                ]
+                ws.setColsProperties(colPropList)
+
+                const rData = wb.render()
+                const dBlob = new Blob([rData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+                saveAs(dBlob, UB.i18n(fileName || 'data') + '.xlsx')
+                me.setLoading(false)
+              }
+            }
+          }
+        ]
+      }
+    ]
+
+    me.on('afterrender', async function () {
+      const massiveData = []
+      const me = this
+
+      me.attr = {
+        name: me.down('[name=name]'),
+        includeSubOrg: me.down('[name=includeSubOrg]'),
+        encoding: me.down('combo[name=encoding]'),
+        organizationID: me.down('combo[name=organizationID]'),
+        encoding1: me.down('combo[name=encoding1]'),
+        encoding2: me.down('combo[name=encoding2]')
+      }
+
+      const resultRequest = await UB.Repository('ac_integrateMap')
+        .attrs('extrnlSystmCode')
+        .groupBy('extrnlSystmCode')
+        .selectAsObject()
+
+      resultRequest.forEach(element => massiveData.push({ text: element.extrnlSystmCode, value: element.extrnlSystmCode }))
+      me.attr.encoding.store = Ext.create('Ext.data.Store', { fields: ['text', 'value'],
+        data: massiveData
+      })
+
+      const massiveData2 = []
+      const resultRequest2 = await UB.Repository('ac_integrateMap')
+        .attrs('entityName')
+        .groupBy('entityName')
+        .selectAsObject()
+
+      resultRequest2.forEach(element => {
+        if (element.entityName === 'hr_position') {
+          massiveData2.push({ text: UB.i18n(element.entityName) + ' (Штатна посада)', value: element.entityName })
+        } else if (element.entityName === 'hr_dictPosition') {
+          massiveData2.push({ text: UB.i18n(element.entityName) + ' (Посада)', value: element.entityName })
+        } else {
+          massiveData2.push({ text: UB.i18n(element.entityName), value: element.entityName })
+        }
+      })
+      me.attr.encoding1.store = Ext.create('Ext.data.Store', { fields: ['text', 'value'],
+        data: massiveData2
+      })
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,332 @@
+/* global UB Ext appAC UB $App AC */
+
+exports.formDef = 'HR.timeSheetChangeEmpEdit'
+
+Ext.define('HR.timeSheetChangeEmpEdit', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.timeSheetChangeEmpEdit',
+  initComponent: function () {
+    const me = this
+    me.dockedItems = [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [],
+      ubID: 'mainToolbar',
+      enableOverflow: true
+    }]
+
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            name: 'employeeNumberID',
+            fieldLabel: UB.i18n('Працівник'),
+            selectOnFocus: true,
+            allowEmpty: false,
+            hideEntityItemInContext: true,
+            ubRequest: {
+              entity: 'hr_employeeNumberS',
+              fieldList: ['ID', 'description', 'depName', 'posName'],
+              orderList: { orderBy: { expression: 'tabNumSort' } }
+            },
+            listeners: {
+              change: function (ctrl) {
+                me.attr.posName.setValue(ctrl.getFieldValue('posName'))
+                me.attr.depName.setValue(ctrl.getFieldValue('depName'))
+                if (!ctrl.skipChange) {
+                  me.setDirty(true)
+                }
+              }
+            }
+          },
+          {
+            name: 'posName',
+            xtype: 'textfield',
+            fieldLabel: UB.i18n('Посада'),
+            readOnly: true
+          },
+          {
+            name: 'depName',
+            xtype: 'textfield',
+            fieldLabel: UB.i18n('Підрозділ'),
+            readOnly: true
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                name: 'dateToEmpty',
+                xtype: 'datefield',
+                fieldLabel: UB.i18n('Діє по'),
+                width: 240,
+                listeners: {
+                  change: function (ctrl) {
+                    me.setDirty(true)
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.onButtonSave = function () {
+      if (!me.attr.employeeNumberID.getValue()) {
+        me.attr.employeeNumberID.markInvalid(UB.i18n(me.attr.employeeNumberID.blankText))
+        AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказано працівника'))
+        return
+      }
+      const formData = {}
+      if (me.formData && me.formData.ID) {
+        formData.ID = me.formData.ID
+      }
+      if (me.formData && me.formData.mi_modifyDate) {
+        formData.mi_modifyDate = me.formData.mi_modifyDate
+      }
+      formData.employeeNumberID = me.attr.employeeNumberID.getValue()
+      formData.dateToEmpty = me.attr.dateToEmpty.getValue()
+      formData['employeeNumberID.posName'] = me.attr.employeeNumberID.getFieldValue('posName')
+      formData['employeeNumberID.depName'] = me.attr.employeeNumberID.getFieldValue('depName')
+      formData['employeeNumberID.description'] = me.attr.employeeNumberID.getFieldValue('description')
+      if (me.parentForm && me.parentForm.record.get('orderState') === 'POSTED') {
+        me.setLoading(true)
+        $App.connection.run({
+          entity: 'hr_timeSheetChange',
+          method: 'updateEmployee',
+          execParams: {
+            ID: formData.ID,
+            employeeNumberID: formData.employeeNumberID,
+            dateToEmpty: formData['dateToEmpty']
+          }
+        }).then(() => {
+          me.setLoading(false)
+          me.reloadParentForm()
+          me.setDirty(false)
+          // me.setControlState()
+        }, err => {
+          me.setLoading(false)
+          throw err
+        })
+      } else {
+        const store = me.gridSender.getStore()
+        const allRecords = store.snapshot || store.data
+        if (!me.gridRecord && allRecords.findBy(o => o.get('employeeNumberID') === formData.employeeNumberID)) {
+          $App.dialogInfo(UB.i18n('Працівник {0} вже був доданий раніше', formData['employeeNumberID.description']))
+          return
+        }
+        if (me.gridRecord && allRecords.findBy(o => o.get('employeeNumberID') === formData.employeeNumberID && o.internalId !== me.gridRecord.internalId)) {
+          $App.dialogInfo(UB.i18n('Працівник {0} вже був доданий раніше', formData['employeeNumberID.description']))
+          return
+        }
+        me.onSave(me.parentForm, me.gridSender, me.gridRecord, formData)
+        me.setDirty(false)
+      }
+    }
+
+    me.setDirty = function (isDirty) {
+      me.isDirty = isDirty
+      me.down('[name=saveBtn]') && me.down('[name=saveBtn]').setDisabled(!isDirty)
+    }
+
+    me.createToolbarButtons = function (isReadOnly) {
+      let tb = me.down('[ubID=mainToolbar]')
+      tb.insert(tb.items.length, {
+        xtype: 'button',
+        scale: 'medium',
+        name: 'saveBtn',
+        iconCls: 'u-icon-save',
+        tooltip: UB.i18n('save'),
+        cls: 'save-action',
+        disabled: !me.isDirty || isReadOnly,
+        handler: function () {
+          if (!me.isReadOnly) {
+            me.onButtonSave(me)
+          }
+        }
+      })
+      tb.insert(tb.items.length, {
+        xtype: 'button',
+        scale: 'medium',
+        name: 'postingBtn',
+        cls: 'add-new-action',
+        iconCls: 'iconApprove',
+        tooltip: UB.i18n('Провести'),
+        hidden: !me.instanceID,
+        disabled: isReadOnly,
+        handler: async function () {
+          if (!me.instanceID) {
+            return
+          }
+          if (me.isDirty) {
+            await $App.dialogInfo(UB.i18n('Перед проведенням треба зберегти рядок!'), UB.i18n('Попередження'))
+            return
+          }
+          const choice = await $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Провести запис?'))
+          if (choice) {
+            me.setLoading(true)
+            try {
+              await $App.connection.run({
+                entity: 'hr_timeSheetChange',
+                method: 'postingEmployee',
+                execParams: {
+                  ID: me.instanceID
+                }
+              })
+              me.setLoading(false)
+              me.reloadParentForm()
+              me.orderState = 'POSTED'
+              me.setControlState()
+            } catch (err) {
+              me.setLoading(false)
+              throw err
+            }
+          }
+        }
+      })
+      tb.insert(tb.items.length, {
+        xtype: 'button',
+        name: 'cancelPostingBtn',
+        iconCls: 'iconReject',
+        cls: 'red-action',
+        scale: 'medium',
+        tooltip: UB.i18n('Відмінити проведення'),
+        hidden: !me.instanceID,
+        disabled: !isReadOnly,
+        handler: async function () {
+          if (!me.instanceID) {
+            return
+          }
+          if (me.isDirty) {
+            await $App.dialogInfo(UB.i18n('Перед скасуванням проведення треба зберегти рядок!'), UB.i18n('Попередження'))
+            return
+          }
+          const choice = await $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Відмінити проведення запису?'))
+          if (choice) {
+            me.setLoading(true)
+            try {
+              await $App.connection.run({
+                entity: 'hr_timeSheetChange',
+                method: 'cancelPostingEmployee',
+                execParams: {
+                  ID: me.instanceID
+                }
+              })
+              me.setLoading(false)
+              me.reloadParentForm()
+              me.orderState = 'PROJECT'
+              me.setControlState()
+            } catch (err) {
+              me.setLoading(false)
+              throw err
+            }
+          }
+        }
+      })
+      tb.insert(tb.items.length, {
+        xtype: 'button',
+        name: 'deleteBtn',
+        iconCls: 'u-icon-delete',
+        cls: 'delete-action',
+        scale: 'medium',
+        tooltip: UB.i18n('Видалити'),
+        hidden: !me.instanceID,
+        disabled: isReadOnly,
+        handler: function () {
+          if (!me.instanceID) {
+            return
+          }
+          $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Видалити запис?')).then(choice => {
+            if (choice) {
+              me.setLoading(true)
+              $App.connection.run({
+                entity: 'hr_timeSheetChange',
+                method: 'deleteEmployee',
+                execParams: {
+                  ID: me.instanceID
+                }
+              }).finally(() => {
+                me.setLoading(false)
+                me.reloadParentForm()
+                me.up('window').close()
+              })
+            }
+          })
+        }
+      })
+    }
+
+    me.setControlState = function () {
+      me.isReadOnly = me.orderState === 'POSTED'
+      if (me.parentForm) {
+        me.buttons.delete.setDisabled(!(me.parentForm.record.get('orderState') === 'POSTED' && me.orderState === 'PROJECT'))
+        me.buttons.cancelPosting.setDisabled(!(me.parentForm.record.get('orderState') === 'POSTED' && me.orderState === 'POSTED'))
+        me.buttons.posting.setDisabled(!(me.parentForm.record.get('orderState') === 'POSTED' && me.orderState === 'PROJECT'))
+      }
+      me.attr.employeeNumberID.setReadOnly(me.isReadOnly)
+      me.attr.dateToEmpty.setReadOnly(me.isReadOnly)
+    }
+
+    me.reloadParentForm = function () {
+      if (me.parentForm && me.parentForm.loadInstance) {
+        me.parentForm.loadInstance()
+      }
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      const win = this.window
+      if (win) {
+        win.height = 350
+        win.width = 700
+      }
+      me.attr = {
+        employeeNumberID: me.down('[name=employeeNumberID]'),
+        posName: me.down('[name=posName]'),
+        depName: me.down('[name=depName]'),
+        dateToEmpty: me.down('[name=dateToEmpty]')
+      }
+      me.parentForm = me.gridSender && me.gridSender.up('form')
+      if (me.formData) {
+        me.attr.employeeNumberID.skipChange = true
+        me.attr.employeeNumberID.setValueById(me.formData.employeeNumberID)
+        me.attr.posName.setValue(me.formData['employeeNumberID.posName'])
+        me.attr.depName.setValue(me.formData['employeeNumberID.depName'])
+        me.attr.dateToEmpty.setValue(me.formData.dateToEmpty)
+        me.instanceID = me.formData.ID
+        me.orderState = me.formData.orderState
+      } else {
+        if (me.parentForm) {
+          me.attr.dateToEmpty.setValue(me.parentForm.attr.dateToEmpty.getValue())
+        }
+      }
+      AC.viewUtils.setFilterValue(me.attr.employeeNumberID, { orgID: appAC.globalOrganization() }, ['clearFilter'])
+      me.isReadOnly = me.orderState === 'POSTED'
+      me.createToolbarButtons(me.isReadOnly)
+      me.buttons = {
+        save: me.down('[name=saveBtn]'),
+        posting: me.down('[name=postingBtn]'),
+        cancelPosting: me.down('[name=cancelPostingBtn]'),
+        delete: me.down('[name=deleteBtn]'),
+      }
+      me.setControlState()
+      me.setDirty(false)
+    }, me)
+    me.on('destroy', () => {
+      if (me.parentForm) {
+        const tabPanel = me.parentForm.down('tabpanel')
+        const tabEmp = tabPanel.down('[name=timeSheetChangeEmp]')
+        tabEmp && tabPanel.setActiveTab(tabEmp)
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

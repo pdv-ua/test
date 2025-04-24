@@ -1,0 +1,201 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+/* global UB Ext _ localStorage AC appAC */
+exports.formDef = 'HR.staffOrderParamsSelect'
+
+Ext.define(exports.formDef, {
+  ident: 'staffOrderParamsSelect',
+  extend: 'Ext.panel.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  defaults: { labelWidth: 160 },
+  isModal: true,
+  listeners: {
+    render: function () {
+      let me = this
+      let win = me.window
+      if (win) {
+        if (!win.height) {
+          win.height = 300
+        }
+        if (!win.width) {
+          win.width = 600
+        }
+        win.center()
+        if (me.customParams.onRender) {
+          me.customParams.onRender(me)
+        }
+      }
+      me.up('window').on('close', () => {
+        if (me.customParams && _.isFunction(me.customParams.onClose)) {
+          me.customParams.onClose()
+        }
+      })
+      // me.down('[bbar]').getEl().setStyle('border-width', 1)
+    }
+  },
+  bbar: {
+    layout: {
+      pack: 'center'
+    },
+    // style: 'background-color: #112D41;',
+    style: 'border-style: solid',
+    border: 2,
+    items: [{
+      xtype: 'button',
+      text: 'Ok',
+      disabled: true,
+      width: 100,
+      iconCls: 'iconApprove',
+      event: 'accept',
+      handler: function (btn) {
+        let me = this.up('[ident=staffOrderParamsSelect]')
+        let orderDate = me.down('[resultName=orderDate]')
+        if (!orderDate.hidden) {
+          if (new Date(orderDate.getValue()).getFullYear() < 1990) {
+            AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Дата наказу не може бути меншою, ніж 01.01.1990'))
+            Ext.defer(function () {
+              orderDate.focus(false, 1)
+            }, 1)
+            return
+          }
+        }
+        if (me.customParams.onAccept) {
+          let result = {}
+          me.query('[resultName]').forEach(item => {
+            result[item.resultName] = item.getValue()
+            if (item.getRawValue) {
+              result[item.resultName + '_text'] = item.getRawValue()
+            }
+            let record = AC.gridUtils.getCurrentRecord(item)
+            if (record) {
+              result[item.resultName + '_record'] = record.getData()
+            }
+          })
+          me.customParams.onAccept(me, result)
+        } else {
+          me.up('window').close()
+        }
+      }
+    },
+    {
+      xtype: 'button',
+      text: UB.i18n('cancel'),
+      width: 100,
+      iconCls: 'iconReject',
+      event: 'reject',
+      handler: function () {
+        this.up('window').close()
+      }
+    }
+    ]
+  },
+  items: [{
+    xtype: 'textfield',
+    resultName: 'orderNumber',
+    fieldLabel: UB.i18n('№ наказу')
+  },
+  {
+    xtype: 'ubdatefield',
+    resultName: 'orderDate',
+    fieldLabel: UB.i18n('Дата наказу'),
+    allowBlank: false,
+    listeners: {
+      change: ctrl => {
+        ctrl.up('[ident=staffOrderParamsSelect]').setAllowAccept()
+      }
+    }
+  },
+  {
+    xtype: 'ubtextareafield',
+    resultName: 'orderText',
+    fieldLabel: UB.i18n('Текст наказу'),
+    allowBlank: false,
+    listeners: {
+      change: ctrl => {
+        let me = ctrl.up('[ident=staffOrderParamsSelect]')
+        let btnAccept = me.down('[event=accept]')
+        let disable = false
+        me.query('[allowBlank=false]').forEach(item => {
+          disable = disable || !item.getValue()
+        })
+        btnAccept.setDisabled(disable)
+      }
+    }
+  },
+  {
+    xtype: 'textfield',
+    resultName: 'organizationCode',
+    fieldLabel: UB.i18n('ЄДРПОУ'),
+    hidden: true,
+    listeners: {
+      change: ctrl => {
+        ctrl.up('[ident=staffOrderParamsSelect]').setAllowAccept()
+      }
+    }
+  },
+  {
+    xtype: 'ubcombobox',
+    name: 'impOrgID',
+    valueField: 'ID',
+    displayField: 'description',
+    resultName: 'impSourceID',
+    fieldLabel: UB.i18n('Виберіть організацію'),
+    height: 15,
+    maxHeight: 15,
+    hidden: true,
+    allowBlank: true,
+    ubRequest: {
+      entity: 'hr_organization',
+      method: UB.core.UBCommand.methodName.SELECT,
+      fieldList: ['EDRPOUCode', 'name', 'description', 'mi_data_id'],
+      whereList: {
+        dateFrom: {
+          expression: '[mi_dateFrom]',
+          condition: 'lessEqual',
+          value: appAC.globalApplicationDate()
+        },
+        dateTo: {
+          expression: '[mi_dateTo]',
+          condition: 'moreEqual',
+          value: appAC.globalApplicationDate()
+        },
+        state: {
+          expression: '[state]',
+          condition: 'equal',
+          value: 'ACTIVE'
+        }
+      }
+    },
+    listeners: {
+      change: ctrl => {
+        localStorage.setItem('impOrgID', ctrl.getValue() || null)
+        ctrl.up('[ident=staffOrderParamsSelect]').setAllowAccept()
+      }
+    }
+  }
+  ],
+  initComponent: function () {
+    let me = this
+    me.callParent(arguments)
+    me.on('render', () => {
+      Ext.defer(function () {
+        me.down('[resultName=orderNumber]').focus(true, 1)
+      }, 1)
+    })
+  },
+  setAllowAccept: function () {
+    let me = this
+    let btnAccept = me.down('[event=accept]')
+    let disable = false
+    me.query('[allowBlank=false]').forEach(item => {
+      if (disable || item.hidden) {
+        return
+      }
+      disable = !item.getValue()
+    })
+    btnAccept.setDisabled(disable)
+  }
+})

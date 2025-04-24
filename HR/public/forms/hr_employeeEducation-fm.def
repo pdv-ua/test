@@ -1,0 +1,102 @@
+/* global HR UB */
+exports.formDef = {
+  requiredFields: ['dictEducationLevelID.name', 'dictDocKindID.name', 'dictDegreeID.name', 'educationOrgID', 'educationName',
+    'impSourceID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 120 },
+          flex: 1,
+          items: [
+            { attributeName: 'employeeID', hidden: true },
+            {
+              attributeName: 'dictEducationLevelID',
+              fieldList: ['ID', 'code', 'name', 'nominalName', 'level', 'educationKind', 'isActive'],
+              gridFieldList: ['code', 'name', 'nominalName'],
+              displayField: 'nominalName',
+              margin: '5 15 0 15',
+              whereList: {
+                isActive: {
+                  expression: '[isActive]',
+                  condition: 'equal',
+                  values: { value: true }
+                }
+              }
+            },
+            { attributeName: 'dictAreasOfEduID' },
+            HR.controlService.getEduOrgCombo({ fieldID: 'educationOrgID', fieldName: 'educationName', isChangeDocIssuer: true, allowBlank: true }),
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'dateFrom', description: UB.i18n('Дата вступу'), labelWidth: 120, width: 240, recordField: 'dateFrom' },
+                { attributeName: 'dateTo', description: UB.i18n('Дата закінчення навчання'), labelWidth: 210, width: 330, recordField: 'dateTo' },
+                { attributeName: 'isMain', labelWidth: 120, width: 140 }
+              ]
+            },
+            {
+              xtype: 'fieldset',
+              title: UB.i18n('Документ про освіту'),
+              margin: '0 17 5 10',
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 100 },
+              items: [
+                {
+                  attributeName: 'employeeDocID',
+                  fieldList: ['ID', 'dictDocKindID', 'docSeries', 'docNumber', 'docIssued', 'docIssuedDate', 'employeeID', 'description'],
+                  gridFieldList: ['description', 'docIssued'],
+                  displayField: 'description'
+                },
+                { attributeName: 'dictDocKindID', description: UB.i18n('Вид документа'), recordField: 'dictDocKindID' },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    { attributeName: 'docNumber', description: UB.i18n('Номер'), labelWidth: 100, width: 220, recordField: 'docNumber' },
+                    { attributeName: 'docSeries', description: UB.i18n('Серія'), labelWidth: 60, width: 180, recordField: 'docSeries' },
+                    { attributeName: 'dateIssue', description: UB.i18n('Дата видачі'), labelWidth: 100, width: 220, recordField: 'docIssuedDate' }
+                  ]
+                },
+                { attributeName: 'docIssuer', description: UB.i18n('Ким видана'), recordField: 'docIssued', margin: '5 15 5 15' }
+              ]
+            },
+            { attributeName: 'educationForm', labelWidth: 120, width: 400, disableContextMenu: false, hideEntityItemInContext: true },
+            { attributeName: 'dictSpecialtyID' },
+            { attributeName: 'qualification' },
+            { attributeName: 'worksAndStudies' }
+          ]
+        },
+        {
+          title: UB.i18n('Скан-копії'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'docAttachment',
+              entity: 'hr_attachDoc',
+              detailFields: 'entityID',
+              fieldList: ['ID', 'caption', 'description', 'sheetsQuantity', 'document', 'mi_createDate',
+                'mi_modifyDate', 'entityID'],
+              masterFields: 'ID',
+              showOriginal: true,
+              minHeight: 55,
+              maxHeight: 140,
+              height: 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

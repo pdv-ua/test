@@ -1,0 +1,4227 @@
+/* global Ext $App appAC UB AC appHR */
+exports.formDef = 'HR.importCustom'
+
+Ext.define('HR.importCustom', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_importCustom',
+  width: 1100,
+  height: 600,
+  autoScroll: true,
+  layout: { type: 'vbox', align: 'stretch' },
+  initComponent: function () {
+    const me = this
+    const getLogButton = (method) => {
+      return {
+        xtype: 'button',
+        tooltip: UB.i18n('Зауваження'),
+        text: UB.i18n('Зауваження'),
+        iconCls: 'u-icon-edit-alt',
+        cls: 'fill-action',
+        margin: '5 0 5 15',
+        width: 150,
+        handler: () => {
+          $App.doCommand({
+            entity: 'hr_importCustomLog',
+            cmdType: 'showList',
+            description: UB.i18n('Зауваження'),
+            isModal: true,
+            hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew', 'itemSelect'],
+            cmdData: {
+              params: [{
+                entity: 'hr_importCustomLog',
+                method: 'select',
+                fieldList: [
+                  { name: 'operationDate', description: UB.i18n('Дата операції'), format: 'd.m.Y H:i:s' },
+                  { name: 'msgType' },
+                  { name: 'targetOrgID.name', description: UB.i18n('Організація') },
+                  { name: 'description' },
+                  { name: 'userID.name', description: UB.i18n('Користувач') }
+                ],
+                whereList: {
+                  orgID: {
+                    expression: '[orgID]',
+                    condition: 'equal',
+                    value: appAC.globalOrganization()
+                  },
+                  entityName: {
+                    expression: '[entityName]',
+                    condition: 'equal',
+                    value: method
+                  }
+                }
+              }]
+            },
+            cmpInitConfig: {
+              customActions: [
+                {
+                  xtype: 'button',
+                  scale: 'medium',
+                  iconCls: 'fas fa-file-excel',
+                  tooltip: UB.i18n('Сформувати'),
+                  cls: 'green-action',
+                  handler: (btn) => {
+                    const grid = btn.up('entitygridpanel')
+                    grid.onExportXls()
+                  }
+                }
+              ]
+            }
+          })
+        }
+      }
+    }
+    const getRunButton = (buttonParams, runParams) => {
+      return {
+        xtype: 'button',
+        tooltip: UB.i18n(buttonParams.text || 'Виконати'),
+        text: UB.i18n(buttonParams.text || 'Виконати'),
+        iconCls: buttonParams.iconCls || 'fas fa-cloud-download-alt',
+        cls: buttonParams.cls || 'fill-action',
+        margin: buttonParams.margin || '5 0 5 15',
+        width: buttonParams.width || 150,
+        handler: () => {
+          if (!buttonParams.validateFunction || buttonParams.validateFunction()) {
+            $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n(buttonParams.warningText || `Увага! ${buttonParams.text || 'Виконати'}?`))
+              .then(res => {
+                if (res) {
+                  me.setLoading(true)
+                  $App.connection.run(runParams()).then(response => {
+                    me.setLoading(false)
+                    if (response.msgType) {
+                      $App.dialogInfo(UB.i18n('Операція виконана з зауваженнями'))
+                    } else {
+                      $App.dialogInfo(UB.i18n('Операція успішно виконана'))
+                    }
+                  }, (err) => {
+                    me.setLoading(false)
+                    if (err.config && err.config.timeout) {
+                      $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                    } else {
+                      throw err
+                    }
+                  })
+                }
+              })
+          }
+        }
+      }
+    }
+
+    me.items = [
+      {
+        xtype: 'tabpanel',
+        flex: 1,
+        items: [
+          {
+            title: `${UB.i18n('Зарплата')} ${UB.i18n('Особові рахунки')}`,
+            split: true,
+            layout: 'accordion',
+            layoutConfig: {
+              collapsible: true,
+              collapsed: false
+            },
+            autoScroll: true,
+            items: [
+              {
+                xtype: 'panel',
+                hidden: true,
+                collapsed: false
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Заповнення категорії застрахованих осіб для всіх'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'dictCategoryECBID',
+                    fieldLabel: UB.i18n('Категорія застрахованої особи'),
+                    valueField: 'ID',
+                    displayField: 'caption',
+                    width: 600,
+                    ubRequest: {
+                      entity: 'hr_dictCategoryECB',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'caption']
+                    }
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      getRunButton({
+                        text: 'Заповнити',
+                        warningText: 'Увага! Заповнити категорію застрахованих осіб для всіх працівників?',
+                        validateFunction: () => {
+                          return me.attr.dictCategoryECBID.getValue()
+                        }
+                      },
+                      () => {
+                        return {
+                          entity: 'hr_importCustom',
+                          method: 'setDictCategoryECB',
+                          orgID: appAC.globalOrganization(),
+                          dictCategoryECBID: me.attr.dictCategoryECBID.getValue()
+                        }
+                      }),
+                      getLogButton('setDictCategoryECB')
+                    ]
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Корректировки табеля'),
+                hidden: true,
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      me.timeSheetCorrect()
+                    }
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Замінити графік роботи по всій організації'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'workScheduleFrom',
+                        fieldLabel: UB.i18n('Існуючий графік роботи'),
+                        displayField: 'description',
+                        labelWidth: 180,
+                        width: 500,
+                        ubRequest: {
+                          entity: 'hr_workSchedule',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description', 'organizationID'],
+                          whereList: {
+                            organizationID: {
+                              expression: '[organizationID]',
+                              condition: 'equal',
+                              value: appAC.globalOrganization()
+                            },
+                            orgIsNull: {
+                              expression: '[organizationID]',
+                              condition: 'isNull'
+                            }
+                          },
+                          logicalPredicates: ['[organizationID] OR [orgIsNull]']
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'workScheduleTo',
+                        fieldLabel: UB.i18n('Новий графік роботи'),
+                        displayField: 'description',
+                        labelWidth: 180,
+                        width: 500,
+                        ubRequest: {
+                          entity: 'hr_workSchedule',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description', 'organizationID'],
+                          whereList: {
+                            organizationID: {
+                              expression: '[organizationID]',
+                              condition: 'equal',
+                              value: appAC.globalOrganization()
+                            },
+                            orgIsNull: {
+                              expression: '[organizationID]',
+                              condition: 'isNull'
+                            }
+                          },
+                          logicalPredicates: ['[organizationID] OR [orgIsNull]']
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      getRunButton({
+                        text: 'Замінити',
+                        warningText: 'Увага! Замінити графік роботи по всій організації?',
+                        validateFunction: () => {
+                          if (me.down('[name=workScheduleFrom]').getValue() === me.down('[name=workScheduleTo]').getValue()) {
+                            AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Вибрані однакові значення'))
+                            return false
+                          } else {
+                            return true
+                          }
+                        }
+                      },
+                      () => {
+                        return {
+                          entity: 'hr_importCustom',
+                          method: 'replaceWorkSchedule',
+                          orgID: appAC.globalOrganization(),
+                          workScheduleFromID: me.down('[name=workScheduleFrom]').getValue(),
+                          workScheduleToID: me.down('[name=workScheduleTo]').getValue()
+                        }
+                      }),
+                      getLogButton('replaceWorkSchedule')
+                    ]
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Заповнення ознаки індексувати середній заробіток згідно підвищенню окладу'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox' },
+                items: [
+
+                  {
+                    xtype: 'ubdatefield',
+                    name: 'isIndexDateFrom',
+                    fieldLabel: UB.i18n('Дата підвищення окладів'),
+                    labelWidth: 200,
+                    width: 320
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      getRunButton({
+                        text: 'Заповнити',
+                        warningText: 'Увага! Заповнити ознаки індексувати середній заробіток згідно підвищенню окладу?',
+                        validateFunction: () => {
+                          return me.attr.isIndexDateFrom.getValue() && me.attr.isIndexDateFrom.isValid()
+                        }
+                      },
+                      () => {
+                        return {
+                          entity: 'hr_importCustom',
+                          method: 'setIsIndexSalary',
+                          orgID: appAC.globalOrganization(),
+                          isIndexDateFrom: me.attr.isIndexDateFrom.getValue()
+                        }
+                      }),
+                      getLogButton('setIsIndexSalary')
+                    ]
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Оновлення особових рахунків даними з Тарифікаці'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    xtype: 'textarea',
+                    rows: 3,
+                    name: 'tariffTabNums',
+                    fieldLabel: UB.i18n('Табельні номери (через кому)')
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'tariffChildOrg',
+                        labelWidth: 250,
+                        width: 600,
+                        boxLabelAlign: 'before',
+                        fieldLabel: UB.i18n('Разом з підпорядкованими')
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      getRunButton({
+                        text: 'Оновити',
+                        warningText: 'Увага! Оновити особові рахункіи з Тарифікаці?'
+                      },
+                      () => {
+                        return {
+                          entity: 'hr_importCustom',
+                          method: 'createTarifications',
+                          orgID: appAC.globalOrganization(),
+                          tariffTabNums: me.down('[name=tariffTabNums]').getValue(),
+                          tariffChildOrg: me.down('[name=tariffChildOrg]').getValue()
+                        }
+                      }),
+                      getLogButton('createTarifications')
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            title: `${UB.i18n('Зарплата')} ${UB.i18n('Розрахункові листи')}`,
+            split: true,
+            layout: 'accordion',
+            layoutConfig: {
+              collapsible: true,
+              collapsed: false
+            },
+            autoScroll: true,
+            items: [
+              {
+                xtype: 'panel',
+                hidden: true,
+                collapsed: false
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Перенесення записів РЛ з одного ОР на інший'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'label',
+                        text: UB.i18n('За період'),
+                        cls: 'x-form-item-label',
+                        margin: '8 15 0 15',
+                        width: 120
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'periodFromRlID',
+                        fieldLabel: UB.i18n('з'),
+                        labelWidth: 15,
+                        width: 200,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name', 'isClosed'],
+                          whereList: {
+                            isClosed: {
+                              expression: '[isClosed]',
+                              condition: 'equal',
+                              value: true
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          expand: appHR.periodExpand,
+                          change: function (ctrl, value) {
+                            if (value && me.attr.periodToRlID.getValue() &&
+                              AC.dateService.shiftDate(me.attr.periodFromRlID.getFieldValue('dateFrom')) > AC.dateService.shiftDate(me.attr.periodToRlID.getFieldValue('dateFrom'))) {
+                              me.attr.periodToRlID.setValueById(value)
+                            }
+                            AC.viewUtils.setFilterValue(me.attr.sourceRlID, {
+                              orgID: appAC.globalOrganization()
+                            })
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'periodToRlID',
+                        fieldLabel: UB.i18n('по'),
+                        labelWidth: 20,
+                        width: 200,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name', 'isClosed'],
+                          whereList: {
+                            isClosed: {
+                              expression: '[isClosed]',
+                              condition: 'equal',
+                              value: true
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          expand: appHR.periodExpand,
+                          change: function (ctrl, value) {
+                            if (value && me.attr.periodFromRlID.getValue() &&
+                              AC.dateService.shiftDate(me.attr.periodFromRlID.getFieldValue('dateFrom')) > AC.dateService.shiftDate(me.attr.periodToRlID.getFieldValue('dateFrom'))) {
+                              me.attr.periodFromRlID.setValueById(value)
+                            }
+                            AC.viewUtils.setFilterValue(me.attr.sourceRlID, {
+                              orgID: appAC.globalOrganization()
+                              /* dateTo: { value: AC.dateService.shiftDate(me.attr.periodToRlID.getFieldValue('dateFrom') || AC.dateService.minDate()), condition: '>=' },
+                              dateFrom: { value: AC.dateService.shiftDate(me.attr.periodToRlID.getFieldValue('dateTo') || AC.dateService.maxDate()), condition: '<=' } */
+                            })
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'empNumComboBox',
+                    name: 'sourceRlID',
+                    displayField: 'description',
+                    fieldLabel: UB.i18n('З ОР працівника'),
+                    addPlural: true,
+                    addDateTo: true,
+                    ubRequest: {
+                      entity: 'hr_employeeNumberS',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'description', 'orgID', 'dateFrom', 'dateToEmpty', 'depName', 'posName', 'workPlaceCode', 'workPlace', 'employeeID']
+                    },
+                    labelWidth: 140,
+                    width: 500,
+                    listeners: {
+                      change: function (ctrl, value) {
+                        if (value) {
+                          me.down('[name=sourceRlDateFrom]').setValue(ctrl.getFieldValue('dateFrom') ? AC.dateService.shiftDate(ctrl.getFieldValue('dateFrom')) : null)
+                          me.down('[name=sourceRlDateTo]').setValue(ctrl.getFieldValue('dateToEmpty') ? AC.dateService.shiftDate(ctrl.getFieldValue('dateToEmpty')) : null)
+                          me.down('[name=sourceRlDepName]').setValue(ctrl.getFieldValue('depName') || null)
+                          me.down('[name=sourceRlPosName]').setValue(ctrl.getFieldValue('posName') || null)
+                          AC.viewUtils.setFilterValue(me.attr.targetRlID, {
+                            orgID: appAC.globalOrganization(),
+                            ID: { value: value, condition: '<>' }
+                          })
+                          UB.Repository('hr_employeeNumberSR')
+                            .attrs('ID')
+                            .where('orgID', '=', appAC.globalOrganization())
+                            .where('employeeID', '=', me.attr.targetRlID.getFieldValue('employeeID'))
+                            .where('ID', '<>', value)
+                            .selectAsObject().then(responses => {
+                              if (responses.length === 1) {
+                                me.attr.targetRlID.setValueById(responses.ID)
+                              } else if (responses.length > 1) {
+                                me.attr.targetRlID.setValueById(null)
+                              }
+                            })
+                        }
+                      }
+                    }
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    margin: '0 15 0 145',
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'sourceRlDateFrom',
+                        fieldLabel: UB.i18n('Дата прийому'),
+                        readOnly: true,
+                        labelWidth: 100,
+                        width: 200
+                      },
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'sourceRlDateTo',
+                        fieldLabel: UB.i18n('Дата звільнення'),
+                        readOnly: true,
+                        labelWidth: 140,
+                        width: 240
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'textfield',
+                    name: 'sourceRlDepName',
+                    fieldLabel: UB.i18n('Підрозділ'),
+                    readOnly: true,
+                    margin: '0 15 0 160',
+                    labelWidth: 100,
+                    width: 500
+                  },
+                  {
+                    xtype: 'textfield',
+                    name: 'sourceRlPosName',
+                    fieldLabel: UB.i18n('Посада'),
+                    margin: '0 15 0 160',
+                    readOnly: true,
+                    labelWidth: 100,
+                    width: 500
+                  },
+                  {
+                    xtype: 'empNumComboBox',
+                    name: 'targetRlID',
+                    displayField: 'description',
+                    fieldLabel: UB.i18n('На ОР працівника'),
+                    addPlural: true,
+                    addDateTo: true,
+                    ubRequest: {
+                      entity: 'hr_employeeNumberS',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'description', 'orgID', 'dateFrom', 'dateTo', 'dateToEmpty', 'depName', 'posName', 'workPlaceCode', 'workPlace', 'employeeID']
+                    },
+                    labelWidth: 140,
+                    width: 500,
+                    listeners: {
+                      change: function (ctrl, value) {
+                        if (value) {
+                          me.down('[name=targetRlDateFrom]').setValue(ctrl.getFieldValue('dateFrom') ? AC.dateService.shiftDate(ctrl.getFieldValue('dateFrom')) : null)
+                          me.down('[name=targetRlDateTo]').setValue(ctrl.getFieldValue('dateToEmpty') ? AC.dateService.shiftDate(ctrl.getFieldValue('dateToEmpty')) : null)
+                          me.down('[name=targetRlDepName]').setValue(ctrl.getFieldValue('depName') || null)
+                          me.down('[name=targetRlPosName]').setValue(ctrl.getFieldValue('posName') || null)
+                        }
+                      }
+                    }
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    margin: '0 15 0 145',
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'targetRlDateFrom',
+                        fieldLabel: UB.i18n('Дата прийому'),
+                        readOnly: true,
+                        labelWidth: 100,
+                        width: 200
+                      },
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'targetRlDateTo',
+                        fieldLabel: UB.i18n('Дата звільнення'),
+                        readOnly: true,
+                        labelWidth: 140,
+                        width: 240
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'textfield',
+                    name: 'targetRlDepName',
+                    fieldLabel: UB.i18n('Підрозділ'),
+                    readOnly: true,
+                    margin: '0 15 0 160',
+                    labelWidth: 100,
+                    width: 500
+                  },
+                  {
+                    xtype: 'textfield',
+                    name: 'targetRlPosName',
+                    fieldLabel: UB.i18n('Посада'),
+                    margin: '0 15 0 160',
+                    readOnly: true,
+                    labelWidth: 100,
+                    width: 500
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Виконати'),
+                    text: UB.i18n('Виконати'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: async function (btn) {
+                      if (me.attr.sourceRlID.getValue() && me.attr.targetRlID.getValue()) {
+                        if (me.attr.sourceRlID.getFieldValue('employeeID') !== me.attr.targetRlID.getFieldValue('employeeID')) {
+                          const res = await $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Увага! Особові рахунки належать різним особам! Все одно переносити?'))
+                          if (!res) {
+                            return
+                          }
+                        }
+                        if (me.attr.sourceRlID.getFieldValue('workPlaceCode') === '1') {
+                          const res = await $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Увага! Ви дійсно хочите перенести нарахування з табельного номера, у якому місцем роботи=Основне?'))
+                          if (!res) {
+                            return
+                          }
+                        }
+                        if (me.attr.targetRlID.getFieldValue('workPlaceCode') !== '1') {
+                          const res = await $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Увага! Ви дійсно хочите перенести нарахування на табельний номер, у якому місцем роботи = {0} ?', me.attr.targetRlID.getFieldValue('workPlace') || ''))
+                          if (!res) {
+                            return
+                          }
+                        }
+                        const periodText = (!me.attr.periodFromRlID.getValue() && !me.attr.periodToRlID.getValue())
+                          ? UB.i18n('за всі місяці')
+                          : (!me.attr.periodFromRlID.getValue() && me.attr.periodToRlID.getValue())
+                            ? `${UB.i18n('за всі місяці')} ${UB.i18n('по')} ${me.attr.periodToRlID.getFieldValue('name')}`
+                            : (me.attr.periodFromRlID.getValue() && !me.attr.periodToRlID.getValue())
+                              ? `${UB.i18n('за всі місяці')} ${UB.i18n('з')} ${me.attr.periodFromRlID.getFieldValue('name')}`
+                              : `${UB.i18n('за період')} ${UB.i18n('з')} ${me.attr.periodFromRlID.getFieldValue('name')} ${UB.i18n('по')} ${me.attr.periodToRlID.getFieldValue('name')}`
+
+                        const resRl = await $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Перенести записи з розрахункового листа {0} {1} у розрахунковий лист {2}?',
+                          me.attr.sourceRlID.getFieldValue('description'), periodText, me.attr.targetRlID.getFieldValue('description')))
+                        if (resRl) {
+                          me.setLoading(true)
+                          $App.connection.run({
+                            entity: 'hr_importCustom',
+                            method: 'transferRl',
+                            orgID: appAC.globalOrganization(),
+                            sourceRlID: me.attr.sourceRlID.getValue(),
+                            targetRlID: me.attr.targetRlID.getValue(),
+                            periodFromRlID: me.attr.periodFromRlID.getValue(),
+                            periodToRlID: me.attr.periodToRlID.getValue()
+                          }).then(response => {
+                            me.setLoading(false)
+                            $App.dialogInfo(UB.i18n('Операція успішно виконана'))
+                          }, (err) => {
+                            me.setLoading(false)
+                            if (err.config && err.config.timeout) {
+                              $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                            } else {
+                              throw err
+                            }
+                          })
+                        }
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Замінити Вид оплати в розрахункових листах'),
+                defaults: {
+                  labelWidth: 200
+                },
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'payElFromID',
+                        fieldLabel: UB.i18n('З вида оплати'),
+                        displayField: 'description',
+                        labelWidth: 200,
+                        width: 500,
+                        tpl: new Ext.XTemplate('<ul class="x-list-plain"><tpl for="."><li role="option" unselectable="on" class="boundlist-{[xindex % 2 === 0 ? "even" : "odd"]}  x-boundlist-item " ><span>{description}</span><span><small style="color: gray;"> {[this.deleteRow(values)]}</small></span></li></tpl></ul>', {
+                          deleteRow: function (reco) {
+                            return reco.mi_deleteUser ? ` (${UB.i18n('Видалено')})` : ''
+                          }
+                        }),
+                        ubRequest: {
+                          entity: 'hr_payEl',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description', 'mi_deleteUser'],
+                          __allowSelectSafeDeleted: true
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'payElToID',
+                        fieldLabel: UB.i18n('на вид оплати'),
+                        displayField: 'description',
+                        labelWidth: 100,
+                        width: 400,
+                        tpl: new Ext.XTemplate('<ul class="x-list-plain"><tpl for="."><li role="option" unselectable="on" class="boundlist-{[xindex % 2 === 0 ? "even" : "odd"]}  x-boundlist-item " ><span>{description}</span><span><small style="color: gray;"> {[this.deleteRow(values)]}</small></span></li></tpl></ul>', {
+                          deleteRow: function (reco) {
+                            return reco.mi_deleteUser ? ` (${UB.i18n('Видалено')})` : ''
+                          }
+                        }),
+                        ubRequest: {
+                          entity: 'hr_payEl',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description', 'mi_deleteUser'],
+                          __allowSelectSafeDeleted: true
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'textarea',
+                    rows: 3,
+                    name: 'tabNums',
+                    fieldLabel: UB.i18n('Табельні номери (через кому)')
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Замінити'),
+                        text: UB.i18n('Замінити'),
+                        iconCls: 'fas fa-cloud-download-alt',
+                        cls: 'fill-action',
+                        margin: '5 0 5 15',
+                        width: 150,
+                        handler: () => {
+                          const payElFromID = me.down('[name=payElFromID]').getValue()
+                          const payElToID = me.down('[name=payElToID]').getValue()
+                          if (payElFromID && payElToID) {
+                            if (payElFromID === payElToID) {
+                              AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Вибрані однакові значення'))
+                              return
+                            }
+                            $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Увага! Замінити вид оплати'))
+                              .then(res => {
+                                if (res) {
+                                  me.setLoading(true)
+                                  $App.connection.run({
+                                    entity: 'hr_importCustom',
+                                    method: 'updateAccrualPayEl',
+                                    orgID: appAC.globalOrganization(),
+                                    tabNums: me.down('[name=tabNums]').getValue(),
+                                    payElFromID: payElFromID,
+                                    payElToID: payElToID
+                                  }).then(response => {
+                                    me.setLoading(false)
+                                    $App.dialogInfo(response.result === 'OK' ? UB.i18n('Операція успішно виконана') : response.result || UB.i18n('Виконано'))
+                                  }, (err) => {
+                                    me.setLoading(false)
+                                    if (err.config && err.config.timeout) {
+                                      $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                                    } else {
+                                      throw err
+                                    }
+                                  })
+                                }
+                              })
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Перенесення залишків за джерелом фінансування'),
+                defaults: {
+                  labelWidth: 200
+                },
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'allFundSource',
+                    labelWidth: 380,
+                    boxLabelAlign: 'before',
+                    fieldLabel: UB.i18n('З будь-яких джерел фінансування включно з пустим та видаленим'),
+                    listeners: {
+                      change: function (ctrl, value) {
+                        if (value) {
+                          me.down('[name=nullFundSource]').setValue(false)
+                          me.down('[name=delFundSource]').setValue(false)
+                          me.down('[name=dictFundSourceIDFrom]').setValueById()
+                        }
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'nullFundSource',
+                    labelWidth: 380,
+                    boxLabelAlign: 'before',
+                    fieldLabel: UB.i18n('Тільки з пустим джерелом фінансування'),
+                    listeners: {
+                      change: function (ctrl, value) {
+                        if (value) {
+                          me.down('[name=allFundSource]').setValue(false)
+                          me.down('[name=delFundSource]').setValue(false)
+                          me.down('[name=dictFundSourceIDFrom]').setValueById()
+                        }
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'delFundSource',
+                    labelWidth: 380,
+                    boxLabelAlign: 'before',
+                    fieldLabel: UB.i18n('Тільки з видаленим джерелом фінансування'),
+                    listeners: {
+                      change: function (ctrl, value) {
+                        if (value) {
+                          me.down('[name=allFundSource]').setValue(false)
+                          me.down('[name=nullFundSource]').setValue(false)
+                          me.down('[name=dictFundSourceIDFrom]').setValueById()
+                        }
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'dictFundSourceIDFrom',
+                    fieldLabel: UB.i18n('Тільки з'),
+                    valueField: 'ID',
+                    displayField: 'name',
+                    width: 800,
+                    labelWidth: 380,
+                    ubRequest: {
+                      entity: 'ac_fundSource',
+                      method: 'selectByOrg',
+                      fieldList: ['ID', 'name']
+                    },
+                    beforeQuerySend: (ctrl) => {
+                      const me = ctrl.combo.up('form')
+                      ctrl.combo.store.ubRequest.orgID = me.record.get('orgID') || appAC.globalOrganization()
+                      ctrl.combo.store.ubRequest.__allowSelectSafeDeleted = true
+                    },
+                    listeners: {
+                      change: function (ctrl, value) {
+                        if (value) {
+                          me.down('[name=nullFundSource]').setValue(false)
+                          me.down('[name=allFundSource]').setValue(false)
+                          me.down('[name=delFundSource]').setValue(false)
+                        }
+                      }
+                    }
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'textarea',
+                        rows: 3,
+                        labelWidth: 380,
+                        width: 800,
+                        hidden: true,
+                        name: 'tabNumsFundSource',
+                        fieldLabel: UB.i18n('Табельні номери (через кому)')
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'dictFundSourceIDTo',
+                        fieldLabel: UB.i18n('На джерело фінансування'),
+                        valueField: 'ID',
+                        displayField: 'name',
+                        width: 600,
+                        labelWidth: 200,
+                        ubRequest: {
+                          entity: 'ac_fundSource',
+                          method: 'selectByOrg',
+                          fieldList: ['ID', 'name']
+                        },
+                        beforeQuerySend: (ctrl) => {
+                          const me = ctrl.combo.up('form')
+                          ctrl.combo.store.ubRequest.orgID = me.record.get('orgID') || appAC.globalOrganization()
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Перенести'),
+                    text: UB.i18n('Перенести'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: async () => {
+                      const allFundSource = me.down('[name=allFundSource]').getValue()
+                      const nullFundSource = me.down('[name=nullFundSource]').getValue()
+                      const delFundSource = me.down('[name=delFundSource]').getValue()
+                      const dictFundSourceIDFrom = me.down('[name=dictFundSourceIDFrom]').getValue()
+                      const dictFundSourceIDTo = me.down('[name=dictFundSourceIDTo]').getValue()
+                      const tabNumsFundSource = me.down('[name=tabNumsFundSource]').getValue()
+
+                      const currPeriod = await appHR.getCurrentPeriod(appAC.globalOrganization())
+
+                      if (!dictFundSourceIDTo) {
+                        return $App.dialogInfo('Необхідно заповнити поле "На джерело фінансування".', 'Увага!')
+                      }
+                      if (!allFundSource && !nullFundSource && !delFundSource && !dictFundSourceIDFrom) {
+                        return $App.dialogInfo('Не вказане джерело фінансування, з якого треба перенести залишки, та не стоїть ознака "Зі всіх джерел фінансування"! Вкажіть джерела фінансування, з яких перенести залишки.', 'Увага!')
+                      }
+                      if (dictFundSourceIDFrom && dictFundSourceIDTo && dictFundSourceIDFrom === dictFundSourceIDTo) {
+                        return $App.dialogInfo('Перенесення залишків на те ж саме джерело фінансування не має сенсу!', 'Увага!')
+                      }
+                      let msg = ''
+                      if (allFundSource) {
+                        msg = `Перенести всі залишки на початок періоду ${currPeriod.description} на джерело фінансування ${me.down('[name=dictFundSourceIDTo]').getFieldValue('name')}?`
+                      } else if (nullFundSource) {
+                        msg = `Перенести всі залишки на початок періоду ${currPeriod.description} з пустим джерелом фінансування на джерело фінансування ${me.down('[name=dictFundSourceIDTo]').getFieldValue('name')}?`
+                      } else if (delFundSource) {
+                        msg = `Перенести всі залишки на початок періоду ${currPeriod.description} з видаленим джерелом фінансування на джерело фінансування ${me.down('[name=dictFundSourceIDTo]').getFieldValue('name')}?`
+                      } else if (dictFundSourceIDFrom) {
+                        msg = `Перенести всі залишки на початок періоду ${currPeriod.description} з джерела фінансування ${me.down('[name=dictFundSourceIDFrom]').getFieldValue('name')} на джерело фінансування ${me.down('[name=dictFundSourceIDTo]').getFieldValue('name')}?`
+                      }
+                      $App.dialogYesNo(UB.i18n('Попередження'), msg)
+                        .then(res => {
+                          if (res) {
+                            me.setLoading(true)
+                            $App.connection.run({
+                              entity: 'hr_importCustom',
+                              method: 'updateFundBalance',
+                              orgID: appAC.globalOrganization(),
+                              allFundSource,
+                              nullFundSource,
+                              delFundSource,
+                              dictFundSourceIDFrom,
+                              dictFundSourceIDTo,
+                              tabNumsFundSource
+                            }).then(response => {
+                              me.setLoading(false)
+                              $App.dialogInfo(response.result === 'OK' ? UB.i18n('Операція успішно виконана') : response.result || UB.i18n('Виконано'))
+                            }, (err) => {
+                              me.setLoading(false)
+                              if (err.config && err.config.timeout) {
+                                $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                              } else {
+                                throw err
+                              }
+                            })
+                          }
+                        })
+                    }
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Видалення перенесення залишків джерел фінансування'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Видалити'),
+                    text: UB.i18n('Видалити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n('Видалити?')).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'deleteFundBalance',
+                          orgID: appAC.globalOrganization()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Формування записів з видом оплати Виплата заробітної плати'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'payElID',
+                    fieldLabel: UB.i18n('Вид оплати'),
+                    displayField: 'description',
+                    labelWidth: 100,
+                    width: 400,
+                    ubRequest: {
+                      entity: 'hr_payEl',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'description'],
+                      whereList: {
+                        methodID: {
+                          expression: '[methodID.code]',
+                          condition: '=',
+                          value: '28'
+                        }
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Виконати'),
+                    text: UB.i18n('Виконати'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      const payElID = me.down('[name=payElID]').getValue()
+                      if (payElID) {
+                        $App.dialogYesNo(UB.i18n('Попередження'), `${UB.i18n('Виконати')}?`)
+                          .then(res => {
+                            if (res) {
+                              me.setLoading(true)
+                              $App.connection.run({
+                                entity: 'hr_importCustom',
+                                method: 'createPayAccrual',
+                                orgID: appAC.globalOrganization(),
+                                payElID: payElID
+                              }).then(response => {
+                                me.setLoading(false)
+                                $App.dialogInfo(response.result === 'OK' ? UB.i18n('Операція успішно виконана') : response.result || UB.i18n('Виконано'))
+                              }, (err) => {
+                                me.setLoading(false)
+                                if (err.config && err.config.timeout) {
+                                  $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                                } else {
+                                  throw err
+                                }
+                              })
+                            }
+                          })
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Формування деталізації для РЛ та Нарахування на ЗП'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'checkbox',
+                        name: 'createAccrualDtChildOrg',
+                        labelWidth: 300,
+                        width: 320,
+                        fieldLabel: UB.i18n('Разом з підпорядкованими організаціями')
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'periodID',
+                        fieldLabel: UB.i18n('За розрахунковий період'),
+                        labelWidth: 180,
+                        width: 600,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          expand: appHR.periodExpand
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'checkbox',
+                        name: 'createAccrualDtAllPayEl',
+                        labelWidth: 300,
+                        width: 320,
+                        fieldLabel: UB.i18n('Види оплати'),
+                        listeners: {
+                          change: function (ctrl, value) {
+                            if (value) {
+                              me.down('[name=createAccrualDtPayElID]').setValueById(null)
+                            }
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'createAccrualDtPayElID',
+                        fieldLabel: UB.i18n('всі'),
+                        displayField: 'description',
+                        labelWidth: 180,
+                        width: 600,
+                        tpl: new Ext.XTemplate('<ul class="x-list-plain"><tpl for="."><li role="option" unselectable="on" class="boundlist-{[xindex % 2 === 0 ? "even" : "odd"]}  x-boundlist-item " ><span>{description}</span><span><small style="color: gray;"> {[this.deleteRow(values)]}</small></span></li></tpl></ul>', {
+                          deleteRow: function (reco) {
+                            return reco.mi_deleteUser ? ` (${UB.i18n('Видалено')})` : ''
+                          }
+                        }),
+                        ubRequest: {
+                          entity: 'hr_payEl',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description', 'mi_deleteUser'],
+                          __allowSelectSafeDeleted: true
+                        },
+                        listeners: {
+                          change: function (ctrl, value) {
+                            me.down('[name=createAccrualDtAllPayEl]').setValue(!value)
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'checkbox',
+                        name: 'createAccrualDtAllPayFund',
+                        labelWidth: 300,
+                        width: 320,
+                        fieldLabel: UB.i18n('Нарахування на ЗП'),
+                        listeners: {
+                          change: function (ctrl, value) {
+                            if (value) {
+                              me.down('[name=createAccrualDtPayFundID]').setValueById(null)
+                            }
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'createAccrualDtPayFundID',
+                        fieldLabel: UB.i18n('всі'),
+                        displayField: 'description',
+                        labelWidth: 180,
+                        width: 600,
+                        ubRequest: {
+                          entity: 'hr_payFund',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description']
+                        },
+                        listeners: {
+                          change: function (ctrl, value) {
+                            me.down('[name=createAccrualDtAllPayFund]').setValue(!value)
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'fieldset',
+                    margin: '5 15 5 15',
+                    title: UB.i18n(`Параметри формування`),
+                    width: 800,
+                    layout: {
+                      type: 'vbox',
+                      align: 'stretch'
+                    },
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'checkbox',
+                            name: 'createAccrualDtExDt',
+                            labelWidth: 350,
+                            flex: 1,
+                            value: true,
+                            fieldLabel: UB.i18n('Заповнювати в існуючих деталізаціях, тільки якщо значення пусте')
+                          },
+                          {
+                            xtype: 'checkbox',
+                            name: 'createAccrualDtFsFromPay',
+                            labelWidth: 350,
+                            flex: 1,
+                            fieldLabel: UB.i18n('Заповнювати ДФ з вида оплати/нарахування на ЗП')
+                          }
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            layout: { type: 'vbox' },
+                            flex: 1
+                          },
+                          {
+                            xtype: 'checkbox',
+                            name: 'createAccrualDtFsFromPos',
+                            margin: '5 15 5 45',
+                            labelWidth: 350,
+                            flex: 1,
+                            fieldLabel: UB.i18n('Заповнювати ДФ з призначення')
+                          }
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            layout: { type: 'vbox' },
+                            flex: 1
+                          },
+                          {
+                            xtype: 'checkbox',
+                            margin: '5 15 5 45',
+                            name: 'createAccrualDtDepFromPos',
+                            labelWidth: 350,
+                            flex: 1,
+                            fieldLabel: UB.i18n('Заповнювати підрозділ з призначення')
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      getRunButton({
+                        text: 'Виконати',
+                        warningText: 'Увага! Виконати?'
+                      },
+                      () => {
+                        return {
+                          entity: 'hr_importCustom',
+                          method: 'createAccrualDt',
+                          orgID: appAC.globalOrganization(),
+                          periodID: me.attr.periodID.getValue(),
+                          childOrg: me.down('[name=createAccrualDtChildOrg]').getValue(),
+                          allPayEl: me.down('[name=createAccrualDtAllPayEl]').getValue(),
+                          payElID: me.down('[name=createAccrualDtPayElID]').getValue(),
+                          payElName: me.down('[name=createAccrualDtPayElID]').getFieldValue('description'),
+                          allPayFund: me.down('[name=createAccrualDtAllPayFund]').getValue(),
+                          payFundID: me.down('[name=createAccrualDtPayFundID]').getValue(),
+                          payFundName: me.down('[name=createAccrualDtPayFundID]').getFieldValue('description'),
+                          exDt: me.down('[name=createAccrualDtExDt]').getValue(),
+                          fsFromPay: me.down('[name=createAccrualDtFsFromPay]').getValue(),
+                          fsFromPos: me.down('[name=createAccrualDtFsFromPos]').getValue(),
+                          depFromPos: me.down('[name=createAccrualDtDepFromPos]').getValue()
+                        }
+                      }),
+                      getLogButton('createAccrualDt')
+                    ]
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Перерахунок ЄСВ в закритих періодах'),
+                defaults: {
+                  labelWidth: 300
+                },
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'esvPeriodID',
+                        fieldLabel: UB.i18n('Розрахунковий період'),
+                        labelWidth: 300,
+                        width: 600,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          expand: appHR.periodExpand
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'checkbox',
+                    name: 'esvChildOrg',
+                    labelWidth: 300,
+                    width: 320,
+                    fieldLabel: UB.i18n('Разом з підпорядкованими організаціями')
+                  },
+                  {
+                    xtype: 'checkbox',
+                    name: 'recalcEntry',
+                    fieldLabel: UB.i18n('Перерахувати проводки'),
+                    labelWidth: 300,
+                    width: 320
+                  },
+                  {
+                    xtype: 'textarea',
+                    rows: 3,
+                    name: 'esvTabNums',
+                    fieldLabel: UB.i18n('Табельні номери (через кому)')
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      getRunButton({
+                        text: 'Перерахувати',
+                        warningText: 'Увага! Перерахувати ЄСВ в закритих періодах?',
+                        iconCls: 'fas fa-calculator'
+                      },
+                      () => {
+                        return {
+                          entity: 'hr_importCustom',
+                          method: 'recalcEsv',
+                          orgID: appAC.globalOrganization(),
+                          tabNums: me.down('[name=esvTabNums]').getValue(),
+                          recalcEntry: me.down('[name=recalcEntry]').getValue(),
+                          periodCalcID: me.attr.esvPeriodID.getValue(),
+                          childOrg: me.down('[name=esvChildOrg]').getValue()
+                        }
+                      }),
+                      getLogButton('recalcEsv')
+                    ]
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Розподілення записів РЛ за ОР посадових місць'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    xtype: 'textarea',
+                    rows: 3,
+                    name: 'tariffRlTabNums',
+                    fieldLabel: UB.i18n('Табельні номери (через кому)')
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'label',
+                        text: UB.i18n('За період'),
+                        cls: 'x-form-item-label',
+                        margin: '8 15 0 15',
+                        width: 235
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'tariffRlPeriodFromID',
+                        fieldLabel: UB.i18n('з'),
+                        labelWidth: 15,
+                        width: 200,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name', 'isClosed'],
+                          whereList: {
+                            isClosed: {
+                              expression: '[isClosed]',
+                              condition: 'equal',
+                              value: true
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          expand: appHR.periodExpand,
+                          change: function (ctrl, value) {
+                            if (value && me.attr.tariffRlPeriodToID.getValue() &&
+                              AC.dateService.shiftDate(me.attr.tariffRlPeriodFromID.getFieldValue('dateFrom')) > AC.dateService.shiftDate(me.attr.tariffRlPeriodToID.getFieldValue('dateFrom'))) {
+                              me.attr.tariffRlPeriodToID.setValueById(value)
+                            }
+                            AC.viewUtils.setFilterValue(me.attr.sourceRlID, {
+                              orgID: appAC.globalOrganization()
+                            })
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'tariffRlPeriodToID',
+                        fieldLabel: UB.i18n('по'),
+                        labelWidth: 20,
+                        width: 200,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name', 'isClosed'],
+                          whereList: {
+                            isClosed: {
+                              expression: '[isClosed]',
+                              condition: 'equal',
+                              value: true
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          expand: appHR.periodExpand,
+                          change: function (ctrl, value) {
+                            if (value && me.attr.tariffRlPeriodFromID.getValue() &&
+                              AC.dateService.shiftDate(me.attr.tariffRlPeriodFromID.getFieldValue('dateFrom')) > AC.dateService.shiftDate(me.attr.tariffRlPeriodToID.getFieldValue('dateFrom'))) {
+                              me.attr.tariffRlPeriodFromID.setValueById(value)
+                            }
+                            AC.viewUtils.setFilterValue(me.attr.sourceRlID, {
+                              orgID: appAC.globalOrganization()
+                            })
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'tariffRlChildOrg',
+                        labelWidth: 250,
+                        width: 600,
+                        boxLabelAlign: 'before',
+                        fieldLabel: UB.i18n('Разом з підпорядкованими')
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Оновити'),
+                        text: UB.i18n('Оновити'),
+                        iconCls: 'fas fa-cloud-download-alt',
+                        cls: 'fill-action',
+                        margin: '5 0 5 15',
+                        width: 150,
+                        handler: () => {
+                          $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Увага! Розподілити записи РЛ за ОР посадових місць'))
+                            .then(res => {
+                              if (res) {
+                                me.setLoading(true)
+                                $App.connection.run({
+                                  entity: 'hr_importCustom',
+                                  method: 'createRlTarifications',
+                                  orgID: appAC.globalOrganization(),
+                                  tariffRlTabNums: me.down('[name=tariffRlTabNums]').getValue(),
+                                  tariffRlChildOrg: me.down('[name=tariffRlChildOrg]').getValue(),
+                                  dateFrom: me.attr.tariffRlPeriodFromID.getFieldValue('dateFrom'),
+                                  dateTo: me.attr.tariffRlPeriodToID.getFieldValue('dateFrom')
+                                }).then(response => {
+                                  me.setLoading(false)
+                                  $App.dialogInfo(response.result === 'OK' ? (UB.i18n('Операція успішно виконана') + (response.resultMessage || '')) : response.result || UB.i18n('Виконано'))
+                                }, (err) => {
+                                  me.setLoading(false)
+                                  if (err.config && err.config.timeout) {
+                                    $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                                  } else {
+                                    throw err
+                                  }
+                                })
+                              }
+                            })
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Оновити ознаки перерахованим імпортованим записам'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    xtype: 'textarea',
+                    rows: 3,
+                    name: 'impRlTabNums',
+                    fieldLabel: UB.i18n('Табельні номери (через кому)')
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'label',
+                        text: UB.i18n('За період'),
+                        cls: 'x-form-item-label',
+                        margin: '8 15 0 15',
+                        width: 235
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'impRlPeriodFromID',
+                        fieldLabel: UB.i18n('з'),
+                        labelWidth: 15,
+                        width: 200,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name', 'isClosed'],
+                          whereList: {
+                            isClosed: {
+                              expression: '[isClosed]',
+                              condition: 'equal',
+                              value: true
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          expand: appHR.periodExpand,
+                          change: function (ctrl, value) {
+                            if (value && me.attr.impRlPeriodToID.getValue() &&
+                              AC.dateService.shiftDate(me.attr.impRlPeriodFromID.getFieldValue('dateFrom')) > AC.dateService.shiftDate(me.attr.impRlPeriodToID.getFieldValue('dateFrom'))) {
+                              me.attr.impRlPeriodToID.setValueById(value)
+                            }
+                            AC.viewUtils.setFilterValue(me.attr.sourceRlID, {
+                              orgID: appAC.globalOrganization()
+                            })
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'impRlPeriodToID',
+                        fieldLabel: UB.i18n('по'),
+                        labelWidth: 20,
+                        width: 200,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name', 'isClosed'],
+                          whereList: {
+                            isClosed: {
+                              expression: '[isClosed]',
+                              condition: 'equal',
+                              value: true
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          expand: appHR.periodExpand,
+                          change: function (ctrl, value) {
+                            if (value && me.attr.impRlPeriodFromID.getValue() &&
+                              AC.dateService.shiftDate(me.attr.impRlPeriodFromID.getFieldValue('dateFrom')) > AC.dateService.shiftDate(me.attr.impRlPeriodToID.getFieldValue('dateFrom'))) {
+                              me.attr.impRlPeriodFromID.setValueById(value)
+                            }
+                            AC.viewUtils.setFilterValue(me.attr.sourceRlID, {
+                              orgID: appAC.globalOrganization()
+                            })
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'impRlChildOrg',
+                        labelWidth: 250,
+                        width: 600,
+                        boxLabelAlign: 'before',
+                        fieldLabel: UB.i18n('Разом з підпорядкованими')
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Оновити'),
+                        text: UB.i18n('Оновити'),
+                        iconCls: 'fas fa-cloud-download-alt',
+                        cls: 'fill-action',
+                        margin: '5 0 5 15',
+                        width: 150,
+                        handler: () => {
+                          $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Увага! Оновити ознаки перерахованим імпортованим записам'))
+                            .then(res => {
+                              if (res) {
+                                me.setLoading(true)
+                                $App.connection.run({
+                                  entity: 'hr_importCustom',
+                                  method: 'recalcFlagsRlImp',
+                                  orgID: appAC.globalOrganization(),
+                                  impRlTabNums: me.down('[name=impRlTabNums]').getValue(),
+                                  impRlChildOrg: me.down('[name=impRlChildOrg]').getValue(),
+                                  dateFrom: me.attr.impRlPeriodFromID.getFieldValue('dateFrom'),
+                                  dateTo: me.attr.impRlPeriodToID.getFieldValue('dateFrom')
+                                }).then(response => {
+                                  me.setLoading(false)
+                                  $App.dialogInfo(response.result === 'OK' ? (UB.i18n('Операція успішно виконана') + (response.resultMessage || '')) : response.result || UB.i18n('Виконано'))
+                                }, (err) => {
+                                  me.setLoading(false)
+                                  if (err.config && err.config.timeout) {
+                                    $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                                  } else {
+                                    throw err
+                                  }
+                                })
+                              }
+                            })
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            title: `${UB.i18n('Табельний облік')}`,
+            split: true,
+            layout: 'accordion',
+            layoutConfig: {
+              collapsible: true,
+              collapsed: false
+            },
+            autoScroll: true,
+            items: [
+              {
+                xtype: 'panel',
+                hidden: true,
+                collapsed: false
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Виправлення помилки ручного коригування запису скорочення робочого дня/тижня'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    xtype: 'textarea',
+                    rows: 3,
+                    name: 'corSheetTabNums',
+                    fieldLabel: UB.i18n('Табельні номери (через кому)')
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'label',
+                        text: UB.i18n('За період'),
+                        cls: 'x-form-item-label',
+                        margin: '8 15 0 15',
+                        width: 230
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'corPeriodFromID',
+                        fieldLabel: UB.i18n('з'),
+                        labelWidth: 15,
+                        width: 200,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name', 'isClosed'],
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          expand: appHR.periodExpand,
+                          change: function (ctrl, value) {
+                            if (value && me.attr.corPeriodToID.getValue() &&
+                              AC.dateService.shiftDate(me.attr.corPeriodFromID.getFieldValue('dateFrom')) > AC.dateService.shiftDate(me.attr.corPeriodToID.getFieldValue('dateFrom'))) {
+                              me.attr.corPeriodToID.setValueById(value)
+                            }
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'corPeriodToID',
+                        fieldLabel: UB.i18n('по'),
+                        labelWidth: 20,
+                        width: 200,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name', 'isClosed'],
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          expand: appHR.periodExpand,
+                          change: function (ctrl, value) {
+                            if (value && me.attr.corPeriodFromID.getValue() &&
+                              AC.dateService.shiftDate(me.attr.corPeriodFromID.getFieldValue('dateFrom')) > AC.dateService.shiftDate(me.attr.corPeriodToID.getFieldValue('dateFrom'))) {
+                              me.attr.corPeriodFromID.setValueById(value)
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'corSheetChildOrg',
+                    labelWidth: 250,
+                    width: 600,
+                    boxLabelAlign: 'before',
+                    fieldLabel: UB.i18n('Разом з підпорядкованими')
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Виправити'),
+                        text: UB.i18n('Виправити'),
+                        iconCls: 'fas fa-cloud-download-alt',
+                        cls: 'fill-action',
+                        margin: '5 0 5 15',
+                        width: 150,
+                        handler: () => {
+                          $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Увага! Виправити помилки ручного коригування запису скорочення робочого дня/тижня'))
+                            .then(res => {
+                              if (res) {
+                                me.setLoading(true)
+                                $App.connection.run({
+                                  entity: 'hr_importCustom',
+                                  method: 'corectionSheetChange',
+                                  orgID: appAC.globalOrganization(),
+                                  tabNums: me.down('[name=corSheetTabNums]').getValue(),
+                                  childOrg: me.down('[name=corSheetChildOrg]').getValue(),
+                                  periodFromID: me.attr.corPeriodFromID.getValue(),
+                                  periodToID: me.attr.corPeriodToID.getValue()
+                                }).then(response => {
+                                  me.setLoading(false)
+                                  $App.dialogInfo(response.result === 'OK' ? (UB.i18n('Операція успішно виконана') + (response.resultMessage || '')) : response.result || UB.i18n('Виконано'))
+                                }, (err) => {
+                                  me.setLoading(false)
+                                  if (err.config && err.config.timeout) {
+                                    $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                                  } else {
+                                    throw err
+                                  }
+                                })
+                              }
+                            })
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Виправлення табелювання за документом нарахування Відрядження'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    xtype: 'textarea',
+                    rows: 3,
+                    name: 'corMissionSheetTabNums',
+                    fieldLabel: UB.i18n('Табельні номери (через кому)')
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'label',
+                        text: UB.i18n('За період'),
+                        cls: 'x-form-item-label',
+                        margin: '8 15 0 15',
+                        width: 230
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'corMissionPeriodFromID',
+                        fieldLabel: UB.i18n('з'),
+                        labelWidth: 15,
+                        width: 200,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name', 'isClosed'],
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          expand: appHR.periodExpand,
+                          change: function (ctrl, value) {
+                            if (value && me.attr.corMissionPeriodToID.getValue() &&
+                              AC.dateService.shiftDate(me.attr.corMissionPeriodFromID.getFieldValue('dateFrom')) > AC.dateService.shiftDate(me.attr.corMissionPeriodToID.getFieldValue('dateFrom'))) {
+                              me.attr.corMissionPeriodToID.setValueById(value)
+                            }
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'corMissionPeriodToID',
+                        fieldLabel: UB.i18n('по'),
+                        labelWidth: 20,
+                        width: 200,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name', 'isClosed'],
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          expand: appHR.periodExpand,
+                          change: function (ctrl, value) {
+                            if (value && me.attr.corMissionPeriodFromID.getValue() &&
+                              AC.dateService.shiftDate(me.attr.corMissionPeriodFromID.getFieldValue('dateFrom')) > AC.dateService.shiftDate(me.attr.corMissionPeriodToID.getFieldValue('dateFrom'))) {
+                              me.attr.corMissionPeriodFromID.setValueById(value)
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'corMissionSheetChildOrg',
+                    labelWidth: 250,
+                    width: 600,
+                    boxLabelAlign: 'before',
+                    fieldLabel: UB.i18n('Разом з підпорядкованими')
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Виправити'),
+                        text: UB.i18n('Виправити'),
+                        iconCls: 'fas fa-cloud-download-alt',
+                        cls: 'fill-action',
+                        margin: '5 0 5 15',
+                        width: 150,
+                        handler: () => {
+                          $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Увага! Виправити табелювання за документом нарахування Відрядження'))
+                            .then(res => {
+                              if (res) {
+                                me.setLoading(true)
+                                $App.connection.run({
+                                  entity: 'hr_importCustom',
+                                  method: 'corectionMissionTimeSheet',
+                                  orgID: appAC.globalOrganization(),
+                                  tabNums: me.down('[name=corMissionSheetTabNums]').getValue(),
+                                  childOrg: me.down('[name=corMissionSheetChildOrg]').getValue(),
+                                  periodFromID: me.attr.corMissionPeriodFromID.getValue(),
+                                  periodToID: me.attr.corMissionPeriodToID.getValue()
+                                }).then(response => {
+                                  me.setLoading(false)
+                                  $App.dialogInfo(response.result === 'OK' ? (UB.i18n('Операція успішно виконана') + (response.resultMessage || '')) : response.result || UB.i18n('Виконано'))
+                                }, (err) => {
+                                  me.setLoading(false)
+                                  if (err.config && err.config.timeout) {
+                                    $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                                  } else {
+                                    throw err
+                                  }
+                                })
+                              }
+                            })
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                margin: '5 15 5 15',
+                title: UB.i18n('Синхронізація табелю робочих місць'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    xtype: 'textarea',
+                    rows: 3,
+                    name: 'tariffSheetTabNums',
+                    fieldLabel: UB.i18n('Табельні номери (через кому)')
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'tariffSheetChildOrg',
+                        labelWidth: 250,
+                        width: 600,
+                        boxLabelAlign: 'before',
+                        fieldLabel: UB.i18n('Разом з підпорядкованими')
+                      },
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Сінхронізувати'),
+                        text: UB.i18n('Сінхронізувати'),
+                        iconCls: 'fas fa-cloud-download-alt',
+                        cls: 'fill-action',
+                        margin: '5 0 5 15',
+                        width: 150,
+                        handler: () => {
+                          $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Увага! Сінхронізувати табель робочих місць'))
+                            .then(res => {
+                              if (res) {
+                                me.setLoading(true)
+                                $App.connection.run({
+                                  entity: 'hr_importCustom',
+                                  method: 'timeSheetTarifications',
+                                  orgID: appAC.globalOrganization(),
+                                  tabNums: me.down('[name=tariffSheetTabNums]').getValue(),
+                                  childOrg: me.down('[name=tariffSheetChildOrg]').getValue()
+                                }).then(response => {
+                                  me.setLoading(false)
+                                  $App.dialogInfo(response.result === 'OK' ? (UB.i18n('Операція успішно виконана') + (response.resultMessage || '')) : response.result || UB.i18n('Виконано'))
+                                }, (err) => {
+                                  me.setLoading(false)
+                                  if (err.config && err.config.timeout) {
+                                    $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                                  } else {
+                                    throw err
+                                  }
+                                })
+                              }
+                            })
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+
+          {
+            title: UB.i18n('Персонал'),
+            autoScroll: true,
+            layout: { type: 'vbox', align: 'stretch' },
+            items: [
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n(`Об'єднання табельних номерів`),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'empNumComboBox',
+                    name: 'sourceID',
+                    displayField: 'description',
+                    fieldLabel: UB.i18n('З ОР працівника'),
+                    addPlural: true,
+                    addDateTo: true,
+                    ubRequest: {
+                      entity: 'hr_employeeNumberS',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'description', 'orgID', 'dateFrom', 'dateToEmpty', 'workPlaceCode', 'workPlace']
+                    },
+                    labelWidth: 120,
+                    width: 440
+                  },
+                  {
+                    xtype: 'empNumComboBox',
+                    name: 'targetID',
+                    displayField: 'description',
+                    fieldLabel: UB.i18n('На ОР працівника'),
+                    addPlural: true,
+                    addDateTo: true,
+                    ubRequest: {
+                      entity: 'hr_employeeNumberS',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'description', 'orgID', 'dateFrom', 'dateToEmpty', 'workPlaceCode', 'workPlace']
+                    },
+                    labelWidth: 140,
+                    width: 440
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n(`Об'єднати`),
+                    text: UB.i18n('Об\'єднати'),
+                    iconCls: 'u-icon-copy',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      if (me.attr.sourceID.getValue() && me.attr.targetID.getValue()) {
+                        $App.dialogYesNo('Попередження', UB.i18n(`Увага! Будуть перенесені дані {0} в {1}. Виконати?`, me.attr.sourceID.getFieldValue('description'), me.attr.targetID.getFieldValue('description')))
+                          .then(res => {
+                            if (res) {
+                              me.setLoading(true)
+                              $App.connection.run({
+                                entity: 'hr_importCustom',
+                                method: 'unitTabs',
+                                orgID: appAC.globalOrganization(),
+                                sourceID: me.attr.sourceID.getValue(),
+                                targetID: me.attr.targetID.getValue()
+                              }).then(response => {
+                                me.setLoading(false)
+                                $App.dialogInfo(UB.i18n('Операція успішно виконана'))
+                              }, (err) => {
+                                me.setLoading(false)
+                                if (err.config && err.config.timeout) {
+                                  $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                                } else {
+                                  throw err
+                                }
+                              })
+                            }
+                          })
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Замінити латинських букв на українські у ПІБ'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n('Коригувати?')).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'updateEmployeeFIO',
+                          orgID: appAC.globalOrganization()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Створення наказів призначення з даних ЗП'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630,
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'departmentID',
+                        fieldLabel: UB.i18n('Підрозділ'),
+                        labelWidth: 160,
+                        width: 570,
+                        displayField: 'caption',
+                        valueField: 'mi_data_id',
+                        allowBlank: true,
+                        ubRequest: {
+                          entity: 'hr_department',
+                          method: 'select',
+                          fieldList: ['mi_data_id', 'caption']
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n('Виконати створення наказів призначення з даних ЗП?')).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        $App.viewport.centralPanel.setLoading(UB.i18n('Виконання...'))
+                        $App.connection.run({
+                          entity: 'hr_import', method: 'createServiceOrderAppoint', orgID: appAC.globalOrganization(), departmentID: me.attr.departmentID.getValue()
+                        }).then(() => {
+                          $App.viewport.centralPanel.setLoading(false)
+                          $App.dialogInfo(UB.i18n('Виконано'))
+                        }, (err) => {
+                          $App.viewport.centralPanel.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Видалити'),
+                    text: UB.i18n('Видалити'),
+                    iconCls: 'fas fa-trash-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n('Видалити раніше створенні накази призначення?')).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        $App.viewport.centralPanel.setLoading(UB.i18n('Виконання...'))
+                        $App.connection.run({
+                          entity: 'hr_import', method: 'deleteServiceOrderAppoint', orgID: appAC.globalOrganization()
+                        }).then(() => {
+                          $App.viewport.centralPanel.setLoading(false)
+                          $App.dialogInfo(UB.i18n('Виконано'))
+                        }, (err) => {
+                          $App.viewport.centralPanel.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Актуалізація підрозділів в призначеннях'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n('Актуалізувати підрозділи в призначеннях?')).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'setDepartmentInEmpPos',
+                          orgID: appAC.globalOrganization(),
+                          onDate: appAC.globalApplicationDate()
+                        }).then(response => {
+                          me.setLoading(false)
+                          const resultData = JSON.parse(response.resultData)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана. Змінено: <br>{0}`, resultData.join('<br>')))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Актуалізація опису призначень'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'checkbox',
+                    name: 'fillAllEmpPositions',
+                    labelWidth: 400,
+                    boxLabelAlign: 'after',
+                    boxLabel: UB.i18n('Оновити всі записи'),
+                    width: 600
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n('Актуалізувати опис призначень?')).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'setEmployeePositionDescription',
+                          orgID: appAC.globalOrganization(),
+                          onDate: appAC.globalApplicationDate(),
+                          fillAll: me.down('[name=fillAllEmpPositions]').getValue()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Заповнити Дату початку дії табельного номера (за Трудовою книжкою)'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n('Заповнити Дату початку дії табельного номера (за Трудовою книжкою)?')).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'setEmployeeNumberDateFrom',
+                          orgID: appAC.globalOrganization(),
+                          onDate: appAC.globalApplicationDate()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Заповнити атрибут "Призначення" в Трудовій книжці'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n('Заповнити атрибут "Призначення" в Трудовій книжці?')).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'fillEmployeePosInWorkBook',
+                          orgID: appAC.globalOrganization(),
+                          onDate: appAC.globalApplicationDate()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n(`Об'єднання призначень працівників (Кадри -> Зарплата)`),
+                hidden: true,
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Видалити призначення'),
+                    text: UB.i18n('Видалити призначення'),
+                    iconCls: 'u-icon-close',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 200,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n('Видалити призначення?')).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'deleteEmployeePosition',
+                          orgID: appAC.globalOrganization()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    width: 415
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n(`Об'єднати призначення працівників (Кадри -> Зарплата)?`)).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'updateEmployeePosition',
+                          orgID: appAC.globalOrganization()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n(`Заповнення атрибутів призначень та посад`),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'component',
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.doCommand({
+                        cmdType: 'showForm',
+                        formCode: 'hr_fillEmpPosParams',
+                        entity: 'hr_importCustom',
+                        title: UB.i18n(`Заповнення атрибутів призначень та посад`),
+                        description: UB.i18n(`Заповнення атрибутів призначень та посад`),
+                        cmpInitConfig:
+                          {
+                            defaultValues: {
+                            }
+                          }
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Відмінювати ПІБ'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n('Заповнити відмінки ПІБ?')).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'setEmployeeNameCases',
+                          orgID: appAC.globalOrganization(),
+                          onDate: appAC.globalApplicationDate()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Видалити'),
+                    text: UB.i18n('Видалити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', `${UB.i18n('Видалити відмінки ПІБ')}?`).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'clearEmployeeNameCases',
+                          orgID: appAC.globalOrganization(),
+                          onDate: appAC.globalApplicationDate()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Оновлення опису періодів прав на відпустку'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n(`Оновити опис періодів прав на відпустку для <b>{0}</b>?`, appAC.globalOrganizationName())).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'updateEntityDescription',
+                          entityName: 'hr_empVacationPeriod',
+                          whereList: {
+                            orgID: {
+                              expression: '[empVacationPlanID.employeeNumberID.orgID]',
+                              condition: 'equal',
+                              value: appAC.globalOrganization()
+                            }
+                          }
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Переформування опису всіх внесених документів'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n(`Оновити опис всіх внесених документів?`)).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'updateEntityDescription',
+                          entityName: 'hr_employeeDocs'
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Масова заміна видів документів'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'dictDocKindFromID',
+                        fieldLabel: UB.i18n('Старий вид документа'),
+                        displayField: 'name',
+                        labelWidth: 100,
+                        width: 400,
+                        tpl: new Ext.XTemplate(
+                          '<ul class="' + Ext.plainListCls + '"><tpl for=".">',
+                          '<li role="option" unselectable="on" class="',
+                          'boundlist-{[xindex % 2 === 0 ? "even" : "odd"]}  ' + Ext.baseCSSPrefix + 'boundlist-item " ',
+                          ">{[values['name']]}<span><small style=\"color:gray;\"> ({[this.getState(values)]})</small></span></li>",
+                          '</tpl></ul>', {
+                            getState: function (reco) {
+                              return AC.dateService.isMaxDate(reco['mi_deleteDate']) ? UB.i18n('діючій') : UB.i18n('не діючій')
+                            }
+                          }
+                        ),
+                        ubRequest: {
+                          entity: 'ac_dictDocKind',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'name', 'mi_deleteDate', 'mi_deleteUser'],
+                          __allowSelectSafeDeleted: true
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'dictDocKindToID',
+                        fieldLabel: UB.i18n('Новий вид документа'),
+                        displayField: 'name',
+                        labelWidth: 100,
+                        width: 400,
+                        ubRequest: {
+                          entity: 'ac_dictDocKind',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'name']
+                        }
+                      },
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Замінити'),
+                        text: UB.i18n('Замінити'),
+                        iconCls: 'fas fa-cloud-download-alt',
+                        cls: 'fill-action',
+                        margin: '5 0 5 15',
+                        width: 150,
+                        handler: () => {
+                          const dictDocKindFromCtrl = me.down('[name=dictDocKindFromID]')
+                          const dictDocKindToCtrl = me.down('[name=dictDocKindToID]')
+                          const dictDocKindFromID = dictDocKindFromCtrl.getValue()
+                          const dictDocKindToID = dictDocKindToCtrl.getValue()
+                          if (dictDocKindFromID && dictDocKindToID) {
+                            if (dictDocKindFromID === dictDocKindToID) {
+                              AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Вибрані однакові значення'))
+                              return
+                            }
+                            $App.dialogYesNo(UB.i18n('Увага'), UB.i18n('Замінити вид документа "{0}" на "{1}"?', dictDocKindFromCtrl.getFieldValue('name'), dictDocKindToCtrl.getFieldValue('name')))
+                              .then(res => {
+                                if (res) {
+                                  me.setLoading(true)
+                                  $App.connection.run({
+                                    entity: 'hr_importCustom',
+                                    method: 'updateEmployeeDocKind',
+                                    orgID: appAC.globalOrganization(),
+                                    dictDocKindFromID: dictDocKindFromID,
+                                    dictDocKindToID: dictDocKindToID
+                                  }).then(response => {
+                                    me.setLoading(false)
+                                    $App.dialogInfo(response.result === 'OK' ? UB.i18n('Операція успішно виконана') : response.result || UB.i18n('Виконано'))
+                                  }, (err) => {
+                                    me.setLoading(false)
+                                    if (err.config && err.config.timeout) {
+                                      $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                                    } else {
+                                      throw err
+                                    }
+                                  })
+                                }
+                              })
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Оновлення додаткової інформації по всім працівникам'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n(`Оновити додаткову інформацію по всім працівникам для <b>{0}</b>?`, appAC.globalOrganizationName())).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'updateAddPersonDescription',
+                          orgID: appAC.globalOrganization(),
+                          onDate: appAC.globalApplicationDate()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Заповнити кваліфікаційну категорію призначень працівників'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630,
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'empCatDate',
+                        fieldLabel: UB.i18n('На дату'),
+                        labelWidth: 200,
+                        width: 320
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      const onDate = me.down('[name=empCatDate]').getValue()
+                      if (!onDate) {
+                        AC.viewUtils.showToast(UB.i18n('Не вказана дата'), 'Помилка')
+                        return
+                      }
+                      $App.dialogYesNo('Попередження', UB.i18n(`Заповнити кваліфікаційну категорію призначень працівників для <b>{0}</b>?`, appAC.globalOrganizationName())).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'updateEmpCategory',
+                          orgID: appAC.globalOrganization(),
+                          onDate: onDate
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Заповнити додаткові гарантії працевлаштування працівників'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n(`Заповнити додаткові гарантії працевлаштування працівників для <b>{0}</b>?`, appAC.globalOrganizationName())).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'fillEmpAddGuarantees',
+                          orgID: appAC.globalOrganization(),
+                          onDate: appAC.globalApplicationDate()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Заповнення штатних посад в призначеннях'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n('Заповнити штатні посади в призначеннях?')).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'setPositionInEmpPos',
+                          orgID: appAC.globalOrganization(),
+                          onDate: appAC.globalApplicationDate()
+                        }).then(() => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n('Операція успішно виконана'))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Заповнити відповідність особ організаціям ()'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n('Заповнити відповідність особ організаціям?')).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        $App.dialogYesNo('Попередження', UB.i18n('Заповнити тільки для поточної організації?')).then(isCurrentOrg => {
+                          me.setLoading(true)
+                          $App.connection.run({
+                            entity: 'hr_importCustom',
+                            method: 'setEmployeeOrg',
+                            orgID: appAC.globalOrganization(),
+                            isCurrentOrg
+                          }).then(() => {
+                            me.setLoading(false)
+                            $App.dialogInfo(UB.i18n('Операція успішно виконана'))
+                          }, (err) => {
+                            me.setLoading(false)
+                            if (err.config && err.config.timeout) {
+                              $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                            } else {
+                              throw err
+                            }
+                          })
+                        })
+                      })
+                    }
+                  },
+                  {
+                    xtype: 'label',
+                    text: UB.i18n('Дана функція надає доступність карток осіб в організаціях, де вони працюють. Потрібно виконати, якщо при імпортуванні даних не була коректно завантажена таблиця "Працівники організації " і в організаціях немає доступу до карток осіб своїх працівників.'),
+                    cls: 'x-form-item-label grd-italic',
+                    margin: '15 15 15 15',
+                    width: 800
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            title: UB.i18n('Оргструктура'),
+            layout: { type: 'vbox', align: 'stretch' },
+            autoScroll: true,
+            items: [
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Сінхронізація призначення з HR в ORG'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n(`Сінхронізація призначення з HR в ORG`) + '?').then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'updateEmployeeOnStaff',
+                          orgID: appAC.globalOrganization()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Актуалізація mi_treePath в оргструкурі'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        xtype: 'label',
+                        text: UB.i18n('Для виконання функції необхідно вибрати організацію, яка не має батьківського елемента'),
+                        cls: 'x-form-item-label',
+                        margin: '10 0 0 17'
+                      }
+                    ],
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n(`Актуалізувати mi_treePath в оргструктурі для <b>{0}</b>?`, appAC.globalOrganizationName())).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'setMiTreePath',
+                          orgID: appAC.globalOrganization(),
+                          onDate: appAC.globalApplicationDate()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Заповнити кількість посад'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n(`Заповнити кількість посад в оргструкурі для <b>{0}</b>?`, appAC.globalOrganizationName())).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'updatePosQuantity',
+                          orgID: appAC.globalOrganization()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Вилучення підрозділів, у яких немає підпорядкованих підрозділів або посад'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630,
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'depDateFrom',
+                        fieldLabel: UB.i18n('З датою створення більше'),
+                        labelWidth: 200,
+                        width: 320
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Видалити'),
+                    text: UB.i18n('Видалити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', `${UB.i18n('Видалити')}?`).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'deleteDepartment',
+                          orgID: appAC.globalOrganization(),
+                          depDateFrom: me.down('[name=depDateFrom]').getValue()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Розрахувати та заповнити суми доплат та надбавок для посад'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        layout: { type: 'vbox' },
+                        width: 630,
+                        items: [
+                          {
+                            xtype: 'ubdatefield',
+                            name: 'calcPosAccrualDate',
+                            fieldLabel: UB.i18n('На дату'),
+                            labelWidth: 200,
+                            width: 320
+                          }
+                        ]
+                      },
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Заповнити'),
+                        text: UB.i18n('Заповнити'),
+                        iconCls: 'fas fa-cloud-download-alt',
+                        cls: 'fill-action',
+                        margin: '5 0 5 15',
+                        width: 150,
+                        handler: () => {
+                          $App.dialogYesNo('Попередження', `${UB.i18n('Заповнити')}?`).then(isAgree => {
+                            if (!isAgree) {
+                              return
+                            }
+                            me.setLoading(true)
+                            $App.connection.run({
+                              entity: 'hr_importCustom',
+                              method: 'calcPosAccrual',
+                              orgID: appAC.globalOrganization(),
+                              onDate: me.down('[name=calcPosAccrualDate]').getValue(),
+                              recalcAccrualSum: me.down('[name=recalcAccrualSum]').getValue()
+                            }).then(response => {
+                              me.setLoading(false)
+                              $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                            }, (err) => {
+                              me.setLoading(false)
+                              if (err.config && err.config.timeout) {
+                                $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                              } else {
+                                throw err
+                              }
+                            })
+                          })
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'label',
+                    text: UB.i18n('Якщо дата не заповнена, то розрахунок буде виконано для всіх версій штатного розпису, включаючи проєкти та ті розписи, що на поточний час вже не діють. Якщо заповнити дату, то розрахунок буде виконано для версії штатного розпису та проєктів штатного розпису що діють на вказану дату.'),
+                    cls: 'x-form-item-label grd-italic',
+                    margin: '15 15 15 15',
+                    width: 800
+                  },
+                  {
+                    xtype: 'checkbox',
+                    name: 'recalcAccrualSum',
+                    labelWidth: 300,
+                    fieldLabel: UB.i18n('Перераховувати суми окладу штатних посад'),
+                    width: 600
+                  },
+                  {
+                    xtype: 'label',
+                    text: UB.i18n('Для штатних посад з типом оплати "За тарифними розрядами" перераховувати суми окладу, враховуючи підвищуючі надбавки'),
+                    cls: 'x-form-item-label grd-italic',
+                    margin: '15 15 15 15',
+                    width: 800
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Видалити недіючі Підрозділи та призначення із довідників Бухгалтерії'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        layout: { type: 'vbox' },
+                        width: 630,
+                        items: [
+                          {
+                            xtype: 'ubdatefield',
+                            name: 'delOrgDepDate',
+                            fieldLabel: UB.i18n('На дату'),
+                            labelWidth: 200,
+                            width: 320
+                          },
+                          {
+                            xtype: 'checkbox',
+                            name: 'delOrgDepAllOrg',
+                            labelWidth: 300,
+                            fieldLabel: UB.i18n('По всім організаціям'),
+                            width: 600
+                          },
+                          {
+                            xtype: 'checkbox',
+                            name: 'delOrgDepChildOrg',
+                            labelWidth: 300,
+                            width: 600,
+                            fieldLabel: UB.i18n('Разом з підпорядкованими')
+                          }
+                        ]
+                      },
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Видалити'),
+                        text: UB.i18n('Видалити'),
+                        iconCls: 'fas fa-cloud-download-alt',
+                        cls: 'fill-action',
+                        margin: '5 0 5 15',
+                        width: 150,
+                        handler: () => {
+                          $App.dialogYesNo('Попередження', `${UB.i18n('Видалити')}?`).then(isAgree => {
+                            if (!isAgree) {
+                              return
+                            }
+                            me.setLoading(true)
+                            $App.connection.run({
+                              entity: 'hr_importCustom',
+                              method: 'deleteOrgDep',
+                              orgID: appAC.globalOrganization(),
+                              onDate: me.down('[name=delOrgDepDate]').getValue(),
+                              allOrg: me.down('[name=delOrgDepAllOrg]').getValue(),
+                              childOrg: me.down('[name=delOrgDepChildOrg]').getValue()
+                            }).then(response => {
+                              me.setLoading(false)
+                              $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                            }, (err) => {
+                              me.setLoading(false)
+                              if (err.config && err.config.timeout) {
+                                $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                              } else {
+                                throw err
+                              }
+                            })
+                          })
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'label',
+                    text: UB.i18n('Видаляються недіючі Підрозділи та Призначення із довідників Бухгалтерії. Використовувати після міграції коли були завантажені історичні записи Штатних розписів та Призначень, щоб у Підсистемі Бухгалтерія залишилися тільки діючі записи на задану дату (дату старту Системи)'),
+                    cls: 'x-form-item-label grd-italic',
+                    margin: '15 15 15 15',
+                    width: 800
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: UB.i18n('Виправити посади в призначеннях довідників Бухгалтерії'),
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        layout: { type: 'vbox' },
+                        width: 630,
+                        items: [
+                          {
+                            xtype: 'checkbox',
+                            name: 'fixPosOrgAllOrg',
+                            labelWidth: 300,
+                            fieldLabel: UB.i18n('По всім організаціям'),
+                            width: 600
+                          }
+                        ]
+                      },
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Виправити'),
+                        text: UB.i18n('Виправити'),
+                        iconCls: 'fas fa-cloud-download-alt',
+                        cls: 'fill-action',
+                        margin: '5 0 5 15',
+                        width: 150,
+                        handler: () => {
+                          $App.dialogYesNo('Попередження', `${UB.i18n('Виправити')}?`).then(isAgree => {
+                            if (!isAgree) {
+                              return
+                            }
+                            me.setLoading(true)
+                            $App.connection.run({
+                              entity: 'hr_importCustom',
+                              method: 'fixPosOrg',
+                              orgID: appAC.globalOrganization(),
+                              allOrg: me.down('[name=fixPosOrgAllOrg]').getValue()
+                            }).then(response => {
+                              me.setLoading(false)
+                              $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                            }, (err) => {
+                              me.setLoading(false)
+                              if (err.config && err.config.timeout) {
+                                $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                              } else {
+                                throw err
+                              }
+                            })
+                          })
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            title: UB.i18n('Для всіх організацій'),
+            layout: { type: 'vbox', align: 'stretch' },
+            autoScroll: true,
+            items: [
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: `${`<span style="color:red;">`}${UB.i18n('Сінхронізація оргструктури з HR в ORG')}${`</span>`}`,
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n(`Сінхронізація оргструктури з HR в ORG`) + '?').then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_staffOrder',
+                          method: 'syncHRtoOrg',
+                          orgID: appAC.globalOrganization()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: `${`<span style="color:red;">`}${UB.i18n('Сінхронізація оргструктури з ORG в HR')}${`</span>`}`,
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n(`Сінхронізація оргструктури з ORG в HR`) + '?').then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_staffOrder',
+                          method: 'syncOrgToHR',
+                          withoutDep: 1,
+                          orgID: appAC.globalOrganization()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: `${`<span style="color:red;">`}${UB.i18n('Сінхронізація призначення з HR в ORG')}${`</span>`}`,
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 630
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n(`Сінхронізація призначення з HR в ORG`) + '?').then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'updateEmployeeOnStaff'
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: `${`<span style="color:red;">`}${UB.i18n('Замінити Вид оплати для всіх організацій')}${`</span>`}`,
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'payElIDFrom',
+                    fieldLabel: UB.i18n('з вида оплати'),
+                    displayField: 'description',
+                    labelWidth: 100,
+                    width: 400,
+                    tpl: new Ext.XTemplate('<ul class="x-list-plain"><tpl for="."><li role="option" unselectable="on" class="boundlist-{[xindex % 2 === 0 ? "even" : "odd"]}  x-boundlist-item " ><span>{description}</span><span><small style="color: gray;"> {[this.deleteRow(values)]}</small></span></li></tpl></ul>', {
+                      deleteRow: function (reco) {
+                        return reco.mi_deleteUser ? ` (${UB.i18n('Видалено')})` : ''
+                      }
+                    }),
+                    ubRequest: {
+                      entity: 'hr_payEl',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'description', 'mi_deleteUser'],
+                      __allowSelectSafeDeleted: true
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'payElIDTo',
+                    fieldLabel: UB.i18n('на вид оплати'),
+                    displayField: 'description',
+                    labelWidth: 100,
+                    width: 400,
+                    tpl: new Ext.XTemplate('<ul class="x-list-plain"><tpl for="."><li role="option" unselectable="on" class="boundlist-{[xindex % 2 === 0 ? "even" : "odd"]}  x-boundlist-item " ><span>{description}</span><span><small style="color: gray;"> {[this.deleteRow(values)]}</small></span></li></tpl></ul>', {
+                      deleteRow: function (reco) {
+                        return reco.mi_deleteUser ? ` (${UB.i18n('Видалено')})` : ''
+                      }
+                    }),
+                    ubRequest: {
+                      entity: 'hr_payEl',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'description', 'mi_deleteUser'],
+                      __allowSelectSafeDeleted: true
+                    }
+                  },
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'allOrganization',
+                    hidden: true,
+                    fieldLabel: UB.i18n('По всім організаціям')
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Замінити'),
+                    text: UB.i18n('Замінити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      const payElIDFrom = me.down('[name=payElIDFrom]').getValue()
+                      const payElIDTo = me.down('[name=payElIDTo]').getValue()
+                      if (payElIDFrom && payElIDTo) {
+                        if (payElIDFrom === payElIDTo) {
+                          AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Вибрані однакові значення'))
+                          return
+                        }
+                        $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Увага! Замінити вид оплати'))
+                          .then(res => {
+                            if (res) {
+                              me.setLoading(true)
+                              $App.connection.run({
+                                entity: 'hr_importCustom',
+                                method: 'updatePayEl',
+                                orgID: appAC.globalOrganization(),
+                                payElIDFrom: payElIDFrom,
+                                payElIDTo: payElIDTo,
+                                allOrganization: me.down('[name=allOrganization]').getValue()
+                              }).then(response => {
+                                me.setLoading(false)
+                                $App.dialogInfo(response.result === 'OK' ? UB.i18n('Операція успішно виконана') : response.result || UB.i18n('Виконано'))
+                              }, (err) => {
+                                me.setLoading(false)
+                                if (err.config && err.config.timeout) {
+                                  $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                                } else {
+                                  throw err
+                                }
+                              })
+                            }
+                          })
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: `${`<span style="color:red;">`}${UB.i18n('Змінити поточний розрахунковий період для організації та всіх підпорядкованих організацій')}${`</span>`}`,
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'ubcombobox',
+                    allowBlank: false,
+                    name: 'dictPeriod',
+                    fieldLabel: UB.i18n('Розрахунковий період'),
+                    displayField: 'name',
+                    labelWidth: 170,
+                    width: 340,
+                    hideEntityItemInContext: true,
+                    selectOnFocus: true,
+                    ubRequest: {
+                      entity: 'hr_dictPeriod',
+                      fieldList: ['ID', 'name', 'dateFrom'],
+                      orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                    },
+                    pageSize: 50,
+                    listeners: {
+                      beforeQuerySend: function () {
+                        this.store.ubRequest.whereList = {
+                          orgID: {
+                            expression: '[orgID]',
+                            condition: 'equal',
+                            value: appAC.globalOrganization()
+                          }
+                        }
+                        if (!this.whereListIsSet) this.whereListIsSet = true
+                        else this.store.reload()
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Змінити поточний розрахунковий період'),
+                    text: UB.i18n('Змінити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      const dateFrom = me.down('[name=dictPeriod]').getFieldValue('dateFrom')
+                      if (!dateFrom) {
+                        AC.viewUtils.showToast(UB.i18n('Не визначено розрахунковий період'))
+                        return
+                      }
+
+                      $App.dialogYesNo(UB.i18n('Зміна поточного розрахункового періоду'), UB.i18n('Буде змінено поточний розрахунковий період для поточної організації та усіх підпорядкованих організацій. Продовжити?'))
+                        .then(res => {
+                          if (res) {
+                            me.setLoading(true)
+                            $App.connection.run({
+                              entity: 'hr_importCustom',
+                              method: 'updateDictPeriod',
+                              orgID: appAC.globalOrganization(),
+                              dateFrom: dateFrom
+                            }).then(response => {
+                              me.setLoading(false)
+                              $App.dialogInfo(response.result === 'OK' ? UB.i18n('Зміна поточного розрахункового періоду') : response.result || UB.i18n('Виконано'))
+                            }, (err) => {
+                              me.setLoading(false)
+                              if (err.config && err.config.timeout) {
+                                $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                              } else {
+                                throw err
+                              }
+                            })
+                          }
+                        })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: `${`<span style="color:red;">`}${UB.i18n('Змінити особу у всіх сутностях')}${`</span>`}`,
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'employeeSourceID',
+                    displayField: 'taxCode',
+                    fieldLabel: UB.i18n('З особи'),
+                    ubRequest: {
+                      entity: 'hr_employee',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'taxCode', 'fullFIO']
+                    },
+                    labelWidth: 120,
+                    width: 440
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'employeeTargetID',
+                    displayField: 'taxCode',
+                    fieldLabel: UB.i18n('На особу'),
+                    addPlural: true,
+                    addDateTo: true,
+                    ubRequest: {
+                      entity: 'hr_employee',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'taxCode', 'fullFIO']
+                    },
+                    labelWidth: 140,
+                    width: 440
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n(`Замінити`),
+                    text: UB.i18n('Замінити'),
+                    iconCls: 'u-icon-copy',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      if (me.attr.employeeSourceID.getValue() && me.attr.employeeTargetID.getValue()) {
+                        $App.dialogYesNo('Попередження', UB.i18n(`Увага! Буде замінена особа {0} на {1}. Виконати?`,
+                          me.attr.employeeSourceID.getFieldValue('taxCode') + me.attr.employeeSourceID.getFieldValue('fullFIO'), me.attr.employeeTargetID.getFieldValue('taxCode') + me.attr.employeeTargetID.getFieldValue('fullFIO')))
+                          .then(res => {
+                            if (res) {
+                              me.setLoading(true)
+                              $App.connection.run({
+                                entity: 'hr_importCustom',
+                                method: 'changeEmployee',
+                                orgID: appAC.globalOrganization(),
+                                sourceID: me.attr.employeeSourceID.getValue(),
+                                targetID: me.attr.employeeTargetID.getValue()
+                              }).then(response => {
+                                me.setLoading(false)
+                                $App.dialogInfo(UB.i18n('Операція успішно виконана'))
+                              }, (err) => {
+                                me.setLoading(false)
+                                if (err.config && err.config.timeout) {
+                                  $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                                } else {
+                                  throw err
+                                }
+                              })
+                            }
+                          })
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: `${`<span style="color:red;">`}${UB.i18n('Актуалізація mi_treePath для всіх організацій')}${`</span>`}`,
+                defaults: {
+                  labelWidth: 250
+                },
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        xtype: 'label',
+                        text: UB.i18n('Для актуалізація mi_treePath для всіх організацій натисніть на кнопку заповнити'),
+                        cls: 'x-form-item-label',
+                        margin: '10 0 0 17'
+                      }
+                    ],
+                    width: 560
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n(`Актуалізувати mi_treePath для всіх організацій ?`)).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'setMiTreePathByAllOrgs',
+                          orgID: appAC.globalOrganization(),
+                          onDate: appAC.globalApplicationDate()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'fieldset',
+                margin: '5 15 5 15',
+                title: `${`<span style="color:red;">`}${UB.i18n('Заміна зовнішнього ID підрозділів ktID на clID в Express')}${`</span>`}`,
+                defaults: {
+                  labelWidth: 250
+                },
+                ubID: 'changeDepartmentKtID2ClID',
+                hidden: false,
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        xtype: 'label',
+                        text: UB.i18n('Для заміни зовнішнього ID підрозділів ktID на clID в Express для всіх організацій натисніть на кнопку заповнити'),
+                        cls: 'x-form-item-label',
+                        margin: '10 0 0 17'
+                      }
+                    ],
+                    width: 560
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити'),
+                    text: UB.i18n('Заповнити'),
+                    iconCls: 'fas fa-cloud-download-alt',
+                    cls: 'fill-action',
+                    margin: '5 0 5 15',
+                    width: 150,
+                    handler: () => {
+                      $App.dialogYesNo('Попередження', UB.i18n(`Замінити зовнішній ID підрозділів ktID на clID в Express?`)).then(isAgree => {
+                        if (!isAgree) {
+                          return
+                        }
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_importCustom',
+                          method: 'changeDepartmentKtID2ClID',
+                          orgID: appAC.globalOrganization(),
+                          onDate: appAC.globalApplicationDate()
+                        }).then(response => {
+                          me.setLoading(false)
+                          $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                        }, (err) => {
+                          me.setLoading(false)
+                          if (err.config && err.config.timeout) {
+                            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                          } else {
+                            throw err
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.timeSheetCorrect = () => {
+      Ext.create('UB.view.UploadFileAjax', {
+        scope: this,
+        listeners: {
+          afterrender: function (cmp) {
+            this.fieldFile.fileInputEl.set({
+              accept: '.csv'
+            })
+          }
+        },
+        upLoad: function (btn) {
+          me.setLoading(true)
+          const dialogWindow = btn.up('window')
+          const inputDom = this.fieldFile.fileInputEl.dom
+          if (inputDom.files.length === 0) {
+            return
+          }
+          const file = inputDom.files[0]
+          if (file.name.indexOf('.csv', file.name.length - 4) === -1) {
+            $App.dialogInfo(UB.i18n('Невірний формат файлу, для завантаження використовується формат csv'))
+            me.setLoading(false)
+            return
+          }
+          btn.disable()
+
+          UB.connection.post('loadImportDataEx', file, {
+            params: {
+              entityName: '',
+              encoding: 'win1251',
+              fileName: file.name
+            },
+            headers: { 'Content-Type': 'application/octet-stream' }
+          }).then(response => {
+            me.setLoading(false)
+            const data = response.data
+            const attrs = [ 'ID', 'periodID', 'employeeNumberID', 'dateWork', 'planID', 'planTimeCostID', 'planHour',
+              'planHourNight', 'planHourEvening', 'factTimeCostID', 'factHour', 'factHourNight', 'factHourEvening',
+              'isActive', 'mtCount', 'factPlanHour', 'isCorrection' ]
+            const parsedData = []
+            data && data.forEach((item, key) => {
+              if (key === 0) {
+                return
+              }
+              let row = {}
+              attrs.forEach((attr, idx) => {
+                row[attr] = attr === 'dateWork' ? item[idx] : Number(item[idx])
+              })
+              parsedData.push(row)
+            })
+            $App.connection.run({
+              entity: 'hr_importCustom',
+              method: 'timeSheetCorrect',
+              data: JSON.stringify(parsedData),
+              orgID: appAC.globalOrganization()
+            }).then(response => {
+              $App.dialogInfo(UB.i18n('Завершено'))
+            })
+          }, (err) => {
+            me.setLoading(false)
+            if (err.config && err.config.timeout) {
+              $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+            } else {
+              throw err
+            }
+          }).finally(() => {
+            me.setLoading(false)
+          })
+          dialogWindow.close()
+        }
+      })
+    }
+    me.periodAttrs = ['sourceID', 'targetID', 'periodID', 'esvPeriodID', 'sourceRlID', 'targetRlID', 'periodFromRlID', 'periodToRlID',
+      'tariffRlPeriodFromID', 'tariffRlPeriodToID', 'impRlPeriodFromID', 'impRlPeriodToID', 'corPeriodFromID', 'corPeriodToID',
+      'corMissionPeriodFromID', 'corMissionPeriodToID']
+    me.changeGlobal = () => {
+      const globalOrganization = appAC.globalOrganization()
+      me.periodAttrs.forEach(periodAttrName => {
+        AC.viewUtils.setFilterValue(me.attr[periodAttrName], { orgID: globalOrganization }, ['clearValue'])
+      })
+      AC.viewUtils.setWhereListProperty(me.attr.workScheduleFrom, [
+        [ 'organizationID', 'equal', globalOrganization ],
+        [ 'organizationID', 'isNull', globalOrganization ]
+      ], ['[organizationID] OR [orgIsNull]'], ['clearValue', 'clearStore'])
+      AC.viewUtils.setWhereListProperty(me.attr.workScheduleTo, [
+        [ 'organizationID', 'equal', globalOrganization ],
+        [ 'organizationID', 'isNull', globalOrganization ]
+      ], ['[organizationID] OR [orgIsNull]'], ['clearValue', 'clearStore'])
+      AC.viewUtils.setWhereListProperty(me.attr.departmentID, [
+        ['orgID', '=', globalOrganization || 0],
+        ['state', '=', 'ACTIVE']
+      ], null, ['clearStore', 'clearWhereList', 'clearValue'])
+      appHR.getCurrentPeriod(globalOrganization).then(currentPeriod => {
+        if (currentPeriod) {
+          me.attr.periodID.setValueById(currentPeriod.ID)
+          me.attr.esvPeriodID.setValueById(currentPeriod.priorPeriodID)
+          me.attr.periodFromRlID.setValueById(null)
+          me.attr.periodToRlID.setValueById(currentPeriod.priorPeriodID)
+          me.attr.tariffRlPeriodFromID.setValueById(null)
+          me.attr.tariffRlPeriodToID.setValueById(currentPeriod.priorPeriodID)
+          me.attr.impRlPeriodFromID.setValueById(null)
+          me.attr.impRlPeriodToID.setValueById(null)
+          me.attr.corPeriodFromID.setValueById(null)
+          me.attr.corPeriodToID.setValueById(null)
+          me.attr.corMissionPeriodFromID.setValueById(null)
+          me.attr.corMissionPeriodToID.setValueById(null)
+        } else {
+          me.periodAttrs.forEach(periodAttrName => {
+            me.attr[periodAttrName].setValueById(null)
+          })
+        }
+      })
+    }
+
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+    me.on('afterrender', () => {
+      const me = this
+
+      me.attr = {
+        dictCategoryECBID: me.down('[name=dictCategoryECBID]'),
+        sourceID: me.down('[name=sourceID]'),
+        targetID: me.down('[name=targetID]'),
+        workScheduleFrom: me.down('[name=workScheduleFrom]'),
+        workScheduleTo: me.down('[name=workScheduleTo]'),
+        isIndexDateFrom: me.down('[name=isIndexDateFrom]'),
+        departmentID: me.down('[name=departmentID]'),
+        periodID: me.down('[name=periodID]'),
+        esvPeriodID: me.down('[name=esvPeriodID]'),
+        sourceRlID: me.down('[name=sourceRlID]'),
+        targetRlID: me.down('[name=targetRlID]'),
+        periodFromRlID: me.down('[name=periodFromRlID]'),
+        periodToRlID: me.down('[name=periodToRlID]'),
+        tariffRlPeriodFromID: me.down('[name=tariffRlPeriodFromID]'),
+        tariffRlPeriodToID: me.down('[name=tariffRlPeriodToID]'),
+        impRlPeriodFromID: me.down('[name=impRlPeriodFromID]'),
+        impRlPeriodToID: me.down('[name=impRlPeriodToID]'),
+        corPeriodFromID: me.down('[name=corPeriodFromID]'),
+        corPeriodToID: me.down('[name=corPeriodToID]'),
+        corMissionPeriodFromID: me.down('[name=corMissionPeriodFromID]'),
+        corMissionPeriodToID: me.down('[name=corMissionPeriodToID]'),
+        employeeSourceID: me.down('[name=employeeSourceID]'),
+        employeeTargetID: me.down('[name=employeeTargetID]')
+      }
+
+      me.periodAttrs.forEach(periodAttrName => {
+        AC.viewUtils.setFilterValue(me.attr[periodAttrName], { orgID: appAC.globalOrganization() }, ['clearValue'])
+      })
+
+      AC.viewUtils.setWhereListProperty(me.attr.workScheduleFrom, [
+        [ 'organizationID', 'equal', appAC.globalOrganization() ],
+        [ 'organizationID', 'isNull', appAC.globalOrganization() ]
+      ], ['[organizationID] OR [orgIsNull]'])
+      AC.viewUtils.setWhereListProperty(me.attr.workScheduleTo, [
+        [ 'organizationID', 'equal', appAC.globalOrganization() ],
+        [ 'organizationID', 'isNull', appAC.globalOrganization() ]
+      ], ['[organizationID] OR [orgIsNull]'])
+      AC.viewUtils.setWhereListProperty(me.attr.departmentID, [
+        ['orgID', '=', appAC.globalOrganization() || 0],
+        ['state', '=', 'ACTIVE']
+      ])
+      appHR.getCurrentPeriod(appAC.globalOrganization()).then(currentPeriod => {
+        if (currentPeriod) {
+          me.attr.periodID.setValueById(currentPeriod.ID)
+          me.attr.esvPeriodID.setValueById(currentPeriod.priorPeriodID)
+          me.attr.periodToRlID.setValueById(currentPeriod.priorPeriodID)
+        }
+      })
+      if ($App.domainInfo.models['INTEGRATOR']) {
+        me.down('[ubID=changeDepartmentKtID2ClID]').show()
+      }
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

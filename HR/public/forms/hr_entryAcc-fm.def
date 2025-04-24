@@ -1,0 +1,661 @@
+/* global Ext UB HR $App */
+
+exports.formDef = 'HR.entryAcc'
+
+Ext.define('HR.entryAcc', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.entryAcc',
+  actionId: {
+    save: 'save'
+  },
+  eventId: {
+    save: 'save'
+  },
+  hotKeys: {
+    save: {
+      key: Ext.EventObject.ENTER,
+      shift: false,
+      ctrl: true,
+      text: ' (Ctrl+Enter)'
+    }
+  },
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [],
+      ubID: 'mainToolbar',
+      enableOverflow: true
+    }]
+    me.items = [
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox' },
+        region: 'north',
+        items: [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            flex: 1,
+            items: [
+              {
+                xtype: 'textfield',
+                name: 'code',
+                readOnly: true,
+                fieldLabel: UB.i18n('Код'),
+                width: 300
+              },
+              {
+                xtype: 'textfield',
+                name: 'name',
+                readOnly: true,
+                fieldLabel: UB.i18n('Назва'),
+                width: 500
+              },
+              {
+                xtype: 'ubcombobox',
+                name: 'dictFundSourceID',
+                flex: 1,
+                width: 500,
+                fieldLabel: UB.i18n('Джерело фінансування'),
+                ubRequest: {
+                  entity: 'ac_fundSource',
+                  fieldList: ['ID', 'name']
+                }
+              }
+            ]
+          },
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            flex: 1,
+            items: []
+          }
+        ]
+      },
+      {
+        xtype: 'tabpanel',
+        region: 'center',
+        items: [
+          {
+            title: UB.i18n('Налаштування'),
+            layout: { type: 'border' },
+            items: [
+              {
+                xtype: 'panel',
+                title: UB.i18n('Дебет'),
+                layout: { type: 'vbox', align: 'stretch' },
+                region: 'west',
+                autoScroll: true,
+                split: true,
+                flex: 1,
+                style: { backgroundColor: '#ffffff !important' },
+                items: [
+                  {
+                    xtype: 'accountDimensionsControl',
+                    name: 'accountDtID',
+                    fieldLabel: UB.i18n('Рахунок обліку Дт'),
+                    labelWidth: 170,
+                    allowBlank: true,
+                    allowBlankDims: true,
+                    dimensionAttributeName: 'dimensionDt',
+                    accountAttributeName: 'accountDtID',
+                    getDefaultDimension: HR.accrualService.getDefaultDimension
+                  }
+                ]
+              },
+              {
+                xtype: 'panel',
+                title: UB.i18n('Кредит'),
+                layout: { type: 'vbox', align: 'stretch' },
+                region: 'center',
+                autoScroll: true,
+                flex: 1,
+                style: { backgroundColor: '#ffffff !important' },
+                items: [
+                  {
+                    xtype: 'accountDimensionsControl',
+                    name: 'accountKtID',
+                    fieldLabel: UB.i18n('Рахунок обліку Кт'),
+                    labelWidth: 170,
+                    allowBlank: true,
+                    allowBlankDims: true,
+                    dimensionAttributeName: 'dimensionKt',
+                    accountAttributeName: 'accountKtID',
+                    getDefaultDimension: HR.accrualService.getDefaultDimension
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            title: UB.i18n('Умови формування'),
+            layout: { type: 'border' },
+            items: [
+              {
+                xtype: 'panel',
+                layout: { type: 'vbox' },
+                region: 'north',
+                items: [
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'operPeriod',
+                    width: 500,
+                    labelWidth: 200,
+                    fieldLabel: UB.i18n('За обліковим періодом'),
+                    hideEntityItemInContext: true,
+                    enumGroupFilter: 'HR_ACC_OPER_PERIOD',
+                    valueField: 'code',
+                    displayField: 'name',
+                    ubRequest: {
+                      entity: 'ubm_enum',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                      whereList: {
+                        eGroup: {
+                          expression: '[eGroup]',
+                          condition: 'equal',
+                          values: { 'eGroup': 'HR_ACC_OPER_PERIOD' }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'operSum',
+                    width: 500,
+                    labelWidth: 200,
+                    fieldLabel: UB.i18n('За сумою нарахування'),
+                    hideEntityItemInContext: true,
+                    enumGroupFilter: 'HR_ACC_OPER_SUM',
+                    valueField: 'code',
+                    displayField: 'name',
+                    ubRequest: {
+                      entity: 'ubm_enum',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                      whereList: {
+                        eGroup: {
+                          expression: '[eGroup]',
+                          condition: 'equal',
+                          values: { 'eGroup': 'HR_ACC_OPER_SUM' }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    name: 'isReversal',
+                    width: 500,
+                    labelWidth: 200,
+                    xtype: 'checkboxfield',
+                    fieldLabel: UB.i18n('Сторно')
+                  }
+                ]
+              },
+              {
+                xtype: 'tabpanel',
+                region: 'center',
+                items: [
+                  {
+                    title: UB.i18n('Організації'),
+                    xtype: 'acGrid',
+                    name: 'org',
+                    region: 'center',
+                    flex: 1,
+                    autoScroll: true,
+                    notWriteChanges: true,
+                    storeType: 'local',
+                    showToolBar: true,
+                    disablePaging: true,
+                    loadMaskMessage: UB.i18n('Завантаження даних...'),
+                    includeCustomReadOnly: ['fillBtn'],
+                    includeContextMenuReadOnly: [],
+                    summaryDataOnClient: true,
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit'],
+                    viewConfig: {
+                      markDirty: false
+                    },
+                    customToolBarActions: [
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        scale: 'medium',
+                        cls: 'fill-action',
+                        handler: function (btn) {
+                          me.changeGridValue('org')
+                        }
+                      },
+                      {
+                        name: 'excludeOrg',
+                        width: 400,
+                        xtype: 'checkboxfield',
+                        fieldLabel: UB.i18n('Виключення')
+                      }
+                    ],
+                    fields: [
+                      { name: 'value' },
+                      {
+                        name: 'description',
+                        columnConfig: {
+                          text: UB.i18n('Назва'),
+                          sortable: false,
+                          flex: 1
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    title: UB.i18n('Підрозділи'),
+                    xtype: 'acGrid',
+                    name: 'dep',
+                    region: 'center',
+                    flex: 1,
+                    autoScroll: true,
+                    notWriteChanges: true,
+                    storeType: 'local',
+                    showToolBar: true,
+                    disablePaging: true,
+                    loadMaskMessage: UB.i18n('Завантаження даних...'),
+                    includeCustomReadOnly: ['fillBtn'],
+                    includeContextMenuReadOnly: [],
+                    summaryDataOnClient: true,
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit'],
+                    viewConfig: {
+                      markDirty: false
+                    },
+                    customToolBarActions: [
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        scale: 'medium',
+                        cls: 'fill-action',
+                        handler: function (btn) {
+                          me.changeGridValue('dep')
+                        }
+                      },
+                      {
+                        name: 'excludeDepartment',
+                        width: 400,
+                        xtype: 'checkboxfield',
+                        fieldLabel: UB.i18n('Виключення')
+                      }
+                    ],
+                    fields: [
+                      { name: 'value' },
+                      {
+                        name: 'description',
+                        columnConfig: {
+                          text: UB.i18n('Назва'),
+                          sortable: false,
+                          flex: 1
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    title: UB.i18n('Джерела фінансування'),
+                    xtype: 'acGrid',
+                    name: 'fs',
+                    region: 'center',
+                    flex: 1,
+                    autoScroll: true,
+                    notWriteChanges: true,
+                    storeType: 'local',
+                    showToolBar: true,
+                    disablePaging: true,
+                    loadMaskMessage: UB.i18n('Завантаження даних...'),
+                    includeCustomReadOnly: ['fillBtn'],
+                    includeContextMenuReadOnly: [],
+                    summaryDataOnClient: true,
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit'],
+                    viewConfig: {
+                      markDirty: false
+                    },
+                    customToolBarActions: [
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        scale: 'medium',
+                        cls: 'fill-action',
+                        handler: function (btn) {
+                          me.changeGridValue('fs')
+                        }
+                      },
+                      {
+                        name: 'excludeFundSource',
+                        width: 400,
+                        xtype: 'checkboxfield',
+                        fieldLabel: UB.i18n('Виключення')
+                      }
+                    ],
+                    fields: [
+                      { name: 'value' },
+                      {
+                        name: 'description',
+                        columnConfig: {
+                          text: UB.i18n('Назва'),
+                          sortable: false,
+                          flex: 1
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    title: UB.i18n('Місце роботи'),
+                    xtype: 'acGrid',
+                    name: 'wp',
+                    region: 'center',
+                    flex: 1,
+                    autoScroll: true,
+                    notWriteChanges: true,
+                    storeType: 'local',
+                    showToolBar: true,
+                    disablePaging: true,
+                    loadMaskMessage: UB.i18n('Завантаження даних...'),
+                    includeCustomReadOnly: ['fillBtn'],
+                    includeContextMenuReadOnly: [],
+                    summaryDataOnClient: true,
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit'],
+                    viewConfig: {
+                      markDirty: false
+                    },
+                    customToolBarActions: [
+                      {
+                        xtype: 'button',
+                        tooltip: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        scale: 'medium',
+                        cls: 'fill-action',
+                        handler: function (btn) {
+                          me.changeGridValue('wp')
+                        }
+                      },
+                      {
+                        name: 'excludeWorkPlace',
+                        width: 400,
+                        xtype: 'checkboxfield',
+                        fieldLabel: UB.i18n('Виключення')
+                      }
+                    ],
+                    fields: [
+                      { name: 'value' },
+                      {
+                        name: 'description',
+                        columnConfig: {
+                          text: UB.i18n('Назва'),
+                          sortable: false,
+                          flex: 1
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+
+            ]
+          }
+
+        ]
+      }
+
+    ]
+
+    me.showChangeForm = function (me, grid, sourceData) {
+      const selectData = []
+      grid.getData().forEach(row => {
+        selectData.push({
+          ID: row.value,
+          value: row.value
+        })
+      })
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: grid.name === 'dep' ? 'hr_departmentSelect' : 'hr_elementSelect',
+        cmpInitConfig: {
+          sourceData,
+          selectData,
+          onSelectData: (data) => {
+            grid.setLocalStoreData(data.selected)
+          }
+        }
+      })
+    }
+
+    me.changeGridValue = function (gridName) {
+      const grid = me.down(`[name=${gridName}]`)
+      switch (gridName) {
+        case 'org':
+          UB.Repository('hr_organization')
+            .attrs(['mi_data_id', 'description'])
+            .where('state', '=', 'ACTIVE')
+            .orderBy('description')
+            .selectAsObject({
+              'mi_data_id': 'ID'
+            }).then(sourceData => {
+              me.showChangeForm(me, grid, sourceData)
+            })
+          break
+        case 'dep':
+          me.showChangeForm(me, grid, [])
+          break
+        case 'fs':
+          UB.Repository('ac_fundSource')
+            .attrs(['ID', 'description'])
+            .orderBy('description')
+            .selectAsObject().then(sourceData => {
+              me.showChangeForm(me, grid, sourceData)
+            })
+          break
+        case 'wp':
+          const sourceData = []
+          const enumSource = UB.core.UBEnumManager.getStore('HR_WORKER_PLACE')
+          enumSource.data.items.forEach(row => {
+            sourceData.push({
+              ID: row.get('code'),
+              description: row.get('name')
+            })
+          })
+          me.showChangeForm(me, grid, sourceData)
+          break
+      }
+    }
+    me.setGridValue = function (data) {
+      if (data) {
+        const gridData = typeof data === 'object' ? data : JSON.parse(data)
+        me.excludeGrid.forEach(gridName => {
+          if (gridData[gridName] && gridData[gridName].length) {
+            const grid = me.down(`[name=${gridName}]`)
+            switch (gridName) {
+              case 'org':
+                UB.Repository('hr_organization')
+                  .attrs(['mi_data_id', 'description'])
+                  .where('mi_data_id', 'in', gridData[gridName])
+                  .where('state', '=', 'ACTIVE')
+                  .orderBy('description')
+                  .selectAsObject({
+                    'mi_data_id': 'value'
+                  }).then(sourceData => {
+                    grid.setLocalStoreData(sourceData)
+                  })
+                break
+              case 'dep':
+                UB.Repository('hr_department')
+                  .attrs(['mi_data_id', 'description'])
+                  .where('state', '=', 'ACTIVE')
+                  .where('mi_data_id', 'in', gridData[gridName])
+                  .orderBy('description')
+                  .selectAsObject({
+                    'mi_data_id': 'value'
+                  }).then(sourceData => {
+                    grid.setLocalStoreData(sourceData)
+                  })
+                break
+              case 'fs':
+                UB.Repository('ac_fundSource')
+                  .attrs(['ID', 'description'])
+                  .where('ID', 'in', gridData[gridName])
+                  .orderBy('description')
+                  .selectAsObject({
+                    'ID': 'value'
+                  }).then(sourceData => {
+                    grid.setLocalStoreData(sourceData)
+                  })
+                break
+              case 'wp':
+                const sourceData = []
+                gridData[gridName].forEach(code => {
+                  sourceData.push({
+                    value: code,
+                    description: UB.core.UBEnumManager.getStore('HR_WORKER_PLACE').getById(code).get('name')
+                  })
+                })
+                grid.setLocalStoreData(sourceData)
+                break
+            }
+          }
+        })
+      }
+    }
+    me.on('afterrender',
+      function () {
+        me.up('window').setTitle(UB.i18n('Проводка'))
+        me.createToolbarButtons(me)
+        me.excludeGrid = ['org', 'dep', 'fs', 'wp']
+        if (!me.formData) {
+          me.formData = {
+            accountDtID: null,
+            accountKtID: null,
+            dictFundSourceID: null,
+            operPeriod: null,
+            operSum: null,
+            isReversal: 0,
+            excludeOrg: 0,
+            excludeDepartment: 0,
+            excludeFundSource: 0,
+            excludeWorkPlace: 0,
+            entryAccDt: {}
+          }
+        }
+        Object.keys(me.formData).forEach(attr => {
+          if (me.formData[attr] !== undefined) {
+            switch (attr) {
+              case 'dictFundSourceID':
+              case 'operPeriod':
+              case 'operSum':
+                me.down('[name=' + attr + ']').setValueById(me.formData[attr])
+                break
+              case 'isReversal':
+              case 'excludeOrg':
+              case 'excludeDepartment':
+              case 'excludeFundSource':
+              case 'excludeWorkPlace':
+                me.down('[name=' + attr + ']').setValue(me.formData[attr])
+                break
+              case 'accountDtID':
+                me.down('[name=' + attr + ']').setValue(me.formData)
+                break
+              case 'accountKtID':
+                const timerId = setTimeout(() => {
+                  me.down('[name=' + attr + ']').setValue(me.formData)
+                  clearInterval(timerId)
+                }, 200)
+                break
+              case 'entryAccDt':
+                me.setGridValue(me.formData[attr])
+                break
+            }
+          }
+        })
+        const senderForm = me.gridSender && me.gridSender.up('form')
+        if (senderForm) {
+          me.down('[name=code]').setValue(senderForm.record.get('code'))
+          me.down('[name=name]').setValue(senderForm.record.get('name'))
+        }
+      }, me)
+    me.callParent(arguments)
+  },
+  createToolbarButtons: function (me) {
+    let tb = me.down('toolbar')
+    tb.insert(tb.items.length - 2, {
+      xtype: 'button',
+      scale: 'medium',
+      iconCls: 'fas fa-share-square',
+      tooltip: UB.i18n('saveAndClose') + me.hotKeys[me.actionId.save].text,
+      cls: 'save-action',
+      handler: function (btn) {
+        me.onButtonSave(me)
+      }
+    })
+    let wnd = me.up('window')
+    let kMap = new Ext.util.KeyMap({
+      target: (wnd && wnd.getEl()) || me,
+      binding: [
+        {
+          key: me.hotKeys[me.actionId.save].key,
+          ctrl: me.hotKeys[me.actionId.save].ctrl,
+          shift: me.hotKeys[me.actionId.save].shift,
+          fn: function (keyCode, e) {
+            e.stopEvent()
+            me.onButtonSave(me)
+          }
+        }
+      ]
+    })
+  },
+  setIsDirty: function (action) {
+
+  },
+  onButtonSave: function (me) {
+    if (me.isValid()) {
+      let formData = {}
+      formData.dictFundSourceID = me.down('[name=dictFundSourceID]').getValue()
+      formData['dictFundSourceID.name'] = me.down('[name=dictFundSourceID]').getFieldValue('name')
+      formData.operPeriod = me.down('[name=operPeriod]').getValue()
+      formData.operSum = me.down('[name=operSum]').getValue()
+      formData.isReversal = me.down('[name=isReversal]').getValue()
+      formData.excludeOrg = me.down('[name=excludeOrg]').getValue()
+      formData.excludeDepartment = me.down('[name=excludeDepartment]').getValue()
+      formData.excludeFundSource = me.down('[name=excludeFundSource]').getValue()
+      formData.excludeWorkPlace = me.down('[name=excludeWorkPlace]').getValue()
+      Object.assign(formData, me.down('[name=accountDtID]').getValue(true, true))
+      Object.assign(formData, me.down('[name=accountKtID]').getValue(true, true))
+      formData.entryAccDt = {}
+
+      me.excludeGrid.forEach(gridName => {
+        formData.entryAccDt[gridName] = me.down(`[name=${gridName}]`).getData().map(o => o.value)
+      })
+      formData.entryAccDt = JSON.stringify(formData.entryAccDt)
+      if (me.formData && me.formData.ID) {
+        formData.ID = me.formData.ID
+      }
+      if (me.formData && me.formData.mi_modifyDate) {
+        formData.mi_modifyDate = me.formData.mi_modifyDate
+      }
+      me.onSave(formData)
+      me.up().close()
+    } else {
+      me.getForm().getFields().each(function (item) {
+        if (!item.isValid()) {
+          UB.toast({
+            entityTitle: UB.i18n('Проводка'),
+            fieldLabel: item.fieldLabel,
+            callback: function () {
+              if (me) {
+                let wnd = me.getFormWin()
+                if (wnd) wnd.toFront()
+                Ext.callback(item.focus, item, [], 100)
+              }
+            }
+          })
+          item.focus()
+        }
+      }, me)
+    }
+  }
+
+})

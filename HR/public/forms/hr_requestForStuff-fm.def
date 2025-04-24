@@ -1,0 +1,632 @@
+/* global HR AC */
+exports.formDef = {
+  requiredFields: ['requestNumber', 'organizationID', 'departmentID.mi_treePath', 'orderState',
+    'reportSettings', 'document', 'empOrderType'],
+  parentConfig: {
+    hideActions: ['docActiondocument'],
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 6,
+          iconCls: 'fas fa-angle-double-down',
+          cls: 'fill-action',
+          text: UB.i18n('Завантажити згідно вибраним параметрам'),
+          actionId: 'startReconciliation'
+        },
+        {
+          orderId: 7,
+          iconCls: 'fas fa-angle-double-down',
+          cls: 'fill-action',
+          text: UB.i18n('Завантажити згідно вибраним параметрам'),
+          actionId: 'stopReconciliation'
+        },
+        {
+          orderId: 8,
+          iconCls: 'fas fa-angle-double-down',
+          cls: 'fill-action',
+          text: UB.i18n('Завантажити згідно вибраним параметрам'),
+          actionId: 'toCompletion'
+        },
+        {
+          orderId: 9,
+          iconCls: 'fas fa-angle-double-down',
+          cls: 'fill-action',
+          text: UB.i18n('Завантажити згідно вибраним параметрам'),
+          actionId: 'renewTask'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      listeners: {
+        tabchange: function (tabPanel, activeTab) {
+          let me = tabPanel.up('form')
+          if (activeTab.ubID === 'report') {
+            if (!me.isPdfCreated) {
+              if (!me.record.get('docText') && !['ON_RECONCILATION', 'RECONCILED', 'POSTED'].includes(me.record.get('orderState'))) {
+                HR.reportTab.editHtml(me)
+              } else {
+                HR.reportTab.setReportMode(me, 'view')
+              }
+              me.isPdfCreated = true
+            } else {
+              HR.reportTab.setReportMode(me, ['ON_RECONCILATION', 'RECONCILED', 'POSTED'].includes(me.record.get('orderState')) ? 'view' : 'edit')
+            }
+          } else if (me.isNewInstance) {
+            me.saveForm().then(result => {
+              if (result === -1) {
+                me.down('tabpanel').setActiveTab(0)
+              }
+            })
+          }
+        }
+      },
+      items: [
+        {
+          title: UB.i18n('Інформація про посаду'),
+          region: 'center',
+          layout: { type: 'vbox', align: 'stretch' },
+          items: [
+            { attributeName: 'requestNumber', hidden: true },
+            { attributeName: 'requestDate', hidden: true },
+            HR.controlService.getAttrDepPosBlock({
+              valueField: 'mi_data_id',
+              labelWidth: 140,
+              showPosCategory: true
+            }),
+            { attributeName: 'assignmentType', labelWidth: 140 },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  attributeName: 'positionResp',
+                  labelWidth: 140,
+                  flex: 1
+                },
+                {
+                  xtype: 'button',
+                  width: 30,
+                  iconCls: 'fas fa-angle-double-down',
+                  cls: 'fill-action',
+                  tooltip: UB.i18n('Завантажити записи'),
+                  handler: (btn) => {
+                    const me = btn.up('form')
+                    me.loadRespPosition(me, 'positionResp')
+                  }
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  attributeName: 'positionInstruction',
+                  labelWidth: 140,
+                  flex: 1
+                },
+                {
+                  xtype: 'button',
+                  width: 30,
+                  iconCls: 'fas fa-angle-double-down',
+                  cls: 'fill-action',
+                  tooltip: UB.i18n('Завантажити записи'),
+                  handler: (btn) => {
+                    const me = btn.up('form')
+                    me.loadRespPosition(me, 'positionInstruction')
+                  }
+                }
+              ]
+            },
+            { attributeName: 'sphereOfResp', labelWidth: 140 },
+            { attributeName: 'futuresOfWork', labelWidth: 140 },
+            { attributeName: 'descOfExtRelatins', labelWidth: 140 }
+          ]
+        },
+        {
+          title: UB.i18n('Вимоги до особи'),
+          split: true,
+          flex: 1,
+          layout: 'accordion',
+          layoutConfig: {
+            collapsible: true,
+            collapsed: false
+          },
+          items: [
+            {
+              xtype: 'panel',
+              hidden: true,
+              collapsed: false
+            },
+            {
+              title: UB.i18n('Освіта'),
+              flex: 1,
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 5px; margin-bottom: 0px'
+                },
+                {
+                  name: 'requestStuffEducation',
+                  xtype: 'ubdetailgrid',
+                  pageSize: 10000,
+                  forceDataLoad: true,
+                  rowEditing: true,
+                  notWriteChanges: true,
+                  disableSearchBar: true,
+                  hidePagingBar: true,
+                  sortableColumns: false,
+                  enableColumnHide: false,
+                  hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_requestStuffEducation',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'dictEducationLevelID.name',
+                        description: UB.i18n('Освіта'),
+                        config: { flex: 1 },
+                        editor: {
+                          fieldList: ['ID', 'name'],
+                          gridFieldList: ['code', 'name', 'nominalName', 'level', 'educationKind'],
+                          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                        }
+                      },
+                      {
+                        name: 'dictAreasOfEduID.name',
+                        description: UB.i18n('Напрям освіти'),
+                        config: { flex: 1 },
+                        editor: {
+                          fieldList: ['ID', 'name'],
+                          gridFieldList: ['code', 'name'],
+                          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                        }
+                      },
+                      {
+                        name: 'dictSpecialtyID.name',
+                        description: UB.i18n('Спеціальність'),
+                        config: { flex: 1 },
+                        editor: {
+                          fieldList: ['ID', 'name'],
+                          gridFieldList: ['code', 'name'],
+                          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                        }
+                      }
+                    ]
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['requestForStuffID'],
+                  cmpInitConfig: {
+                    onBeforeEdit: function (editor, context) {
+                      const me = context.grid.up('form')
+                      me.setIsDirty(true)
+                    }
+                  }
+                },
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 5px; margin-bottom: 5px'
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Досвід роботи'),
+              flex: 1,
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 5px; margin-bottom: 0px'
+                },
+                {
+                  attributeName: 'needExperience',
+                  labelWidth: 200
+                },
+                {
+                  name: 'requestStuffExperience',
+                  xtype: 'ubdetailgrid',
+                  pageSize: 10000,
+                  forceDataLoad: true,
+                  rowEditing: true,
+                  notWriteChanges: true,
+                  disableSearchBar: true,
+                  hidePagingBar: true,
+                  sortableColumns: false,
+                  enableColumnHide: false,
+                  hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_requestStuffExperience',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'dictExperienceID.name',
+                        description: UB.i18n('Вид стажу'),
+                        config: { width: 200 },
+                        editor: {
+                          fieldList: ['ID', 'name'],
+                          gridFieldList: ['code', 'name'],
+                          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                        }
+                      },
+                      {
+                        name: 'years',
+                        description: UB.i18n('Років'),
+                        config: { width: 200 }
+                      },
+                      {
+                        name: 'months',
+                        description: UB.i18n('Місяців'),
+                        config: { width: 200 }
+                      },
+                      {
+                        name: 'comment',
+                        config: { flex: 1 }
+                      }
+                    ]
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['requestForStuffID'],
+                  cmpInitConfig: {
+                    onBeforeEdit: function (editor, context) {
+                      const me = context.grid.up('form')
+                      me.setIsDirty(true)
+                    }
+                  }
+                },
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 5px; margin-bottom: 5px'
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Професійні знання'),
+              flex: 1,
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 5px; margin-bottom: 0px'
+                },
+                {
+                  name: 'requestStuffProfi',
+                  xtype: 'ubdetailgrid',
+                  pageSize: 10000,
+                  forceDataLoad: true,
+                  rowEditing: true,
+                  notWriteChanges: true,
+                  disableSearchBar: true,
+                  hidePagingBar: true,
+                  sortableColumns: false,
+                  enableColumnHide: false,
+                  hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_requestStuffProfi',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'dictRequiredParaID.name',
+                        description: UB.i18n('Пункт вимоги'),
+                        config: { width: 200 },
+                        editor: {
+                          fieldList: ['ID', 'name', 'organizationID', 'requirementKind'],
+                          gridFieldList: ['code', 'name', 'requirementKind'],
+                          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                        }
+                      },
+                      {
+                        name: 'requirement',
+                        config: { flex: 1 },
+                        editor: {
+                          xtype: 'textBox',
+                          hideEntityItemInContext: true,
+                          gridFieldList: ['code', 'name', 'requirement', 'organizationID'],
+                          ubRequest: {
+                            entity: 'hr_dictRequiredPosition',
+                            fieldList: ['requirement', 'dictRequiredParaID', 'organizationID', 'dictRequiredParaID.requirementKind']
+                          },
+                          displayField: 'requirement',
+                          valueField: 'requirement',
+                          allowCustomText: true,
+                          triggerCls: 'hr-list-trigger'
+                        }
+                      }
+                    ]
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['requestForStuffID'],
+                  cmpInitConfig: {
+                    onBeforeEdit: function (editor, context) {
+                      context.grid.optimizeColumnWidth(true)
+                      const me = context.grid.up('form')
+                      me.attr[`requestStuffProfi.dictRequiredParaID.name`].field.on('change', (ctrl, value) => {
+                        AC.viewUtils.setFilterValue(me.attr[`requestStuffProfi.requirement`].field, {
+                          dictRequiredParaID: ctrl.getFieldValue('ID')
+                        }, ['clearValue'])
+                      })
+
+                      AC.viewUtils.setWhereListProperty(me.attr[`requestStuffProfi.dictRequiredParaID.name`].field,
+                        [
+                          ['requirementKind', '=', '1'],
+                          ['organizationID', '=', me.record.get('organizationID'), 'org'],
+                          ['organizationID', 'isNull', me.record.get('organizationID'), 'notOrg']
+
+                        ],
+                        ['([org] OR [notOrg])'],
+                        ['clearWhereList']
+                      )
+
+                      me.setIsDirty(true)
+                    }
+                  }
+                },
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 5px; margin-bottom: 5px'
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Комп\'ютерна грамотність'),
+              flex: 1,
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 5px; margin-bottom: 0px'
+                },
+                {
+                  attributeName: 'dictLevelUsePcID',
+                  labelWidth: 250
+                },
+                {
+                  name: 'requestStuffPcLiteracy',
+                  xtype: 'ubdetailgrid',
+                  pageSize: 10000,
+                  forceDataLoad: true,
+                  rowEditing: true,
+                  notWriteChanges: true,
+                  disableSearchBar: true,
+                  hidePagingBar: true,
+                  sortableColumns: false,
+                  enableColumnHide: false,
+                  hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_requestStuffPcLiteracy',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'soft',
+                        config: { width: 200 }
+                      },
+                      {
+                        name: 'dictLevelUsePcID.name',
+                        description: UB.i18n('Рівень користування'),
+                        config: { width: 200 },
+                        editor: {
+                          fieldList: ['ID', 'name'],
+                          gridFieldList: ['code', 'name'],
+                          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                        }
+                      },
+                      {
+                        name: 'comment',
+                        config: { flex: 1 }
+                      }
+                    ]
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['requestForStuffID'],
+                  cmpInitConfig: {
+                    onBeforeEdit: function (editor, context) {
+                      const me = context.grid.up('form')
+                      me.setIsDirty(true)
+                    }
+                  }
+                },
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 5px; margin-bottom: 5px'
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Ділові якості'),
+              flex: 1,
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 5px; margin-bottom: 0px'
+                },
+                {
+                  name: 'requestStuffComp',
+                  xtype: 'ubdetailgrid',
+                  pageSize: 10000,
+                  forceDataLoad: true,
+                  rowEditing: true,
+                  notWriteChanges: true,
+                  disableSearchBar: true,
+                  hidePagingBar: true,
+                  sortableColumns: false,
+                  enableColumnHide: false,
+                  hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_requestStuffComp',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'dictRequiredParaID.name',
+                        description: UB.i18n('Пункт вимоги'),
+                        config: { width: 200 },
+                        editor: {
+                          fieldList: ['ID', 'name', 'organizationID', 'requirementKind'],
+                          gridFieldList: ['code', 'name', 'requirementKind'],
+                          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                        }
+                      },
+                      {
+                        name: 'requirement',
+                        config: { flex: 1 },
+                        editor: {
+                          xtype: 'textBox',
+                          hideEntityItemInContext: true,
+                          gridFieldList: ['code', 'name', 'requirement', 'organizationID'],
+                          ubRequest: {
+                            entity: 'hr_dictRequiredPosition',
+                            fieldList: ['requirement', 'dictRequiredParaID', 'organizationID', 'dictRequiredParaID.requirementKind']
+                          },
+                          displayField: 'requirement',
+                          valueField: 'requirement',
+                          allowCustomText: true,
+                          triggerCls: 'hr-list-trigger'
+                        }
+                      }
+                    ]
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['requestForStuffID'],
+                  cmpInitConfig: {
+                    onBeforeEdit: function (editor, context) {
+                      context.grid.optimizeColumnWidth(true)
+                      const me = context.grid.up('form')
+                      me.attr[`requestStuffComp.dictRequiredParaID.name`].field.on('change', (ctrl, value) => {
+                        AC.viewUtils.setFilterValue(me.attr[`requestStuffComp.requirement`].field, {
+                          dictRequiredParaID: ctrl.getFieldValue('ID')
+                        }, ['clearValue'])
+                      })
+
+                      AC.viewUtils.setWhereListProperty(me.attr[`requestStuffComp.dictRequiredParaID.name`].field,
+                        [
+                          ['requirementKind', '=', '2'],
+                          ['organizationID', '=', me.record.get('organizationID'), 'org'],
+                          ['organizationID', 'isNull', me.record.get('organizationID'), 'notOrg']
+
+                        ],
+                        ['([org] OR [notOrg])'],
+                        ['clearWhereList']
+                      )
+
+                      me.setIsDirty(true)
+                    }
+                  }
+                },
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 5px; margin-bottom: 5px'
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Особисті якості'),
+              flex: 1,
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 5px; margin-bottom: 0px'
+                },
+                {
+                  name: 'requestStuffPrivat',
+                  xtype: 'ubdetailgrid',
+                  pageSize: 10000,
+                  forceDataLoad: true,
+                  rowEditing: true,
+                  notWriteChanges: true,
+                  disableSearchBar: true,
+                  hidePagingBar: true,
+                  sortableColumns: false,
+                  enableColumnHide: false,
+                  hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_requestStuffPrivat',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'requirement',
+                        config: { flex: 1 },
+                        editor: {
+                          xtype: 'textBox',
+                          hideEntityItemInContext: true,
+                          gridFieldList: ['code', 'name', 'requirement', 'organizationID'],
+                          ubRequest: {
+                            entity: 'hr_dictRequiredPosition',
+                            fieldList: ['requirement', 'dictRequiredParaID', 'organizationID', 'dictRequiredParaID.requirementKind']
+                          },
+                          displayField: 'requirement',
+                          valueField: 'requirement',
+                          allowCustomText: true,
+                          triggerCls: 'hr-list-trigger'
+
+                        }
+                      }
+                    ]
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['requestForStuffID'],
+                  cmpInitConfig: {
+                    onBeforeEdit: function (editor, context) {
+                      context.grid.optimizeColumnWidth(true)
+                      const me = context.grid.up('form')
+                      AC.viewUtils.setWhereListProperty(me.attr[`requestStuffPrivat.requirement`].field,
+                        [
+                          ['dictRequiredParaID.requirementKind', '=', '3'],
+                          ['organizationID', '=', me.record.get('organizationID'), 'org'],
+                          ['organizationID', 'isNull', null, 'notOrg']
+
+                        ],
+                        ['([org] OR [notOrg])'],
+                        ['clearWhereList']
+                      )
+
+                      me.setIsDirty(true)
+                    }
+                  }
+                },
+                {
+                  layout: { type: 'hbox' },
+                  style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 5px; margin-bottom: 5px'
+                }
+              ]
+            }
+          ]
+        },
+        HR.reportTab.getTabConfig({ getRepName: 'getReportName', repTabIndex: 2 }),
+        {
+          title: UB.i18n('Маршрут'),
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          items: [
+            {
+              xtype: 'recpanel',
+              name: 'recpanel'
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

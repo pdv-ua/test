@@ -1,0 +1,413 @@
+// @isModal true
+/* global UB Ext appAC UB $App AC */
+
+exports.formDef = 'HR.empOrderChgPositionAttrsDet'
+
+Ext.define('HR.empOrderChgPositionAttrsDet', {
+  extend: 'Ext.form.Panel',
+  width: 600,
+  height: 400,
+  layout: 'border',
+  alias: 'widget.empOrderChgPositionAttrsDet',
+  initComponent: function () {
+    const me = this
+    me.dockedItems = [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [],
+      ubID: 'mainToolbar',
+      enableOverflow: true
+    }]
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'center',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            name: 'dictEmpPosAttrID',
+            fieldLabel: UB.i18n('Атрибут'),
+            allowBlank: false,
+            ubRequest: {
+              entity: 'hr_dictEmpPosAttr',
+              fieldList: ['ID', 'name', 'attrName']
+            },
+            listeners: {
+              change: function (ctrl) {
+                const me = ctrl.up('form')
+                me.setControls(ctrl)
+              }
+            }
+          },
+          {
+            xtype: 'checkbox',
+            name: 'changeAll',
+            fieldLabel: UB.i18n('Змінити всі')
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'enumCurValue',
+            fieldLabel: UB.i18n('Заміняти значення'),
+            hideEntityItemInContext: true,
+            hidden: true,
+            valueField: 'code',
+            displayField: 'name',
+            ubRequest: {
+              entity: 'ubm_enum',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['code', 'name', 'eGroup', 'sortOrder']
+            }
+          },
+          {
+            xtype: 'ubdatefield',
+            name: 'dateCurValue',
+            fieldLabel: UB.i18n('Заміняти значення'),
+            hidden: true
+          },
+          {
+            xtype: 'ubtextfield',
+            name: 'stringCurValue',
+            fieldLabel: UB.i18n('Заміняти значення'),
+            hidden: true
+          },
+          {
+            xtype: 'ubboolbox',
+            name: 'boolCurValue',
+            fieldLabel: UB.i18n('Заміняти значення'),
+            hidden: true
+          },
+          {
+            xtype: 'numberfield',
+            name: 'numberCurValue',
+            fieldLabel: UB.i18n('Заміняти значення'),
+            hideTrigger: true,
+            hidden: true
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'enumNewValue',
+            fieldLabel: UB.i18n('Нове значення'),
+            hideEntityItemInContext: true,
+            hidden: true,
+            valueField: 'code',
+            displayField: 'name',
+            ubRequest: {
+              entity: 'ubm_enum',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['code', 'name', 'eGroup', 'sortOrder']
+            }
+          },
+          {
+            xtype: 'ubdatefield',
+            name: 'dateNewValue',
+            fieldLabel: UB.i18n('Нове значення'),
+            hidden: true
+          },
+          {
+            xtype: 'ubtextfield',
+            name: 'stringNewValue',
+            fieldLabel: UB.i18n('Нове значення'),
+            hidden: true
+          },
+          {
+            xtype: 'ubboolbox',
+            name: 'boolNewValue',
+            fieldLabel: UB.i18n('Нове значення'),
+            hidden: true
+          },
+          {
+            xtype: 'numberfield',
+            name: 'numberNewValue',
+            fieldLabel: UB.i18n('Нове значення'),
+            hideTrigger: true,
+            hidden: true
+          },
+          {
+            xtype: 'panel',
+            name: 'valuePanel',
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+
+            },
+            items: [
+              {
+                xtype: 'combobox',
+                name: 'entityCurValue',
+                fieldLabel: UB.i18n('Заміняти значення'),
+                hideTrigger: true,
+                hidden: true
+              },
+              {
+                xtype: 'combobox',
+                name: 'entityNewValue',
+                fieldLabel: UB.i18n('Нове значення'),
+                hideTrigger: true,
+                hidden: true
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        dictEmpPosAttrID: me.down('[name=dictEmpPosAttrID]'),
+        changeAll: me.down('[name=changeAll]'),
+        dateCurValue: me.down('[name=dateCurValue]'),
+        stringCurValue: me.down('[name=stringCurValue]'),
+        boolCurValue: me.down('[name=boolCurValue]'),
+        numberCurValue: me.down('[name=numberCurValue]'),
+        entityCurValue: me.down('[name=entityCurValue]'),
+        enumCurValue: me.down('[name=enumCurValue]'),
+        dateNewValue: me.down('[name=dateNewValue]'),
+        stringNewValue: me.down('[name=stringNewValue]'),
+        boolNewValue: me.down('[name=boolNewValue]'),
+        numberNewValue: me.down('[name=numberNewValue]'),
+        entityNewValue: me.down('[name=entityNewValue]'),
+        enumNewValue: me.down('[name=enumNewValue]'),
+        valuePanel: me.down('[name=valuePanel]')
+      }
+      me.attr.changeAll.on('change', (ctrl, newValue) => {
+        me.setDisabledCurValues(newValue)
+        if (newValue) {
+          me.clearCurValues()
+        }
+      })
+      me.createToolbarButtons()
+      if (me.formData) {
+        me.attr.dictEmpPosAttrID.setValueById(me.formData.dictEmpPosAttrID)
+        me.attr.changeAll.setValue(me.formData.changeAll)
+      } else {
+        me.attr.changeAll.setValue(true)
+      }
+      const isFundSourceAccounting = AC.settings.get('hrFundSourceAccounting', appAC.globalOrganization())
+      if (isFundSourceAccounting === 'STAFF') {
+        AC.viewUtils.setWhereListProperty(me.attr.dictEmpPosAttrID, [
+          ['attrName', '!=', 'mtCount']
+        ])
+      }
+    }, me)
+
+    me.createToolbarButtons = function () {
+      const me = this
+      let tb = me.down('toolbar')
+      tb.insert(tb.items.length - 2, {
+        xtype: 'button',
+        scale: 'medium',
+        iconCls: 'u-icon-save-and-close',
+        tooltip: UB.i18n('saveAndClose'),
+        cls: 'save-action',
+        handler: function (btn) {
+          me.onButtonSave()
+        }
+      })
+    }
+
+    me.onButtonSave = function () {
+      let curValue = null
+      let newValue = null
+      switch (me.dataType) {
+        case 'DATE':
+          curValue = AC.dateService.shiftDate(me.attr.dateCurValue.getValue())
+          newValue = AC.dateService.shiftDate(me.attr.dateNewValue.getValue())
+          break
+        case 'STRING':
+        case 'TEXT':
+          curValue = me.attr.stringCurValue.getValue()
+          newValue = me.attr.stringNewValue.getValue()
+          break
+        case 'BOOLEAN':
+          curValue = me.attr.boolCurValue.getValue()
+          newValue = me.attr.boolNewValue.getValue()
+          break
+        case 'INT':
+        case 'BIGINT':
+        case 'CURRENCY':
+        case 'FLOAT':
+          curValue = me.attr.numberCurValue.getValue()
+          newValue = me.attr.numberNewValue.getValue()
+          break
+        case 'ENTITY':
+          curValue = me.attr.entityCurValue.getValue()
+          newValue = me.attr.entityNewValue.getValue()
+          break
+        case 'ENUM':
+          curValue = me.attr.enumCurValue.getValue()
+          newValue = me.attr.enumNewValue.getValue()
+          break
+        default:
+          curValue = null
+          newValue = null
+          break
+      }
+      let curValueText = curValue
+      let newValueText = newValue
+      if (me.dataType === 'DATE') {
+        curValueText = AC.dateService.formatDate(curValue)
+        newValueText = AC.dateService.formatDate(newValue)
+      }
+      if (me.dataType === 'ENUM') {
+        curValueText = me.attr.enumCurValue.getFieldValue('name')
+        newValueText = me.attr.enumNewValue.getFieldValue('name')
+      }
+      if (me.dataType === 'ENTITY') {
+        curValueText = me.attr.entityCurValue.getRawValue()
+        newValueText = me.attr.entityNewValue.getRawValue()
+      }
+      const parentForm = me.gridSender.up('form')
+      const result = {
+        'dictEmpPosAttrID.name': me.attr.dictEmpPosAttrID.getFieldValue('name'),
+        orderID: parentForm.record.get('orderID'),
+        paraID: parentForm.instanceID,
+        changeAll: me.attr.changeAll.getValue(),
+        dictEmpPosAttrID: me.attr.dictEmpPosAttrID.getValue(),
+        curValue: curValue,
+        newValue: newValue,
+        curValueText: curValueText,
+        newValueText: newValueText
+      }
+      if (me.formData && me.formData.ID) {
+        result.ID = me.formData.ID
+      }
+      if (me.formData && me.formData.mi_modifyDate) {
+        result.mi_modifyDate = me.formData.mi_modifyDate
+      }
+      me.onSave(result)
+      me.up('window').close()
+    }
+
+    me.setDisabledCurValues = function (newValue) {
+      me.attr.dateCurValue.setDisabled(newValue)
+      me.attr.stringCurValue.setDisabled(newValue)
+      me.attr.boolCurValue.setDisabled(newValue)
+      me.attr.numberCurValue.setDisabled(newValue)
+      me.attr.entityCurValue.setDisabled(newValue)
+      me.attr.enumCurValue.setDisabled(newValue)
+    }
+
+    me.clearCurValues = function () {
+      me.attr.dateCurValue.setValue(null)
+      me.attr.stringCurValue.setValue(null)
+      me.attr.boolCurValue.setValue(null)
+      me.attr.numberCurValue.setValue(null)
+      me.attr.entityCurValue.setValue(null)
+      me.attr.enumCurValue.setValue(null)
+    }
+
+    me.clearNewValues = function () {
+      me.attr.dateNewValue.setValue(null)
+      me.attr.stringNewValue.setValue(null)
+      me.attr.boolNewValue.setValue(null)
+      me.attr.numberNewValue.setValue(null)
+      me.attr.entityNewValue.setValue(null)
+      me.attr.enumNewValue.setValue(null)
+    }
+
+    me.dataType = null
+
+    me.setControls = function (ctrl) {
+      const fields = AC.entityUtils.getAttributes('hr_employeePosition')
+      const attrName = ctrl.getFieldValue('attrName')
+      if (fields.hasOwnProperty(attrName)) {
+        const entityAttr = fields[attrName]
+        const type = entityAttr.dataType.toUpperCase()
+        me.dataType = type
+
+        me.clearCurValues()
+        me.clearNewValues()
+
+        me.attr.dateCurValue.setVisible(type === 'DATE' || type === 'DATETIME')
+        me.attr.stringCurValue.setVisible(type === 'STRING' || type === 'TEXT')
+        me.attr.boolCurValue.setVisible(type === 'BOOLEAN')
+        me.attr.numberCurValue.setVisible(type === 'INT' || type === 'BIGINT' || type === 'CURRENCY' || type === 'FLOAT')
+        me.attr.entityCurValue.setVisible(type === 'ENTITY')
+        me.attr.enumCurValue.setVisible(type === 'ENUM')
+
+        me.attr.dateNewValue.setVisible(type === 'DATE' || type === 'DATETIME')
+        me.attr.stringNewValue.setVisible(type === 'STRING' || type === 'TEXT')
+        me.attr.boolNewValue.setVisible(type === 'BOOLEAN')
+        me.attr.numberNewValue.setVisible(type === 'INT' || type === 'BIGINT' || type === 'CURRENCY' || type === 'FLOAT')
+        me.attr.entityNewValue.setVisible(type === 'ENTITY')
+        me.attr.enumNewValue.setVisible(type === 'ENUM')
+
+        if (type === 'ENUM') {
+          AC.viewUtils.setFilterValue(me.attr.enumCurValue, { eGroup: entityAttr.enumGroup })
+          AC.viewUtils.setFilterValue(me.attr.enumNewValue, { eGroup: entityAttr.enumGroup })
+        }
+        if (type === 'ENTITY') {
+          let entityName = entityAttr.associatedEntity
+          let descriptionName = $App.domainInfo.entities[entityName].descriptionAttribute || null
+
+          me.attr.entityCurValue.destroy()
+          me.attr.entityNewValue.destroy()
+          if (descriptionName) {
+            let fields = ['ID', descriptionName]
+
+            me.attr.entityCurValue = Ext.create('UB.ux.form.field.UBComboBox',
+              {
+                xtype: 'ubcombobox',
+                name: 'entityCurValue',
+                fieldLabel: UB.i18n('Заміняти значення'),
+                displayField: descriptionName,
+                valueField: 'ID',
+                ubRequest: {
+                  entity: entityName,
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: fields
+                }
+
+              })
+            me.attr.entityNewValue = Ext.create('UB.ux.form.field.UBComboBox',
+              {
+                xtype: 'ubcombobox',
+                name: 'entityNewValue',
+                fieldLabel: UB.i18n('Нове значення'),
+                displayField: descriptionName,
+                valueField: 'ID',
+                ubRequest: {
+                  entity: entityName,
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: fields
+                }
+
+              })
+            me.attr.valuePanel.add(me.attr.entityCurValue)
+            me.attr.valuePanel.add(me.attr.entityNewValue)
+          }
+          me.setDisabledCurValues(me.attr.changeAll.getValue())
+        }
+        if (me.formData) {
+          me.attr.stringCurValue.setValue(type === 'STRING' || type === 'TEXT' ? me.formData.curValue : null)
+          me.attr.dateCurValue.setValue(type === 'DATE' ? AC.dateService.shiftDate(me.formData.curValue) : null)
+          me.attr.boolCurValue.setValue(type === 'BOOL' ? Number(me.formData.curValue) : null)
+          me.attr.numberCurValue.setValue(type === 'INT' || type === 'BIGINT' || type === 'CURRENCY' || type === 'FLOAT' ? Number(me.formData.curValue) : null)
+          me.attr.enumCurValue.setValue(type === 'ENUM' ? me.formData.curValue : null)
+
+          me.attr.stringNewValue.setValue(type === 'STRING' || type === 'TEXT' ? me.formData.newValue : null)
+          me.attr.dateNewValue.setValue(type === 'DATE' ? AC.dateService.shiftDate(me.formData.newValue) : null)
+          me.attr.boolNewValue.setValue(type === 'BOOL' ? Number(me.formData.newValue) : null)
+          me.attr.numberNewValue.setValue(type === 'INT' || type === 'BIGINT' || type === 'CURRENCY' || type === 'FLOAT' ? Number(me.formData.newValue) : null)
+          me.attr.enumNewValue.setValue(type === 'ENUM' ? me.formData.newValue : null)
+
+          if (type === 'ENTITY') {
+            me.attr.entityCurValue.setValueById(Number(me.formData.curValue))
+            me.attr.entityNewValue.setValueById(Number(me.formData.newValue))
+          }
+          me.formData.curValue = null
+          me.formData.newValue = null
+          me.formData.curValueText = null
+          me.formData.newValueText = null
+        }
+      }
+    }
+
+    me.callParent(arguments)
+  }
+})

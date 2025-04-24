@@ -1,0 +1,151 @@
+{
+  "caption": "Місце виникнення виробничих витрат",
+  "description": "Місце виникнення виробничих витрат",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "fullName",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Повна назва",
+      "description": "Повна назва",
+      "documentation": "Повна назва",
+      "allowNull": false
+    },
+    {
+      "name": "dictBalanceUnitID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictBalanceUnit",
+      "caption": "Балансова одиниця",
+      "description": "Балансова одиниця",
+      "documentation": "Балансова одиниця"
+    },
+    {
+      "name": "dictActivityTypeID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictActivityType",
+      "caption": "Вид діяльності",
+      "description": "Вид діяльності",
+      "documentation": "Вид діяльності"
+    },
+    {
+      "name": "dictDepCostKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictDepCostKind",
+      "caption": "Вид підрозділу",
+      "description": "Вид підрозділу",
+      "documentation": "Вид підрозділу"
+    },
+    {
+      "name": "dictCostPlaceTypeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictCostPlaceType",
+      "caption": "Тип місця виникнення витрат",
+      "description": "Тип місця виникнення витрат",
+      "documentation": "Тип місця виникнення витрат"
+    },
+    {
+      "name": "dictCostPlaceNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictCostPlaceNumber",
+      "caption": "Порядковий номер місця виникнення витрат",
+      "description": "Порядковий номер місця виникнення витрат",
+      "documentation": "Порядковий номер місця виникнення витрат"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "accountID",
+      "dataType": "Entity",
+      "associatedEntity": "gl_account",
+      "caption": "Рахунок витрат",
+      "documentation": "Рахунок витрат",
+      "description": "Рахунок витрат"
+    },
+    {
+      "name": "calcScheme",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Схема калькуляції",
+      "description": "Схема калькуляції",
+      "documentation": "Схема калькуляції"
+    },
+    {
+      "name": "mvp",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Місце виникнення прибутку",
+      "description": "Місце виникнення прибутку",
+      "documentation": "Місце виникнення прибутку"
+    },
+    {
+      "name": "levelCode",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Область ієрархії",
+      "description": "Область ієрархії",
+      "documentation": "Область ієрархії"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

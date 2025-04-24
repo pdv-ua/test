@@ -1,0 +1,138 @@
+exports.formDef = {
+  requiredFields: ['orderState', 'description'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: { type: 'hbox' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 130 },
+              flex: 1,
+              items: [
+                {
+                  attributeName: 'orderNumber',
+                  readOnly: true,
+                  allowBlank: true
+                },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      attributeName: 'orderDate',
+                      labelWidth: 130,
+                      width: 320
+                    },
+                    {
+                      layout: { type: 'hbox', pack: 'end' },
+                      flex: 1,
+                      items: [
+                        {
+                          attributeName: 'entryDate',
+                          labelWidth: 130,
+                          width: 320
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  attributeName: 'orgID',
+                  fieldList: ['mi_data_id', 'description'],
+                  valueField: 'mi_data_id',
+                  displayField: 'description',
+                  __mip_recordhistory_all: true,
+                  whereList: {
+                    state: {
+                      expression: '[state]',
+                      condition: 'equal',
+                      values: {
+                        state: 'ACTIVE'
+                      }
+                    }
+                  }
+                },
+                { attributeName: 'textOrder', xtype: 'textarea', height: 40 }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'respEmployeeID',
+                  fieldList: ['ID', 'description'],
+                  gridFieldList: ['ID', 'description'],
+                  valueField: 'ID',
+                  displayField: 'description',
+                  __mip_recordhistory_all: true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Оргструктура'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'staffTreeControl',
+              stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_staffOrder_staffTreeControl'),
+              name: 'staffTreeControl',
+              searchFeature: true
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додатки'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'docAttachment',
+              entity: 'hr_orderAttachment',
+              detailFields: 'documentID',
+              masterFields: 'ID',
+              showOriginal: true,
+              minHeight: 55,
+              maxHeight: 140,
+              height: 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

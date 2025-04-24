@@ -1,0 +1,234 @@
+/* global Ext UB AC HR */
+exports.formDef = 'HR.payRollPaymentDt'
+
+Ext.define('HR.payRollPaymentDt', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.payRollPaymentDt',
+  actionId: {
+    save: 'save'
+  },
+  eventId: {
+    save: 'save'
+  },
+  hotKeys: {
+    save: {
+      key: Ext.EventObject.ENTER,
+      shift: false,
+      ctrl: true,
+      text: ' (Ctrl+Enter)'
+    }
+  },
+  initComponent: function () {
+    let me = this
+    if (me.orderState !== 'POSTED') {
+      me.dockedItems = [{
+        xtype: 'toolbar',
+        dock: 'top',
+        items: [],
+        enableOverflow: true
+      }]
+    }
+    me.items = [
+      {
+        region: 'north',
+        autoScroll: true,
+        split: true,
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'textfield',
+            fieldLabel: UB.i18n('Працівник'),
+            name: 'employeeNumber',
+            labelWidth: 120,
+            width: 500,
+            readOnly: true
+          },
+          {
+            xtype: 'numberfield',
+            name: 'baseSum',
+            fieldLabel: UB.i18n('Нараховано'),
+            decimalPrecision: 2,
+            hideTrigger: true,
+            labelWidth: 120,
+            width: 500,
+            readOnly: true
+          },
+          {
+            xtype: 'numberfield',
+            name: 'taxSum',
+            fieldLabel: UB.i18n('Утримано'),
+            decimalPrecision: 2,
+            hideTrigger: true,
+            labelWidth: 120,
+            width: 500,
+            readOnly: true
+          },
+          {
+            xtype: 'numberfield',
+            name: 'paySum',
+            fieldLabel: UB.i18n('До виплати'),
+            decimalPrecision: 2,
+            hideTrigger: true,
+            labelWidth: 120,
+            width: 500,
+            readOnly: true
+          }
+        ]
+
+      },
+      {
+        xtype: 'acGrid',
+        name: 'paymentDt',
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_paymentOrder_payOrderDt'),
+        title: UB.i18n(`Обов'язкові утримання`),
+        autoScroll: true,
+        flex: 1,
+        region: 'center',
+        cellEditing: true,
+        storeType: 'local',
+        showToolBar: false,
+        disablePaging: true,
+        loadMaskMessage: UB.i18n('Завантаження даних...'),
+        summary: { paySum: 'sum' },
+        summaryDataOnClient: true,
+        edit: () => {
+          let taxSum = 0
+          me.attr.paymentDt.getData().forEach(row => {
+            if (!me.esvOlbs.includes(row.payObligatoryID)) {
+              taxSum = AC.currencyService.round(taxSum + Number(row.paySum))
+            }
+          })
+          me.attr.taxSum.setValue(taxSum)
+          me.attr.paySum.setValue(AC.currencyService.round(me.attr.baseSum.getValue() - taxSum))
+        },
+        onBeforeEdit: function () {
+          return me.orderState !== 'POSTED'
+        },
+        fields: [
+          {
+            name: 'data'
+          },
+          {
+            name: 'payObligatoryID'
+          },
+          {
+            name: 'name',
+            columnConfig: {
+              text: UB.i18n('Назва'),
+              flex: 1
+            }
+          },
+          {
+            name: 'paySum',
+            columnConfig: {
+              text: UB.i18n('Сума'),
+              width: 150,
+              floatFormat: 2,
+              align: 'right',
+              editor: {
+                dataType: 'Currency',
+                decimalPrecision: 2
+              }
+            }
+          }
+        ]
+      }
+
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      me.up('window').setTitle(UB.i18n('Коригування обов\'язкових утримань'))
+      if (me.orderState !== 'POSTED') {
+        me.createToolbarButtons(me)
+      }
+      me.esvOlbs = []
+
+      UB.Repository('hr_payObligatoryOrg')
+        .attrs(['payObligatoryID'])
+        .where('orgID', 'equal', me.parentFrom.record.get('organizationID'))
+        .selectAsObject().then(parRes => {
+          const payObligatoryByParentOrg = parRes.map(o => o.payObligatoryID)
+          UB.Repository('hr_payObligatory')
+            .attrs(['ID'])
+            .where('organizationID', '=', me.parentFrom.record.get('organizationID'), 'byOrgID')
+            .where('ID', 'in', payObligatoryByParentOrg, 'byParentOrg')
+            .logic('([byOrgID] or [byParentOrg])')
+            .where('type', '=', '3')
+            .selectAsObject().then(res => {
+              me.esvOlbs = res.map(o => o.ID)
+            })
+        })
+
+      me.attr = {
+        employeeNumber: me.down('[name=employeeNumber]'),
+        baseSum: me.down('[name=baseSum]'),
+        taxSum: me.down('[name=taxSum]'),
+        paySum: me.down('[name=paySum]'),
+        paymentDt: me.down('[name=paymentDt]')
+      }
+
+      me.attr.employeeNumber.setValue(me.record.get('employeeNumberID.description'))
+      me.attr.baseSum.setValue(me.record.get('baseSum'))
+      me.attr.taxSum.setValue(me.record.get('taxSum'))
+      me.attr.paySum.setValue(me.record.get('paySum'))
+      const paymentDt = JSON.parse(me.record.get('paymentDt'))
+      const data = []
+      paymentDt.forEach(row => {
+        data.push({
+          name: row['payObligatoryID.name'],
+          paySum: row.paySum,
+          payObligatoryID: row.payObligatoryID,
+          data: JSON.stringify(row)
+        })
+      })
+      me.attr.paymentDt.setLocalStoreData(data)
+    }, me)
+    me.callParent(arguments)
+  },
+  createToolbarButtons: function (me) {
+    let tb = me.down('toolbar')
+    tb.insert(tb.items.length - 2, {
+      xtype: 'button',
+      scale: 'medium',
+      name: 'saveAndClose',
+      iconCls: 'fas fa-share-square',
+      tooltip: UB.i18n('saveAndClose') + me.hotKeys[me.actionId.save].text,
+      cls: 'save-action',
+      handler: function () {
+        me.onButtonSave(me)
+      }
+    })
+  },
+  onButtonSave: function (me) {
+    const resultData = []
+    let taxSum = 0
+    me.attr.paymentDt.getData().forEach(row => {
+      const data = JSON.parse(row.data)
+      if (data.paySum !== row.paySum) {
+        data.paySum = row.paySum
+        data.paymentOrderAccDt = row.paySum === 0 ? [] : HR.accrualService.correctAccrualDt(data.paymentOrderAccDt, row.paySum)
+        data.paymentOrderDt = row.paySum === 0 ? [] : HR.accrualService.correctAccrualDt(data.paymentOrderDt, row.paySum)
+      }
+      if (!me.esvOlbs.includes(row.payObligatoryID)) {
+        taxSum = AC.currencyService.round(taxSum + data.paySum)
+      }
+      resultData.push(data)
+    })
+    me.record.set('taxSum', taxSum)
+    me.record.set('paySum', AC.currencyService.round(me.record.get('baseSum') - taxSum))
+    me.record.set('paidSum', AC.currencyService.round(me.record.get('baseSum') - taxSum))
+    me.record.set('flagsFix', (me.record.set('flagsFix') || 0) & ~(1 << 16))
+    me.record.set('paymentDt', JSON.stringify(resultData))
+    if (me.parentGrid && me.parentGrid.GridSummary) {
+      me.parentGrid.GridSummary.dataBind()
+    }
+    me.parentFrom.setIsDirty(true)
+    me.parentFrom.setPayOrder(me.parentFrom, me.parentFrom.attr.payRollDt.getData())
+    me.up().close()
+  }
+
+})

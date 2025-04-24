@@ -1,0 +1,117 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['orderID', 'organizationID', 'empOrderType', 'firstName', 'lastName', 'middleName',
+    'employeePositionID.employeeNumberID', 'typeCompensation'],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      attributeName: 'employeePositionID',
+      fieldList: ['ID', 'description', 'workScheduleID', 'employeeNumberID', 'organizationID', 'workPlace', 'vacancyDateFrom',
+        'vacancyDateTo', 'dictStaffCatID', 'positionType'],
+      orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+      fieldLabel: UB.i18n('Працівник'),
+      allowBlank: false,
+      addWorkPlace: true,
+      xtype: 'empPositionCombobox',
+      labelWidth: 150
+    },
+    {
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+      items: [
+        {
+          attributeName: 'dateFrom',
+          fieldLabel: UB.i18n('Дата роботи'),
+          labelWidth: 150,
+          listeners: {
+            blur: ctrl => {
+              // ctrl.up('form').checkIsNotWorkDay()
+            }
+          }
+        },
+        {
+          xtype: 'button',
+          cls: 'list-icon',
+          ubID: 'btnSelectByTree',
+          tooltip: UB.i18n('Розклад роботи на вказану дату'),
+          width: 35,
+          height: 35,
+          margin: '0 2 0 -14',
+          handler: btn => {
+            btn.up('form').showTimPlanRecord()
+          }
+        },
+        {
+          attributeName: 'dictTimeCostID',
+          flex: 1
+        }
+      ]
+    },
+    {
+      attributeName: 'workHours',
+      labelWidth: 150,
+      decimalPrecision: 2
+    },
+    {
+      layout: {
+        type: 'hbox',
+      },
+      name: 'reasonDocPanel',
+      items: [{
+        attributeName: 'restDayScheduleDesc',
+        labelWidth: 150,
+        flex: 1
+      },
+      {
+        xtype: 'button',
+        cls: 'list-icon',
+        name: 'restDayScheduleDescButton',
+        tooltip: UB.i18n('Вибрати'),
+        width: 35,
+        height: 35,
+        margin: '0 2 0 -45',
+        handler: btn => btn.up('form').getField('restDayScheduleDesc').selectHandler(btn)
+      }
+      ]
+    },
+    {
+      attributeName: 'typeCompensation',
+      labelWidth: 150
+    },
+    {
+      attributeName: 'byRequest',
+      labelWidth: 150,
+      hidden: true
+    },
+    {
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+      items: [
+        {
+          attributeName: 'dateRest',
+          labelWidth: 150,
+          hidden: true
+        },
+        {
+          attributeName: 'dictTimeCost2ID',
+          labelWidth: 150,
+          flex: 1,
+          hidden: true
+        }
+      ]
+    }
+  ]
+}

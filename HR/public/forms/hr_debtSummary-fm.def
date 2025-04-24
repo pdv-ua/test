@@ -1,0 +1,824 @@
+/* global AC Ext appAC appHR UB $App saveAs Blob moment */
+
+exports.formDef = 'HR.debtSummary'
+
+Ext.define('HR.debtSummary', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.debtSummary',
+  initComponent: function () {
+    const me = this
+
+    me.dockedItems = [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        ubID: 'mainToolbar',
+        enableOverflow: true,
+        items: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Оновити'),
+            iconCls: 'u-icon-refresh',
+            handler: function () {
+              me.setAccrualBalance()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Фільтр'),
+            name: 'filterButton',
+            iconCls: 'u-icon-layers',
+            handler: function (btn) {
+              me.isFilter = !me.isFilter
+              me.attr.filterPanel[me.isFilter ? 'show' : 'hide']()
+              btn.addCls(me.isFilter ? 'custom-action_btn' : '')
+              btn.removeCls(!me.isFilter ? 'custom-action_btn' : '')
+              btn.setTooltip(me.isFilter ? UB.i18n('Виключити параметри фільтрації показників') : UB.i18n('Включити параметри фільтрації показників'))
+              me.setAccrualBalance()
+            }
+          },
+          {
+            xtype: 'label',
+            text: UB.i18n('Період:'),
+            cls: 'x-form-item-label',
+            margin: '0 0 0 8',
+            width: 60
+          },
+          {
+            xtype: 'button',
+            text: '<',
+            margin: '0 0 0 0',
+            tooltip: UB.i18n('Попередній період'),
+            width: 30,
+            handler: () => {
+              const priorID = me.attr.periodID.getFieldValue('priorPeriodID')
+              if (priorID) {
+                me.attr.periodID.setValueById(priorID)
+              }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'periodID',
+            fieldLabel: '',
+            hideLabel: true,
+            pageSize: 50,
+            width: 250,
+            hideEntityItemInContext: true,
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'hr_dictPeriod',
+              fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'priorPeriodID', 'nextPeriodID'],
+              orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+            },
+            listeners: {
+              expand: appHR.periodExpand,
+              change: function (ctrl, value) {
+                if (ctrl.skipChange) {
+                  ctrl.skipChange = false
+                } else {
+                  if (value) {
+                    me.setAccrualBalance()
+                  }
+                }
+              }
+            }
+          },
+          {
+            xtype: 'button',
+            text: '>',
+            tooltip: UB.i18n('Наступний період'),
+            // width: 30,
+            handler: () => {
+              const nextID = me.attr.periodID.getFieldValue('nextPeriodID')
+              if (nextID) {
+                me.attr.periodID.setValueById(nextID)
+              }
+            }
+          },
+          {
+            scale: 'medium',
+            iconCls: 'fas fa-file-excel',
+            tooltip: UB.i18n('Експорт'),
+            cls: 'green-action',
+            xtype: 'button',
+            handler: function (btn) {
+              function setStyles () {
+                defFont = stl.fonts.add({
+                  code: 'def',
+                  name: 'Calibri',
+                  fontSize: 11,
+                  scheme: 'minor'
+                })
+                stl.fonts.add({
+                  code: 'defBold',
+                  name: 'Calibri',
+                  fontSize: 11,
+                  scheme: 'minor',
+                  bold: true
+                })
+
+                borderFull = stl.borders.add({
+                  left: {
+                    style: 'thin'
+                  },
+                  right: {
+                    style: 'thin'
+                  },
+                  top: {
+                    style: 'thin'
+                  },
+                  bottom: {
+                    style: 'thin'
+                  }
+                })
+                stl.alignments.add({
+                  code: 'Hright',
+                  horizontal: 'right'
+                })
+                stl.alignments.add({
+                  code: 'Hcenter',
+                  horizontal: 'center',
+                  wrapText: '1'
+                })
+                stl.alignments.add({
+                  code: 'HVcenter',
+                  horizontal: 'center',
+                  vertical: 'center',
+                  wrapText: '1'
+                })
+                stl.alignments.add({
+                  code: 'wrapText',
+                  wrapText: '1'
+                })
+                styleCol = stl.getStyle({
+                  font: defFont
+                })
+                styleNumCol = stl.getStyle({
+                  font: defFont,
+                  alignment: stl.alignments.named.Hright,
+                  format: '#,##0.00'
+                })
+                headerStyle = stl.getStyle({
+                  font: stl.fonts.named.defBold,
+                  alignment: stl.alignments.named.HVcenter
+                })
+                rowHeaderStyle = stl.getStyle({
+                  font: stl.fonts.named.defBold,
+                  fill: 'EBEDED',
+                  border: borderFull,
+                  alignment: stl.alignments.named.HVcenter
+                })
+              }
+              let wb, defFont, ws, borderFull, headerStyle, rowHeaderStyle, stl, styleCol, styleNumCol
+              wb = new window.XLSX.XLSXWorkbook()
+              wb.useSharedString = true
+              stl = wb.style
+              setStyles()
+              let data = me.down('grid').getData()
+              let fName = UB.i18n('Відомість заборгованості')
+              ws = wb.addWorkSheet({ caption: UB.i18n('Відомість заборгованості'), name: UB.i18n('Відомість заборгованості') })
+              ws.addMerge({ colFrom: 0, colTo: 10 })
+              ws.addRow({ value: UB.i18n('Відомість заборгованості по виплаті зарплати'), column: 0, style: headerStyle }, {}, { height: 40 })
+
+              let colPropList = [
+                { column: 0, width: 50 },
+                { column: 1, width: 20 },
+                { column: 2, width: 20 },
+                { column: 3, width: 20 },
+                { column: 4, width: 20 },
+                { column: 5, width: 20 },
+                { column: 6, width: 20 },
+                { column: 7, width: 20 },
+                { column: 8, width: 40 },
+                { column: 9, width: 50 },
+                { column: 10, width: 20 },
+                { column: 11, width: 20 }
+              ]
+              if (me.attr.showWithFundSource.getValue()) colPropList.push({ column: 12, width: 20 })
+              ws.setColsProperties(colPropList)
+              let rowList
+              if (me.attr.showWithFundSource.getValue()) {
+                rowList = [
+                  { column: 0, value: UB.i18n('Працівник'), style: rowHeaderStyle },
+                  { column: 1, value: UB.i18n('Джерело фінансування'), style: rowHeaderStyle },
+                  { column: 2, value: UB.i18n('Сальдо вхідне'), style: rowHeaderStyle },
+                  { column: 3, value: UB.i18n('Нараховано'), style: rowHeaderStyle },
+                  { column: 4, value: UB.i18n('Утримано'), style: rowHeaderStyle },
+                  { column: 5, value: UB.i18n('Виплачено'), style: rowHeaderStyle },
+                  { column: 6, value: UB.i18n('Сальдо вихідне'), style: rowHeaderStyle },
+                  { column: 7, value: UB.i18n('Борг підприємства'), style: rowHeaderStyle },
+                  { column: 8, value: UB.i18n('Борг працівника'), style: rowHeaderStyle },
+                  { column: 9, value: UB.i18n('Підрозділ'), style: rowHeaderStyle },
+                  { column: 10, value: UB.i18n('Посада'), style: rowHeaderStyle },
+                  { column: 11, value: UB.i18n('Дата прийому'), style: rowHeaderStyle },
+                  { column: 12, value: UB.i18n('Дата звільнення'), style: rowHeaderStyle }
+                ]
+              } else {
+                rowList = [
+                  { column: 0, value: UB.i18n('Працівник'), style: rowHeaderStyle },
+                  { column: 1, value: UB.i18n('Сальдо вхідне'), style: rowHeaderStyle },
+                  { column: 2, value: UB.i18n('Нараховано'), style: rowHeaderStyle },
+                  { column: 3, value: UB.i18n('Утримано'), style: rowHeaderStyle },
+                  { column: 4, value: UB.i18n('Виплачено'), style: rowHeaderStyle },
+                  { column: 5, value: UB.i18n('Сальдо вихідне'), style: rowHeaderStyle },
+                  { column: 6, value: UB.i18n('Борг підприємства'), style: rowHeaderStyle },
+                  { column: 7, value: UB.i18n('Борг працівника'), style: rowHeaderStyle },
+                  { column: 8, value: UB.i18n('Підрозділ'), style: rowHeaderStyle },
+                  { column: 9, value: UB.i18n('Посада'), style: rowHeaderStyle },
+                  { column: 10, value: UB.i18n('Дата прийому'), style: rowHeaderStyle },
+                  { column: 11, value: UB.i18n('Дата звільнення'), style: rowHeaderStyle }
+                ]
+              }
+
+              ws.addRow(rowList, null, { height: 30 })
+              data.forEach((fix, idx) => {
+                let rowDataList
+                if (me.attr.showWithFundSource.getValue()) {
+                  rowDataList = [
+                    { column: 0, value: fix['description'], style: styleCol },
+                    { column: 1, value: fix['fundSource'], style: styleCol },
+                    { column: 2, value: fix['sumFrom'], style: styleNumCol },
+                    { column: 3, value: fix['sumPlus'], style: styleNumCol },
+                    { column: 4, value: fix['sumMinus'], style: styleNumCol },
+                    { column: 5, value: fix['sumPay'], style: styleNumCol },
+                    { column: 6, value: fix['sumTo'], style: styleNumCol },
+                    { column: 7, value: fix['sumToAbove'], style: styleNumCol },
+                    { column: 8, value: fix['sumToBelow'], style: styleNumCol },
+                    { column: 9, value: fix['depName'], style: styleCol },
+                    { column: 10, value: fix['posName'], style: styleCol },
+                    { column: 11, value: fix['dateFrom'] ? moment(fix['dateFrom']).format('DD.MM.YYYY') : '', style: styleCol },
+                    { column: 12, value: fix['dateToEmpty'] ? moment(fix['dateToEmpty']).format('DD.MM.YYYY') : '', style: styleCol }
+                  ]
+                } else {
+                  rowDataList = [
+                    { column: 0, value: fix['description'], style: styleCol },
+                    { column: 1, value: fix['sumFrom'], style: styleNumCol },
+                    { column: 2, value: fix['sumPlus'], style: styleNumCol },
+                    { column: 3, value: fix['sumMinus'], style: styleNumCol },
+                    { column: 4, value: fix['sumPay'], style: styleNumCol },
+                    { column: 5, value: fix['sumTo'], style: styleNumCol },
+                    { column: 6, value: fix['sumToAbove'], style: styleNumCol },
+                    { column: 7, value: fix['sumToBelow'], style: styleNumCol },
+                    { column: 8, value: fix['depName'], style: styleCol },
+                    { column: 9, value: fix['posName'], style: styleCol },
+                    { column: 10, value: fix['dateFrom'] ? moment(fix['dateFrom']).format('DD.MM.YYYY') : '', style: styleCol },
+                    { column: 11, value: fix['dateToEmpty'] ? moment(fix['dateToEmpty']).format('DD.MM.YYYY') : '', style: styleCol }
+                  ]
+                }
+                ws.addRow(rowDataList, null, { height: 20 })
+              })
+              const rData = wb.render()
+              const dBlob = new Blob([rData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) // data:  ;base64
+              saveAs(dBlob, fName + '.xlsx')
+            }
+          }
+        ]
+      }
+    ]
+
+    me.items = [
+      Ext.widget('panel', {
+        xtype: 'panel',
+        header: false,
+        region: 'north',
+        name: 'panel',
+        layout: { type: 'hbox' },
+        items: [
+          {
+            xtype: 'panel',
+            name: 'filterPanel',
+            flex: 1,
+            items: [
+              {
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'departmentID',
+                        fieldLabel: UB.i18n('Підрозділ'),
+                        labelWidth: 160,
+                        width: 570,
+                        displayField: 'caption',
+                        valueField: 'mi_data_id',
+                        allowBlank: true,
+                        ubRequest: {
+                          entity: 'hr_department',
+                          method: 'select',
+                          fieldList: ['mi_data_id', 'caption']
+                        },
+                        listeners: {
+                          change: function (ctrl, value) {
+                            if (ctrl.skipChange) {
+                              ctrl.skipChange = false
+                            } else {
+                              if (me.attr.childDep.getValue()) {
+                                me.attr.childDep.skipChange = true
+                              }
+                              if (!value) {
+                                me.attr.childDep.setValue(false)
+                                me.attr.childDep.setReadOnly(true)
+                              } else {
+                                me.attr.childDep.setReadOnly(false)
+                              }
+                              me.setAccrualBalance()
+                            }
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'childDep',
+                        fieldLabel: UB.i18n('з підлеглими'),
+                        labelWidth: 100,
+                        listeners: {
+                          change: function (ctrl) {
+                            if (ctrl.skipChange) {
+                              ctrl.skipChange = false
+                            } else {
+                              me.setAccrualBalance()
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictFundSource',
+                        fieldLabel: UB.i18n('Джерело фінансування'),
+                        labelWidth: 160,
+                        width: 700,
+                        hideEntityItemInContext: true,
+                        displayField: 'name',
+                        valueField: 'ID',
+                        gridFieldList: ['ID', 'name', 'description'],
+                        ubRequest: {
+                          entity: 'ac_fundSource',
+                          method: 'selectByOrg',
+                          fieldList: ['ID', 'name']
+                        },
+                        listeners: {
+                          blur: () => {
+                            me.setAccrualBalance()
+                          },
+                          afterrender: function (ctrl) {
+                            ctrl.store.ubRequest.orgID = appAC.globalOrganization()
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'showWithFundSource',
+                        fieldLabel: UB.i18n('Відображати у розрізі джерел фінансування'),
+                        labelWidth: 300,
+                        listeners: {
+                          change: function (ctrl, value) {
+                            AC.gridUtils.setGridColumnVisible(me.attr.grid, ['fundSource'], value)
+                            me.setAccrualBalance()
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictProgClass',
+                        fieldLabel: UB.i18n('КПК'),
+                        labelWidth: 160,
+                        width: 700,
+                        displayField: 'description',
+                        valueField: 'ID',
+                        allowBlank: true,
+                        ubRequest: {
+                          entity: 'ac_dictProgClass',
+                          method: 'selectByOrg',
+                          fieldList: ['ID', 'description']
+                        },
+                        listeners: {
+                          blur: () => {
+                            me.setAccrualBalance()
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'showWithDictProgClass',
+                        fieldLabel: UB.i18n('Відображати у розрізі КПК'),
+                        labelWidth: 300,
+                        listeners: {
+                          change: function (ctrl, value) {
+                            AC.gridUtils.setGridColumnVisible(me.attr.grid, ['dictProgClass'], AC.settings.get('hrProgClassAcc', appAC.globalOrganization()) ? value : false)
+                            me.setAccrualBalance()
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictProject',
+                        fieldLabel: UB.i18n('Проєкт'),
+                        labelWidth: 160,
+                        width: 700,
+                        allowBlank: true,
+                        displayField: 'description',
+                        valueField: 'ID',
+                        ubRequest: {
+                          entity: 'ac_dictProject',
+                          method: 'selectByOrg',
+                          fieldList: ['ID', 'description']
+                        },
+                        listeners: {
+                          blur: () => {
+                            me.setAccrualBalance()
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'showWithDictProject',
+                        fieldLabel: UB.i18n('Відображати у розрізі проєктів'),
+                        labelWidth: 300,
+                        listeners: {
+                          change: function (ctrl, value) {
+                            AC.gridUtils.setGridColumnVisible(me.attr.grid, ['dictProject'], AC.settings.get('hrProjectAcc', appAC.globalOrganization()) ? value : false)
+                            me.setAccrualBalance()
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }),
+      Ext.widget('panel', {
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        name: 'panel',
+        flex: 1,
+        layout: 'fit',
+        items: [
+          {
+            xtype: 'acGrid',
+            name: 'accrualBalanceListGrid',
+            stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_paySummary_accrualBalanceListGrid'),
+            flex: 1,
+            autoScroll: true,
+            region: 'center',
+            storeType: 'local',
+            disablePaging: true,
+            notWriteChanges: true,
+            showToolBar: true,
+            enableMultifilter: true,
+            hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+            baseSummary: true,
+            summary: { description: 'count', sumFrom: 'sum', sumPlus: 'sum', sumMinus: 'sum', sumPay: 'sum', sumTo: 'sum', sumToAbove: 'sum', sumToBelow: 'sum' },
+            onItemDoubleClick: function (row, record) {
+              me.openRL(record)
+            },
+            onAfterRender: (grid) => {
+              const me = grid.up('form')
+              grid.menu.removeAll()
+              grid.menu.add([
+                {
+                  text: UB.i18n('Розрахунковий лист'),
+                  iconCls: 'el-icon-tickets',
+                  ubID: 'itemShowRl',
+                  handler: function (context) {
+                    const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                    if (record) me.openRL(record)
+                  }
+                },
+                {
+                  text: UB.i18n('Особовий рахунок'),
+                  iconCls: 'el-icon-s-custom',
+                  ubID: 'itemShowEmployee',
+                  handler: function (context) {
+                    const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                    if (record) {
+                      $App.doCommand({
+                        cmdType: 'showForm',
+                        formCode: 'hr_employeeNumber',
+                        entity: 'hr_employeeNumber',
+                        instanceID: record.get('employeeNumberID'),
+                        tabId: 'hr_employeeNumber' + record.get('employeeNumberID'),
+                        target: $App.getViewport().centralPanel,
+                        sender: grid.getView()
+                      })
+                    }
+                  }
+                }
+              ])
+            },
+            getRowClass: function (record) {
+              let cls = ''
+              let dateToEmpty = record.data['employeeNumberID.dateToEmpty']
+              let workPlaceCode = record.data['employeeNumberID.workPlaceCode']
+              if (['1', '3', null].includes(workPlaceCode)) cls = dateToEmpty ? 'grd-color-blue' : ''
+              else if (['2', '5'].includes(workPlaceCode)) cls = dateToEmpty ? 'grd-color-blue-italic' : 'grd-italic'
+              else if (workPlaceCode === '4') cls = dateToEmpty ? 'grd-color-blue' : 'grd-color-lightgreen'
+              return cls
+            },
+            fields: [
+              {
+                name: 'description',
+                columnConfig: {
+                  text: UB.i18n('Працівник'),
+                  filterBy: 'string',
+                  width: 300
+                }
+              },
+              {
+                name: 'fundSource',
+                columnConfig: {
+                  text: UB.i18n('Джерело фінансування'),
+                  filterBy: 'string',
+                  width: 500
+                }
+              },
+              {
+                name: 'dictProject',
+                columnConfig: {
+                  text: UB.i18n('Проєкт'),
+                  filterBy: 'string',
+                  width: 500
+                }
+              },
+              {
+                name: 'dictProgClass',
+                columnConfig: {
+                  text: UB.i18n('КПК'),
+                  filterBy: 'string',
+                  width: 500
+                }
+              },
+              {
+                name: 'sumFrom',
+                columnConfig: {
+                  text: UB.i18n('Сальдо вхідне'),
+                  width: 150,
+                  floatFormat: 2,
+                  sortBy: 'Number',
+                  filterBy: 'float',
+                  align: 'right'
+                }
+              },
+              {
+                name: 'sumPlus',
+                columnConfig: {
+                  text: UB.i18n('Нараховано'),
+                  width: 150,
+                  floatFormat: 2,
+                  sortBy: 'Number',
+                  filterBy: 'float',
+                  align: 'right'
+                }
+              },
+              {
+                name: 'sumMinus',
+                columnConfig: {
+                  text: UB.i18n('Утримано'),
+                  width: 150,
+                  floatFormat: 2,
+                  sortBy: 'Number',
+                  filterBy: 'float',
+                  align: 'right'
+                }
+              },
+              {
+                name: 'sumPay',
+                columnConfig: {
+                  text: UB.i18n('Виплачено'),
+                  width: 150,
+                  floatFormat: 2,
+                  sortBy: 'Number',
+                  filterBy: 'float',
+                  align: 'right'
+                }
+              },
+              {
+                name: 'sumTo',
+                columnConfig: {
+                  text: UB.i18n('Сальдо вихідне'),
+                  width: 150,
+                  floatFormat: 2,
+                  sortBy: 'Number',
+                  filterBy: 'float',
+                  align: 'right'
+                }
+              },
+              {
+                name: 'sumToAbove',
+                columnConfig: {
+                  text: UB.i18n('Борг підприємства'),
+                  width: 150,
+                  floatFormat: 2,
+                  sortBy: 'Number',
+                  filterBy: 'float',
+                  align: 'right'
+                }
+              },
+              {
+                name: 'sumToBelow',
+                columnConfig: {
+                  text: UB.i18n('Борг працівника'),
+                  width: 150,
+                  floatFormat: 2,
+                  sortBy: 'Number',
+                  filterBy: 'float',
+                  align: 'right'
+                }
+              },
+              {
+                name: 'depName',
+                columnConfig: {
+                  text: UB.i18n('Підрозділ'),
+                  filterBy: 'string',
+                  width: 300
+                }
+              },
+              {
+                name: 'posName',
+                columnConfig: {
+                  text: UB.i18n('Посада'),
+                  filterBy: 'string',
+                  width: 300
+                }
+              },
+              {
+                name: 'dateFrom',
+                columnConfig: {
+                  filterable: false,
+                  text: UB.i18n('Дата прийому'),
+                  width: 300,
+                  filterBy: 'date',
+                  dateFormat: 'd.m.Y'
+                }
+              },
+              {
+                name: 'dateToEmpty',
+                columnConfig: {
+                  filterable: false,
+                  text: UB.i18n('Дата звільнення'),
+                  width: 300,
+                  filterBy: 'date',
+                  dateFormat: 'd.m.Y'
+                }
+              },
+              { name: 'workPlaceCode' },
+              { name: 'employeeNumberID' }
+            ]
+          }
+        ]
+      })
+    ]
+
+    me.openRL = function (record) {
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: 'hr_rl',
+        tabId: 'hr_rl' + record.get('employeeNumberID'),
+        target: $App.getViewport().centralPanel,
+        cmpInitConfig: {
+          defaultValues: {
+            employeeNumberID: record.get('employeeNumberID'),
+            periodID: me.attr.periodID.getValue()
+          }
+        }
+      })
+    }
+
+    me.setAccrualBalance = async () => {
+      me.setLoading(true)
+      me.attr.grid.getStore().removeAll()
+      let dictFundSourceIDs = AC.dataService.getIDsFromString(me.attr.dictFundSource.getValue() || (me.firstLoadForm && me.dictFundSourceID))
+      const isWithEmptyFundSource = dictFundSourceIDs ? dictFundSourceIDs.includes(0) : false
+      let dictProgClassIDs = AC.dataService.getIDsFromString(me.attr.dictProgClass.getValue() || (me.firstLoadForm && me.dictProgClassID))
+      const isWithEmptyDictProgClass = dictProgClassIDs ? dictProgClassIDs.includes(0) : false
+      let dictProjectIDs = AC.dataService.getIDsFromString(me.attr.dictProject.getValue() || (me.firstLoadForm && me.dictProjectID))
+      const isWithEmptyDictProject = dictProjectIDs ? dictProjectIDs.includes(0) : false
+      me.firstLoadForm = false
+      $App.connection.run({
+        entity: 'hr_paySummary',
+        method: 'getDebtSummary',
+        params: JSON.stringify({
+          orgID: me.attr.periodID.getFieldValue('orgID'),
+          periodCalcID: me.attr.periodID.getValue(),
+          departmentID: me.attr.departmentID.getValue(),
+          childDep: me.attr.childDep.getValue(),
+          dictFundSourceIDs,
+          isWithEmptyFundSource,
+          showWithFundSource: me.attr.showWithFundSource.getValue(),
+          dictProgClassIDs,
+          showWithDictProgClass: me.attr.showWithDictProgClass.getValue(),
+          isWithEmptyDictProgClass,
+          dictProjectIDs,
+          showWithDictProject: me.attr.showWithDictProject.getValue(),
+          isWithEmptyDictProject
+        })
+      }).then(response => {
+        const data = JSON.parse(response.resultData)
+        let resData = data.reduce((res, el) => {
+          let item = res.find(el1 => el1.employeeNumberID === el.employeeNumberID &&
+              (me.attr.showWithFundSource.getValue() ? el1.fundSourceID === el.fundSourceID : true) &&
+              (me.attr.showWithDictProject.getValue() ? el1.dictProjectID === el.dictProjectID : true) &&
+              (me.attr.showWithDictProgClass.getValue() ? el1.dictProgClassID === el.dictProgClassID : true))
+          if (item) {
+            ['sumFrom', 'sumPlus', 'sumMinus', 'sumTo', 'sumPay'].forEach(el1 => { item[el1] += el[el1] })
+          } else {
+            item = { ...el, sumToAbove: 0, sumToBelow: 0 }
+            res.push(item)
+          }
+          return res
+        }, [])
+
+        if (resData.length) {
+          resData.forEach(el => {
+            ['sumFrom', 'sumPlus', 'sumMinus', 'sumTo', 'sumPay'].forEach(f => { el[f] = AC.currencyService.round(el[f], 2) })
+            el.sumToAbove = el.sumTo > 0 ? Math.abs(el.sumTo) : 0
+            el.sumToBelow = el.sumTo < 0 ? Math.abs(el.sumTo) : 0
+          })
+          me.attr.grid.setLocalStoreData(resData)
+        }
+        me.setLoading(false)
+      })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      const globalOrganization = appAC.globalOrganization()
+      AC.viewUtils.setAttr(me)
+      me.attr.filterButton = me.down('[name=filterButton]')
+      me.attr.filterPanel = me.down('[name=filterPanel]')
+      me.isFilter = !!me.isFilter
+      me.attr.filterButton.addCls(me.isFilter ? 'custom-action_btn' : '')
+      me.attr.filterButton.removeCls(!me.isFilter ? 'custom-action_btn' : '')
+      me.attr.filterButton.setTooltip(me.isFilter ? UB.i18n('Виключити параметри фільтрації показників') : UB.i18n('Включити параметри фільтрації показників'))
+      me.attr.filterPanel[me.isFilter ? 'show' : 'hide']()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization })
+      AC.viewUtils.setFilterValue(me.attr.employeeNumberID, { orgID: globalOrganization })
+      me.attr.dictFundSource.store.ubRequest.orgID = globalOrganization
+      me.attr.dictFundSource.store.ubRequest.emptyValue = true
+      me.attr.grid = me.down('[name=accrualBalanceListGrid]')
+      AC.gridUtils.setGridColumnVisible(me.attr.grid, ['fundSource'], false)
+      AC.gridUtils.setGridColumnVisible(me.attr.grid, ['dictProgClass'], false)
+      AC.gridUtils.setGridColumnVisible(me.attr.grid, ['dictProject'], false)
+      me.firstLoadForm = true
+      if (me.dictFundSourceID) {
+        me.attr.dictFundSource.setValue(me.dictFundSourceID)
+      }
+      if (me.dictProgClassID) {
+        me.attr.dictProgClass.setValue(me.dictProgClassID)
+      }
+      if (me.dictProjectID) {
+        me.attr.dictProject.setValue(me.dictProjectID)
+      }
+      if (me.departmentID) {
+        me.attr.periodID.skipChange = true
+      }
+      me.attr.dictProgClass[AC.settings.get('hrProgClassAcc', appAC.globalOrganization()) ? 'show' : 'hide']()
+      me.attr.dictProject[AC.settings.get('hrProjectAcc', appAC.globalOrganization()) ? 'show' : 'hide']()
+      me.attr.periodID.setValueById(me.periodID)
+      AC.viewUtils.setWhereListProperty(me.attr.departmentID, [
+        ['orgID', '=', globalOrganization || 0],
+        ['state', '=', 'ACTIVE']
+      ])
+      if (me.childDep === undefined) {
+        me.childDep = true
+      }
+
+      if (me.departmentID) {
+        me.attr.departmentID.setValueById(me.departmentID || null)
+        if (me.childDep) {
+          me.attr.childDep.skipChange = true
+        }
+        me.attr.childDep.setValue(me.childDep)
+      } else {
+        me.attr.childDep.setValue(false)
+        me.attr.childDep.setReadOnly(true)
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

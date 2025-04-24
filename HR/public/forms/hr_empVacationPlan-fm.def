@@ -1,0 +1,330 @@
+/* global $App UB AC HR appAC */
+exports.formDef = {
+  requiredFields: ['employeeID', 'dictVacationKindID.code', 'dictVacationKindID.isDate', 'dictVacationKindID.isProportional',
+    'reason', 'errorText'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1200,
+    height: 700
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Загальні дані'),
+          autoScroll: true,
+          split: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 160 },
+          items: [
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  attributeName: 'employeeNumberID',
+                  fieldList: ['ID', 'tabNum', 'posOrderID', 'employeeID', 'orgID'],
+                  orderList: { orderBy: { expression: 'dateFrom' } },
+                  displayField: 'tabNum',
+                  labelWidth: 160,
+                  width: 280,
+                  margin: '10 15 2 15',
+                  whereList: {
+                    orgID: {
+                      expression: '[orgID]',
+                      condition: '=',
+                      value: appAC.globalOrganization()
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              attributeName: 'dictVacationKindID',
+              fieldList: ['ID', 'name', 'code', 'isDate'],
+              displayField: 'name',
+              whereList: {
+                isDay: {
+                  expression: '[isDay]',
+                  condition: '=',
+                  values: {
+                    isDay: 1
+                  }
+                }
+              }
+            },
+            {
+              layout: { type: 'vbox' },
+              defaults: { labelWidth: 160 },
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  defaults: { labelWidth: 160 },
+                  items: [
+                    { attributeName: 'dateFrom', width: 280 },
+                    { attributeName: 'dateToEmpty', width: 280 }
+                  ]
+                },
+                { attributeName: 'dayCount', minValue: 0, width: 280 }
+              ]
+            },
+            {
+              name: 'errorText',
+              xtype: 'label',
+              cls: 'x-form-item-label field-label-red',
+              margin: '10 10 5 15'
+            },
+            {
+              xtype: 'ubdetailgrid',
+              name: 'gridPeriod',
+              disableSearchBar: true,
+              flex: 1,
+              hideActions: ['addNew', 'addNewByCurrent', 'showDetail'],
+              entityConfig: {
+                entity: 'hr_empVacationPeriod',
+                method: 'selectData',
+                fieldList: [
+                  { name: 'dateFrom', config: { align: 'center', width: 120 }, description: UB.i18n('Дата початку') },
+                  { name: 'dateTo', config: { align: 'center', width: 130 }, description: UB.i18n('Дата закінчення') },
+                  { name: 'dayCountPlan', config: { align: 'center', width: 110 }, description: UB.i18n('Кількість днів') },
+                  { name: 'dayFact', config: { align: 'center', width: 110 }, description: UB.i18n('Використано') },
+                  { name: 'dayCountFactCorr', config: { align: 'center', width: 160 }, description: UB.i18n('Використано (ручне коригування)') },
+                  { name: 'dayFix', config: { align: 'center', width: 160 }, description: UB.i18n('Зафіксовано днів'), hidden: false },
+                  { name: 'dayDiff', config: { align: 'center', width: 110 }, description: UB.i18n('Залишилося') },
+                  { name: 'dayComp', config: { align: 'center', width: 120 }, description: UB.i18n('Компенсовано') },
+                  { name: 'dayRecalc', config: { align: 'center', width: 120 }, description: UB.i18n('Перераховано') },
+                  { name: 'dayReturn', config: { align: 'center', width: 120 }, description: UB.i18n('Відраховано') },
+                  { name: 'comment', config: { width: 300 }, description: UB.i18n('Коментар') }
+                ],
+                orderList: {
+                  dateFrom: {
+                    'expression': 'dateFrom'
+                  }
+                },
+                customParams: {
+                  onDate: appAC.globalApplicationDate(),
+                  showZeroes: true
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['empVacationPlanID'],
+              cmpInitConfig: {
+                customInit: function () {
+                  const grid = this
+                  grid.on('changeData', (grd, event) => {
+                    const form = grd.up('form')
+                    if (event === 'delete') {
+                      AC.gridUtils.refreshSenderGrid(form)
+                    }
+                  })
+                  const fixMonth = AC.settings.get('hrVacFixMonth', appAC.globalOrganization()) || 0
+                  AC.gridUtils.setGridColumnVisible(grid, ['dayFix'], fixMonth > 0)
+                  let oldOnRefresh = grid.onRefresh
+                  let newOnRefresh = function () {
+                    const form = grid.up('form')
+                    $App.connection.run({
+                      entity: 'hr_empVacationPeriod',
+                      method: 'calcFields',
+                      execParams: {
+                        employeeNumberID: form.attr.employeeNumberID.getValue(),
+                        dictVacationKindID: form.attr.dictVacationKindID.getValue()
+                      }
+                    }).then(() => {
+                      oldOnRefresh.call(grid)
+                    })
+                  }
+                  AC.gridUtils.replaceListener(grid, 'refresh', grid.onRefresh, newOnRefresh)
+                },
+                optimizeColumnWidth: function () {
+                  // eslint-disable-next-line no-unused-expressions
+                  /!* do nothing for manual column width tunning *!/
+                },
+                onDeterminateForm: function (grid) {
+                  const me = grid.up('form')
+                  const defaultValues = HR.timeService.getVacationPeriodDefaultValues(grid)
+                  let planDateTo = me.record.get('dateToEmpty')
+                  if (planDateTo && defaultValues.dateTo > planDateTo) {
+                    defaultValues.dateTo = planDateTo
+                  }
+                  return {
+                    cmpInitConfig: {
+                      defaultValues: defaultValues
+                    }
+                  }
+                },
+                customActions: [
+                  {
+                    text: UB.i18n('Додати'),
+                    iconCls: 'u-icon-add',
+                    cls: 'add-new-action',
+                    handler: function (btn) {
+                      const me = btn.up('form')
+                      const isPause = me.attr.isPause.getValue()
+                      if (isPause) {
+                        $App.dialogInfo(UB.i18n('Встановлена ознака тимчасового припинення відпустки'))
+                        return
+                      }
+                      const periods = me.down('[name=gridPeriod]')
+                      const defaultValues = HR.timeService.getVacationPeriodDefaultValues(periods)
+                      let planDateTo = me.record.get('dateToEmpty')
+                      const vacKindReco = AC.gridUtils.getCurrentRecord(me.attr.dictVacationKindID)
+                      const vacKindCode = vacKindReco && vacKindReco.get('code')
+                      if (planDateTo && defaultValues.dateFrom > planDateTo) {
+                        $App.dialogInfo(UB.i18n('Неможливо додати новий період у зв\'язку з закриттям дії виду відпустки'))
+                      } else if (vacKindCode === 'dState') {
+                        UB.Repository('hr_employeeExperience')
+                          .attrs('calcDate')
+                          .where('employeeID', '=', me.record.get('employeeID'))
+                          .where('dictExperienceID.code', '=', HR.timeService.getConstants().stateExpCode)
+                          .where('dictExperienceID.mi_deleteDate', '>=', '#maxdate')
+                          .where('startCalcDate', 'isNull', undefined, 'startCalcDateIsNull')
+                          .where('calcDate', '<=', defaultValues.dateFrom, 'calcDateLess')
+                          .where('startCalcDate', '>=', defaultValues.dateFrom, 'startCalcDateMore')
+                          .where('employeeNumberID', '=', me.record.get('employeeNumberID'), 'empNum')
+                          .where('employeeNumberID', 'isNull', undefined, 'empNumNull')
+                          .logic('([empNum] OR [empNumNull]) AND ([startCalcDateIsNull] OR ([calcDateLess] AND [startCalcDateMore]))')
+                          .orderByDesc('employeeNumberID')
+                          .limit(1)
+                          .selectScalar().then(stateExpCalcDate => {
+                              if (stateExpCalcDate) {
+                                $App.doCommand({
+                                  cmdType: 'showForm',
+                                  formCode: 'hr_empVacationPeriod',
+                                  entity: 'hr_empVacationPeriod',
+                                  title: UB.i18n('Кількість днів відпустки по періодам'),
+                                  description: UB.i18n('Кількість днів відпустки по періодам'),
+                                  target: $App.getViewport().modal,
+                                  sender: periods,
+                                  cmpInitConfig:
+                                    {
+                                      defaultValues: defaultValues
+                                    }
+                                })
+                              } else {
+                                $App.dialogInfo(UB.i18n('Станом на {0} у працівника немає відкритого стажу державної служби. Право на відпустку за стаж державної служби не буде додано', AC.dateService.formatDate(defaultValues.dateFrom)))
+                              }
+                          })
+                      } else {
+                        $App.doCommand({
+                          cmdType: 'showForm',
+                          formCode: 'hr_empVacationPeriod',
+                          entity: 'hr_empVacationPeriod',
+                          title: UB.i18n('Кількість днів відпустки по періодам'),
+                          description: UB.i18n('Кількість днів відпустки по періодам'),
+                          target: $App.getViewport().modal,
+                          sender: periods,
+                          cmpInitConfig:
+                            {
+                              defaultValues: defaultValues
+                            }
+                        })
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Підстави'),
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 160 },
+          items: [
+            {
+              xtype: 'fieldset',
+              title: UB.i18n('Підстава для надання'),
+              layout: { type: 'vbox', align: 'stretch' },
+              margin: '5 10 0 10',
+              padding: '0 0 10 10',
+              items: [
+                {
+                  attributeName: 'orderDetID',
+                  fieldList: ['ID', 'orderID.description', 'employeeID', 'employeeNumberID', 'organizationID', 'dateFrom', 'dateTo', 'orderID'],
+                  gridFieldList: ['orderID.description', 'employeeID.fullFIO', 'orderID.empOrderType', 'dateFrom', 'dateTo'],
+                  displayField: 'orderID.description',
+                  fieldLabel: UB.i18n('Наказ з персоналу'),
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                  disablePaging: true,
+                  whereList: {
+                    notDeleted: {
+                      expression: '[orderID.mi_deleteUser]',
+                      condition: 'isNull'
+                    },
+                    mi_unityEntity: {
+                      expression: '[mi_unityEntity]',
+                      condition: 'in',
+                      value: ['hr_empOrderAppointDet', 'hr_empOrderMoveDet', 'hr_empOrder']
+                    },
+                    orderState: {
+                      expression: '[orderID.orderState]',
+                      condition: '!=',
+                      value: 'PROJECT'
+                    }
+                  },
+                  orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                },
+                {
+                  attributeName: 'employeeBenefitsID',
+                  fieldList: ['ID', 'description', 'dateFrom', 'dateTo'],
+                  whereList: {
+                    employeeID: {
+                      expression: '[employeeID]',
+                      condition: '=',
+                      value: 0
+                    }
+                  },
+                  orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                },
+                {
+                  attributeName: 'otherReasons'
+                }
+              ]
+            },
+            {
+              xtype: 'fieldset',
+              title: UB.i18n('Тимчасове припинення'),
+              layout: { type: 'vbox', align: 'stretch' },
+              margin: '5 10 0 10',
+              padding: '0 0 10 10',
+              items: [
+                {
+                  attributeName: 'isPause',
+                  labelWidth: 130
+                },
+                {
+                  attributeName: 'pauseOrderDetID',
+                  fieldList: ['ID', 'orderID.description', 'employeeID', 'employeeNumberID', 'organizationID', 'dateFrom', 'dateTo', 'orderID'],
+                  gridFieldList: ['orderID.description', 'employeeID.fullFIO', 'orderID.empOrderType', 'dateFrom', 'dateTo'],
+                  displayField: 'orderID.description',
+                  fieldLabel: UB.i18n('Наказ з персоналу'),
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                  disablePaging: true,
+                  whereList: {
+                    notDeleted: {
+                      expression: '[orderID.mi_deleteUser]',
+                      condition: 'isNull'
+                    },
+                    orderState: {
+                      expression: '[orderID.orderState]',
+                      condition: '!=',
+                      value: 'PROJECT'
+                    }
+                  },
+                  orderList: { orderBy: { expression: 'orderID.orderDate', order: 'desc' } }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

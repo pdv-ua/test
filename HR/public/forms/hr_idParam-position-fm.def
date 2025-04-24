@@ -1,0 +1,87 @@
+/* global AC appAC */
+exports.formDef = {
+  requiredFields: ['orgID', 'listParamID', 'valuesID'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'ubcombobox',
+      fieldLabel: UB.i18n('Посада'),
+      displayField: 'description',
+      valueField: 'mi_data_id',
+      itemId: 'positionID',
+      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+      disableModifyEntity: true,
+
+      ubRequest: {
+        entity: 'hr_position',
+        method: 'select',
+        fieldList: ['ID', 'mi_data_id', 'name', 'description', 'parentUnitID.name', 'dictPositionID.dictProfessionID.description', 'mi_dateFrom', 'mi_dateTo',
+          'parentUnitID.mi_dateFrom', 'parentUnitID.mi_dateTo'],
+        __mip_recordhistory_all: true,
+        whereList: {
+          dateFrom: {
+            expression: '[mi_dateFrom]',
+            condition: 'lessEqual',
+            value: appAC.globalApplicationDate()
+          }
+        }
+      },
+      listeners: {
+        change: function (fld) {
+          const form = fld.up('form')
+          const val = fld.getValue()
+
+          let rec = {}
+          if (val && val === form.record.get('valuesID') && fld.store.data.items && fld.store.data.items.length > 0) {
+            let maxDateFromPos = AC.dateService.unshiftDate(fld.store.data.items[0].data['mi_dateFrom'])
+            let maxDateFromDep = AC.dateService.unshiftDate(fld.store.data.items[0].data['parentUnitID.mi_dateFrom'])
+
+            fld.store.data.items.forEach(item => {
+              let curDatePos = AC.dateService.unshiftDate(item.data['mi_dateFrom'])
+              let curDateDep = AC.dateService.unshiftDate(item.data['parentUnitID.mi_dateFrom'])
+              if (maxDateFromPos < curDatePos) {
+                maxDateFromPos = curDatePos
+              }
+              if (maxDateFromDep < curDateDep) {
+                maxDateFromDep = curDateDep
+              }
+            })
+            rec = fld.store.data.items.filter(item => {
+              if (AC.dateService.dateDiff(item.data['mi_dateFrom'], maxDateFromPos) === 0) return true
+              return false
+            })
+            rec = rec.find(item => AC.dateService.dateDiff(item.data['parentUnitID.mi_dateFrom'], maxDateFromDep) === 0)
+            rec = rec ? rec.data : {}
+          } else {
+            rec = val && AC.gridUtils.getCurrentRecord(fld).data ? AC.gridUtils.getCurrentRecord(fld).data : {}
+          }
+
+          form.record.set('valuesID', val)
+          form.queryById('parentName').setValue(rec['parentUnitID.name'])
+          form.queryById('professionName').setValue(rec['dictPositionID.dictProfessionID.description'])
+        }
+      },
+      width: 500,
+      labelWidth: 120
+    },
+    {
+      xtype: 'textfield',
+      fieldLabel: UB.i18n('Підпорядкування'),
+      itemId: 'parentName',
+      readOnly: true,
+      width: 500,
+      labelWidth: 120
+    },
+    {
+      xtype: 'textfield',
+      fieldLabel: UB.i18n('Державна класіфікація'),
+      itemId: 'professionName',
+      readOnly: true,
+      width: 500,
+      labelWidth: 120
+    }
+  ]
+}

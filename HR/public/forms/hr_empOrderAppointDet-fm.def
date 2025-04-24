@@ -1,0 +1,774 @@
+// @isModal true
+
+/* global HR AC _ appAC UB */
+exports.formDef = (function () {
+  return {
+    customParams: {
+      empOrderType: 'APPOINT'
+    },
+    requiredFields: ['orderID', 'empOrderType', 'tabDate', 'organizationID', 'positionID.positionType', 'srcOrganizationName',
+      'dictContractKindID.name', 'dateToEmpty', 'workPlace.name', 'workerType.name', 'dictStaffCatID.name', 'workScheduleID.name',
+      'srcOrganizationID', 'srcOrganizationID.name', 'contractType.name', 'mtCount', 'positionID.mi_data_id', 'dictContractKindID.isTerm',
+      'description', 'isOutStaff', 'isByHours', 'positionID.dictPositionID.isVehicle'
+    ],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    defaults: {
+      layout: 'fit'
+    },
+    size: {
+      width: 1100,
+      height: 650
+    },
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [{
+        title: UB.i18n('Загальне'),
+        ubID: 'tabMain',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        autoScroll: true,
+        items: [{
+          layout: {
+            type: 'hbox'
+          },
+          items: [{
+            flex: 1,
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            defaults: {
+              labelWidth: 130
+            },
+            items: [{
+              attributeName: 'employeeID',
+              fieldList: ['ID', 'fullFIO', 'sexType'],
+              disableModifyEntity: !AC.entityUtils.verifyRightsMethod('hr_employee', 'addnew'),
+              margin: '5 15 2 15',
+              whereList: {
+                exist: {
+                  expression: '',
+                  condition: 'subquery',
+                  subQueryType: 'Exists',
+                  value: {
+                    entity: 'ac_employeeOrg',
+                    fieldList: [],
+                    method: 'select',
+                    whereList: {
+                      cond: {
+                        expression: '[employeeID]=[{master}.ID]',
+                        condition: 'custom'
+                      },
+                      mi_deleteDate: {
+                        condition: 'equal',
+                        expression: '[mi_deleteDate]',
+                        value: '#maxdate'
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              layout: {
+                type: 'hbox'
+              },
+              items: [
+                {
+                  labelWidth: 130,
+                  attributeName: 'dateFrom',
+                  fieldLabel: UB.i18n('Дата початку'),
+                  width: 250
+                },
+                {
+                  xtype: 'ubdatefield',
+                  name: 'dateToHour',
+                  hidden: true,
+                  fieldLabel: UB.i18n('Дата закінчення'),
+                  labelWidth: 130,
+                  width: 250,
+                  listeners: {
+                    change: function (ctrl, value) {
+                      const me = ctrl.up('form')
+                      me.attr.dateToEmpty.setValue(value)
+                    }
+                  }
+                }
+              ]
+            },
+            HR.controlService.getAttrDepPosBlock({
+              valueField: 'ID',
+              labelWidth: 130,
+              // showFundSource: true,
+              showPosCategory: false,
+              posFieldLabel: UB.i18n('Штатна посада'),
+              vehicleField: 'dictPositionID.isVehicle'
+            }),
+            {
+              attributeName: 'addOrderText',
+              hidden: true
+            },
+            {
+              attributeName: 'dictVehicleID',
+              fieldList: ['ID', 'vehicleName', 'description', 'modelID.name', 'govNum'],
+              whereList: {
+                organizationID: {
+                  expression: '[organizationID]',
+                  condition: 'equal',
+                  value: appAC.globalOrganization()
+                }
+              },
+              hidden: true
+            },
+            {
+              xtype: 'ubfieldset',
+              border: true,
+              hidden: true,
+              ubID: 'factPositionBlock',
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              margins: {
+                right: 10,
+                left: 10
+              },
+              items: [
+                {
+                  attributeName: 'dictPositionID',
+                  allowBlank: true,
+                  fieldLabel: UB.i18n('Посада')
+                },
+                {
+                  attributeName: 'posNameAddition',
+                  fieldLabel: UB.i18n('Доповнення')
+                },
+                {
+                  attributeName: 'dictEmpCategoryID'
+                },
+                {
+                  attributeName: 'dictTarifCoeffID'
+                }
+              ]
+            },
+            {
+              attributeName: 'vacPositionID',
+              hidden: true,
+              fieldList: ['ID', 'description'],
+              whereList: {
+                organizationID: {
+                  expression: '[organizationID]',
+                  condition: 'equal',
+                  value: appAC.globalOrganization()
+                }
+              }
+            },
+            {
+              layout: {
+                type: 'hbox'
+              },
+              items: [{
+                attributeName: 'tabNum',
+                labelWidth: 130,
+                width: 270
+              },
+              {
+                xtype: 'button',
+                scale: 'small',
+                name: 'generateTabNumButton',
+                iconCls: 'fas fa-angle-double-left',
+                margin: '10 10 10 0',
+                width: 40,
+                visibility: false,
+                tooltip: UB.i18n('Згенерувати табельний номер'),
+                cls: 'add-new-action',
+                handler: function (btn) {
+                  btn.up('form').getNextTabNum()
+                }
+              },
+              {
+                attributeName: 'planHours',
+                labelWidth: 180,
+                hidden: true,
+                decimalPrecision: 2,
+                flex: 1
+              }
+              ]
+            },
+            {
+              xtype: 'ubfieldset',
+              border: true,
+              ubID: 'appointMoveBlock',
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              margins: {
+                right: 10,
+                left: 10
+              },
+              items: [
+                {
+                  layout: {
+                    type: 'hbox',
+                    align: 'middle'
+                  },
+                  items: [
+                    {
+                      attributeName: 'isAppoint',
+                      fieldLabel: UB.i18n('Наказ про призначення'),
+                      labelWidth: 130,
+                      hidden: true
+                    },
+                    {
+                      attributeName: 'isMove',
+                      fieldLabel: UB.i18n('Наказ про переведення'),
+                      labelWidth: 120,
+                      hidden: true
+                    }
+                  ]
+                },
+                {
+                  attributeName: 'dateStartWork',
+                  fieldLabel: UB.i18n('Дата прийому на роботу в Організацію'),
+                  labelWidth: 170,
+                  hidden: true
+                },
+                {
+                  layout: {
+                    type: 'hbox',
+                    align: 'middle'
+                  },
+                  items: [
+                    {
+                      attributeName: 'appointmentOrderDate',
+                      fieldLabel: UB.i18n('Дата наказу'),
+                      labelWidth: 170,
+                      hidden: true
+                    },
+                    {
+                      attributeName: 'appointmentOrderNumber',
+                      fieldLabel: UB.i18n('№ наказу'),
+                      labelWidth: 120,
+                      flex: 1,
+                      hidden: true
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: {
+                type: 'hbox',
+                align: 'middle'
+              },
+              name: 'srcOrganizationPanel',
+              items: [{
+                attributeName: 'isTransfer',
+                hidden: true,
+                labelWidth: 130,
+                width: 150
+              },
+              HR.controlService.getIDNameCombo({
+                fieldID: 'srcOrganizationID',
+                valueField: 'mi_data_id',
+                fieldName: 'srcOrganizationName',
+                fieldLabel: UB.i18n('З організації'),
+                labelWidth: 130,
+                maxLength: 300,
+                flex: 1,
+                ubRequest: {
+                  entity: 'hr_organization',
+                  fieldList: ['mi_data_id', 'name'],
+                  whereList: {
+                    isActive: {
+                      expression: '[state]',
+                      condition: 'equal',
+                      value: 'ACTIVE'
+                    }
+                  },
+                  orderList: { orderBy: { expression: 'name' } },
+                  __mip_ondate: appAC.globalApplicationDate()
+                }
+              })
+              ]
+            },
+            {
+              attributeName: 'empPositionName',
+              hidden: true
+            },
+            {
+              attributeName: 'dictAppointKindID'
+            },
+            {
+              layout: {
+                type: 'hbox',
+                align: 'middle'
+              },
+              items: [{
+                attributeName: 'isTrialPeriod',
+                fieldLabel: UB.i18n('Випробувальний строк'),
+                flex: 1,
+                labelWidth: 130
+              },
+              {
+                attributeName: 'dictTrialPeriodID',
+                fieldLabel: UB.i18n('Строк'),
+                labelWidth: 50,
+                flex: 2,
+                disableModifyEntity: !AC.entityUtils.verifyRightsMethod('hr_dictTrialPeriod', 'addnew'),
+                fieldList: ['name', 'months'],
+                orderList: {
+                  byMonths: {
+                    expression: '[months]'
+                  }
+                },
+                disabled: true
+              },
+              {
+                attributeName: 'dateTrialEnd',
+                fieldLabel: UB.i18n('По'),
+                labelWidth: 30,
+                width: 150,
+                disabled: true
+              }
+              ]
+            },
+            {
+              layout: {
+                type: 'hbox',
+                align: 'middle'
+              },
+              items: [{
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                items: [{
+                  attributeName: 'isRankSave',
+                  flex: 1,
+                  labelWidth: 130
+                },
+                {
+                  attributeName: 'isRankAssign',
+                  flex: 1,
+                  labelWidth: 130
+                }
+                ]
+              },
+              {
+                attributeName: 'dictRankID',
+                displayField: 'name',
+                fieldList: ['ID', 'code', 'name'],
+                whereList: {
+                  isActive: {
+                    expression: '[isActive]',
+                    condition: 'equal',
+                    value: true
+                  }
+                },
+                labelWidth: 150,
+                flex: 2
+              }
+              ]
+            },
+            {
+              attributeName: 'dictFundSourceID',
+              hidden: true
+            },
+            {
+              layout: {
+                type: 'hbox',
+                align: 'top'
+              },
+              flex: 1,
+              hidden: true,
+              name: 'reasonDocPanel',
+              items: [{
+                attributeName: 'reason',
+                fieldLabel: UB.i18n('Підстава (до пункту наказу)'),
+                flex: 1,
+                labelWidth: 130
+              },
+              {
+                xtype: 'button',
+                cls: 'list-icon',
+                name: 'reasonButton',
+                tooltip: UB.i18n('Вибрати'),
+                width: 35,
+                height: 35,
+                margin: '0 2 0 -45',
+                handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+              }
+              ]
+            },
+            HR.controlService.getOrderFundSourceGrid()
+            ]
+          },
+          {
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            width: 450,
+            items: [
+              AC.viewUtils.getCollapsiblePanel(
+                /* eslint-disable */
+                '<span style="color:#2196F3; padding-left: 16px">${UB.i18n("Тип договору")}:</span> ${contractType.name} <br>' +
+                '<span style="color:#2196F3;padding-left: 16px">${UB.i18n("Вид договору")}:</span> ${dictContractKindID.name} <br>' +
+                '<span style="color:#2196F3;padding-left: 16px">${UB.i18n("Дата закінчення")}:</span> ${get("dateToEmpty") ? moment(get("dateToEmpty")).format("DD.MM.YYYY"): " - "} <br>' +
+                '<span style="color:#2196F3;padding-left: 16px">${UB.i18n("Місце роботи")}:</span> ${workPlace.name} <br>' +
+                '<span style="color:#2196F3;padding-left: 16px">${UB.i18n("Форма зайнятості")}:</span> ${workerType.name} <br>' +
+                '<span style="color:#2196F3;padding-left: 16px">${UB.i18n("Категорія персоналу для розрахунків")}:</span> ${dictStaffCatID.name} <br>' +
+                '<span style="color:#2196F3;padding-left: 16px">${UB.i18n("Графік роботи")}:</span> ${workScheduleID.name} <br>' +
+                '<span style="color:#2196F3;padding-left: 16px">${UB.i18n("Кількість ставок")}:</span> ${mtCount} <br>',
+                /* eslint-enable */
+                {
+                  name: 'panelAppointDetInfo',
+                  expandTitle: UB.i18n('Інформація'),
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  items: [{
+                    attributeName: 'contractType'
+                  },
+                  {
+                    attributeName: 'dictContractKindID',
+                    disableModifyEntity: !AC.entityUtils.verifyRightsMethod('hr_dictContractKind', 'addnew'),
+                    fieldList: ['ID', 'name', 'isTerm']
+                  },
+                  {
+                    attributeName: 'dateToEmpty',
+                    fieldLabel: UB.i18n('Дата закінчення'),
+                    hidden: true
+                  },
+                  {
+                    attributeName: 'workPlace',
+                    allowBlank: false
+                  },
+                  {
+                    attributeName: 'workerType',
+                    allowBlank: false
+                  },
+                  {
+                    attributeName: 'dictStaffCatID',
+                    hidden: false,
+                    fieldLabel: UB.i18n('Категорія персоналу для розрахунків'),
+                    disableModifyEntity: !AC.entityUtils.verifyRightsMethod('hr_dictStaffCat', 'addnew'),
+                    allowBlank: false
+                  },
+                  {
+                    attributeName: 'workScheduleID',
+                    gridFieldList: ['code', 'name', 'dateFrom', 'dateTo', 'begins', 'isPayDayOff', 'isPayHoliday', 'isHoliday', 'isLastHoliday', 'isChangeDay', 'isCalendar'],
+                    disableModifyEntity: !AC.entityUtils.verifyRightsMethod('hr_workSchedule', 'addnew'),
+                    allowBlank: false
+                  },
+                  {
+                    attributeName: 'dictCategoryECBID',
+                    gridFieldList: ['code', 'name'],
+                    disableModifyEntity: !AC.entityUtils.verifyRightsMethod('hr_dictCategoryECB', 'addnew')
+                  },
+                  {
+                    attributeName: 'dictCostTypeID',
+                    disableModifyEntity: !AC.entityUtils.verifyRightsMethod('ac_dictCostType', 'addnew')
+                  },
+                  {
+                    layout: {
+                      type: 'hbox',
+                      align: 'middle'
+                    },
+                    items: [{
+                      attributeName: 'mtCount',
+                      flex: 1,
+                      decimalPrecision: 2
+                    },
+                    {
+                      attributeName: 'isResponsible',
+                      flex: 1
+                    }
+                    ]
+                  },
+                  {
+                    attributeName: 'notStoreInWorkBook',
+                    labelWidth: 200,
+                    flex: 1
+                  },
+                  {
+                    attributeName: 'addGuarant',
+                    width: '100%',
+                    margins: '0 5 10 0',
+                    allowBlank: true,
+                    labelAlign: 'top',
+                    fieldLabel: UB.i18n('Додаткові гарантії працевлаштування')
+                  }
+                  ]
+                }),
+              {
+                xtype: 'ubfieldset',
+                title: UB.i18n('Оклад'),
+                border: true,
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                margins: '0 5 0 5',
+                padding: '0 0 10 5',
+                items: [{
+                  attributeName: 'payElID',
+                  allowBlank: false,
+                  disableModifyEntity: !AC.entityUtils.verifyRightsMethod('hr_payEl', 'addnew'),
+                  fieldList: ['ID', 'name', 'description', 'methodID.code', 'codeSort'],
+                  whereList: {
+                    isSalary: {
+                      expression: '[methodID.methodGroupID.code]',
+                      condition: 'equal',
+                      value: '1'
+                    },
+                    tariff: {
+                      expression: '[methodID.code]',
+                      condition: 'notIn',
+                      value: ['143', '144', '145', '146', '147', '156']
+                    }
+                  },
+                  orderList: {
+                    orderBy: {
+                      expression: 'codeSort'
+                    }
+                  },
+                  fieldLabel: UB.i18n('Вид оплати')
+                },
+                {
+                  attributeName: 'accrualSum',
+                  fieldLabel: UB.i18n('Сума'),
+                  allowBlank: false
+                },
+                {
+                  xtype: 'label',
+                  text: '',
+                  cls: 'x-form-item-label grd-italic',
+                  margin: '5 0 0 15',
+                  width: 160,
+                  ubID: 'accrualLabel',
+                  hidden: true
+                }
+                ]
+              }
+            ]
+          }
+          ]
+        }]
+      },
+      {
+        title: UB.i18n('Стажі та нарахування'),
+        layout: {
+          type: 'border'
+        },
+        name: 'empOrderExperienceAcrrualTab',
+        items: [{
+          xtype: 'panel',
+          region: 'north',
+          split: true,
+          flex: 2,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [{
+            name: 'hr_empOrderExperience',
+            xtype: 'ubdetailgrid',
+            autoScroll: true,
+            flex: 2,
+            rowEditing: true,
+            sortableColumns: false,
+            entityConfig: {
+              entity: 'hr_empOrderExperience',
+              method: 'select',
+              fieldList: [
+                {
+                  name: 'ID',
+                  visibility: false
+                },
+                {
+                  name: 'empOrderID',
+                  visibility: false
+                },
+                {
+                  name: 'dictExperienceID.name',
+                  description: UB.i18n('Вид стажу'),
+                  editor: {
+                    fieldList: ['ID', 'name', 'code'],
+                    orderList: { orderBy: { expression: 'name', order: 'asc' } }
+                  }
+                },
+                {
+                  name: 'years',
+                  config: { align: 'center' },
+                  editor: {
+                    xtype: 'numberfield',
+                    allowBlank: false,
+                    vtype: 'numberValidator',
+                    width: 280,
+                    maxValue: 99,
+                    minValue: 0
+                  }
+                },
+                {
+                  name: 'months',
+                  config: { align: 'center' },
+                  editor: {
+                    xtype: 'numberfield',
+                    allowBlank: false,
+                    vtype: 'numberValidator',
+                    width: 280,
+                    maxValue: 12,
+                    minValue: 0
+                  }
+                },
+                {
+                  name: 'days',
+                  config: { align: 'center' },
+                  editor: {
+                    xtype: 'numberfield',
+                    allowBlank: false,
+                    vtype: 'numberValidator',
+                    width: 280,
+                    maxValue: 31,
+                    minValue: 0
+                  }
+                },
+                {
+                  name: 'totalDays',
+                  config: { align: 'center' },
+                  editor: {
+                    xtype: 'numberfield',
+                    allowBlank: false,
+                    vtype: 'numberValidator',
+                    width: 280,
+                    minValue: 0
+                  }
+                },
+                {
+                  name: 'calcDate',
+                  config: { align: 'center' },
+                  description: UB.i18n('Приведена дата'),
+                  editor: {
+                    readOnly: true
+                  }
+                },
+                {
+                  name: 'dictExperienceID.code',
+                  visibility: false
+                }
+              ]
+            },
+            masterFields: ['ID'],
+            detailFields: ['empOrderDetID'],
+            onBeforeEdit: function (rowEditor, context) {
+              if (context.grid.isEditDisabled) {
+                return false
+              }
+              const editor = rowEditor.editor
+              const me = editor.up('form')
+              const calcDate = editor.query(`[name=calcDate]`)[0]
+              const years = editor.query(`[name=years]`)[0]
+              const months = editor.query(`[name=months]`)[0]
+              const days = editor.query(`[name=days]`)[0]
+              const dictExperienceCtrl = editor.query(`[name=dictExperienceID.name]`)[0]
+              const totalDays = editor.query(`[name=totalDays]`)[0]
+              const calcMethod = AC.settings.get('hrCalcExperienceMethod', appAC.globalOrganization())
+              if (calcMethod === 'SIMPLE') {
+                totalDays.setReadOnly(true)
+              }
+              const reco = context.record
+              const recalcCalcDate = () => {
+                me.recalcCalcDate({
+                  record: reco,
+                  years: years.getValue(),
+                  months: months.getValue(),
+                  days: days.getValue(),
+                  calcDate: calcDate,
+                  totalDays: totalDays
+                })
+              }
+              years.on('change', () => recalcCalcDate())
+              months.on('change', () => recalcCalcDate())
+              days.on('change', () => recalcCalcDate())
+              totalDays.on('change', (ctrl) => {
+                if (ctrl.getValue() !== null) {
+                  if (me.isInnerChange) {
+                    return
+                  }
+                  me.isInnerChange = true
+                  try {
+                    const calcDateVal = AC.dateService.addDays(me.getField('dateFrom').getValue(), -1 * ctrl.getValue())
+                    calcDate.setValue(calcDateVal)
+                    const ymd = AC.dateService.getYmd(calcDateVal, me.getField('dateFrom').getValue(), false)
+                    years.setValue(ymd.years)
+                    months.setValue(ymd.months)
+                    days.setValue(ymd.days)
+                  } finally {
+                    me.isInnerChange = false
+                  }
+                }
+              })
+              dictExperienceCtrl.on('change', () => {
+                let dictExpReco = AC.gridUtils.getCurrentRecord(dictExperienceCtrl)
+                let expCode = (dictExpReco && dictExpReco.get('code')) || null
+                reco.set('dictExperienceID.code', expCode)
+              })
+
+              if (!reco.get('empOrderID')) {
+                reco.set('empOrderID', me.record.get('orderID'))
+                reco.set('days', 0)
+                reco.set('months', 0)
+              }
+            },
+            cmpInitConfig: {
+              customActions: [{
+                text: UB.i18n('Додати з даних особи'),
+                name: 'fillFromExperience',
+                actionId: 'fillFromExperience',
+                iconCls: 'fas fa-angle-double-down',
+                cls: 'fill-action',
+                disabled: false,
+                handler: function (btn) {
+                  const me = btn.up('form')
+                  me.fillOrderExperience()
+                }
+              }]
+            }
+          }]
+        },
+        {
+          xtype: 'panel',
+          region: 'center',
+          flex: 3,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          split: true,
+          items: [
+            _.merge(HR.orderManager.getOrderAccrualGrid(), {
+              title: UB.i18n('Нарахування')
+            })
+          ]
+        }
+        ]
+      },
+      HR.orderManager.getVacationPlanParaGrid('hr_empOrderAppointDet', {
+        title: UB.i18n('Право на відпустки')
+      })
+      ]
+    }]
+  }
+})()

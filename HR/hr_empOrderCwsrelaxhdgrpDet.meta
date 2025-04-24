@@ -1,0 +1,158 @@
+{
+  "caption": "Наказ про компенсацію за роботу в вихідний день (груповий)",
+  "description": "Наказ про компенсацію за роботу в вихідний день (груповий)",
+  "descriptionAttribute": "orderID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "itemIdx",
+      "dataType": "Int",
+      "caption": "№",
+      "description": "№ за порядком",
+      "documentation": "№ за порядком"
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ",
+      "allowNull": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultView": false
+    },
+    {
+      "name": "cancelOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Скасовано наказом",
+      "description": "Наказ, що скасував даний пункт",
+      "documentation": "Наказ, що скасував даний пункт"
+    },
+    {
+      "name": "cancelParaID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Скасовано пунктом",
+      "description": "Пункт, що скасував даний пункт",
+      "documentation": "Пункт, що скасував даний пункт"
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "typeCompensation",
+      "dataType": "Enum",
+      "enumGroup": "HR_COMPENSATION_TYPE",
+      "caption": "Вид компенсації",
+      "documentation": "Вид компенсації",
+      "description": "Вид компенсації",
+      "allowNull": true
+    },
+    {
+      "name": "dictTimeCostID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTimeCost",
+      "caption": "Елемент обліку робочого часу для робочого дня",
+      "description": "Елемент обліку робочого часу для робочого дня",
+      "documentation": "Елемент обліку робочого часу для робочого дня"
+    },
+    {
+      "name": "dictTimeCost2ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTimeCost",
+      "caption": "Елемент обліку робочого часу для вихідного дня",
+      "description": "Елемент обліку робочого часу для вихідного дня",
+      "documentation": "Елемент обліку робочого часу для вихідного дня"
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false,
+      "defaultValue": "CWSRELAXHDGRP"
+    },
+    {
+      "name": "periodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Звітній період",
+      "description": "Звітній період",
+      "documentation": "Звітній період"
+    },
+    {
+      "name": "reason",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Підстава",
+      "description": "Підстава",
+      "documentation": "Підстава",
+      "allowNull": true
+    },
+    {
+      "name": "isExternal",
+      "dataType": "Boolean",
+      "caption": "Зовнішній",
+      "documentation": "Чи особа не являється працівником",
+      "description": "Зовнішній",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "changedValues",
+      "dataType": "Text",
+      "caption": "Дані змінені при проведенні",
+      "description": "Дані змінені при проведенні",
+      "documentation": "Дані змінені при проведенні"
+    },
+    {
+      "name": "isGroup",
+      "dataType": "Boolean",
+      "caption": "Груповий",
+      "documentation": "Чи являється наказ груповим",
+      "description": "Чи являється наказ груповим",
+      "allowNull": false,
+      "defaultValue": "1"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "unity": {
+      "entity": "hr_empOrderDet",
+      "attributeList": [
+        "organizationID",
+        "empOrderType",
+        "orderID",
+        "orderState",
+        "cancelParaID",
+        "isExternal",
+        "changedValues",
+        "itemIdx",
+        "isGroup"
+      ],"defaults": {
+        "isExternal": false,
+        "isGroup": true
+      }
+    }
+  }
+}

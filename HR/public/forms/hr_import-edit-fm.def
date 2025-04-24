@@ -1,0 +1,103 @@
+/* global Ext $App UB */
+exports.formDef = 'HR.hr_import-edit'
+
+// noinspection JSAnnotator
+Ext.define(exports.formDef, {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.empImportEdit',
+  width: 1200,
+  height: 600,
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  autoScroll: true,
+  isModal: true,
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [{
+      xtype: 'button',
+      tooltip: UB.i18n('Зберегти'),
+      disabled: true,
+      glyph: 61639,
+      name: 'btnSave',
+      hidden: true,
+      cls: 'green-action',
+      listeners: {
+        click: function (btn) {
+          let me = btn.up('[alias=widget.empImportEdit]')
+          let modi = me.record.modified
+          for (let attr in modi) {
+            if (modi.hasOwnProperty(attr)) {
+              me.record.set(attr, modi[attr])
+              delete modi[attr]
+            }
+          }
+          btn.setDisabled(Object.keys(modi).length === 0)
+        }
+      }
+    }]
+  }],
+  initComponent: function () {
+    let me = this
+    me.on('afterrender', () => {
+      let attrs = $App.domainInfo.entities[me.entity].attributes
+      if (me.grid && me.grid.grid) {
+        me.grid.grid.columns.forEach(col => {
+          let attrName = col.dataIndex
+          let attr = attrs[attrName]
+          if (col.hidden) {
+            return
+          }
+          me.add({
+            attributeName: attrName,
+            readOnly: true,
+            xtype: attr.dataType === 'Date' ? 'datefield' : 'textfield',
+            fieldLabel: col.text || (attrName === 'ID' ? '№' : attrName),
+            // readOnly: attrName === 'ID',
+            value: me.record.get(attrName),
+            maxWidth: attr.dataType === 'Date' ? 240 : undefined,
+            minWidth: attr.dataType === 'Date' ? 240 : undefined,
+            width: attr.dataType === 'Date' ? 240 : undefined,
+            listeners: {
+              change: ctrl => {
+                let reco = me.record
+                if (reco.get(ctrl.attributeName) !== ctrl.getValue()) {
+                  reco.modified[ctrl.attributeName] = ctrl.getValue()
+                } else {
+                  delete reco.modified[ctrl.attributeName]
+                }
+                // me.down('[name=btnSave]').setDisabled(Object.keys(reco.modified).length === 0)
+              }
+            }
+          })
+        })
+      } else if (me.ID) {
+        me.up().setTitle(UB.i18n('Дані імпорту'))
+        let attrNames = Object.keys(attrs).filter(item => item.startsWith('imp') || item === 'comment' || attrs[item].documentation === UB.i18n('Використовується тільки при імпорті (видиме)'))
+        // DevUtils.inspect(attrNames)
+        UB.Repository(me.entity).attrs(attrNames).selectById(me.ID).then(data => {
+          UB.Repository('hr_organization').attrs(['name']).selectById(data.impSourceID).then(orgData => {
+            attrNames.forEach(attrName => {
+              let attr = attrs[attrName]
+              me.add({
+                attributeName: attrName,
+                readOnly: true,
+                xtype: attr.dataType === 'Date' ? 'datefield' : 'textfield',
+                fieldLabel: attrName === 'impEmployeeID' ? UB.i18n('Код особи') : attr.caption,
+                value: attrName === 'impSourceID' ? data[attrName] + ' ' + orgData.name : data[attrName],
+                maxWidth: attr.dataType === 'Date' ? 240 : undefined,
+                minWidth: attr.dataType === 'Date' ? 240 : undefined,
+                width: attr.dataType === 'Date' ? 240 : undefined,
+                tooltip: attrName
+              })
+            })
+          })
+        })
+      }
+    })
+    me.callParent(arguments)
+  }
+
+})

@@ -1,0 +1,220 @@
+{
+  "caption": "Заявка на добір персоналу",
+  "description": "Заявка на добір персоналу",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "associationAttr": "mi_data_id",
+      "allowNull": true
+    },
+    {
+      "name": "requestNumber",
+      "dataType": "Int",
+      "caption": "Номер документа",
+      "description": "Номер документа",
+      "documentation": "Номер документа",
+      "allowNull": true
+    },
+    {
+      "name": "requestDate",
+      "dataType": "Date",
+      "caption": "Дата погодження докумета",
+      "description": "Дата погодження докумета",
+      "documentation": "Дата погодження докумета"
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultValue": "PROJECT",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false,
+      "defaultValue": "STUFFREQUEST"
+    },
+    {
+      "name": "docText",
+      "dataType": "Text",
+      "caption": "Збережений текст",
+      "documentation": "Збережений текст",
+      "description": "Збережений текст"
+    },
+    {
+      "name": "document",
+      "dataType": "Document",
+      "caption": "PDF образ",
+      "documentation": "PDF образ",
+      "description": "PDF образ"
+    },
+    {
+      "name": "reportSettings",
+      "dataType": "Text",
+      "caption": "Налаштування звіту",
+      "documentation": "Налаштування звіту",
+      "description": "Налаштування звіту"
+    },
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада"
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ"
+    },
+    {
+      "name": "assignmentType",
+      "dataType": "Enum",
+      "enumGroup": "HR_REQ4STUFF_ASSIGNMENT_TYPE",
+      "caption": "Тип призначення",
+      "documentation": "Тип призначення",
+      "description": "Тип призначення"
+    },
+    {
+      "name": "positionResp",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Посадові обов'язки",
+      "documentation": "Посадові обов'язки",
+      "description": "Посадові обов'язки",
+      "allowNull": true
+    },
+    {
+      "name": "positionInstruction",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Завдання за посадою",
+      "description": "Завдання за посадою",
+      "documentation": "Завдання за посадою",
+      "allowNull": true
+    },
+    {
+      "name": "sphereOfResp",
+      "dataType": "String",
+      "size": 250,
+      "caption": "Сфера відповідальності",
+      "description": "Сфера відповідальності",
+      "documentation": "Сфера відповідальності",
+      "allowNull": true
+    },
+    {
+      "name": "futuresOfWork",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictFutureOfWork",
+      "caption": "Особливості роботи",
+      "description": "Особливості роботи",
+      "documentation": "Особливості роботи"
+    },
+    {
+      "name": "descOfExtRelatins",
+      "dataType": "String",
+      "size": 250,
+      "caption": "Опис зовнішніх зв'язків",
+      "description": "Опис зовнішніх зв'язків",
+      "documentation": "Опис зовнішніх зв'язків",
+      "allowNull": true
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "allowNull": true
+    },
+    {
+      "name": "needExperience",
+      "dataType": "Boolean",
+      "caption": "Потребується досвід",
+      "description": "Потребується досвід",
+      "documentation": "Потребується досвід",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dictLevelUsePcID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictLevelUsePc",
+      "caption": "Загальний рівень користування ПК",
+      "description": "Загальний рівень користування ПК",
+      "documentation": "Загальний рівень користування ПК"
+    },
+    {
+      "name": "posName",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Посада",
+      "description": "Посада",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pos.name from hr_position pos where pos.mi_data_id = {self}.positionID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pos.name from hr_position pos where pos.mi_data_id = {self}.positionID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "depName",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 dep.name from hr_department dep where dep.mi_data_id = {self}.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dep.name from hr_department dep where dep.mi_data_id = {self}.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "audit": {
+      "enabled": true
+    },
+    "rls": {
+      "func": "RLS.byOrganization"
+    }
+  }
+}

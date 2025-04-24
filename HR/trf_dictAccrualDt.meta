@@ -1,0 +1,200 @@
+{
+  "caption": "Правила розрахунку надбавок і доплат тарифікації",
+  "description": "Правила розрахунку надбавок і доплат тарифікації",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "dictAccrualID",
+      "dataType": "Entity",
+      "associatedEntity": "trf_dictAccrual",
+      "caption": "Вид оплати тарифікації",
+      "description": "Вид оплати тарифікації",
+      "documentation": "Вид оплати тарифікації",
+      "allowNull": false
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_organization",
+      "caption": "Організація",
+      "description": "Організація"
+    },
+    {
+      "name": "dictPositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPosition",
+      "caption": "Посада",
+      "description": "Посада"
+    },
+    {
+      "name": "dictQualificationID",
+      "dataType": "Entity",
+      "associatedEntity": "trf_dictQualification",
+      "caption": "Кваліфікація",
+      "description": "Кваліфікаційна категорія"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата кінця",
+      "description": "Дата кінця",
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата кінця",
+      "description": "Дата кінця",
+      "documentation": "Дата кінця",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "calcRuleID",
+      "dataType": "Enum",
+      "enumGroup": "TRF_CALC_RULE",
+      "caption": "Правило розрахунку",
+      "description": "Правило розрахунку"
+    },
+    {
+      "name": "dictSubjectID",
+      "dataType": "Entity",
+      "associatedEntity": "trf_dictSubject",
+      "caption": "Предмет",
+      "documentation": "Предмет",
+      "description": "Предмет"
+    },
+    {
+      "name": "dictPupilID",
+      "dataType": "Entity",
+      "associatedEntity": "trf_dictPupil",
+      "caption": "Категорія учнів",
+      "description": "Категорія учнів",
+      "documentation": "Категорія учнів"
+    },
+    {
+      "name": "rate",
+      "dataType": "Currency",
+      "caption": "Відсоток",
+      "description": "Відсоток",
+      "documentation": "Відсоток",
+      "defaultValue": "0"
+    },
+    {
+      "name": "sumCalc",
+      "dataType": "Currency",
+      "caption": "Сума для розрахунку",
+      "description": "Сума для розрахунку",
+      "documentation": "Сума для розрахунку",
+      "defaultValue": "0"
+    },
+    {
+      "name": "maxRate",
+      "dataType": "Currency",
+      "caption": "Максимальна кількість ставок",
+      "description": "Максимальна кількість ставок",
+      "documentation": "Максимальна кількість ставок",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isAutoAdd",
+      "dataType": "Boolean",
+      "caption": "Додавати автоматично",
+      "description": "Додавати автоматично",
+      "documentation": "Додавати автоматично",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isAutoHours",
+      "dataType": "Boolean",
+      "caption": "Години заповнювати автоматично",
+      "description": "Години заповнювати автоматично",
+      "documentation": "Години заповнювати автоматично",
+      "defaultValue": "0"
+    },
+    {
+      "name": "excludeOrg",
+      "dataType": "Boolean",
+      "caption": "Виключення",
+      "description": "Виключення організацій",
+      "defaultValue": "0"
+    },
+    {
+      "name": "excludePosition",
+      "dataType": "Boolean",
+      "caption": "Виключення",
+      "description": "Виключення посад",
+      "defaultValue": "0"
+    },
+    {
+      "name": "excludeQualification",
+      "dataType": "Boolean",
+      "caption": "Виключення",
+      "description": "Виключення кваліфікацій",
+      "defaultValue": "0"
+    },
+    {
+      "name": "excludeSubject",
+      "dataType": "Boolean",
+      "caption": "Виключення",
+      "description": "Виключення предметів",
+      "defaultValue": "0"
+    },
+    {
+      "name": "excludePupil",
+      "dataType": "Boolean",
+      "caption": "Виключення",
+      "description": "Виключення категорій учнів",
+      "defaultValue": "0"
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 256,
+      "caption": "Коментар",
+      "description": "Коментар"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

@@ -1,0 +1,235 @@
+/* global UB AC $App HR */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'empOrderType', 'organizationID', 'isGroup', 'organizationID.mi_data_id',
+    'positionID', 'employeeNumberID', 'employeePositionID.employeeNumberID', 'employeeID', 'employeeWorkbookID'
+  ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [{
+    xtype: 'tabpanel',
+    region: 'center',
+    listeners: {
+      tabchange: function (tp, t) {}
+    },
+    items: [{
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      title: UB.i18n('Загальне'),
+      items: [
+        {
+          ubID: 'tabMain',
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              layout: {
+                type: 'hbox'
+              },
+              padding: '10 0 5 0',
+              items: [
+                {
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  flex: 1,
+                  defaults: {
+                    labelWidth: 140
+                  },
+                  items: [
+                    {
+                      attributeName: 'employeePositionID',
+                      fieldList: ['ID', 'description', 'employeeNumberID', 'employeeID', 'positionID', 'dateFrom', 'workPlace',
+                        'organizationID', 'vacancyDateFrom', 'vacancyDateTo'],
+                      orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                      xtype: 'empPositionCombobox',
+                      addWorkPlace: true,
+                      customContextActions: [{
+                        text: UB.i18n('Трудова книжка'),
+                        iconCls: 'u-icon-check',
+                        handler: function () {
+                          const ctrl = this
+                          const me = ctrl.up('form')
+                          let employeeID = me.record.get('employeeID')
+                          let employeeNumberID = me.record.get('employeeNumberID')
+                          let reco = AC.gridUtils.getCurrentRecord(ctrl)
+                          if (reco) {
+                            employeeID = reco.get('employeeID')
+                            employeeNumberID = reco.get('employeeNumberID')
+                          } else if (!employeeID || !employeeNumberID) {
+                            $App.dialogInfo(UB.i18n('Необхідно вибрати працівника'), UB.i18n('Увага'))
+                            return
+                          }
+                          HR.employeeTabs.runEmpCard({
+                            employeeID: employeeID,
+                            employeeNumberID: employeeNumberID,
+                            isModal: true,
+                            nodeId: 'hr_employeeWorkbook',
+                            customParams: {
+                              visibleNodes: ['grpCommon', 'grpWork', 'hr_employee', 'hr_employeeWorkbook'],
+                              readOnlyExceptActive: true
+                            }
+                          })
+                        }
+                      },
+                      {
+                        text: UB.i18n('Запис в трудовій книжці'),
+                        iconCls: 'u-icon-check',
+                        handler: function () {
+                          const ctrl = this
+                          const me = ctrl.up('form')
+                          let employeePositionID = me.record.get('employeePositionID')
+                          me.getWorkbookRecord({ employeePositionID: employeePositionID })
+                            .then(data => {
+                              if (data) {
+                                $App.doCommand({
+                                  cmdType: 'showForm',
+                                  entity: 'hr_employeeWorkbook',
+                                  instanceID: data.ID
+                                })
+                              }
+                            })
+                        }
+                      },
+                      {
+                        text: UB.i18n('Лікарняні'),
+                        iconCls: 'fas fa-calendar',
+                        handler: function () {
+                          const ctrl = this
+                          const me = ctrl.up('form')
+                          let employeeID = me.record.get('employeeID')
+                          let employeeNumberID = me.record.get('employeeNumberID')
+                          let reco = AC.gridUtils.getCurrentRecord(ctrl)
+                          if (reco) {
+                            employeeID = reco.get('employeeID')
+                            employeeNumberID = reco.get('employeeNumberID')
+                          } else if (!employeeID || !employeeNumberID) {
+                            $App.dialogInfo(UB.i18n('Необхідно вибрати працівника'), UB.i18n('Увага'))
+                            return
+                          }
+                          HR.employeeTabs.runEmpCard({
+                            employeeID: employeeID,
+                            employeeNumberID: employeeNumberID,
+                            isModal: true,
+                            nodeId: 'hr_empOrderSickness',
+                            customParams: {
+                              visibleNodes: ['grpCommon', 'grpOrder', 'hr_employee', 'hr_empOrderSickness'],
+                              readOnlyExceptActive: true
+                            }
+                          })
+                        }
+                      }]
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        {
+                          attributeName: 'dateFrom',
+                          labelWidth: 140,
+                          width: 260
+                        },
+                        {
+                          xtype: 'label',
+                          name: 'dateFromInfo',
+                          text: '',
+                          cls: 'x-form-item-label',
+                          margin: '5 5 0 0'
+                        }
+                      ]
+                    },
+                    {
+                      attributeName: 'dateTo',
+                      width: 260
+                    },
+                    {
+                      attributeName: 'dayCount',
+                      readOnly: true,
+                      width: 260,
+                      minWidth: 260,
+                      maxWidth: 260
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  flex: 1,
+                  defaults: {
+                    labelWidth: 100
+                  },
+                  items: [
+                    {
+                      layout: {
+                        type: 'hbox',
+                        align: 'top'
+                      },
+                      items: [{
+                        attributeName: 'reason',
+                        rows: 5,
+                        flex: 1
+                      },
+                      {
+                        xtype: 'button',
+                        cls: 'list-icon',
+                        name: 'reasonButton',
+                        tooltip: UB.i18n('Вибрати'),
+                        width: 35,
+                        height: 35,
+                        margin: '0 2 0 -45',
+                        handler: btn => {
+                          btn.up('form').getField('reason').selectHandler(btn)
+                        }
+                      }
+                      ]
+                    },
+                    {
+                      layout: {
+                        type: 'hbox',
+                        align: 'top'
+                      },
+                      hidden: true,
+                      items: [{
+                        attributeName: 'reasonDoc',
+                        flex: 1,
+                        rows: 5
+                      },
+                      {
+                        xtype: 'button',
+                        cls: 'list-icon',
+                        name: 'reasonDocButton',
+                        tooltip: UB.i18n('Вибрати'),
+                        width: 35,
+                        height: 35,
+                        margin: '0 2 0 -45',
+                        handler: btn => {
+                          btn.up('form').getField('reasonDoc').selectHandler(btn)
+                        }
+                      }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            HR.controlService.getPeriodAbsencePanel({ dateToField: 'dateFrom', setChangeEvent: false, dateChangeField: 'dateFrom' })
+          ]
+        }
+      ]
+    }
+    ]
+  }]
+}

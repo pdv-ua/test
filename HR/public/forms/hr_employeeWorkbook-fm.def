@@ -1,0 +1,414 @@
+/* global appAC AC $App UB HR */
+exports.formDef = {
+  requiredFields: ['workPlace', 'employeeID', 'impSourceID', 'employeePositionID', 'employeePositionID.positionID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 750
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      items: [
+        {
+          title: UB.i18n('Основна інформація'),
+          layout: { type: 'vbox', align: 'stretch' },
+          items: [
+            {
+              layout: {
+                type: 'hbox',
+                align: 'middle'
+              },
+              items: [
+                {
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  flex: 1,
+                  items: [
+                    {
+                      attributeName: 'dateFrom',
+                      margin: '10 0 4 15',
+                      flex: 1
+                    },
+                    {
+                      attributeName: 'appointOrder'
+                    },
+                    {
+                      attributeName: 'appointReason',
+                      xtype: 'ubtextareafield'
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  flex: 1,
+                  items: [
+                    {
+                      attributeName: 'dateToEmpty',
+                      margin: '10 0 4 15',
+                      flex: 1
+                    },
+                    {
+                      attributeName: 'dismOrder'
+                    },
+                    {
+                      attributeName: 'dischargeReason',
+                      xtype: 'ubtextareafield'
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: {
+                type: 'hbox'
+              },
+              items: [
+                {
+                  xtype: 'ubcombobox',
+                  gridFieldList: ['name', 'code'],
+                  name: 'workPlace',
+                  hidden: true,
+                  fieldLabel: UB.i18n('Місце роботи'),
+                  flex: 1,
+                  ubRequest: {
+                    entity: 'ac_contractor',
+                    fieldList: ['ID', 'name']
+                  },
+                  isFormField: true,
+                  displayField: 'name',
+                  allowCustomText: true,
+                  maxLength: 500,
+                  triggerCls: 'hr-list-trigger',
+                  listeners: {
+                    blur: ctrl => {
+                      ctrl.setValue(ctrl.rawValue)
+                      ctrl.up('form').record.set('workPlace', ctrl.rawValue)
+                    },
+                    focus: ctrl => {
+                      ctrl.inputEl.dom.setAttribute('maxlength', 500)
+                    },
+                    select: ctrl => {
+                      ctrl.setValue(ctrl.rawValue)
+                      ctrl.up('form').record.set('workPlace', ctrl.rawValue)
+                    }
+                  }
+                },
+                {
+                  attributeName: 'organizationID',
+                  fieldList: ['ID', 'name', 'mi_data_id'],
+                  displayField: 'name',
+                  valueField: 'mi_data_id',
+                  flex: 1,
+                  whereList: {
+                    state: {
+                      expression: '[state]',
+                      condition: 'equal',
+                      value: 'ACTIVE'
+                    },
+                    mi_dateFrom: {
+                      expression: '[mi_dateFrom]',
+                      condition: '<=',
+                      value: appAC.globalApplicationDate()
+                    },
+                    mi_dateTo: {
+                      expression: '[mi_dateTo]',
+                      condition: '>=',
+                      value: appAC.globalApplicationDate()
+                    }
+                  }
+                },
+                {
+                  attributeName: 'isManualWorkPlace',
+                  labelWidth: 200
+                }
+              ]
+            },
+            {
+              attributeName: 'dictProfessionID',
+              fieldLabel: UB.i18n('Код КП'),
+              fieldList: ['ID', 'code', 'name'],
+              displayField: 'code',
+              valueField: 'ID',
+              disableContextMenu: false,
+              tpl: new Ext.XTemplate('<ul class="x-list-plain"><tpl for="."><li role="option" class="boundlist-{[xindex % 2 === 0 ? "even" : "odd"]}  ' +
+                Ext.baseCSSPrefix + 'boundlist-item">' +
+                '<span>{code}</span><span><small style="color: gray;"> {name}</small></span>' +
+                '</li></tpl></ul>', { }),
+              listeners: {
+                change: function (ctrl) {
+                  const form = ctrl.up('form')
+                  if (!form.record.get('workPosition')) {
+                    const reco = AC.gridUtils.getCurrentRecord(ctrl)
+                    if (reco && reco.get('name'))
+                    form.record.set('workPosition', reco.get('name'))
+                  }
+                }
+              }
+            },
+            {
+              attributeName: 'workPosition',
+              cls: 'textarea-bold'
+            },
+            {
+              attributeName: 'positionType',
+              disableContextMenu: false,
+              hideEntityItemInContext: true
+            },
+            AC.viewUtils.getCollapsiblePanel(
+              // eslint-disable-next-line no-template-curly-in-string
+              '<span style="color:#2196F3;">&nbsp;${UB.i18n("Опис")}: </span><span style="font-weight: normal;">${get("description").substr(0,80)}</span>' +
+              // eslint-disable-next-line no-template-curly-in-string
+              '<span style="color:#2196F3;">&nbsp;&nbsp;${UB.i18n("Коментар")}: </span><span style="font-weight: normal;">${get("baseDocument").substr(0,80)}</span>',
+              {
+                expandTitle: UB.i18n('Опис'),
+                layout: {
+                  type: 'hbox'
+                },
+                items: [
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    flex: 1,
+                    items: [
+                      { attributeName: 'description', labelWidth: 100 },
+                      { attributeName: 'baseDocument', labelWidth: 100, xtype: 'ubtextfield' }
+                    ]
+                  }
+                ]
+              }),
+            {
+              xtype: 'acGrid',
+              name: 'employeeWorkbookDt',
+              stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_empOrderChgsalaryDet_employeeWorkbookDt'),
+              title: UB.i18n('Стаж роботи'),
+              height: 250,
+              autoScroll: true,
+              rowEditing: true,
+              notWriteChanges: true,
+              storeType: 'local',
+              showToolBar: true,
+              readOnly: !$App.domainInfo.isEntityMethodsAccessible('hr_employeeWorkbook', 'update'),
+              disablePaging: true,
+              loadMaskMessage: UB.i18n('Завантаження даних...'),
+              summaryDataOnClient: true,
+              ignoreAttr: ['years', 'months', 'days', 'countDays', 'countDaysGiven'],
+              onBeforeEdit: function (ctrl, context) {
+                const me = context.grid.up('form')
+                me.beforeGridEdit(me, context)
+                me.setIsDirty(true)
+              },
+              edit: function (control, context) {
+                const calcDate = AC.dateService.shiftDate(context.record.get('dateFrom'))
+                const onDate = context.record.get('dateTo') ? AC.dateService.shiftDate(context.record.get('dateTo')) : AC.dateService.currentDate()
+                const ymd = AC.dateService.getYmd(calcDate, onDate, true)
+                const countDays = calcDate < onDate ? (AC.dateService.dateDiff(calcDate, onDate) || 0) + 1 : 0
+                const coef = context.record.get('coefficient') ? context.record.get('coefficient') : 1
+                context.record.set('countDays', countDays)
+                context.record.set('countDaysGiven', Math.floor(countDays * coef))
+                context.record.set('years', ymd.years)
+                context.record.set('months', ymd.months)
+                context.record.set('days', ymd.days)
+                return true
+              },
+              customToolBarActions: [{
+                name: 'fillExperience',
+                xtype: 'button',
+                tooltip: UB.i18n('Внести всі стажі'),
+                iconCls: 'fas fa-angle-double-down',
+                cls: 'fill-action',
+                handler: function (btn) {
+                  const me = btn.up('form')
+                  if (me.attr.employeeWorkbookDt.getStore().count()) {
+                    $App.dialogYesNo('Попередження', UB.i18n('Видалити раніше внесені стажі?'))
+                      .then(res => {
+                        if (res) {
+                          me.attr.employeeWorkbookDt.removeAll()
+                          me.setIsDirty(true)
+                          me.setExperience(me)
+                        }
+                      })
+                  } else {
+                    me.setExperience(me)
+                  }
+                }
+              }],
+              dockedItemsCreated: function (grid) {
+                const toolBarItems = grid.dockedItems[0].items
+                const oldIdx = toolBarItems.findIndex(item => item.name === 'addNew')
+                const newIdx = toolBarItems.findIndex(item => item.name === 'fillExperience')
+                if (oldIdx >= 0 && newIdx >= 0) {
+                  AC.dataService.arraymove(toolBarItems, oldIdx, newIdx)
+                }
+              },
+              fields: [
+                {
+                  name: 'ID'
+                },
+                {
+                  name: 'mi_modifyDate'
+                },
+                {
+                  name: 'dictExperienceID.name',
+                  columnConfig: {
+                    text: UB.i18n('Вид стажу'),
+                    flex: 1,
+                    editor: {
+                      dataType: 'Entity',
+                      xtype: 'accombobox',
+                      associatedEntity: 'hr_dictExperience',
+                      disableClearSelection: true,
+                      hideEntityItemInContext: true,
+                      disableContextMenu: true,
+                      storeAttributeValueField: 'dictExperienceID',
+                      allowBlank: false,
+                      fieldList: ['ID', 'name']
+                    }
+                  }
+                },
+                {
+                  name: 'dictExperienceID'
+                },
+                {
+                  name: 'dateFrom',
+                  columnConfig: {
+                    text: UB.i18n('Дата з'),
+                    dateFormat: 'd.m.Y',
+                    dataType: 'Date',
+                    width: 120,
+                    editor: {
+                      dataType: 'Date',
+                      allowBlank: false
+                    }
+                  }
+                },
+                {
+                  name: 'dateTo',
+                  columnConfig: {
+                    text: UB.i18n('Дата по'),
+                    dateFormat: 'd.m.Y',
+                    dataType: 'Date',
+                    width: 120,
+                    editor: {
+                      dataType: 'Date'
+                    }
+                  }
+                },
+                {
+                  name: 'years',
+                  columnConfig: {
+                    text: UB.i18n('Років')
+                  }
+                },
+                {
+                  name: 'months',
+                  columnConfig: {
+                    text: UB.i18n('Місяців')
+                  }
+                },
+                {
+                  name: 'days',
+                  columnConfig: {
+                    text: UB.i18n('Днів')
+                  }
+                },
+                {
+                  name: 'countDays',
+                  columnConfig: {
+                    text: UB.i18n('Кількість у днях')
+                  }
+                },
+                {
+                  name: 'coefficient',
+                  columnConfig: {
+                    text: UB.i18n('Коефіцієнт'),
+                    editor: {
+                      dataType: 'Float',
+                      decimalPrecision: 2,
+                      minValue: 1
+                    }
+                  }
+                },
+                {
+                  name: 'countDaysGiven',
+                  columnConfig: {
+                    text: UB.i18n('Кількість у днях (приведений)')
+                  }
+                },
+                {
+                  name: 'comment',
+                  columnConfig: {
+                    text: UB.i18n('Коментар'),
+                    editor: {
+                      dataType: 'String',
+                      maxLength: 100,
+                      enforceMaxLength: true
+                    }
+                  }
+                }]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додаткова інформація'),
+          layout: { type: 'vbox', align: 'stretch' },
+          items: [
+            {
+              attributeName: 'positionCategory',
+              labelWidth: 200
+            },
+            {
+              layout: {
+                type: 'hbox',
+                align: 'middle'
+              },
+              items: [
+                {
+                  attributeName: 'dateTrialEnd',
+                  labelWidth: 200
+                },
+                {
+                  attributeName: 'isOrgAppoint',
+                  labelWidth: 150
+                },
+                {
+                  attributeName: 'isOrgDismiss',
+                  labelWidth: 150
+                }
+              ]
+            },
+            {
+              attributeName: 'empWorkPlace',
+              labelWidth: 200,
+              disableContextMenu: false,
+              hideEntityItemInContext: true
+            },
+            {
+              attributeName: 'appointmentLevel',
+              labelWidth: 200,
+              disableContextMenu: false,
+              hideEntityItemInContext: true
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  attributeName: 'mtCount',
+                  labelWidth: 200,
+                  decimalPrecision: 2
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

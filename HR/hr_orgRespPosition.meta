@@ -1,0 +1,137 @@
+{
+  "caption": "Відповідальні особи організації",
+  "description": "Відповідальні особи організації",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "respPosition",
+      "dataType": "Enum",
+      "enumGroup": "HR_RESPPOSITION",
+      "caption": "Відповідальна особа",
+      "documentation": "Відповідальна особа",
+      "description": "Відповідальна особа",
+      "allowNull": false
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ"
+    },
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "documentation": "Діє з"
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по"
+    },
+    {
+      "name": "respStateEmpPosID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Підписант заяви про відпустку для держслужбовців",
+      "description": "Підписант заяви про відпустку для держслужбовців",
+      "documentation": "Підписант заяви про відпустку для держслужбовців"
+    },
+    {
+      "name": "respPoliticEmpPosID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Підписант заяви про відпустку для політиків",
+      "description": "Підписант заяви про відпустку для політиків",
+      "documentation": "Підписант заяви про відпустку для політиків"
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "documentation": "Діє з",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "useFullNamePosition",
+      "dataType": "Boolean",
+      "caption": "Використовувати повну назву посади",
+      "description": "Використовувати повну назву посади",
+      "documentation": "Використовувати повну назву посади",
+      "defaultValue": "0"
+    },
+    {
+      "name": "sourceOrgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

@@ -1,0 +1,86 @@
+// @isModal true
+
+// eslint-disable-next-line no-unused-vars
+/* global HR AC UB */
+exports.formDef = (function () {
+  return {
+    customParams: {
+      empOrderType: 'PLURALIST'
+    },
+    requiredFields: ['orderID', 'empOrderType', 'organizationID', 'positionID.positionType', 'positionID.mi_data_id', 'isGroup'
+    ],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    defaults: {
+      layout: 'fit'
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [{
+        title: UB.i18n('Загальне'),
+        ubID: 'tabMain',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        autoScroll: true,
+        items: [
+          {
+            attributeName: 'dateFrom',
+            fieldLabel: UB.i18n('З дати'),
+            width: 280,
+            labelWidth: 160
+          },
+          {
+            attributeName: 'employeePositionID',
+            fieldList: ['ID', 'description', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+            xtype: 'empPositionCombobox',
+            addWorkPlace: true,
+            fieldLabel: UB.i18n('Припинити сумісництво'),
+            disableModifyEntity: true,
+            labelWidth: 160
+          },
+          {
+            layout: {
+              type: 'hbox',
+              align: 'top'
+            },
+            // flex: 1,
+            items: [{
+              attributeName: 'reason',
+              labelWidth: 160,
+              flex: 1
+            },
+            {
+              xtype: 'button',
+              cls: 'list-icon',
+              name: 'reasonButton',
+              tooltip: UB.i18n('Вибрати'),
+              width: 35,
+              height: 35,
+              margin: '0 2 0 -45',
+              handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+            }
+            ]
+          },
+          {
+            xtype: 'label',
+            cls: 'x-form-item-label grd-italic',
+            margin: '10 10 10 15',
+            html: UB.i18n('Цей наказ припинить з вказаної дати дію вказаного призначення сумісника. <br/> Увага! За цим наказом НЕ БУДЕ припинено дію табельного номера сумісника. Цей табельний номер пізніше зможе бути використаний у наказі про сумісництво.')
+          }
+        ]
+      }
+      ]
+    }]
+  }
+})()

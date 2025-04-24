@@ -1,0 +1,725 @@
+/* global AC appAC $App HR */
+
+exports.formDef = {
+  requiredFields: [ 'positionID', 'state', 'dateFrom', 'dateTo', 'orderState', 'reportSettings', 'document', 'empOrderType', 'organizationID' ],
+  parentConfig: {
+    hideActions: ['docActiondocument'],
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'hbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [
+      {
+        orderId: 6,
+        actionId: 'startReconciliation'
+      },
+      {
+        orderId: 7,
+        actionId: 'stopReconciliation'
+      },
+      {
+        orderId: 8,
+        actionId: 'toCompletion'
+      },
+      {
+        orderId: 9,
+        actionId: 'renewTask'
+      }
+    ]
+  }],
+  items: [
+    {
+      flex: 1,
+      xtype: 'panel',
+      collapsible: true,
+      ubId: 'menuPanel',
+      style: { border: 'solid 1px lightgray' },
+      animate: true,
+      collapseDirection: 'left',
+      layout: 'fit',
+      layoutConfig: {
+        titleCollapse: true,
+        animate: true,
+        activeOnTop: false
+      },
+      activateTab: function (nodeId, me) {
+        me.activateTab(nodeId, me)
+      },
+      items: [
+        {
+          xtype: 'treepanel',
+          collapsed: false,
+          rootVisible: false,
+          multiSelect: false,
+          hideCollapseTool: true,
+          lines: false,
+          hideHeaders: true,
+          hideIcons: true,
+          ubID: 'treeInfo',
+          root: {
+            expanded: true,
+            children: [
+              { text: UB.i18n('Загальна інформація'), leaf: true, nodeId: 'hr_positionInstructionCommonTab' },
+              { text: UB.i18n('Основні посадові обов’язки'), leaf: true, nodeId: 'hr_positionMainResponsibilitiTab' },
+              { text: UB.i18n('Мета, вимоги та умови служби'), leaf: true, nodeId: 'hr_positionWorkingConditionsTab' },
+              { text: UB.i18n('Права'), leaf: true, nodeId: 'hr_positionRightResponsibilitiTab' },
+              { text: UB.i18n('Зовнішня службова комунікація'), leaf: true, nodeId: 'hr_positionServiceCommunicationTab' }
+            ]
+          },
+          listeners: {
+            select: function (tree, record) {
+              const me = tree.view.up('form')
+              me.treePanelSelect(tree, record)
+            }
+          }
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      flex: 4,
+      listeners: {
+        tabchange: function (tabPanel, activeTab) {
+          let me = tabPanel.up('form')
+          if (activeTab.ubID === 'report') {
+            if (!me.isPdfCreated) {
+              if (!me.record.get('docText')) {
+                HR.reportTab.editHtml(me)
+              } else {
+                HR.reportTab.setReportMode(me, 'view')
+              }
+            }
+            me.isPdfCreated = true
+          } else if (me.isNewInstance) {
+            me.saveForm().then(result => {
+              if (result === -1) {
+                me.activateTab('hr_positionInstructionCommonTab', me)
+              }
+            })
+          }
+        }
+      },
+      items: [
+        {
+          title: UB.i18n('Загальна інформація'),
+          nodeId: 'hr_positionInstructionCommonTab',
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          autoScroll: true,
+          flex: 1,
+          items: [
+            HR.controlService.getAttrDepPosBlock({
+              valueField: 'mi_data_id',
+              labelWidth: 120,
+              showPosCategory: false
+            }),
+            {
+              layout: {
+                type: 'hbox'
+              },
+              items: [
+                {
+                  flex: 1,
+                  defaults: { labelWidth: 120 },
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  items: [
+                    {
+                      attributeName: 'employeePositionID',
+                      disableContextMenu: true,
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                      gridFieldList: ['ID', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'dateFrom', 'dateTo']
+                    },
+                    {
+                      defaults: { labelWidth: 120 },
+                      layout: {
+                        type: 'hbox'
+                      },
+                      items: [
+                        { attributeName: 'state', width: 240 },
+                        { attributeName: 'approvalDate', labelWidth: 160 }
+                      ]
+                    },
+                    {
+                      defaults: { labelWidth: 120 },
+                      layout: {
+                        type: 'hbox'
+                      },
+                      items: [
+                        { attributeName: 'dateFrom' },
+                        { attributeName: 'dateTo', labelWidth: 160 }
+                      ]
+                    },
+                    { attributeName: 'comment' },
+                    { attributeName: 'namePosition' }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              items: [
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    {
+                      xtype: 'ubcombobox',
+                      attributeName: 'indepStructUnitID',
+                      fieldLabel: UB.i18n('Найменування самостійного структурного підрозділу'),
+                      labelWidth: 310,
+                      flex: 1,
+                      gridFieldList: [{ name: 'mi_data_id', visibility: false }, 'code', 'name', { name: 'parentUnitID.name', description: UB.i18n('Підпорядкування') }],
+                      displayField: 'name',
+                      valueField: 'mi_data_id',
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                      disableModifyEntity: true,
+                      fieldList: ['ID', 'mi_data_id', 'name'],
+                      ubRequest: {
+                        entity: 'hr_department',
+                        orderList: { orderBy: { expression: 'name' } }
+                      }
+                    },
+                    {
+                      xtype: 'button',
+                      cls: 'treeIconNotFocus',
+                      ubID: 'btnSelectByTree1',
+                      width: 35,
+                      height: 35,
+                      margin: '0 2 0 -12',
+                      listeners: {
+                        click: function (ctrl) {
+                          const me = ctrl.up('form')
+                          me.showStaffTree(me.attr.indepStructUnitID, 'DEPUNIT')
+                        },
+                        render: ctrl => {
+                          ctrl.setTooltip(UB.i18n('Вибір підрозділу з дерева орг. структури'))
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    {
+                      xtype: 'ubcombobox',
+                      attributeName: 'supervisorPosID',
+                      labelWidth: 310,
+                      flex: 1,
+                      gridFieldList: [
+                        { name: 'mi_data_id', visibility: false }, 'code', 'name', { name: 'parentUnitID.name', description: UB.i18n('Підпорядкування') }
+                      ],
+                      displayField: 'name',
+                      valueField: 'mi_data_id',
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                      disableModifyEntity: true,
+                      fieldList: ['ID', 'mi_data_id', 'name', 'description'],
+                      ubRequest: {
+                        entity: 'hr_position',
+                        orderList: { orderBy: { expression: 'name' } }
+                      }
+                    },
+                    {
+                      xtype: 'button',
+                      cls: 'treeIconNotFocus',
+                      ubID: 'btnSelectByTree2',
+                      width: 35,
+                      height: 35,
+                      margin: '0 2 0 -12',
+                      listeners: {
+                        click: function (ctrl) {
+                          const me = ctrl.up('form')
+                          me.showStaffTree(me.attr.supervisorPosID)
+                        },
+                        render: ctrl => {
+                          ctrl.setTooltip(UB.i18n('Вибір посади з дерева орг. структури'))
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    {
+                      xtype: 'ubcombobox',
+                      attributeName: 'headIndStrUnitPosID',
+                      labelWidth: 310,
+                      flex: 1,
+                      gridFieldList: [
+                        { name: 'mi_data_id', visibility: false }, 'code', 'name', { name: 'parentUnitID.name', description: UB.i18n('Підпорядкування') }
+                      ],
+                      displayField: 'name',
+                      valueField: 'mi_data_id',
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                      disableModifyEntity: true,
+                      fieldList: ['ID', 'mi_data_id', 'name', 'description'],
+                      ubRequest: {
+                        entity: 'hr_position',
+                        orderList: { orderBy: { expression: 'name' } }
+                      }
+                    },
+                    {
+                      xtype: 'button',
+                      cls: 'treeIconNotFocus',
+                      ubID: 'btnSelectByTree3',
+                      width: 35,
+                      height: 35,
+                      margin: '0 2 0 -12',
+                      listeners: {
+                        click: function (ctrl) {
+                          const me = ctrl.up('form')
+                          me.showStaffTree(me.attr.headIndStrUnitPosID)
+                        },
+                        render: ctrl => {
+                          ctrl.setTooltip(UB.i18n('Вибір посади з дерева орг. структури'))
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    {
+                      xtype: 'ubcombobox',
+                      attributeName: 'coordActUnitPosID',
+                      labelWidth: 310,
+                      flex: 1,
+                      valueField: 'mi_data_id',
+                      gridFieldList: [
+                        { name: 'mi_data_id', visibility: false }, 'code', 'name', { name: 'parentUnitID.name', description: UB.i18n('Підпорядкування') }
+                      ],
+                      displayField: 'name',
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                      disableModifyEntity: true,
+                      fieldList: ['ID', 'mi_data_id', 'name', 'description'],
+                      ubRequest: {
+                        entity: 'hr_position',
+                        orderList: { orderBy: { expression: 'name' } }
+                      }
+                    },
+                    {
+                      xtype: 'button',
+                      cls: 'treeIconNotFocus',
+                      ubID: 'btnSelectByTree4',
+                      width: 35,
+                      height: 35,
+                      margin: '0 2 0 -12',
+                      listeners: {
+                        click: function (ctrl) {
+                          const me = ctrl.up('form')
+                          me.showStaffTree(me.attr.coordActUnitPosID)
+                        },
+                        render: ctrl => {
+                          ctrl.setTooltip(UB.i18n('Вибір посади з дерева орг. структури'))
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    {
+                      attributeName: 'quantityFactEmpl',
+                      readOnly: true,
+                      labelWidth: 310,
+                      width: 400,
+                      hidden: true
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    {
+                      attributeName: 'showSigners',
+                      fieldLabel: UB.i18n('Підписанти'),
+                      labelWidth: 310,
+                      width: 400
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Основні посадові обов’язки'),
+          nodeId: 'hr_positionMainResponsibilitiTab',
+          hidden: true,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          flex: 1,
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'hr_positionMainResponsibiliti',
+              autoScroll: true,
+              hideActions: [],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_positionMainResponsibiliti',
+                method: 'select',
+                fieldList: [
+                  { name: 'itemIdx' },
+                  { name: 'description' },
+                  { name: 'comment' }
+                ],
+                whereList: {
+                },
+                orderList: {
+                  x100: { 'expression': 'itemIdx', 'order': 'asc' }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['positionInstructionID'],
+              cmpInitConfig: {
+                onDeterminateForm: function (grid) {
+                  return {
+                    cmpInitConfig: {
+                      initComponentStart () {
+                        const me = this
+                        me.on('recordloaded', () => {
+                          if (this.isNewInstance) this.record.set('itemIdx', grid.getStore().getCount() + 1)
+                        })
+                      }
+                    }
+                  }
+                },
+                customActions: [
+                  {
+                    text: UB.i18n('Завантажити'),
+                    iconCls: 'fas fa-angle-double-down',
+                    scale: 'medium',
+                    cls: 'fill-action',
+                    handler: function (btn) {
+                      const grid = btn.up('[entityName=hr_positionMainResponsibiliti]')
+                      const form = grid.up('form')
+
+                      let store = grid.getStore()
+                      let promise = Promise.resolve(true)
+                      store.load().then(store => {
+                        if (store.getCount()) {
+                          promise = $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Вже заповненi данi будуть видалені. Продовжити?'))
+                        }
+                        promise.then(isAgree => {
+                          if (isAgree) {
+                            form.setLoading(true)
+                            $App.connection.run({
+                              entity: 'hr_positionMainResponsibiliti',
+                              method: 'loadPositionRespons',
+                              positionID: form.parentContext && form.parentContext.positionID ? form.parentContext.positionID : form.record.data ? form.record.data.positionID : null,
+                              instructionID: form.instanceID
+                            }).then(mParams => {
+                              grid.getStore().load().then(store => {
+                                form.setLoading(false)
+                              })
+                            })
+                          }
+                        })
+                      })
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Права'),
+          nodeId: 'hr_positionRightResponsibilitiTab',
+          hidden: true,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          flex: 1,
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'hr_positionRightResponsibiliti',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent'],
+              customActions: [
+                {
+                  actionId: 'addByType',
+                  itemId: 'addByType',
+                  text: UB.i18n('Додати'),
+                  iconCls: 'fas fa-plus',
+                  cls: 'add-new-action',
+                  scale: 'medium',
+                  handler: function (btn) {
+                    const me = btn.up('form')
+                    me.addNewPositionRight(btn)
+                  }
+                }
+              ],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_positionRightResponsibiliti',
+                method: 'select',
+                fieldList: [
+                  { name: 'itemIdx' },
+                  { name: 'description' },
+                  { name: 'comment' },
+                  { name: 'type' }
+                ],
+                whereList: {
+                },
+                orderList: {
+                  x100: { 'expression': 'type', 'order': 'asc' },
+                  x200: { 'expression': 'itemIdx', 'order': 'asc' }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['positionInstructionID'],
+              onBeforeEdit: function (editor, context) {
+                const me = context.grid.up('form')
+                me.beforeGridEdit(editor, context)
+              },
+              cmpInitConfig: {
+                afterInit: function () {
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Мета, вимоги та умови служби'),
+          nodeId: 'hr_positionWorkingConditionsTab',
+          hidden: true,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'purposePost',
+              rows: 10
+            },
+            {
+              attributeName: 'requirements',
+              rows: 10
+            },
+            {
+              attributeName: 'workingConditions',
+              fieldLabel: UB.i18n('Умови служби'),
+              rows: 10
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Зовнішня службова комунікація'),
+          nodeId: 'hr_positionServiceCommunicationTab',
+          hidden: true,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          flex: 1,
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'hr_positionServiceCommunication',
+              autoScroll: true,
+              hideActions: [],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_positionServiceCommunication',
+                method: 'select',
+                fieldList: [
+                  { name: 'itemIdx' },
+                  { name: 'objectsEest' },
+                  { name: 'subjectsStaff' }
+                ],
+                whereList: {
+                },
+                orderList: {
+                  x100: { 'expression': 'itemIdx', 'order': 'asc' }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['positionInstructionID']
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Спеціальні вимоги'),
+          nodeId: 'hr_positionSpecReqTab',
+          hidden: true,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          flex: 1,
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'hr_positionSpecReq',
+              autoScroll: true,
+              hideActions: [],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_positionSpecReq',
+                method: 'select',
+                fieldList: [
+                  { name: 'itemIdx' },
+                  { name: 'description' },
+                  { name: 'specialRequirements' },
+                  { name: 'specialLegislation' }
+                ],
+                whereList: {
+                },
+                orderList: {
+                  x100: { 'expression': 'itemIdx', 'order': 'asc' }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['positionInstructionID'],
+              cmpInitConfig: {
+                onDeterminateForm: function (grid) {
+                  return {
+                    cmpInitConfig: {
+                      initComponentStart () {
+                        const me = this
+                        me.on('recordloaded', () => {
+                          if (this.isNewInstance) this.record.set('itemIdx', grid.getStore().getCount() + 1)
+                        })
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        HR.reportTab.getTabConfig({ getRepName: 'getReportName', repTabIndex: 6 }),
+        {
+          title: UB.i18n('Маршрут'),
+          autoScroll: true,
+          // nodeId: 'hr_positionDocumentTab',
+          nodeId: 'hr_positionDirectionTab',
+          layout: 'fit',
+          flex: 1,
+          items: [
+            {
+              xtype: 'recpanel',
+              name: 'recpanel'
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Лист ознайомлення'),
+          nodeId: 'hr_positionInstructionAcqListTab',
+          hidden: false,
+          autoScroll: true,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          flex: 1,
+          items: [
+            {
+              name: 'hr_positionInstructionAcqList',
+              xtype: 'ubdetailgrid',
+              // forceDataLoad: true,
+              rowEditing: true,
+              // notWriteChanges: true,
+              disableSearchBar: true,
+              // hidePagingBar: true,
+              // sortableColumns: false,
+              enableColumnHide: false,
+              hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_positionInstructionAcqList',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'employeePositionID.description',
+                    description: UB.i18n('Персона'),
+                    config: { width: 500 },
+                    editor: {
+                      fieldList: ['ID', 'description'],
+                      gridFieldList: ['description'],
+                      allowBlank: false,
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                    }
+                  },
+                  {
+                    name: 'evaluationType',
+                    config: { width: 240 },
+                    editor: {
+                      // readOnly: true
+                    }
+                  },
+                  {
+                    name: 'comment',
+                    config: { width: 400 },
+                    editor: {
+                      // readOnly: true
+                    }
+                  }
+                ]
+              },
+              masterFields: ['ID'],
+              detailFields: ['positionInstructionID'],
+              cmpInitConfig: {
+              },
+              onBeforeEdit: function (editor, context) {
+                const evaluationType = context.record.get('evaluationType')
+                // me.setIsDirty(true)
+                const onDate = appAC.globalApplicationDate()
+                AC.viewUtils.setWhereListProperty(editor.editor.query(`[name=employeePositionID.description]`)[0], [
+                  ['organizationID', '=', appAC.globalOrganization()],
+                  ['dateFrom', '<=', onDate],
+                  ['dateTo', '>=', onDate]
+                ])
+                if (evaluationType === null) {
+                  context.record.set('evaluationType', 'INFO')
+                }
+                return true
+              },
+              optimizeColumnWidth: function () {
+                // /!* do nothing for manual column width tunning *!/
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

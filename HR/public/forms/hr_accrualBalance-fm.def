@@ -1,0 +1,93 @@
+/* global Ext UB appAC AC $App */
+exports.formDef = 'HR.accrualBalance'
+
+Ext.define('HR.accrualBalance', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_accrualBalance',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  readOnly: true,
+  checkPaySum: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        region: 'north',
+        autoScroll: true,
+        split: true,
+        layout: { type: 'hbox' },
+        items: [
+          {
+            xtype: 'displayfield',
+            name: 'onDate',
+            fieldLabel: UB.i18n('Залишок на'),
+            labelWidth: 120,
+            width: 250
+          }
+        ]
+      },
+      {
+        xtype: 'acGrid',
+        name: 'balance',
+        flex: 1,
+        autoScroll: true,
+        region: 'center',
+        storeType: 'local',
+        disablePaging: true,
+        notWriteChanges: true,
+        hideActions: ['addNew', 'edit', 'del'],
+        summary: { paySum: 'sum' },
+        hideDefaultAction: true,
+        showToolBar: false,
+        multilineRows: true,
+        fields: [
+          {
+            name: 'dictFundSourceID',
+            columnConfig: { text: UB.i18n('Джерело фінансування'),
+              flex: 1
+            }
+          },
+          {
+            name: 'dictProgClassID',
+            columnConfig: { text: UB.i18n('КПК'), flex: 1, hidden: true }
+          },
+          {
+            name: 'dictProjectID',
+            columnConfig: { text: UB.i18n('Проєкт'), flex: 1, hidden: true }
+          },
+          {
+            name: 'paySum',
+            columnConfig: { text: UB.i18n('Сума'), width: 150, floatFormat: 2, align: 'right', sortBy: 'Number' }
+          }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=balance]'),
+        onDate: me.down('[name=onDate]')
+      }
+      me.up('window').setTitle(me.inBalance ? UB.i18n('Сальдо вхідне') : UB.i18n('Сальдо вихідне'))
+      if (me.periodID && me.employeeNumberID) {
+        $App.connection.run({
+          entity: 'hr_rl',
+          method: 'getBalance',
+          orgID: appAC.globalOrganization(),
+          periodID: me.periodID,
+          employeeNumberID: me.employeeNumberID,
+          secondaryJobsNumbers: (me.secondaryJobsNumbers && me.secondaryJobsNumbers.length) ? JSON.stringify(me.secondaryJobsNumbers) : null,
+          inBalance: !!me.inBalance
+        }).then(response => {
+          const data = JSON.parse(response.resultData)
+          me.attr.grid.setLocalStoreData(data)
+          me.attr.onDate.setValue(response.onDate)
+        })
+      }
+      AC.gridUtils.setGridColumnVisible(me.attr.grid, ['dictProgClassID'], AC.settings.get('hrProgClassAcc', me.orgID || appAC.globalOrganization()))
+      AC.gridUtils.setGridColumnVisible(me.attr.grid, ['dictProjectID'], AC.settings.get('hrProjectAcc', me.orgID || appAC.globalOrganization()))
+    }, me)
+    me.callParent(arguments)
+  }
+})

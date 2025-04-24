@@ -1,0 +1,928 @@
+/* global AC appAC appHR $App HR UB Ext */
+
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'empOrderType', 'organizationID', 'isGroup', 'organizationID.mi_data_id', 'payType', 'year', 'month'],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    dockedItems: [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        items: []
+      }
+    ],
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          ubID: 'tabMain',
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              layout: {
+                type: 'hbox',
+                align: 'middle'
+              },
+              items: [
+                {
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  flex: 2,
+                  items: [
+                    {
+                      attributeName: 'payElID',
+                      fieldLabel: UB.i18n('Вид оплати'),
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion', 'codeSort'],
+                      displayField: 'description',
+                      gridFieldList: ['description'],
+                      fieldList: ['ID', 'description', 'calcAvgType', 'calcSumType', 'methodID.valuation', 'methodID.code', 'dictFundSourceID'],
+                      flex: 2,
+                      labelWidth: 130,
+                      margin: '10 15 5 15',
+                      orderList: {
+                        orderBy: {
+                          expression: 'codeSort'
+                        }
+                      }
+                    },
+                    {
+                      layout: {
+                        type: 'hbox',
+                        align: 'middle'
+                      },
+                      flex: 2,
+                      items: [
+                        {
+                          attributeName: 'bountySum',
+                          allowBlank: false,
+                          fieldLabel: UB.i18n('Значення'),
+                          labelWidth: 130,
+                          width: 250
+                        },
+                        {
+                          xtype: 'label',
+                          name: 'payTypeSign',
+                          html: UB.i18n('грн'),
+                          width: 150
+                        },
+                        {
+                          attributeName: 'payType',
+                          flex: 1,
+                          fieldLabel: UB.i18n('Оцінка'),
+                          labelWidth: 80,
+                          listeners: {
+                            change: function (item, newVal, oldVal) {
+                              item.up('form').onPayTypeChanged(item, newVal, oldVal)
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  flex: 1,
+                  items: [
+                    {
+                      attributeName: 'workPlace',
+                      disableContextMenu: false,
+                      hideEntityItemInContext: true
+                    },
+                    {
+                      attributeName: 'dictFundSourceID',
+                      flex: 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: {
+                type: 'hbox',
+                align: 'middle'
+              },
+              items: [
+                {
+                  attributeName: 'reason',
+                  labelWidth: 130,
+                  fieldLabel: UB.i18n('Преміювати за'),
+                  flex: 1,
+                  rows: 3
+                },
+                {
+                  xtype: 'button',
+                  cls: 'list-icon',
+                  name: 'reasonButton',
+                  tooltip: UB.i18n('Вибрати'),
+                  width: 35,
+                  height: 35,
+                  margin: '0 13 0 -45',
+                  handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+                }
+              ]
+            },
+            {
+              layout: {
+                type: 'hbox'
+              },
+              items: [
+                {
+                  name: 'month',
+                  labelWidth: 130,
+                  fieldLabel: UB.i18n('За період'),
+                  xtype: 'combobox',
+                  margin: '6 0 0 15',
+                  width: 320,
+                  allowBlank: false,
+                  displayField: 'name',
+                  valueField: 'code',
+                  store: Ext.create('Ext.data.Store', {
+                    fields: [
+                      { name: 'code' },
+                      { name: 'name' }
+                    ],
+                    data: [
+                      { code: 1, name: UB.i18n('Січень') },
+                      { code: 2, name: UB.i18n('Лютий') },
+                      { code: 3, name: UB.i18n('Березень') },
+                      { code: 4, name: UB.i18n('Квітень') },
+                      { code: 5, name: UB.i18n('Травень') },
+                      { code: 6, name: UB.i18n('Червень') },
+                      { code: 7, name: UB.i18n('Липень') },
+                      { code: 8, name: UB.i18n('Серпень') },
+                      { code: 9, name: UB.i18n('Вересень') },
+                      { code: 10, name: UB.i18n('Жовтень') },
+                      { code: 11, name: UB.i18n('Листопад') },
+                      { code: 12, name: UB.i18n('Грудень') }
+                    ]
+                  }),
+                  listeners: {
+                    change: (ctrl, value) => {
+                      const me = ctrl.up('form')
+                      if (me.record.get('month') !== value) {
+                        me.record.set('month', value)
+                        if (!ctrl.skipChange) {
+                          me.changeDetail(me)
+                        }
+                      }
+                      ctrl.skipChange = false
+                    },
+                    afterrender: (ctrl) => {
+                      ctrl.getStore().load()
+                    }
+                  }
+                },
+                {
+                  name: 'quarter',
+                  labelWidth: 130,
+                  fieldLabel: UB.i18n('За період'),
+                  xtype: 'combobox',
+                  margin: '6 0 0 15',
+                  width: 320,
+                  hidden: true,
+                  allowBlank: true,
+                  displayField: 'name',
+                  valueField: 'code',
+                  store: Ext.create('Ext.data.Store', {
+                    fields: [
+                      { name: 'code' },
+                      { name: 'name' }
+                    ],
+                    data: [
+                      { code: 1, name: UB.i18n('I квартал') },
+                      { code: 4, name: UB.i18n('II квартал') },
+                      { code: 7, name: UB.i18n('III квартал') },
+                      { code: 10, name: UB.i18n('IV квартал') }
+                    ]
+                  }),
+                  listeners: {
+                    change: (ctrl, value) => {
+                      const me = ctrl.up('form')
+                      if (me.record.get('month') !== value) {
+                        me.record.set('month', value)
+                        if (!ctrl.skipChange) {
+                          me.changeDetail(me)
+                        }
+                      }
+                      ctrl.skipChange = false
+                    },
+                    afterrender: (ctrl) => {
+                      ctrl.getStore().load()
+                    }
+                  }
+                },
+                {
+                  name: 'yearPeriod',
+                  labelWidth: 200,
+                  fieldLabel: UB.i18n('За період'),
+                  xtype: 'combobox',
+                  margin: '6 0 0 15',
+                  width: 320,
+                  hidden: true,
+                  allowBlank: true,
+                  displayField: 'name',
+                  valueField: 'code',
+                  store: Ext.create('Ext.data.Store', {
+                    fields: [
+                      { name: 'code' },
+                      { name: 'name' }
+                    ],
+                    data: [
+                      { code: 1, name: UB.i18n('Рік') }
+                    ]
+                  }),
+                  listeners: {
+                    change: (ctrl, value) => {
+                      const me = ctrl.up('form')
+                      if (me.record.get('month') !== value) {
+                        me.record.set('month', value)
+                        if (!ctrl.skipChange) {
+                          me.changeDetail(me)
+                        }
+                      }
+                      ctrl.skipChange = false
+                    },
+                    afterrender: (ctrl) => {
+                      ctrl.getStore().load()
+                    }
+                  }
+                },
+                {
+                  xtype: 'combobox',
+                  name: 'year',
+                  labelWidth: 0,
+                  margin: '6 0 0 15',
+                  pack: 'center',
+                  fieldLabel: '',
+                  displayField: 'name',
+                  valueField: 'value',
+                  listeners: {
+                    change: (ctrl, value) => {
+                      const me = ctrl.up('form')
+                      if (me.record.get('year') !== value) {
+                        me.record.set('year', value)
+                        me.changeDetail(me)
+                      }
+                      ctrl.skipChange = false
+                    }
+                  },
+                  width: 100
+                }
+              ]
+            },
+            {
+              layout: {
+                type: 'hbox',
+                align: 'middle'
+              },
+              name: 'orderWordPanel',
+              hidden: true,
+              items: [
+                {
+                  attributeName: 'orderWord',
+                  labelWidth: 130,
+                  flex: 1,
+                  rows: 3
+                },
+                {
+                  xtype: 'button',
+                  cls: 'list-icon',
+                  name: 'orderWordButton',
+                  tooltip: UB.i18n('Вибрати'),
+                  width: 35,
+                  height: 35,
+                  margin: '0 13 0 -45',
+                  handler: btn => btn.up('form').getField('orderWord').selectHandler(btn)
+                }
+              ]
+            },
+            {
+              xtype: 'tabpanel',
+              region: 'center',
+              layout: 'fit',
+              flex: 1,
+              items: [{
+                title: UB.i18n('Працівники'),
+                name: 'hr_empOrderChgSalEmpDet',
+                xtype: 'ubdetailgrid',
+                paraGrid: true,
+                autoScroll: true,
+                rowEditing: true,
+                hideActions: [ /* 'refresh', 'exportXls', 'exportCsv', 'exportHtml',  'del', */ 'showPreview', 'itemLink',
+                  'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'
+                ],
+                flex: 1,
+                entityConfig: {
+                  entity: 'hr_empOrderChgSalEmpDet',
+                  method: 'select',
+                  fieldList: [
+                    {
+                      name: 'employeePositionID.description',
+                      description: UB.i18n('Працівник'),
+                      visibility: true,
+                      simpleFilter: true,
+                      editor: {
+                        fieldList: ['ID', 'description', 'accrualSum', 'employeeID', 'employeeID.fullFIO'],
+                        gridFieldList: ['description'],
+                        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                      },
+                      config: { width: 350 }
+                    },
+                    {
+                      name: 'payElID.description',
+                      description: UB.i18n('Вид оплати'),
+                      editor: { readOnly: true, allowBlank: true },
+                      config: { width: 250 }
+                    },
+                    {
+                      name: 'oldValue',
+                      visibility: false,
+                      description: UB.i18n('Кількість середніх'),
+                      config: { width: 150 }
+                    },
+                    {
+                      name: 'avgCount',
+                      visibility: true,
+                      description: UB.i18n('Кількість середніх'),
+                      config: { width: 150 }
+                    },
+
+                    {
+                      name: 'accrualCount',
+                      visibility: true,
+                      description: UB.i18n('Кількість окладів'),
+                      config: { width: 100 }
+                    },
+                    {
+                      name: 'accrualRate',
+                      visibility: true,
+                      description: UB.i18n('Відсоток'),
+                      config: { width: 100 }
+                    },
+                    {
+                      name: 'newValue',
+                      visibility: true,
+                      description: UB.i18n('Сума'),
+                      config: { width: 100 }
+                    },
+                    {
+                      name: 'valuation',
+                      visibility: true,
+                      description: UB.i18n('Оцінка'),
+                      config: { width: 150 }
+                    },
+                    {
+                      name: 'employeeFamilyID.description',
+                      description: UB.i18n('Виплата коштів родичу'),
+                      hidden: true,
+                      simpleFilter: true,
+                      editor: {
+                        fieldList: ['ID', 'description', 'peopleID.taxCode', 'peopleID', 'peopleID.linkEmployeeID'],
+                        gridFieldList: ['description'],
+                        hideActions: ['addNewByCurrent', 'del', 'newVersion'],
+                        whereList: {
+                          employeeID: {
+                            expression: '[employeeID]',
+                            condition: 'equal',
+                            value: 0
+                          }
+                        }
+                      },
+                      config: { width: 350 }
+                    },
+                    {
+                      name: 'payElID',
+                      visibility: false
+                    },
+                    {
+                      name: 'dateFrom',
+                      visibility: false
+                    },
+                    {
+                      name: 'employeeID',
+                      visibility: false
+                    },
+                    {
+                      name: 'empOrderType',
+                      visibility: false
+                    },
+                    {
+                      name: 'depName',
+                      description: UB.i18n('Підрозділ'),
+                      simpleFilter: true,
+                      editor: {
+                        readOnly: true,
+                        allowBlank: true
+                      },
+                      config: { width: 350 }
+                    },
+                    {
+                      name: 'workPlace',
+                      description: UB.i18n('Місце роботи'),
+                      editor: {
+                        readOnly: true,
+                        allowBlank: true
+                      },
+                      config: { width: 150 }
+                    }
+                  ]
+                },
+                masterFields: ['ID', 'orderID'],
+                detailFields: ['paraID', 'orderID'],
+                onBeforeEdit: async function (rowEditor, context) {
+                  let editor = rowEditor.editor
+                  let me = editor.up('form')
+                  me.gridEditing('start')
+                  // eslint-disable-next-line no-unused-vars
+                  let grid = context.grid
+                  rowEditor.on('canceledit', () => {
+                    me.gridEditing('end')
+                  })
+                  rowEditor.on('edit', (rowEditor, context) => {
+                    me.gridEditing('end')
+                  })
+
+                  if (context.grid.isEditDisabled) {
+                    return false
+                  }
+                  if (await me.saveForm() === -1) {
+                    rowEditor.cancelEdit()
+                    AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Необхідно зберегти дані перед редагуванням або додаванням особи'))
+                    return false
+                  }
+
+                  let reco = context.record
+
+                  let empOrderType = me.getEmpOrderType()
+                  let payType = reco.get('valuation') || me.record.get('payType')
+                  let employeePositionCtrl = editor.query(`[name=employeePositionID.description]`)[0]
+                  let valuationCtrl = editor.query(`[name=valuation]`)[0]
+                  let avgCountCtrl = editor.query(`[name=avgCount]`)[0]
+                  let newValueCtrl = editor.query(`[name=newValue]`)[0]
+                  let accrualRateCtrl = editor.query(`[name=accrualRate]`)[0]
+                  let accrualCountCtrl = editor.query(`[name=accrualCount]`)[0]
+                  let employeeFamilyCtrl = editor.query(`[name=employeeFamilyID.description]`)[0]
+
+                  if (!reco.get('valuation')) {
+                    valuationCtrl.setValue(payType)
+                  }
+                  let payElCtrl = editor.query(`[name=payElID.description]`)[0]
+                  payElCtrl && payElCtrl.setValue(me.getField('payElID').getFieldValue('description'))
+                  reco.set('payElID', me.getField('payElID').getValue())
+                  reco.set('payElID.description', me.getField('payElID').getFieldValue('description'))
+                  if (!reco.get('empOrderType')) {
+                    reco.set('empOrderType', empOrderType)
+                    reco.set('organizationID', me.record.get('organizationID'))
+                    if (empOrderType === 'BOUNTY') {
+                      reco.set('dateFrom', AC.dateService.truncTimeToUtcNull(new Date(me.record.get('year'), me.record.get('month') - 1, 1)))
+                    } else {
+                      reco.set('dateFrom', AC.dateService.truncTimeToUtcNull(me.orderForm.record.get('orderDate') || appAC.globalApplicationDate()))
+                    }
+                    editGrid(false, payType)
+                  } else {
+                    editGrid(true, payType, false)
+                  }
+                  if (employeeFamilyCtrl && reco.get('employeePositionID')) {
+                    AC.viewUtils.setWhereListProperty(employeeFamilyCtrl, [
+                      ['employeeID', '=', reco.get('employeeID')]
+                    ], undefined, ['clearStore', 'clearWhereList'])
+                  }
+
+                  function editGrid (isClean, payType, setValue = true) {
+                    let bountySum = me.record.get('bountySum')
+                    if (payType === 'SUM') {
+                      if (setValue) {
+                        newValueCtrl.setValue(bountySum)
+                        reco.set('newValue', bountySum)
+                      }
+                      newValueCtrl.setReadOnly(false)
+                      newValueCtrl.setAllowBlank(false)
+                      accrualRateCtrl.setReadOnly(true)
+                      accrualRateCtrl.setAllowBlank(true)
+                      avgCountCtrl.setReadOnly(true)
+                      avgCountCtrl.setAllowBlank(true)
+                      accrualCountCtrl.setAllowBlank(true)
+                      accrualCountCtrl.setReadOnly(true)
+                      if (isClean) {
+                        accrualRateCtrl.setValue('')
+                        avgCountCtrl.setValue('')
+                        accrualCountCtrl.setValue('')
+                      }
+                    } else if (payType === 'PRC') {
+                      if (setValue) {
+                        accrualRateCtrl.setValue(bountySum)
+                        reco.set('accrualRate', bountySum)
+                      }
+                      accrualRateCtrl.setReadOnly(false)
+                      accrualRateCtrl.setAllowBlank(false)
+
+                      avgCountCtrl.setReadOnly(true)
+                      avgCountCtrl.setAllowBlank(true)
+                      accrualCountCtrl.setAllowBlank(true)
+                      accrualCountCtrl.setReadOnly(true)
+                      newValueCtrl.setReadOnly(true)
+                      newValueCtrl.setAllowBlank(true)
+                      if (isClean) {
+                        avgCountCtrl.setValue('')
+                        accrualCountCtrl.setValue('')
+                        newValueCtrl.setValue('')
+                      }
+                    } else if (payType === 'AVG') {
+                      if (setValue) {
+                        avgCountCtrl.setValue(bountySum)
+                        reco.set('avgCount', bountySum)
+                      }
+                      avgCountCtrl.setReadOnly(false)
+                      avgCountCtrl.setAllowBlank(false)
+
+                      accrualCountCtrl.setAllowBlank(true)
+                      accrualCountCtrl.setReadOnly(true)
+                      accrualRateCtrl.setReadOnly(true)
+                      accrualRateCtrl.setAllowBlank(true)
+                      newValueCtrl.setReadOnly(true)
+                      newValueCtrl.setAllowBlank(true)
+                      if (isClean) {
+                        accrualCountCtrl.setValue('')
+                        accrualRateCtrl.setValue('')
+                        newValueCtrl.setValue('')
+                      }
+                    } else if (payType === 'PLAN') {
+                      if (setValue) {
+                        reco.set('accrualCount', bountySum)
+                        accrualCountCtrl.setValue(bountySum)
+                      }
+                      accrualCountCtrl.setAllowBlank(false)
+                      accrualCountCtrl.setReadOnly(false)
+                      accrualRateCtrl.setReadOnly(true)
+                      accrualRateCtrl.setAllowBlank(true)
+                      avgCountCtrl.setReadOnly(true)
+                      avgCountCtrl.setAllowBlank(true)
+                      newValueCtrl.setReadOnly(true)
+                      newValueCtrl.setAllowBlank(true)
+                      if (isClean) {
+                        accrualRateCtrl.setValue('')
+                        avgCountCtrl.setValue('')
+                        newValueCtrl.setValue('')
+                      }
+                    }
+                    if (empOrderType === 'BOUNTY') {
+                      if (payType === 'SUM') {
+                        accrualRateCtrl.setReadOnly(true)
+                      }
+                      if (payType !== 'PLAN') {
+                        valuationCtrl.getStore().filter(item => {
+                          return ['RATE', 'SUM', 'PRC'].includes(item.get('code'))
+                        })
+                      }
+                      employeeFamilyCtrl && employeeFamilyCtrl.setDisabled(true)
+                    } else {
+                      accrualRateCtrl.setReadOnly(payType !== 'PRC')
+                      newValueCtrl.setReadOnly(payType !== 'SUM')
+                    }
+                  }
+
+                  const workPlace = me.getField('workPlace').getValue()
+                  me.orderForm.filterEmployeePosition(me, {
+                    ctrlToFilter: employeePositionCtrl,
+                    onDate: appAC.globalApplicationDate(),
+                    params: workPlace ? [['workPlace', '=', workPlace]] : null
+                  })
+
+                  valuationCtrl.on('change', ctrl => { editGrid(true, ctrl.getValue()) })
+                  if (employeeFamilyCtrl) {
+                    employeeFamilyCtrl.addItemButton.show()
+                    employeeFamilyCtrl.addItemButton.setDisabled()
+                    employeeFamilyCtrl.addItemButton.handler = function () {
+                      $App.doCommand({
+                        cmdType: UB.core.UBCommand.commandType.showForm,
+                        entity: 'hr_employeeFamily',
+                        isModal: true,
+                        sender: me,
+                        cmpInitConfig: {
+                          defaultValues: {
+                            employeeID: context.record.get('employeeID')
+                          }
+                        },
+                        onClose: function (instanceID, store, formWasSaved, record) {
+                          if (formWasSaved && instanceID) {
+                            employeeFamilyCtrl.setValue(record.get('description'))
+                          }
+                        }
+                      })
+                    }
+                    employeeFamilyCtrl.editItemButton.show()
+                    employeeFamilyCtrl.editItemButton.setDisabled()
+                    employeeFamilyCtrl.editItemButton.handler = function () {
+                      $App.doCommand({
+                        cmdType: UB.core.UBCommand.commandType.showForm,
+                        entity: 'hr_employeeFamily',
+                        isModal: true,
+                        sender: me,
+                        instanceID: context.record.get('employeeFamilyID'),
+                        onClose: function (instanceID, store, formWasSaved, record) {
+                          if (formWasSaved && instanceID) {
+                            employeeFamilyCtrl.setValue(record.get('description'))
+                          }
+                        }
+                      })
+                    }
+                    employeeFamilyCtrl.on('change', (ctrl, value) => {
+                      if (value) {
+                        const taxCode = ctrl.getFieldValue('peopleID.taxCode')
+                        if (!taxCode) {
+                          $App.dialogError(UB.i18n('Для оформлення виплати матеріальної допомоги необхідно заповнити значення коду "РНОКПП" для отримувача {0}', value), 'Увага')
+                        } else {
+                          if (!ctrl.getFieldValue('peopleID.linkEmployeeID')) {
+                            me.setLoading(true)
+                            UB.Repository('hr_employee')
+                              .attrs(['ID', 'birthDate', 'fullFIO', 'shortFIO', 'firstName', 'lastName', 'middleName'])
+                              .where('taxCode', '=', taxCode)
+                              .selectSingle().then(emp => {
+                                me.setLoading(false)
+                                if (emp) {
+                                  const fio = employeePositionCtrl.getFieldValue('employeeID.fullFIO')
+                                  $App.dialogYesNo('Увага', UB.i18n('У системі наявна інформація про особу з даним РНОКПП {0} {1}, Дата народження: {2}. Чи знайдена особа являється членом родини {3}?', taxCode, emp.fullFIO, AC.dateService.formatDate(emp.birthDate), fio)).then(result => {
+                                    if (result) {
+                                      me.setLoading(true)
+                                      $App.connection.update({
+                                        entity: 'hr_people',
+                                        __skipOptimisticLock: true,
+                                        execParams: {
+                                          ID: employeeFamilyCtrl.getFieldValue('peopleID'),
+                                          linkEmployeeID: emp.ID,
+                                          firstName: emp.firstName,
+                                          lastName: emp.lastName,
+                                          middleName: emp.middleName,
+                                          shortFIO: emp.shortFIO,
+                                          fullFIO: emp.fullFIO,
+                                          birthDate: emp.birthDate
+                                        }
+                                      }).finally(() => {
+                                        me.setLoading(false)
+                                      })
+                                    }
+                                  })
+                                }
+                              })
+                          }
+                        }
+                      }
+                    })
+                  }
+                  employeePositionCtrl.on('change', ctrl => {
+                    UB.Repository('hr_employeePositionS')
+                      .attrs('posName', 'depName', 'workPlace')
+                      .selectById(ctrl.getFieldValue('ID'))
+                      .then(data => {
+                        // editor.form.findField('posName').setValue(data.posName)
+                        editor.form.findField('workPlace').setValue(UB.core.UBEnumManager.getStore('HR_WORKER_PLACE').getById(data.workPlace).get('name'))
+                        editor.form.findField('depName').setValue(data.depName)
+                      })
+                    context.record.set('employeeID', ctrl.getFieldValue('employeeID'))
+                    if (employeeFamilyCtrl) {
+                      AC.viewUtils.setWhereListProperty(employeeFamilyCtrl, [
+                        ['employeeID', '=', context.record.get('employeeID')]
+                      ], undefined, ['clearValue', 'clearStore', 'clearWhereList'])
+                    }
+                  })
+                },
+                customActions: [
+                  {
+                    iconCls: 'fas fa-angle-double-down',
+                    cls: 'fill-action',
+                    text: UB.i18n('Вибрати працівників'),
+                    actionId: 'fillData',
+                    handler: async function (btn) {
+                      const me = btn.up('form')
+                      if (me.isReadOnly) {
+                        return
+                      }
+                      if (await me.saveForm() === -1) {
+                        return
+                      }
+                      const gridEmp = me.down('[name=hr_empOrderChgSalEmpDet]')
+                      const store = gridEmp.getStore()
+                      const workPlace = me.getField('workPlace').getValue()
+                      HR.orderManager.empOrderEmployeeSearch({
+                        selected: store.data.items.map(o => o.get('employeePositionID')),
+                        orgID: me.record.get('organizationID'),
+                        onDate: AC.dateService.truncTimeToUtcNull(me.orderForm.record.get('orderDate') || me.orderForm.record.get('entryDate')),
+                        entityID: me.instanceID,
+                        workPlace: workPlace ? [{ value: workPlace, description: me.getField('workPlace').rawValue }] : [],
+                        onSelectData: function (data, isDelete) {
+                          me.loadEmployeers(data, isDelete)
+                        }
+                      })
+                    }
+                  },
+                  {
+                    actionId: 'recalc',
+                    eventId: 'recalc',
+                    text: UB.i18n('Перерахувати'),
+                    iconCls: 'fas fa-calculator',
+                    handler: item => {
+                      const me = item.up('form')
+                      if (me.isReadOnly) {
+                        return
+                      }
+                      const payElName = me.getField('payElID').getFieldValue('description')
+                      const payTypeText = me.getPayTypeText(me.record.get('payType'))
+                      $App.dialogYesNo('Попередження', UB.i18n(`Всім працівникам цього пункту будуть встановлені значення "{0}", {1} {2}. Продовжити?`, payElName, me.getField('bountySum').getValue(), payTypeText)).then(isYes => {
+                        if (isYes) {
+                          let empOrderType = me.getEmpOrderType().split('_')[0] // BOUNTY and BOUNTY_HELP
+                          if (empOrderType !== 'BOUNTY') {
+                            return
+                          }
+                          me.saveForm().then(result => {
+                            if (result !== -1) {
+                              me.setLoading(UB.i18n('Виконується перерахунок...'))
+                              $App.connection.run({
+                                entity: me.entityName,
+                                method: 'recalcBounty',
+                                ID: me.instanceID,
+                                valuation: me.record.get('payType'),
+                                payElID: me.record.get('payElID'),
+                                dateFrom: me.getEmpOrderType() === 'BOUNTY'
+                                  ? AC.dateService.truncTimeToUtcNull(new Date(me.record.get('year'), me.record.get('month') - 1, 1))
+                                  : AC.dateService.truncTimeToUtcNull(me.orderForm.record.get('orderDate') || me.orderForm.record.get('entryDate')),
+                              }).then(mParams => {
+                                me.down('[name=hr_empOrderChgSalEmpDet]').onRefresh()
+                              }).finally(() => {
+                                me.setLoading(false)
+                              })
+                            }
+                          })
+                        }
+                      })
+                    }
+                  },
+                  {
+                    name: 'dexportList',
+                    iconCls: 'el-icon-download',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    text: UB.i18n('Вивантажити шаблон CSV'),
+                    tooltip: UB.i18n('Вивантажити шаблон CSV'),
+                    handler: function (ctrl) {
+                      const attrs = ['taxCode', 'tabNum', 'rate', 'total']
+                      const content = attrs.reduce((res, item, index, arr) => {
+                        res += index !== arr.length - 1 ? `${item};` : item
+                        return res
+                      }, '')
+                      $App.connection.run({
+                        entity: 'ac_service',
+                        method: 'exportCsv',
+                        content: content
+                      }).then(({ result }) => {
+                        AC.filesService.saveAsByBase64Buffer(result, `Шаблон_Наказ про преміювання.csv`, { type: 'text/plain' })
+                      })
+                    }
+                  },
+                  {
+                    name: 'importList',
+                    iconCls: 'el-icon-upload2',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    text: UB.i18n('Завантажити з файлу'),
+                    handler: async function (btn) {
+                      const me = btn.up('form')
+                      let bountySum = me.down('[name=bountySum]')
+                      bountySum.setValue(0)
+                      if (me.isReadOnly) {
+                        return
+                      }
+                      if (await me.saveForm() === -1) {
+                        return
+                      }
+                      me.loadCsv(btn)
+                    }
+                  }
+                ],
+                cmpInitConfig: {
+                  customInit: function () {
+                    let grid = this
+                    let oldOnDel = grid.onDel
+                    let newOnDel = function () {
+                      let me = grid.up('form')
+                      if (['POSTED', 'PROCESSED'].includes(me.record.get('orderState'))) {
+                        AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Неможливо видалити запис з проведеного наказу'))
+                        return
+                      }
+                      oldOnDel.call(grid)
+                    }
+                    AC.gridUtils.replaceListener(grid, 'del', oldOnDel, newOnDel)
+                    let _doOnEdit = grid.doOnEdit
+                    AC.gridUtils.tuneGridColumns(grid, {})
+                    grid.doOnEdit = function () {
+                      grid.isEditMode = true
+                      _doOnEdit.call(grid)
+                    }
+                  },
+                  optimizeColumnWidth: function () {
+                    /!* do nothing for manual column width tunning *!/
+                  }
+                }
+              }]
+            }
+          ],
+          _items: [{
+            layout: {
+              type: 'hbox',
+              align: 'middle'
+            },
+            items: [
+              {
+                flex: 1,
+                attributeName: 'periodID',
+                pageSize: 50,
+                hidden: true,
+                orderList: {
+                  orderBy: {
+                    expression: 'dateFrom',
+                    order: 'desc'
+                  }
+                },
+                listeners: {
+                  expand: appHR.periodExpand
+                }
+              }
+            ]
+          },
+          {
+            layout: {
+              type: 'hbox',
+              align: 'middle'
+            },
+            items: [{
+              attributeName: 'changeKind',
+              labelWidth: 200,
+              flex: 2
+            },
+            {
+              attributeName: 'roundUpTo',
+              flex: 1
+            }
+            ]
+          },
+          {
+            layout: {
+              type: 'hbox',
+              align: 'middle'
+            },
+            items: [
+              {
+                attributeName: 'bountySum',
+                fieldLabel: UB.i18n('на'),
+                labelWidth: 200,
+                width: 250,
+                allowBlank: false
+              },
+              {
+                xtype: 'radiogroup',
+                ubID: 'payType',
+                listeners: {
+                  change: function (item, newVal, oldVal) {
+                    let me = item.up('form')
+                    me.record.set('payType', newVal.rb)
+                  }
+                },
+                items: [{
+                  boxLabel: '%',
+                  name: 'rb',
+                  inputValue: 'PRC'
+                },
+                {
+                  boxLabel: UB.i18n('грн'),
+                  name: 'rb',
+                  inputValue: 'SUM',
+                  checked: true
+                }
+                ]
+              }
+            ]
+          }]
+        }
+      ]
+    }]
+  }
+})()

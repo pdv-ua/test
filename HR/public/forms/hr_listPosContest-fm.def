@@ -1,0 +1,262 @@
+/* global HR UB */
+
+exports.formDef = {
+  requiredFields: ['positionID', 'orderID', 'positionID', 'positionID.orgID', 'positionID.name',
+    'positionID.dictWagePayID', 'positionID.psCategory.shortName', 'positionID.dictStatePayID.groupN', 'positionID.payElID',
+    'positionID.accrualSum', 'orderID.orderNumber', 'orderID.orderDate', 'orderID.respEmployeePositionID', 'orderID.comment'],
+  parentConfig: {
+    layout: { type: 'border' },
+    defaults: { layout: 'fit' },
+    autoScroll: true
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'importAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'approveAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'rejectAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'north',
+      defaults: { labelWidth: 140 },
+      items: [
+        AC.viewUtils.getCollapsibleFieldSet(
+          // eslint-disable-next-line no-template-curly-in-string
+          '<span>${UB.i18n("Інформація про посаду")}</span><br>' +
+          // eslint-disable-next-line no-template-curly-in-string
+          '<span style="color:#2196F3;">${UB.i18n("Організація")}: </span><span id="organizationdescription"></span><br>' +
+          // eslint-disable-next-line no-template-curly-in-string
+          '<span style="color:#2196F3;">${UB.i18n("Вакантна посада")}: </span> ${get("positionID.description") || ""}<br>',
+          {
+            expandTitle: UB.i18n('Інформація про посаду'),
+            layout: { type: 'vbox', align: 'stretch' },
+            margin: '0 10 0 10',
+            padding: '0 0 5 0',
+            collapsed: true,
+            ubID: 'positionPanel',
+            defaults: { labelWidth: 140 },
+            items: [
+              {
+                name: 'organization',
+                fieldLabel: UB.i18n('Організація'),
+                xtype: 'textfield',
+                readOnly: true
+              },
+              {
+                attributeName: 'positionID.name',
+                fieldLabel: UB.i18n('Вакантна посада'),
+                rows: 1,
+                allowBlank: true,
+                readOnly: true
+              },
+              { attributeName: 'positionID.dictWagePayID', fieldLabel: UB.i18n('Тип посади держслужбовця'), readOnly: true },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    attributeName: 'positionID.psCategory.shortName',
+                    fieldLabel: UB.i18n('Категорія посади держслужбовця'),
+                    readOnly: true,
+                    labelWidth: 140,
+                    width: 440
+                  },
+                  {
+                    attributeName: 'positionID.dictStatePayID.groupN',
+                    fieldLabel: UB.i18n('Група оплати праці держслужбовців'),
+                    allowBlank: true,
+                    readOnly: true,
+                    labelWidth: 140,
+                    width: 260
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    attributeName: 'positionID.payElID',
+                    fieldLabel: UB.i18n('Вид оплати'),
+                    readOnly: true,
+                    labelWidth: 140,
+                    width: 440
+                  },
+                  {
+                    attributeName: 'positionID.accrualSum',
+                    fieldLabel: UB.i18n('Сума, грн'),
+                    readOnly: true,
+                    labelWidth: 140,
+                    width: 260
+                  }
+                ]
+              }
+            ]
+          }
+        ),
+        AC.viewUtils.getCollapsibleFieldSet(
+          // eslint-disable-next-line no-template-curly-in-string
+          '<span>${UB.i18n("Наказ про оголошення конкурсу")}</span></br>' +
+          // eslint-disable-next-line no-template-curly-in-string
+          '<span style="color:#2196F3;">${UB.i18n("Номер/індекс наказу")}: </span> ${get("orderID.orderNumber") || ""}' +
+          // eslint-disable-next-line no-template-curly-in-string
+          '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Дата наказу")}: </span> ${get("orderID.orderDate") ? moment(get("orderID.orderDate")).format("DD.MM.YYYY") : ""}',
+          {
+            cls: 'x-fieldset',
+            expandTitle: UB.i18n('Наказ про оголошення конкурсу'),
+            layout: { type: 'vbox', align: 'stretch' },
+            margin: '10 10 0 10',
+            padding: '0 0 5 0',
+            collapsed: true,
+            defaults: { labelWidth: 140 },
+            items: [
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  { attributeName: 'orderID.orderNumber', fieldLabel: UB.i18n('Номер/індекс наказу'), readOnly: true, labelWidth: 140, width: 440 },
+                  { attributeName: 'orderID.orderDate', fieldLabel: UB.i18n('Дата наказу'), readOnly: true, labelWidth: 140, width: 260 }
+                ]
+              },
+              { attributeName: 'orderID.respEmployeePositionID', fieldLabel: UB.i18n('Підписав'), readOnly: true },
+              { attributeName: 'orderID.comment', fieldLabel: UB.i18n('Коментар'), rows: 1, readOnly: true }
+            ]
+          }
+        ),
+        AC.viewUtils.getCollapsibleFieldSet(
+          // eslint-disable-next-line no-template-curly-in-string
+          '<span>${UB.i18n("Результат конкурсу")}</span></br>' +
+          // eslint-disable-next-line no-template-curly-in-string
+          '<span style="color:#2196F3;">${UB.i18n("Дата проведення з")} </span> ${get("dateFrom") ? moment(get("dateFrom")).format("DD.MM.YYYY") : ""}' +
+          // eslint-disable-next-line no-template-curly-in-string
+          '<span style="color:#2196F3;">&nbsp;&nbsp;${UB.i18n("по")}: </span> ${get("dateTo") ? moment(get("dateTo")).format("DD.MM.YYYY") : ""}' +
+          // eslint-disable-next-line no-template-curly-in-string
+          '<span style="color:#2196F3;">&nbsp;&nbsp;${UB.i18n("Стан результату")}: </span> ${get("result.name") || ""}',
+          {
+            expandTitle: UB.i18n('Результат конкурсу'),
+            layout: { type: 'vbox', align: 'stretch' },
+            margin: '10 10 0 10',
+            padding: '0 0 5 0',
+            collapsed: false,
+            defaults: { labelWidth: 140 },
+            items: [
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  { attributeName: 'dateFrom', fieldLabel: UB.i18n('Дата проведення з'), readOnly: true, labelWidth: 140, width: 260 },
+                  { attributeName: 'dateTo', fieldLabel: UB.i18n('по'), labelWidth: 30, readOnly: true, width: 150 }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  { attributeName: 'result', labelWidth: 140, readOnly: true, width: 440 },
+                  { attributeName: 'dateClose', fieldLabel: UB.i18n('Дата закриття вакансії'), readOnly: true, labelWidth: 120, width: 260 }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  { attributeName: 'state', fieldLabel: UB.i18n('Стан конкурсу'), readOnly: true, labelWidth: 140, width: 440 },
+                  { attributeName: 'portalCode', labelWidth: 120, readOnly: true, width: 260 }
+                ]
+              },
+              { attributeName: 'comment', readOnly: true, labelWidth: 140 }
+            ]
+          }
+        )
+      ]
+    },
+    {
+      region: 'center',
+      autoScroll: true,
+      items: [
+        {
+          xtype: 'ubdetailgrid',
+          name: 'listPosContestDet',
+          hideActions: ['addNewByCurrent'],
+          flex: 1,
+          rowEditing: true,
+          disableSearchBar: true,
+          sortableColumns: false,
+          entityConfig: {
+            entity: 'hr_listPosContestDet',
+            method: 'select',
+            fieldList: [
+              { name: 'itemIdx', config: { width: 80, align: 'center' } },
+              {
+                name: 'employeeID.fullFIO',
+                description: UB.i18n('Особа'),
+                config: { width: 350 },
+                editor: {
+                  fieldList: ['ID', 'fullFIO'],
+                  gridFieldList: ['fullFIO', 'tabNum', 'sexType', 'birthDate', 'taxCode'],
+                  orderList: {
+                    orderBy: {
+                      expression: 'fullFIO',
+                      order: 'asc'
+                    }
+                  }
+                }
+              },
+              { name: 'winLevel', config: { width: 200 } },
+              { name: 'comment', config: { flex: 1 } },
+              { name: 'score', config: { flex: 1 } }
+            ]
+          },
+          masterFields: ['ID'],
+          detailFields: ['listPosContestID'],
+          onBeforeEdit: function (rowEditor, context) {
+            const form = context.grid.up('form')
+            const editor = rowEditor.editor
+            const employeeCtrl = editor.form.findField('employeeID.fullFIO')
+            employeeCtrl.getStore().ubRequest.whereList = {
+              exists: {
+                expression: '',
+                condition: 'subquery',
+                subQueryType: 'Exists',
+                value: {
+                  entity: 'ac_employeeOrg',
+                  fieldList: [],
+                  method: 'select',
+                  whereList: {
+                    cond: {
+                      expression: '[employeeID]=[{master}.ID]',
+                      condition: 'custom'
+                    },
+                    orgID: {
+                      condition: 'equal',
+                      expression: '[organizationID]',
+                      value: form.record.get('positionID.orgID')
+                    },
+                    mi_deleteDate: {
+                      condition: 'equal',
+                      expression: '[employeeID.mi_deleteDate]',
+                      value: '#maxdate'
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,279 @@
+{
+  "caption": "Робочі місця тарифікації",
+  "description": "Робочі місця тарифікації",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "documentID",
+      "dataType": "Entity",
+      "associatedEntity": "trf_document",
+      "caption": "Документ тарифікації",
+      "description": "Документ тарифікації",
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberSR",
+      "caption": "Працівник",
+      "description": "Працівник"
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Підрозділ",
+      "description": "Підрозділ"
+    },
+    {
+      "name": "dictPositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPosition",
+      "caption": "Посада",
+      "description": "Посада"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Опис",
+      "description": "Опис",
+      "allowNull": false
+    },
+    {
+      "name": "state",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан",
+      "description": "Стан",
+      "allowNull": false,
+      "defaultValue": "PROJECT"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата кінця",
+      "description": "Дата кінця",
+      "documentation": "Дата кінця",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата кінця",
+      "description": "Дата кінця",
+      "documentation": "Дата кінця",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "accrualSum",
+      "dataType": "Float",
+      "caption": "Сума",
+      "documentation": "Сума",
+      "description": "Сума",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select round(sum(accrualSum),2) from trf_position p where workPlaceID = {self}.ID and p.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "depName",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 dep.name from hr_department dep where dep.mi_data_id = {self}.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dep.name from hr_department dep where dep.mi_data_id = {self}.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "empName",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Робоче місце",
+      "documentation": "Робоче місце",
+      "description": "Робоче місце",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select case when {self}.employeeNumberID is null then 'Вакансія' else (select description from hr_employeeNumber where ID = {self}.employeeNumberID) end)"
+        }
+      ]
+    },
+    {
+      "name": "empFullFIO",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Робоче місце",
+      "documentation": "Робоче місце",
+      "description": "Робоче місце",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select case when {self}.employeeNumberID is null then 'Вакансія' else (select e1.fullFIO from hr_employee e1 where e1.ID = (select n1.employeeID from hr_employeeNumber n1 where n1.ID = {self}.employeeNumberID)) end)"
+
+        }
+      ]
+    },
+    {
+      "name": "checked",
+      "dataType": "Boolean",
+      "caption": "Вибрано",
+      "description": "Вибрано",
+      "documentation": "Вибрано",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select 0"
+        }
+      ]
+    },
+    {
+      "name": "sumTrfPosition",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Робоче місце",
+      "documentation": "Робоче місце",
+      "description": "Робоче місце",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select SUM(rate) from trf_position where workPlaceID = {self}.ID and mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "position",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Посад",
+      "documentation": "Посад",
+      "description": "Посад",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select COUNT(*) from trf_position where workPlaceID = {self}.ID and mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "isPreviousPeriod",
+      "dataType": "Boolean",
+      "size": 500,
+      "caption": "isPreviousPeriod",
+      "documentation": "isPreviousPeriod",
+      "description": "isPreviousPeriod",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT CASE WHEN EXISTS ( select wp.ID from trf_workPlace wp JOIN trf_document d on d.ID = wp.documentID JOIN hr_dictPeriod dp on dp.orgID = d.orgID where wp.ID = {self}.ID and dp.isClosed = 1 and wp.dateFrom <= dp.dateTo and wp.dateTo >= dp.dateFrom ) THEN 1 ELSE 0 END)"
+        } 
+      ]
+    },
+    {
+      "name": "isCurrent",
+      "dataType": "Boolean",
+      "size": 500,
+      "caption": "isCurrent",
+      "documentation": "isCurrent",
+      "description": "isCurrent",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT CASE WHEN EXISTS ( select wp.ID from trf_workPlace wp inner JOIN hr_employeeNumber d on d.ID = wp.employeeNumberID inner JOIN hr_dictPeriod dp on dp.orgID = d.orgID and dp.isCurrent = 1 and dp.mi_deleteDate >= '9999-12-31' where wp.ID = {self}.ID and wp.dateFrom <= dp.dateTo and wp.dateTo >= dp.dateFrom ) THEN 1 ELSE 0 END)"
+        } 
+      ]
+    },
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер наказу",
+      "description": "Номер наказу",
+      "documentation": "Номер наказу"
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу",
+      "description": "Дата наказу",
+      "documentation": "Дата наказу"
+    },
+    {
+      "name": "changeWorkPlaceID",
+      "dataType": "Entity",
+      "associatedEntity": "trf_workPlace",
+      "caption": "Змінено робочим місцем тарифікації",
+      "description": "Змінено робочим місцем тарифікації"
+    },
+    {
+      "name": "changedValues",
+      "dataType": "Json",
+      "caption": "Дані змінені при проведенні",
+      "description": "Дані змінені при проведенні",
+      "documentation": "Дані змінені при проведенні"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

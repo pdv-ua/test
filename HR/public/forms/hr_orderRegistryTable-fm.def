@@ -1,0 +1,166 @@
+/* global Ext UB $App AC */
+exports.formDef = 'HR.orderRegistryTable'
+
+Ext.define('HR.orderRegistryTable', {
+  extend: 'Ext.form.Panel',
+  requires: [
+    'UB.core.UBCommand',
+    'UB.core.UBUtil'
+  ],
+  width: 1280,
+  height: 800,
+  layout: { type: 'vbox', align: 'stretch' },
+  flex: 1,
+  items: [
+    {
+      xtype: 'panel',
+      region: 'center',
+      flex: 1,
+      items: []
+    }
+  ],
+  initComponent: function () {
+    const me = this
+    const control = Ext.create('Ext.Component', {
+      flex: 1,
+      margin: 0,
+      autoEl: {
+        tag: 'iframe'
+      }
+    })
+    const container = Ext.create('Ext.panel.Panel', {
+      layout: { type: 'vbox', align: 'stretch' },
+      flex: 1,
+      items: [
+        {
+          flex: 1,
+          autoScroll: true,
+          layout: { type: 'hbox', pack: 'center', align: 'stretch' },
+          bodyCls: 'ub-panel-gray',
+          items: [control]
+        }
+      ]
+    })
+    me.items = [container]
+    me.reportControl = control
+    me.on('afterrender', function () {
+      const me = this
+      me.showDesktop()
+    })
+    me.callParent(arguments)
+  },
+  showDesktop: async function () {
+    const me = this
+    me.setLoading(true)
+    const iFrame = me.reportControl.getEl().dom
+    const iFrameDoc = iFrame.contentDocument
+    let shTemplate = ''
+    me.onORClick = me.onORClick.bind(me)
+    const columnsData = await me.prepareShortcut()
+    for (let por = 0; por <= (Math.max(columnsData[0].length, columnsData[1].length)); por++) {
+      const data = {
+        shData1: columnsData[0][por] || null,
+        shData2: columnsData[1][por] || null
+      }
+
+      shTemplate += '<tr>'
+      for (let i = 1; i <= 2; i++) {
+        if (data[`shData${i}`]) {
+          shTemplate += `<td style="width:450px; font-size: 14px; height:24px;padding-left: 0px">
+            <a href="#" data-ordertype=${data[`shData${i}`] ? data[`shData${i}`].orderType : ''} >
+            ${data[`shData${i}`] ? (data[`shData${i}`].caption === '-' ? '<hr  align="left" width="300"  size="2">' : data[`shData${i}`].caption) : ''}
+           </a></td>`
+        }
+      }
+      shTemplate += '</tr>'
+    }
+
+    iFrameDoc.head.innerHTML = `
+      <style type="text/css">
+        body {
+          background-color: #FFFFFF;
+          color: #000000;
+          font-family: Roboto, Arial, Helvetica, sans-serif;
+          font-size: 14px;
+          line-height: 1.3;
+            padding: 30px;
+        }
+        a {
+          text-decoration: none;
+          color: #2f7c94;
+          word-wrap: break-word;
+          word-break: break-word;
+        }
+        td,th {
+          font-family: Roboto,Arial,Helvetica,sans-serif;
+          font-size: 14px;
+          word-wrap: break-word;
+          word-break: break-word;          
+        }
+      </style>`
+    iFrameDoc.body.innerHTML = `
+      <table
+        style="
+          border-collapse: collapse;
+          width: 100%;
+          word-break: break-all;
+        "
+        border="0px"
+        cellspacing="0"
+        cellpadding="3px"
+      >
+        <tbody>
+          ${shTemplate}
+        </tbody>
+      </table>`
+
+    const refs = iFrameDoc.getElementsByTagName('a')
+    for (let i = 0, L = refs.length; i < L; i++) {
+      refs[i].addEventListener('click', me.onORClick, true)
+    }
+    me.setLoading(false)
+  },
+  prepareShortcut: async function () {
+    let result = []
+    const orderTypeList = await UB.Repository('ubm_enum')
+      .attrs(['ID', 'code', 'name'])
+      .where('eGroup', '=', 'HR_ACCRDOC_TYPE')
+      .selectAsObject()
+
+    orderTypeList.forEach(orderType => {
+      result.push({
+        orderType: orderType.code,
+        caption: orderType.name
+      })
+    })
+    result = result.sort((a, b) => AC.dataService.compareStringUa(a.caption, b.caption))
+    let columns = [[{
+      orderType: 'showAll',
+      caption: 'Усі документи нарахувань'
+    }], []]
+    result.forEach((el, idx) => {
+      columns[idx < Math.round(result.length / 2) ? 0 : 1].push(result[idx])
+    })
+    return columns
+  },
+  onORClick: function (e) {
+    const me = this
+    e.preventDefault()
+    if (e.target.dataset.ordertype && e.target.dataset.ordertype.length) {
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: 'hr_orderRegistryList',
+        sender: me,
+        isModal: false,
+        tabId: 'hr_orderRegistry' + e.target.dataset.ordertype,
+        target: $App.getViewport().centralPanel,
+        cmpInitConfig: e.target.dataset.ordertype === 'showAll' ? {}
+          : {
+            customParams: {
+              orderTypes: [e.target.dataset.ordertype]
+            }
+          }
+      })
+    }
+  }
+})

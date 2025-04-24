@@ -1,0 +1,130 @@
+{
+  "caption": "Присвоєння спеціального звання",
+  "description": "Присвоєння спеціального звання",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dictSpecialRankID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictSpecialRank",
+      "caption": "Звання",
+      "description": "Спеціальне звання",
+      "documentation": "Спеціальне звання",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата присвоєння",
+      "description": "Дата присвоєння",
+      "documentation": "Дата присвоєння",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Закінчення дії",
+      "description": "Закінчення дії",
+      "documentation": "Закінчення дії"
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Закінчення дії",
+      "description": "Закінчення дії",
+      "documentation": "Закінчення дії",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "dateNext",
+      "dataType": "Date",
+      "caption": "Планована дата присвоєння",
+      "description": "Планована дата присвоєння",
+      "documentation": "Планована дата присвоєння"
+    },
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер наказу",
+      "description": "Номер наказу",
+      "documentation": "Номер наказу"
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу",
+      "description": "Дата наказу",
+      "documentation": "Дата наказу"
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ"
+    },
+    {
+      "name": "rankAssignKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictRankAssignKind",
+      "caption": "Вид присвоєння",
+      "documentation": "Вид присвоєння",
+      "description": "Вид присвоєння",
+      "allowNull": true
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Коментар",
+      "description": "Коментар",
+      "documentation": "Коментар"
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_SPECIALRANK_EMPDAT": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeeID": { "sort": "ASC" },
+          "dateFrom": { "sort": "ASC" },
+          "dateTo": { "sort": "ASC" },
+          "mi_deleteDate": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

@@ -1,0 +1,480 @@
+/* global $App AC UB Ext HR */
+exports.formDef = {
+  requiredFields: ['orderState', 'description', 'document', 'docText', 'organizationID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    hideActions: ['docActiondocument'],
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 5,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'cancelPostingAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      layout: { type: 'vbox', align: 'stretch' },
+      autoScroll: true,
+      split: true,
+      items: [
+        /* {
+          attributeName: 'organizationID',
+          allowBlank: false,
+          hidden: true
+        }, */
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'orderNumber', labelWidth: 70, width: 250 },
+            { attributeName: 'orderDate', labelWidth: 50 }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      listeners: {
+        tabchange: function (tabPanel, activeTab) {
+          let me = tabPanel.up('form')
+          if (activeTab.ubID === 'report') {
+            if (!me.isPdfCreated) {
+              if (!me.record.get('docText')) {
+                HR.reportTab.editHtml(me)
+              } else {
+                HR.reportTab.setReportMode(me, 'view')
+              }
+            }
+            me.isPdfCreated = true
+          } else if (me.isNewInstance) {
+            me.saveForm().then(result => {
+              if (result === -1) {
+                me.down('tabpanel').setActiveTab(0)
+              }
+            })
+          }
+        }
+      },
+      items: [
+        {
+          title: UB.i18n('Список листів непрацездатності'),
+          layout: 'fit',
+          items: [
+            {
+              name: 'sicknessOrders',
+              xtype: 'ubdetailgrid',
+              autoScroll: true,
+              forceDataLoad: true,
+              rowEditing: true,
+              flex: 1,
+              padding: '0 0 12 0', /* to prevent editor buttons cutting */
+              hideActions: ['refresh', 'addNewByCurrent'],
+              entityConfig: {
+                entity: 'hr_sicknessMeetingDt',
+                method: 'select',
+                fieldList: [
+                  { name: 'ID', visibility: false },
+                  { name: 'mi_modifyDate', visibility: false },
+                  { name: 'employeeNumberID', visibility: false },
+                  {
+                    name: 'empOrderSicknessID.description',
+                    description: UB.i18n('Лікарняний лист'),
+                    simpleFilter: true,
+                    editor: {
+                      tpl: new Ext.XTemplate('<ul class="x-list-plain"><tpl for="."><li role="option" class="boundlist-{[xindex % 2 === 0 ? "even" : "odd"]}  ' +
+                        Ext.baseCSSPrefix + 'boundlist-item">' +
+                        '<span>{[this.getTabNum(values)]}{description}</span></li></tpl></ul>', {
+                        getTabNum: function (reco) {
+                          return `[${reco['employeeNumberID.tabNum']}] (${reco['employeePositionID.workPlace'] === '1' ? UB.i18n('осн') : reco['employeePositionID.workPlace'] === '2' ? UB.i18n('сум') : ''}) `
+                        }
+                      }),
+                      fieldList: ['ID', 'description', 'employeeNumberID', 'employeeNumberID.tabNum', 'employeePositionID.workPlace', 'orderState', 'illnessReasonID.name', 'illnessReasonID.maxDayFOP',
+                        'employeeID.fullFIO', 'employeeNumberID.description', 'dateFrom', 'dateTo', 'parentID', 'parentID.dateFrom', 'parentID.dateTo', 'firstID.dateFrom', 'firstID.dateTo', 'dateFirst'],
+                      whereList: {
+                        organizationID: {
+                          expression: '[organizationID]',
+                          condition: '=',
+                          values: { value: 0 }
+                        },
+                        isRst: {
+                          expression: '[illnessKind]',
+                          condition: 'in',
+                          value: ['1', '3']
+                        },
+                        orderState: {
+                          expression: '[orderState]',
+                          condition: '=',
+                          values: { value: 'POSTED' }
+                        }
+                      },
+                      orderList: {
+                        orderBy: {
+                          expression: 'description',
+                          order: 'asc'
+                        }
+                      }
+                    }
+                  },
+                  {
+                    name: 'empNumDescription',
+                    description: UB.i18n('Працівник'),
+                    editor: { xtype: 'textfield', readOnly: true }
+                  },
+                  { name: 'isPay' },
+                  {
+                    name: 'dayPay',
+                    editor: { xtype: 'textfield', allowBlank: true, readOnly: true }
+                  },
+                  {
+                    name: 'dayFSSU',
+                    editor: { xtype: 'textfield', allowBlank: true, readOnly: true }
+                  },
+                  {
+                    name: 'dayNotPay',
+                    editor: { xtype: 'textfield', allowBlank: true, readOnly: true }
+                  },
+                  { name: 'refusal' },
+                  {
+                    name: 'dateFromStop',
+                    description: UB.i18n('Дата припинення виплати'),
+                    editor: { xtype: 'ubdatefield', allowBlank: true, readOnly: true }
+                  },
+                  {
+                    name: 'illnessReason',
+                    description: UB.i18n('Причина непрацездатності'),
+                    editor: { xtype: 'textfield', allowBlank: true, readOnly: true }
+                  },
+                  {
+                    name: 'parent',
+                    description: UB.i18n('Первинний/продовжений'),
+                    editor: { xtype: 'textfield', allowBlank: true, readOnly: true }
+                  },
+                  {
+                    name: 'dateFrom',
+                    description: UB.i18n('З'),
+                    config: { align: 'center' },
+                    editor: { xtype: 'ubdatefield', allowBlank: true, readOnly: true }
+                  },
+                  {
+                    name: 'dateTo',
+                    description: UB.i18n('По'),
+                    config: { align: 'center' },
+                    editor: { xtype: 'ubdatefield', allowBlank: true, readOnly: true }
+                  }
+                ],
+                whereList: {
+                  notEmpty: {
+                    expression: '[empOrderSicknessID]',
+                    condition: 'isNotNull'
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['sicknessMeetingID'],
+              afterInit: function () {
+                const grid = this
+                AC.gridUtils.removeDuplicatesFieldList(grid)
+              },
+              onValidateEdit: function (editor, context) {
+                return AC.inspectData.checkUniqueValues({
+                  editor,
+                  context,
+                  checkFields: [
+                    {
+                      name: 'empOrderSicknessID.description',
+                      idName: 'empOrderSicknessID'
+                    },
+                    {
+                      name: 'empNumDescription',
+                      idName: 'empNumDescription',
+                      inNoEntityField: true
+                    }
+                  ]
+                })
+              },
+              onBeforeEdit: function (editor, context) {
+                let me = context.grid.up('form')
+                me.beforeGridEdit(me, 'sicknessOrders', context)
+                return true
+              },
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Додати списком'),
+                    actionId: 'addList',
+                    iconCls: 'u-icon-list-success',
+                    cls: 'add-new-action_btn',
+                    scale: 'medium',
+                    handler: function (btn) {
+                      const me = btn.up('form')
+                      if (me.attr.sicknessOrders.getStore().count()) {
+                        $App.dialogYesNo('Попередження', UB.i18n('Видалити існуючі записи?'))
+                          .then(res => {
+                            if (res) {
+                              $App.connection.run({
+                                entity: 'hr_sicknessMeeting',
+                                method: 'removeDt',
+                                instanceID: me.instanceID,
+                                detailName: 'hr_sicknessMeetingDt'
+                              }).then(() => {
+                                me.addListSickness()
+                              })
+                            }
+                          })
+                      } else {
+                        me.addListSickness()
+                      }
+                    }
+                  },
+                  {
+                    itemId: 'deleteAll',
+                    text: UB.i18n('Видалити все'),
+                    actionId: 'deleteAll',
+                    iconCls: 'fa fa-eraser',
+                    cls: 'add-list-action',
+                    handler: function (btn) {
+                      const grid = btn.up('ubdetailgrid')
+                      let me = grid.up('form')
+                      $App.dialogYesNo('Увага', 'Видалити всі записи?').then(result => {
+                        if (result) {
+                          me.setLoading(true)
+                          $App.connection.run({
+                            entity: 'hr_sicknessMeeting',
+                            method: 'removeDt',
+                            instanceID: me.instanceID,
+                            detailName: 'hr_sicknessMeetingDt'
+                          }).then(() => {
+                            me.setLoading(false)
+                            grid.store.load()
+                          }, err => {
+                            me.setLoading(false)
+                            throw err
+                          })
+                        }
+                      })
+                    }
+                  }
+                ],
+                listeners: {
+                  render: (grid) => {
+                    grid.menu.add({
+                      text: UB.i18n('Відкрити документ'),
+                      handler: function () {
+                        let reco = AC.gridUtils.getCurrentRecord(grid)
+                        if (reco.get('empOrderSicknessID')) {
+                          $App.doCommand({
+                            cmdType: 'showForm',
+                            formCode: 'hr_empOrderSickness',
+                            entity: 'hr_empOrderSickness',
+                            title: UB.i18n(`Лист непрацездатності`),
+                            isModal: false,
+                            instanceID: reco.get('empOrderSicknessID'),
+                            tabId: 'hr_empOrderSickness' + reco.get('empOrderSicknessID'),
+                            target: $App.getViewport().centralPanel
+                          })
+                        }
+                      }
+                    })
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Список заяв на допомогу на поховання'),
+          layout: 'fit',
+          items: [
+            {
+              name: 'funeralOrders',
+              xtype: 'ubdetailgrid',
+              autoScroll: true,
+              forceDataLoad: true,
+              rowEditing: true,
+              flex: 1,
+              padding: '0 0 12 0', /* to prevent editor buttons cutting */
+              hideActions: ['refresh', 'addNewByCurrent'],
+              entityConfig: {
+                entity: 'hr_sicknessMeetingDt',
+                method: 'select',
+                fieldList: [
+                  { name: 'ID', visibility: false },
+                  { name: 'mi_modifyDate', visibility: false },
+                  {
+                    name: 'empOrderFuneralID.description',
+                    description: UB.i18n('Список заяв на допомогу на поховання'),
+                    simpleFilter: true,
+                    editor: {
+                      fieldList: ['ID', 'description', 'dead', 'addDoc'],
+                      whereList: {
+                        orderState: {
+                          expression: '[orderState]',
+                          condition: '=',
+                          values: { value: 'POSTED' }
+                        }
+                      },
+                      orderList: {
+                        orderBy: {
+                          expression: 'description',
+                          order: 'asc'
+                        }
+                      }
+                    }
+                  },
+                  { name: 'isPay' },
+                  { name: 'refusal' },
+                  { name: 'dead', editor: { xtype: 'textfield', allowBlank: true, readOnly: true } },
+                  { name: 'addDoc', editor: { xtype: 'textfield', allowBlank: true, readOnly: true } }
+                ],
+                whereList: {
+                  notEmpty: {
+                    expression: '[empOrderFuneralID]',
+                    condition: 'isNotNull'
+                  }
+                }
+              },
+              masterFields: ['ID'],
+              detailFields: ['sicknessMeetingID'],
+              afterInit: function () {
+                const grid = this
+                AC.gridUtils.removeDuplicatesFieldList(grid)
+              },
+              onValidateEdit: function (editor, context) {
+                return AC.inspectData.checkUniqueValues({
+                  editor,
+                  context,
+                  checkFields: [
+                    {
+                      name: 'empOrderFuneralID.description',
+                      idName: 'empOrderFuneralID'
+                    }
+                  ]
+                })
+              },
+              onBeforeEdit: function (editor, context) {
+                const me = context.grid.up('form')
+                me.beforeGridEdit(me, 'funeralOrders', context)
+                return true
+              },
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Додати списком'),
+                    actionId: 'addList',
+                    iconCls: 'u-icon-list-success',
+                    cls: 'add-new-action_btn',
+                    scale: 'medium',
+                    handler: function (btn) {
+                      const me = btn.up('form')
+                      if (me.attr.funeralOrders.getStore().count()) {
+                        $App.dialogYesNo('Попередження', UB.i18n('Видалити існуючі записи?'))
+                          .then(res => {
+                            if (res) {
+                              $App.connection.run({
+                                entity: 'hr_sicknessMeeting',
+                                method: 'removeDt',
+                                instanceID: me.instanceID,
+                                detailName: 'hr_sicknessMeetingDt'
+                              }).then(() => {
+                                me.addListFuneral()
+                              })
+                            }
+                          })
+                      } else {
+                        me.addListFuneral()
+                      }
+                    }
+                  },
+                  {
+                    itemId: 'deleteAll',
+                    text: UB.i18n('Видалити все'),
+                    actionId: 'deleteAll',
+                    iconCls: 'fa fa-eraser',
+                    cls: 'add-list-action',
+                    handler: function (btn) {
+                      const grid = btn.up('ubdetailgrid')
+                      let me = grid.up('form')
+                      $App.connection.run({
+                        entity: 'hr_sicknessMeeting',
+                        method: 'removeDt',
+                        instanceID: me.instanceID,
+                        detailName: 'hr_sicknessMeetingDt'
+                      }).then(() => {
+                        grid.store.load()
+                      })
+                    }
+                  }
+                ],
+                listeners: {
+                  render: (grid) => {
+                    grid.menu.add({
+                      text: UB.i18n('Відкрити документ'),
+                      handler: function () {
+                        let reco = AC.gridUtils.getCurrentRecord(grid)
+                        if (reco.get('empOrderFuneralID')) {
+                          $App.doCommand({
+                            cmdType: 'showForm',
+                            formCode: 'hr_empOrderFuneral',
+                            entity: 'hr_empOrderFuneral',
+                            title: UB.i18n(`Заява на допомогу на поховання`),
+                            isModal: false,
+                            instanceID: reco.get('empOrderFuneralID'),
+                            tabId: 'hr_empOrderFuneral' + reco.get('empOrderFuneralID'),
+                            target: $App.getViewport().centralPanel
+                          })
+                        }
+                      }
+                    })
+                  }
+                }
+              }
+            }
+          ]
+        },
+
+        {
+          title: UB.i18n('Комісія'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'commissionHRID',
+              fieldList: ['ID', 'name', 'organizationID']
+            },
+            {
+              xtype: 'commissionHR',
+              commissionIDAttribute: 'commissionHRID',
+              organizationAttribute: 'organizationID',
+              dateAttribute: 'orderDate',
+              flex: 1
+            }
+          ]
+        },
+        HR.reportTab.getTabConfig({
+          getRepName: 'getReportName',
+          repTabIndex: 3,
+          addExcel: true
+        })
+      ]
+    }
+  ]
+}

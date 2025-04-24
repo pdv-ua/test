@@ -1,0 +1,124 @@
+{
+  "caption": "Група (персонал)",
+  "description": "Група (персонал)",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "documentation": "Організаційна одиниця",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "chiefID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Керівник",
+      "description": "Керівник",
+      "documentation": "Керівник",
+      "allowNull": false
+    },
+    {
+      "name": "accessibleToChief",
+      "dataType": "Boolean",
+      "caption": "Доступний керівнику",
+      "description": "Доступний керівнику",
+      "documentation": "Доступний керівнику",
+      "defaultValue": "0",
+      "allowNull": false
+    },
+	{
+      "name": "isAllEmployees",
+      "dataType": "Boolean",
+      "caption": "Всі діючі працівники",
+      "description": "Всі діючі працівники",
+      "documentation": "Автоматично обирати всіх діючих працівників",
+      "defaultValue": "0",
+      "allowNull": false
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "quantity",
+      "dataType": "Int",
+      "caption": "Кількість учасників",
+      "documentation": "Кількість учасників",
+      "description": "Кількість учасників",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT count(*) FROM hr_employeeGroupDet WHERE employeeGroupID = {self}.ID AND mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

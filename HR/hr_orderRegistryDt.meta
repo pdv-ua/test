@@ -1,0 +1,714 @@
+{
+  "caption": "Первинні документи",
+  "description": "Первинні документи",
+  "descriptionAttribute": "employeeNumberID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orderRegistryID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_orderRegistry",
+      "caption": "Реєстр",
+      "description": "Реєстр",
+      "allowNull": false
+    },
+    {
+      "name": "dtType",
+      "dataType": "String",
+      "size": 32,
+      "caption": "Тип запису",
+      "description": "Тип запису"
+    },
+    {
+      "name": "empOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Кадровий наказ",
+      "description": "Кадровий наказ"
+    },
+    {
+      "name": "empOrderDetID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Кадровий наказ деталь",
+      "description": "Кадровий наказ деталь"
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionSR",
+      "caption": "Призначення",
+      "description": "Призначення"
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberSR",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "allowNull": false
+    },
+    {
+      "name": "dictTechID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTech",
+      "caption": "Технологічна карта",
+      "description": "Технологічна карта"
+    },
+    {
+      "name": "posName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Посада",
+      "description": "Посада",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 (case when dp.name IS NOT NULL then dp.name else pos.name end) from hr_employeePosition ep left join hr_position pos on pos.mi_data_id = ep.positionID and pos.state = 'ACTIVE' and pos.mi_deleteDate >= '9999-12-31' left join hr_dictPosition dp ON dp.ID = ep.dictPositionID where ep.employeeNumberID = {self}.employeeNumberID and ep.isActive = 1 and ep.dateFrom <= {self}.dateTo and ep.dateTo >= {self}.dateFrom and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo, pos.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select (case when dp.name IS NOT NULL then dp.name else pos.name end) from hr_employeePosition ep left join hr_position pos on pos.mi_data_id = ep.positionID and pos.state = 'ACTIVE' and pos.mi_deleteDate >= '9999-12-31' left join hr_dictPosition dp ON dp.ID = ep.dictPositionID where ep.employeeNumberID = {self}.employeeNumberID and ep.isActive = 1 and ep.dateFrom <= {self}.dateTo and ep.dateTo >= {self}.dateFrom and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo, pos.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "tabNum",
+      "dataType": "String",
+      "size": 15,
+      "caption": "Таб.№",
+      "description": "Таб.№",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 en.tabNum from hr_employeeNumber en where en.ID = {self}.employeeNumberID)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select en.tabNum from hr_employeeNumber en where en.ID = {self}.employeeNumberID LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "depName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Посада",
+      "description": "Посада",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 dep.caption from hr_employeePosition ep join hr_department dep on dep.mi_data_id = ep.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' where ep.employeeNumberID = {self}.employeeNumberID and ep.isActive = 1 and ep.dateFrom <= {self}.dateTo and ep.dateTo >= {self}.dateFrom and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo, dep.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dep.caption from hr_employeePosition ep join hr_department dep on dep.mi_data_id = ep.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' where ep.employeeNumberID = {self}.employeeNumberID and ep.isActive = 1 and ep.dateFrom <= {self}.dateTo and ep.dateTo >= {self}.dateFrom and ep.mi_deleteDate >= '9999-12-31' order by ep.dateTo, dep.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати",
+      "description": "Вид оплати"
+    },
+    {
+      "name": "payFundID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payFund",
+      "caption": "Фонд",
+      "description": "Фонд"
+    },
+    {
+      "name": "periodCalcID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Розрахунковий період",
+      "description": "Розрахунковий період"
+    },
+    {
+      "name": "periodSalaryID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Обліковий період",
+      "description": "Обліковий період",
+      "allowNull": false
+    },
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 50,
+      "caption": "Номер наказу",
+      "description": "Номер наказу"
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу",
+      "description": "Дата наказу"
+    },
+    {
+      "name": "periodCalc",
+      "dataType": "Date",
+      "caption": "Дата розрахункового періоду",
+      "description": "Дата розрахункового періоду"
+    },
+    {
+      "name": "periodSalary",
+      "dataType": "Date",
+      "caption": "Дата облікового періоду",
+      "description": "Дата облікового періоду",
+      "allowNull": false
+    },
+    {
+      "name": "flagsRec",
+      "dataType": "BigInt",
+      "caption": "Маска ознаки запису",
+      "description": "Маска ознаки запису"
+    },
+    {
+      "name": "flagsFix",
+      "dataType": "BigInt",
+      "caption": "Маска ознаки фіксації розрахованих полів",
+      "description": "Маска ознаки фіксації розрахованих полів"
+    },
+    {
+      "name": "planHours",
+      "dataType": "Currency",
+      "caption": "Планова кількість годин",
+      "description": "Планова кількість годин"
+    },
+    {
+      "name": "planDays",
+      "dataType": "Currency",
+      "caption": "Планова кількість днів",
+      "description": "Планова кількість днів"
+    },
+    {
+      "name": "baseSum",
+      "dataType": "Float",
+      "caption": "Планова сума",
+      "description": "Планова сума"
+    },
+    {
+      "name": "rate",
+      "dataType": "Currency",
+      "caption": "Відсоток нарахування",
+      "description": "Відсоток нарахування"
+    },
+    {
+      "name": "days",
+      "dataType": "Currency",
+      "caption": "Фактична кількість днів",
+      "description": "Фактична кількість днів"
+    },
+    {
+      "name": "calendarDays",
+      "dataType": "Float",
+      "caption": "Календарні дні",
+      "description": "Календарні дні"
+    },
+    {
+      "name": "hours",
+      "dataType": "Currency",
+      "caption": "Фактична кількість годин",
+      "description": "Фактична кількість годин"
+    },
+    {
+      "name": "mask",
+      "dataType": "BigInt",
+      "caption": "Маска оплачуваних днів",
+      "description": "Маска оплачуваних днів",
+      "defaultValue": "0",
+      "allowNull": false
+    },
+    {
+      "name": "maskAdd",
+      "dataType": "BigInt",
+      "caption": "Маска неоплачуваних днів",
+      "description": "Маска неоплачуваних днів"
+    },
+    {
+      "name": "mtCount",
+      "dataType": "Float",
+      "caption": "Кількість ставок",
+      "description": "Кількість ставок"
+    },
+    {
+      "name": "paySum",
+      "dataType": "Currency",
+      "caption": "Фактична (розрахована) сума",
+      "description": "Фактична (розрахована) сума"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку"
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата кінця",
+      "description": "Дата кінця"
+    },
+    {
+      "name": "koef",
+      "dataType": "Float",
+      "caption": "Коефіцієнт індексації",
+      "description": "Коефіцієнт індексації"
+    },
+    {
+      "name": "calculateDate",
+      "dataType": "DateTime",
+      "caption": "Дата створення запису",
+      "description": "Дата створення запису"
+    },
+    {
+      "name": "linkToParentID",
+      "dataType": "BigInt",
+      "caption": "Батьківський запис",
+      "description": "Батьківський запис"
+    },
+    {
+      "name": "linkToChildID",
+      "dataType": "BigInt",
+      "caption": "Дочірній запис",
+      "description": "Дочірній запис"
+    },
+    {
+      "name": "source",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Сутніть джерела",
+      "description": "Сутніть джерела"
+    },
+    {
+      "name": "sourceID",
+      "dataType": "BigInt",
+      "caption": "ID джерела",
+      "description": "ID джерела"
+    },
+    {
+      "name": "paymentID",
+      "dataType": "BigInt",
+      "caption": "ID системи оплати",
+      "description": "ID системи оплати"
+    },
+    {
+      "name": "dictVacationKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictVacationKind",
+      "caption": "Вид відпустки",
+      "description": "Вид відпустки"
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Документ",
+      "description": "Документ"
+    },
+    {
+      "name": "orderDateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку"
+    },
+    {
+      "name": "orderDateTo",
+      "dataType": "Date",
+      "caption": "Дата кінця",
+      "description": "Дата кінця"
+    },
+    {
+      "name": "avgCalcType",
+      "dataType": "Enum",
+      "enumGroup": "HR_AVGCALC_TYPE",
+      "caption": "Тип розрахунку"
+    },
+    {
+      "name": "dateFromAvg",
+      "dataType": "Date",
+      "caption": "Період для розрахунку з",
+      "description": "Період для розрахунку з"
+    },
+    {
+      "name": "dateToAvg",
+      "dataType": "Date",
+      "caption": "Період для розрахунку по",
+      "description": "Період для розрахунку по"
+    },
+    {
+      "name": "avgDays",
+      "dataType": "Float",
+      "caption": "Середня кількість днів",
+      "description": "Середня кількість днів"
+    },
+    {
+      "name": "planSum",
+      "dataType": "Float",
+      "caption": "Денний плановий заробіток",
+      "description": "Денний плановий заробіток"
+    },
+    {
+      "name": "calcSum",
+      "dataType": "Float",
+      "caption": "Денний заробіток для розрахунку",
+      "description": "Денний заробіток для розрахунку"
+    },
+    {
+      "name": "dictIllnessReasonID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictIllnessReason",
+      "caption": "Причина непрацездатності",
+      "description": "Причина непрацездатності"
+    },
+    {
+      "name": "parentSicknessID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_docRegSickness",
+      "caption": "Попередній лист",
+      "description": "Попередній лист"
+    },
+    {
+      "name": "accrualDt",
+      "dataType": "Json",
+      "caption": "Деталізація записів Розрахункового листа",
+      "description": "Деталізація записів Розрахункового листа"
+    },
+    {
+      "name": "accrualAddDt",
+      "dataType": "Json",
+      "caption": "Деталізація записів Розрахункового листа",
+      "description": "Деталізація записів Розрахункового листа"
+    },
+    {
+      "name": "countMonth",
+      "dataType": "Float",
+      "caption": "Кількість середньомісячних зарплат",
+      "description": "Кількість середньомісячних зарплат"
+    },
+    {
+      "name": "isAvg",
+      "dataType": "Boolean",
+      "caption": "Ознака розрахунку за середнім",
+      "description": "Ознака розрахунку за середнім",
+      "defaultValue": "0",
+      "allowNull": true
+    },
+    {
+      "name": "extraRate",
+      "dataType": "Currency",
+      "caption": "Додатковий відсоток",
+      "description": "Додатковий відсоток"
+    },
+    {
+      "name": "employeeCPHID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeCPH",
+      "caption": "Договір ЦПХ",
+      "description": "Договір ЦПХ",
+      "allowNull": true
+    },
+    {
+      "name": "flagsFixDoc",
+      "dataType": "BigInt",
+      "caption": "Маска ознаки фіксації полів в документі",
+      "description": "Маска ознаки фіксації полів в документі",
+      "defaultValue": "0"
+    },
+    {
+      "name": "linkEmployeeNumberID",
+      "associatedEntity": "hr_employeeNumberSR",
+      "dataType": "Entity",
+      "caption": "Працівник, якого заміняють",
+      "description": "Працівник, якого заміняють"
+    },
+    {
+      "name": "trfPositionID",
+      "associatedEntity": "trf_position",
+      "dataType": "Entity",
+      "caption": "Посадове місце",
+      "description": "Посадове місце"
+    },
+    {
+      "name": "dictTarifCoeffID",
+      "associatedEntity": "hr_dictTarifCoeff",
+      "dataType": "Entity",
+      "caption": "Розряд",
+      "description": "Розряд"
+    },
+    {
+      "name": "calcTimeType",
+      "dataType": "Enum",
+      "enumGroup": "HR_PROPORTION",
+      "caption": "Розрахунок по",
+      "description": "Розрахунок по"
+    },
+    {
+      "name": "rateType",
+      "dataType": "Enum",
+      "enumGroup": "HR_SHIFT_RATETYPE",
+      "caption": "Коефіцієнт",
+      "description": "Коефіцієнт"
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_fundSource",
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування"
+    },
+    {
+      "name": "checked",
+      "dataType": "Boolean",
+      "caption": "Вибрано",
+      "description": "Вибрано",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select 0"
+        }
+      ]
+    },
+    {
+      "name": "storno",
+      "dataType": "Boolean",
+      "caption": "Сторно",
+      "description": "Сторно",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT CASE WHEN {self}.flagsRec & 512 = 512 THEN 1 ELSE 0 END)"
+        }
+      ]
+    },
+    {
+      "name": "calcProportion",
+      "dataType": "Enum",
+      "enumGroup": "HR_PROPORTION",
+      "caption": "Розрахунок по",
+      "description": "Розрахунок по"
+    },
+    {
+      "name": "workScheduleID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_workSchedule",
+      "caption": "Графік роботи",
+      "description": "Графік роботи"
+    },
+    {
+      "name": "calcEarnings",
+      "dataType": "Enum",
+      "enumGroup": "HR_CALC_EARNINGS_TYPE",
+      "caption": "Розрахунок від заробітку",
+      "description": "Розрахунок від заробітку"
+    },
+    {
+      "name": "factHours",
+      "dataType": "Currency",
+      "caption": "Відпрацьовано годин",
+      "description": "Відпрацьовано годин",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select COALESCE(sum(hp.hours),0) from hr_docRegHourPay hp where hp.employeePositionID = {self}.employeePositionID and hp.orderState='POSTED' and hp.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "factHoursInDoc",
+      "dataType": "Currency",
+      "caption": "Відпрацьовано годин",
+      "description": "Відпрацьовано годин",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select COALESCE(sum(hp.hours),0) from hr_docRegHourPay hp where hp.employeePositionID = {self}.employeePositionID and hp.orderRegistryID = {self}.orderRegistryID and hp.orderState='PROJECT' and hp.ID != {self}.orderID and hp.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "paySumAccrual",
+      "dataType": "Currency",
+      "caption": "Сума нарахування",
+      "description": "Сума нарахування"
+    },
+    {
+      "name": "paySumOff",
+      "dataType": "Currency",
+      "caption": "Сума зняття",
+      "description": "Сума зняття"
+    },
+    {
+      "name": "rateOff",
+      "dataType": "Currency",
+      "caption": "% зняття",
+      "description": "% зняття"
+    },
+    {
+      "name": "additionalRate",
+      "dataType": "Currency",
+      "caption": "Дод%",
+      "description": "Дод%"
+    },
+    {
+      "name": "dictProgClassID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictProgClass",
+      "caption": "КПК",
+      "description": "Код програмної класифікації"
+    },
+    {
+      "name": "dictProjectID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictProject",
+      "caption": "Проєкт",
+      "description": "Проєкт"
+    },
+    {
+      "name": "dictWorkOperationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictWorkOperation",
+      "caption": "Операція",
+      "description": "Операція"
+    },
+    {
+      "name": "payment",
+      "dataType": "Enum",
+      "enumGroup": "PIECEWORK_PAYMENT",
+      "caption": "Форма оплати",
+      "description": "Форма оплати",
+      "defaultValue": "1"
+    },
+    {
+      "name": "norm",
+      "dataType": "Float",
+      "caption": "Норма",
+      "description": "Норма виробітку"
+    },
+    {
+      "name": "planQuantity",
+      "dataType": "Float",
+      "caption": "План",
+      "description": "План виробітку"
+    },
+    {
+      "name": "yield",
+      "dataType": "Float",
+      "caption": "Виробіток",
+      "description": "Виробіток"
+    },
+    {
+      "name": "workDays",
+      "dataType": "Int",
+      "caption": "Робочі дні",
+      "description": "Робочі дні"
+    },
+    {
+      "name": "sumFrom",
+      "dataType": "Currency",
+      "caption": "Залишок на початок",
+      "description": "Залишок на початок"
+    },
+    {
+      "name": "accruedSum",
+      "dataType": "Currency",
+      "caption": "Нараховано",
+      "description": "Нараховано"
+    },
+    {
+      "name": "usedSum",
+      "dataType": "Currency",
+      "caption": "Виплачено",
+      "description": "Виплачено"
+    },
+    {
+      "name": "sumTo",
+      "dataType": "Currency",
+      "caption": "Залишок на кінець",
+      "description": "Залишок на кінець"
+    },
+    {
+      "name": "saldoCorr",
+      "dataType": "Currency",
+      "caption": "Скориговане сальдо",
+      "description": "Скориговане сальдо"
+    },
+    {
+      "name": "SumToMove",
+      "dataType": "Currency",
+      "caption": "Сума, що переноситься",
+      "description": "Сума, що переноситься"
+    },
+    {
+      "name": "saldoToCorr",
+      "dataType": "Currency",
+      "caption": "Сальдо, що коригується",
+      "description": "Сальдо, що коригується"
+    },
+    {
+      "name": "KPI",
+      "dataType": "Float",
+      "caption": "KPI",
+      "description": "KPI",
+      "documentation": "KPI"
+    },
+    {
+      "name": "calcParams",
+      "dataType": "Json",
+      "caption": "Параметри розрахунку",
+      "description": "Параметри розрахунку"
+    },
+    {
+      "name": "sumAvg",
+      "dataType": "Float",
+      "caption": "Середньоденна",
+      "description": "Середньоденна",
+      "documentation": "Середньоденна"
+    },
+    {
+      "name": "planSumAvg",
+      "dataType": "Float",
+      "caption": "Сума обмеження (чиста)",
+      "description": "Сума обмеження (чиста)"
+    },
+    {
+      "name": "calculatedSum",
+      "dataType": "Currency",
+      "caption": "Розраховано за місяць",
+      "description": "Розраховано за місяць",
+      "documentation": "Розраховано за місяць"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "rls": {
+      "func": "RLS.byOrderRegistryOrgAndEmpNum"
+    }
+  }
+}

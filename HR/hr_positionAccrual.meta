@@ -1,0 +1,138 @@
+{
+  "caption": "Нарахування",
+  "description": "Нарахування",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада",
+      "allowNull": false
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати",
+      "description": "Вид оплати",
+      "documentation": "Вид оплати",
+      "allowNull": false
+    },
+    {
+      "name": "accrualSum",
+      "dataType": "Currency",
+      "caption": "Сума",
+      "description": "Сума",
+      "documentation": "Сума"
+    },
+    {
+      "name": "accrualRate",
+      "dataType": "Currency",
+      "caption": "Відсоток",
+      "description": "Відсоток",
+      "documentation": "Відсоток"
+    },
+    {
+      "name": "calcSum",
+      "dataType": "Currency",
+      "caption": "Розраховане значення",
+      "description": "Розраховане значення",
+      "documentation": "Розраховане значення"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "staffOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ"
+    },
+    {
+      "name": "impSourceID",
+      "dataType": "Bigint",
+      "caption": "Код джерела",
+      "description": "Код джерела даних імпорту",
+      "documentation": "Код джерела даних імпорту"
+    },
+    {
+      "name": "fullName",
+      "dataType": "String",
+      "size": 256,
+      "caption": "Повна назва",
+      "description": "Інформаційна колонка для полегшення ідентифікації запису в файлі csv",
+      "documentation": "Використовується тільки для імпорту",
+      "allowNull": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

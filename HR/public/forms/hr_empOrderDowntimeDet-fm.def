@@ -1,0 +1,220 @@
+/* global AC HR UB appAC */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'empOrderType', 'organizationID', 'isGroup', 'errorText'],
+  parentConfig: {
+    layout: { type: 'border' }
+  },
+  size: {
+    width: 1100,
+    height: 700
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          ubID: 'tabMain',
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 150 },
+          items: [
+            {
+              layout: { type: 'hbox' },
+              margin: '10 15 5 0',
+              items: [
+                {
+                  attributeName: 'dateFrom',
+                  fieldLabel: UB.i18n('На термін з'),
+                  labelWidth: 150,
+                  width: 270
+                },
+                {
+                  attributeName: 'dateTo',
+                  fieldLabel: UB.i18n('по'),
+                  labelWidth: 50,
+                  width: 170
+                }
+              ]
+            },
+            {
+              attributeName: 'departmentID',
+              fieldList: ['mi_data_id', 'description', 'mi_treePath'],
+              valueField: 'mi_data_id',
+              displayField: 'description'
+            },
+            {
+              attributeName: 'reason'
+            },
+            {
+              attributeName: 'dictTimeCostID',
+              fieldList: ['ID', 'nameSmall'],
+              displayField: 'nameSmall',
+              gridFieldList: ['nameSmall'],
+              orderList: { orderBy: { expression: 'nameSmall' } }
+            },
+            {
+              attributeName: 'payElID',
+              fieldList: ['ID', 'description', 'dictTimeCostID'],
+              displayField: 'description'
+            },
+            {
+              name: 'errorText',
+              xtype: 'label',
+              cls: 'x-form-item-label field-label-red',
+              margin: '10 10 5 15'
+            },
+            {
+              xtype: 'tabpanel',
+              region: 'center',
+              layout: 'fit',
+              flex: 1,
+              items: [
+                {
+                  title: UB.i18n('Працівники'),
+                  name: 'empOrderDowntimeListDet',
+                  xtype: 'ubdetailgrid',
+                  paraGrid: true,
+                  autoScroll: true,
+                  rowEditing: true,
+                  notWriteChanges: true,
+                  sortableColumns: false,
+                  hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit',
+                    'history', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_empOrderDowntimeListDet',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'employeePositionID.description',
+                        description: UB.i18n('Працівник'),
+                        config: { width: 400 },
+                        editor: {
+                          fieldList: ['ID', 'description'],
+                          gridFieldList: ['description'],
+                          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                        }
+                      },
+                      {
+                        name: 'depName',
+                        description: UB.i18n('Підрозділ'),
+                        config: { width: 350 },
+                        editor: { readOnly: true }
+                      },
+                      {
+                        name: 'posName',
+                        description: UB.i18n('Посада'),
+                        config: { width: 350 },
+                        editor: { readOnly: true }
+                      },
+                      { name: 'employeePositionID', visibility: false },
+                      { name: 'itemIdx', visibility: false },
+                      { name: 'empOrderType', visibility: false },
+                      { name: 'organizationID', visibility: false },
+                      { name: 'orderID', visibility: false },
+                      { name: 'paraID', visibility: false },
+                      { name: 'employeePositionID.positionID', visibility: false }
+                    ]
+                  },
+                  masterFields: ['ID', 'orderID'],
+                  detailFields: ['paraID', 'orderID'],
+                  onBeforeEdit: async function (rowEditor, context) {
+                    const editor = rowEditor.editor
+                    const me = editor.up('form')
+                    const reco = context.record
+                    const empOrderType = me.customParams.empOrderType
+                    const employeePositionCtrl = editor.query(`[name=employeePositionID.description]`)[0]
+                    let toSetDefaultValues = !!context.record.phantom
+
+                    if (toSetDefaultValues) {
+                      reco.set('itemIdx', context.grid.getStore().getCount())
+                      reco.set('empOrderType', empOrderType)
+                      reco.set('organizationID', me.record.get('organizationID'))
+                      reco.set('orderID', me.record.get('orderID'))
+                      reco.set('paraID', me.instanceID)
+                    }
+                    me.filterEmployeePosition(employeePositionCtrl)
+                    employeePositionCtrl.on('select', ctrl => {
+                      UB.Repository('hr_employeePositionS')
+                        .attrs('posName', 'depName', 'workPlace')
+                        .selectById(ctrl.getFieldValue('ID'))
+                        .then(data => {
+                          editor.form.findField('posName').setValue(data.posName)
+                          reco.set('workPlace', UB.core.UBEnumManager.getStore('HR_WORKER_PLACE').getById(data.workPlace).get('name'))
+                          editor.form.findField('depName').setValue(data.depName)
+                        })
+                    })
+                  },
+                  optimizeColumnWidth: function () {
+                    /* do nothing for manual column width tunning */
+                  },
+                  customActions: [
+                    {
+                      actionId: 'fillPersons',
+                      text: UB.i18n('Вибрати працівників'),
+                      iconCls: 'fas fa-angle-double-down',
+                      cls: 'fill-action',
+                      handler: async function (btn) {
+                        const me = btn.up('form')
+                        const gridEmp = me.down('[name=empOrderDowntimeListDet]')
+                        const store = gridEmp.getStore()
+                        let onDate = AC.dateService.truncTimeToUtcNull(me.orderForm.record.get('orderDate') || appAC.globalApplicationDate())
+                        let department = []
+                        let depTreePath = me.getField('departmentID').getFieldValue('mi_treePath')
+                        if (depTreePath) {
+                          department = await UB.Repository('hr_department')
+                            .attrs('mi_data_id', 'description', 'name')
+                            .where('mi_treePath', 'startWith', depTreePath)
+                            .where('state', '=', 'ACTIVE')
+                            .misc({ __mip_ondate: onDate })
+                            .selectAsObject({
+                              'mi_data_id': 'value'
+                            })
+                        }
+                        HR.orderManager.empOrderEmployeeSearch({
+                          selected: store.data.items.map(o => o.get('employeePositionID')),
+                          orgID: me.record.get('organizationID'),
+                          onDate: onDate,
+                          entityID: me.instanceID,
+                          department: department,
+                          onSelectData: function (data, isDelete) {
+                            me.loadEmployees(data, isDelete)
+                          }
+                        })
+                      }
+                    },
+                    {
+                      actionId: 'clearPersons',
+                      text: UB.i18n('Очистити працівників'),
+                      iconCls: 'fas fa-eraser',
+                      cls: 'fill-action',
+                      handler: (btn) => {
+                        const me = btn.up('form')
+                        me.clearEmployees()
+                      }
+                    }
+                  ],
+                  cmpInitConfig: {
+                    customInit: function () {
+                      const grid = this
+                      HR.controlService.setValidateEditPromise(grid, (rowEditor, context) => {
+                        const form = context.grid.up('form')
+                        return Promise.resolve(form.validateVacList(rowEditor.editor, context))
+                      })
+                      grid.on('changeData', (grd, event) => {
+                        const me = grd.up('form')
+                        HR.orderManager.setIsDirty(me, true)
+                        me.validate()
+                      })
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

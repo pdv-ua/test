@@ -1,0 +1,123 @@
+{
+  "caption": "Пільги лікарняних працівника",
+  "description": "Пільги лікарняних працівника",
+  "descriptionAttribute": "employeeID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "typeSickLimit",
+      "dataType": "Enum",
+      "enumGroup": "HR_TYPESICKLIMIT",
+      "caption": "Вид пільги",
+      "description": "Вид пільги",
+      "allowNull": false
+    },
+    {
+      "name": "dictSickLimitID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictSickLimit",
+      "caption": "Пільга",
+      "description": "Пільга"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє пої"
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "employeeFamilyID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeFamily",
+      "caption": "Людина, на догляд за якою надається пільга",
+      "description": "Людина, на догляд за якою надається пільга"
+    },
+    {
+      "name": "docNumber",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Серія та № документа",
+      "description": "Серія та № документа"
+    },
+    {
+      "name": "docDate",
+      "dataType": "Date",
+      "caption": "Дата видачі",
+      "description": "Дата видачі"
+    },
+    {
+      "name": "avgSum",
+      "dataType": "Float",
+      "caption": "Середньоденний заробіток",
+      "description": "Середньоденний заробіток"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Опис",
+      "description": "Опис",
+      "customSettings": {
+        "compositeFields": ["docNumber", "docDate"],
+        "compositeSeparator": " "
+      }
+    },
+    {
+      "name": "employeeBenefitsID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeBenefits",
+      "caption": "Пільга",
+      "description": "Пільга",
+      "allowNull": true
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "unity": {
+      "entity": "hr_attachEntity",
+      "attributeList": [],
+      "defaults": {
+        "entityName": "hr_employeeSickLimit"
+      }
+    }
+  }
+}

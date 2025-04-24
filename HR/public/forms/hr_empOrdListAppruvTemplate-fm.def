@@ -1,0 +1,120 @@
+/* global appAC UB AC */
+exports.formDef = {
+  size: {
+    width: 1100,
+    height: 600
+  },
+  requiredFields: ['organizationID'],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  items: [
+    {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [
+        {
+          attributeName: 'empOrderType',
+          disableContextMenu: false,
+          fieldLabel: UB.i18n('Вид наказу'),
+          flex: 1
+        },
+        {
+          attributeName: 'name',
+          flex: 1
+        }
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      name: 'empOrdListAppruvTemplateList',
+      autoScroll: true,
+      disableSearchBar: true,
+      disableMenuItemDetails: true,
+      rowEditing: true,
+      hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+      flex: 1,
+      entityConfig: {
+        entity: 'hr_empOrdListAppruvTemplateDt',
+        method: 'select',
+        fieldList: [
+          {
+            name: 'stageKind',
+            allowBlank: false
+          },
+          {
+            name: 'respPositionID.description',
+            description: UB.i18n('Посада погоджувача'),
+            allowBlank: false,
+            editor: {
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              whereList: {
+                orgID: {
+                  expression: '[orgID]',
+                  condition: '=',
+                  value: appAC.globalOrganization()
+                },
+                dateFrom: {
+                  expression: '[mi_dateFrom]',
+                  condition: '<=',
+                  value: appAC.globalApplicationDate()
+                },
+                dateTo: {
+                  expression: '[mi_dateTo]',
+                  condition: '>=',
+                  value: appAC.globalApplicationDate()
+                }
+              }
+            }
+          },
+          {
+            name: 'respEmployeePositionID.employeeID.description',
+            description: UB.i18n('Погодив'),
+            editor: {
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              whereList: {
+                organizationID: {
+                  expression: '[organizationID]',
+                  condition: '=',
+                  value: appAC.globalOrganization()
+                },
+                dateFrom: {
+                  expression: '[dateFrom]',
+                  condition: '<=',
+                  value: appAC.globalApplicationDate()
+                },
+                dateTo: {
+                  expression: '[dateTo]',
+                  condition: '>=',
+                  value: appAC.globalApplicationDate()
+                },
+                respPositionID: {
+                  expression: '[positionID]',
+                  condition: 'isNotNull'
+                }
+              }
+            }
+          },
+          { name: 'dateAppruv', format: 'd.m.Y' },
+          {
+            name: 'KEP',
+            editor: {
+              readOnly: true
+            }
+          }
+        ]
+      },
+      masterFields: ['ID'],
+      detailFields: ['empOrdListAppruvTemplateID'],
+      onBeforeEdit: function (editor, context) {
+        AC.viewUtils.setWhereListProperty(editor.editor.query('[name=stageKind]')[0], [['code', 'in', ['VISA', 'ONLAW']]], undefined, ['clearStore', 'clearWhereList'])
+        return true
+      }
+    }
+  ]
+}

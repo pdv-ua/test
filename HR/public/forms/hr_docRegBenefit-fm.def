@@ -1,0 +1,113 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['description', 'orderRegistryID', 'orderRegistryID.organizationID', 'orderRegistryID.periodID',
+    'orderRegistryID.periodID.dateFrom', 'flagsRec', 'flagsFix', 'orderState', 'empOrderID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 160 },
+      items: [
+        { attributeName: 'employeeID', hidden: true },
+        { attributeName: 'employeeNumberID', hidden: true },
+        {
+          layout: { type: 'hbox' },
+          defaults: { labelWidth: 160 },
+          items: [
+            {
+              attributeName: 'orderNumber',
+              readOnly: false,
+              allowBlank: true,
+              width: 300
+            },
+            {
+              attributeName: 'orderDate',
+              width: 300
+            }
+          ]
+        },
+        {
+          attributeName: 'employeePositionID',
+          fieldList: ['ID', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'dateFrom', 'dateTo',
+            'employeeNumberID.dateFrom', 'employeeNumberID.dateTo', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+          orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+          addWorkPlace: true,
+          addDateTo: true,
+          xtype: 'empPositionCombobox'
+        },
+        {
+          attributeName: 'payElID',
+          fieldList: ['ID', 'description', 'methodID.code', 'methodID.dayAccumCondition', 'codeSort'],
+          orderList: { orderBy: { expression: 'codeSort' } }
+        },
+        {
+          attributeName: 'dictFundSourceID'
+        },
+        {
+          layout: { type: 'hbox' },
+          defaults: { labelWidth: 160 },
+          items: [
+            {
+              attributeName: 'paySum',
+              flagsFix: 1 << 1,
+              width: 300
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Додатки'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'docAttachment',
+              entity: 'hr_orderAttachment',
+              detailFields: 'documentID',
+              masterFields: 'ID',
+              showOriginal: true,
+              minHeight: 55,
+              maxHeight: 140,
+              height: 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

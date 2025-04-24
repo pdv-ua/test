@@ -1,0 +1,153 @@
+﻿{
+  "caption": "Завдання розгляду",
+  "description": "Завдання для розгляду зареєстрованих документів",
+  "descriptionAttribute": "caption",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "defaultView": false
+    },
+    {
+      "name": "isMainTask",
+      "dataType": "Boolean",
+      "caption": "Головна гілка",
+      "description": "Гілка головного виконавця",
+      "defaultView": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "participantID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_recparticipant",
+      "caption": "task",
+      "description": "task",
+      "allowNull": true
+    },
+    {
+      "name": "docID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "cascadeDelete": true,
+      "caption": "Документ",
+      "description": "Документ",
+      "allowNull": true
+    },
+    {
+      "name": "mi_wfState",
+      "dataType": "Enum",
+      "enumGroup": "HR_TASK_STATES",
+      "caption": "Состояние",
+      "allowNull": false,
+      "defaultValue": "NEW"
+    },
+    {
+      "name": "resolution",
+      "dataType": "Enum",
+      "enumGroup": "HR_PART_RESOLUTION",
+      "caption": "Резолюція",
+      "allowNull": false,
+      "defaultValue": "NEW"
+    },
+    {
+      "name": "caption",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Заголовок",
+      "description": "Заголовок задачи рассмотрения",
+      "allowNull": true,
+      "isMultiLang": true
+    },
+    {
+      "name": "comments",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Коментар",
+      "description": "Коментарі до завдання розгляду",
+      "allowNull": true
+    },
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "caption": "На розгляді",
+      "description": "На розгляді orgUnitID",
+      "allowNull": false
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Виконавець",
+      "description": "Розглянув",
+      "allowNull": true
+    },
+    {
+      "name": "executionDate",
+      "dataType": "DateTime",
+      "caption": "Дата виконання",
+      "description": "Дата виконання",
+      "allowNull": true
+    },
+    {
+      "name": "plannedEmployeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Плановий виконавець",
+      "description": "Плановий виконавець plannedOrgUnitEOSID",
+      "allowNull": true
+    },
+    {
+      "name": "plannedOrgUnitCaption",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Заголовок",
+      "description": "Заголовок",
+      "allowNull": true
+    },
+    {
+      "name": "resolutionText",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Зміст резолюції, термін виконання",
+      "description": "Зміст резолюції, термін виконання",
+      "allowNull": true
+    },
+    {
+      "name": "isVerificationAct",
+      "dataType": "Boolean",
+      "caption": "Перевірено на відповідність законодавству",
+      "description": "Перевірено на відповідність законодавству",
+      "allowNull": true
+    },
+    {
+      "name": "checked",
+      "dataType": "Boolean",
+      "caption": "Вибрано",
+      "description": "Вибрано",
+      "documentation": "Вибрано",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select 0"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": false
+    },
+    "rls": {
+      "expression": "hr_task.rls()"
+    }
+  }
+}

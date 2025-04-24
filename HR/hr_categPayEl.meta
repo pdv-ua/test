@@ -1,0 +1,103 @@
+{
+  "caption": "Нарахування для категорій посад",
+  "description": "Нарахування для категорій посад",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "category",
+      "dataType": "Enum",
+      "enumGroup": "HR_POSITION_CATEGORY",
+      "caption": "Категорія посад",
+      "description": "Категорія посад",
+      "documentation": "Категорія посад",
+      "allowNull": false
+    },
+    {
+      "name": "isPublicService",
+      "dataType": "Boolean",
+      "caption": "Державна служба",
+      "description": "Державна служба",
+      "documentation": "Державна служба",
+      "defaultValue": "0"
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати",
+      "description": "Вид оплати",
+      "documentation": "Вид оплати",
+      "allowNull": false
+    },
+    {
+      "name": "publicServiceType",
+      "dataType": "Enum",
+      "enumGroup": "HR_PUBLIC_SERVICE_TYPE",
+      "caption": "Тип виплати держслужбовцю",
+      "description": "Тип виплати держслужбовцю",
+      "documentation": "Тип виплати держслужбовцю"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "documentation": "Діє з",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "documentation": "Діє з",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+        "safeDelete": true
+    }
+  }
+}

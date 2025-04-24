@@ -1,0 +1,323 @@
+/* global Ext UB $App _ appAC */
+exports.formDef = 'HR.trfReports'
+
+Ext.define('HR.trfReports', {
+  extend: 'Ext.form.Panel',
+  requires: [
+    'UB.core.UBCommand',
+    'UB.core.UBUtil'
+  ],
+  width: 1280,
+  height: 800,
+  layout: { type: 'vbox', align: 'stretch' },
+  flex: 1,
+  items: [
+    {
+      xtype: 'panel',
+      region: 'center',
+      name: 'reportPanel',
+      flex: 1,
+      items: []
+    }
+  ],
+  initComponent: function () {
+    const me = this
+    const control = Ext.create('Ext.Component', {
+      flex: 1,
+      margin: 0,
+      autoEl: {
+        tag: 'iframe'
+      }
+    })
+    const container = Ext.create('Ext.panel.Panel', {
+      layout: { type: 'vbox', align: 'stretch' },
+      flex: 1,
+      items: [
+        {
+          flex: 1,
+          autoScroll: true,
+          layout: { type: 'hbox', pack: 'center', align: 'stretch' },
+          bodyCls: 'ub-panel-gray',
+          items: [control]
+        }
+      ]
+    })
+    me.items = [container]
+    me.reportControl = control
+    me.on('afterrender', function () {
+      const me = this
+      me.showDesktop()
+    })
+    me.callParent(arguments)
+  },
+  showDesktop: async function () {
+    const me = this
+    me.setLoading(true)
+    const iFrame = me.reportControl.getEl().dom
+    const iFrameDoc = iFrame.contentDocument
+    let shTemplate = ''
+    let por = 0
+    me.onReportClick = me.onReportClick.bind(me)
+    const shortcutData = await me.prepareShortcut()
+    while (shortcutData[por]) {
+      const data = {
+        shData1: shortcutData[por] || [],
+        shData2: shortcutData[por + 1] || [],
+        shData3: shortcutData[por + 2] || []
+      }
+      for (let r = 0, l = _.max([data.shData1.length, data.shData2.length, data.shData3.length]); r < l; r++) {
+        shTemplate += '<tr>'
+        for (let i = 1; i <= 3; i++) {
+          const width = i !== 3 ? 'width:350px;' : i === 3 ? 'width:550px;' : ''
+          shTemplate += `<td 
+            style="${width}font-size:${data[`shData${i}`][r] ? data[`shData${i}`][r].fontSize : 14}px;${data[`shData${i}`][r] && data[`shData${i}`][r].isFolder ? 'vertical-align: bottom;' : ''}height:24px;padding-left: ${data[`shData${i}`][r] ? data[`shData${i}`][r].pad : 0}px;">
+            ${data[`shData${i}`][r] && data[`shData${i}`][r].isFolder ? '<b>' : '<a href="#" data-id=' + (data[`shData${i}`][r] ? data[`shData${i}`][r].ID : '') + ' >'}
+            ${data[`shData${i}`][r] ? (data[`shData${i}`][r].caption === '-' ? '<hr  align="left" width="300"  size="2">' : data[`shData${i}`][r].caption) : ''}
+            ${data[`shData${i}`][r] && data[`shData${i}`][r].isFolder ? '</b>' + (data[`shData${i}`][r].caption === '-' ? '' : '<br/><br/>') : '</a>'}
+          </td>`
+        }
+        shTemplate += '</tr>'
+      }
+      shTemplate += '<tr><td style="height:10px;"></td><td></td><td></td><td></td></tr>'
+      por += 3
+    }
+
+    iFrameDoc.head.innerHTML = `
+      <style type="text/css">
+        body {
+          background-color: #FFFFFF;
+          color: #000000;
+          font-family: Roboto, Arial, Helvetica, sans-serif;
+          font-size: 14px;
+          line-height: 1.3;
+        }
+        a {
+          text-decoration: none;
+          color: #2f7c94;
+          word-wrap: break-word;
+          word-break: break-word;
+        }
+        td,th {
+          font-family: Roboto,Arial,Helvetica,sans-serif;
+          font-size: 14px;
+          word-wrap: break-word;
+          word-break: break-word;          
+        }
+      </style>`
+    iFrameDoc.body.innerHTML = `
+      <table
+        style="
+          border-collapse: collapse;
+          width: 100%;
+          word-break: break-all;
+        "
+        border="0px"
+        cellspacing="0"
+        cellpadding="3px"
+      >
+        <tbody>
+          ${shTemplate}
+        </tbody>
+      </table>`
+
+    const refs = iFrameDoc.getElementsByTagName('a')
+    for (let i = 0, L = refs.length; i < L; i++) {
+      refs[i].addEventListener('click', me.onReportClick, true)
+    }
+    me.setLoading(false)
+  },
+  prepareShortcut: async function () {
+    const me = this
+    const result = []
+
+    const parentCodes = ['trf_regReportParamsCfg', 'trf_allReportsCfg']
+    const parents = await UB.Repository('ubm_navshortcut')
+      .attrs('ID')
+      .where('code', 'in', parentCodes)
+      .selectAsObject()
+
+    let favorites = await UB.Repository('ac_repFavorites')
+      .attrs(['reportCode'])
+      .where('userID', '=', $App.connection.userData().userID)
+      .where('reportsType', '=', 2)
+      .selectAsObject()
+    if (!favorites.length) {
+      favorites = [
+        { reportCode: 'regSummaryStatementRates' },
+        { reportCode: 'regStatement' },
+        { reportCode: 'regReportsItemEmployees' },
+        { reportCode: 'regReportsItemDNZEmployees' },
+        { reportCode: 'regReportListOneColum' },
+        { reportCode: 'wholeSchoolIndicators' },
+        { reportCode: 'reportList' }
+      ]
+    }
+    const shortcuts = UB.core.UBStoreManager.getNavigationShortcutStore().data.items
+      .filter(o => { return parentCodes.indexOf(o.get('code')) !== -1 || parents.map(item => item.ID).indexOf(o.get('parentID')) !== -1 })
+
+    const baseFolder = shortcuts.filter(o => { return o.get('parentID') === null && o.get('isFolder') === true })
+
+    function getShortcutByParent (parentID, folderShortcut, padding, checkFavorites = false) {
+      const shcuts = shortcuts.filter(o => { return o.get('parentID') === parentID })
+      // Консолідовані звіти
+      let consolReportsList = ['regSummaryStatementRates', 'regStatement', 'regReportListOneColum', 'regReportsItemEmployees','regReportsItemDNZEmployees']
+      // Довідка
+      let dictionaryList = ['wholeSchoolIndicators', 'reportList']
+      // Iнші звіти
+      let otherReport = ['regReportsTimesheet', 'reportsTimesheetTechnicalStaff']
+
+      let leftFolder = []
+      let dictionaryListFolder = []
+      let otherReportFolder = []
+
+      if (!checkFavorites) {
+        shcuts.forEach(sh => {
+          folderShortcut.push(
+            {
+              ID: sh.get('isFolder') ? '' : sh.get('ID'),
+              isFolder: sh.get('isFolder'),
+              caption: sh.get('caption'),
+              pad: 30,
+              fontSize: sh.get('isFolder') ? 14 : 14
+            }
+          )
+          if (sh.get('isFolder')) {
+            getShortcutByParent(sh.get('ID'), folderShortcut, padding, checkFavorites)
+          }
+        })
+      } else {
+        shcuts.forEach(sh => {
+          let isPush = true
+          if (checkFavorites) {
+            isPush = favorites.find(o => o.reportCode === sh.get('code'))
+          }
+          if (isPush) {
+            if (consolReportsList.includes(sh.get('code'))) {
+              leftFolder.push(
+                {
+                  ID: sh.get('ID'),
+                  isFolder: 0,
+                  caption: sh.get('caption'),
+                  pad: 30,
+                  fontSize: 14
+                }
+              )
+            }
+            if (dictionaryList.includes(sh.get('code'))) {
+              dictionaryListFolder.push(
+                {
+                  ID: sh.get('ID'),
+                  isFolder: 0,
+                  caption: sh.get('caption'),
+                  pad: padding,
+                  fontSize: 14
+                }
+              )
+            }
+            if (otherReport.includes(sh.get('code'))) {
+              otherReportFolder.push(
+                {
+                  ID: sh.get('ID'),
+                  isFolder: 0,
+                  caption: sh.get('caption'),
+                  pad: padding,
+                  fontSize: 14
+                }
+              )
+            }
+          }
+        })
+
+        if (leftFolder.length) {
+          leftFolder.sort((a, b) => {
+            const nameA = a.caption.toUpperCase()
+            const nameB = b.caption.toUpperCase()
+            return a.isFolder ? -1 : nameA < nameB ? -1 : (nameA > nameB ? 1 : 0)
+          })
+          leftFolderShortcut = leftFolderShortcut.concat({
+            ID: '',
+            isFolder: 1,
+            caption: UB.i18n('Звіти'),
+            pad: 30,
+            fontSize: 16
+          }, leftFolder)
+        }
+        if (dictionaryListFolder.length) {
+          dictionaryListFolder.sort((a, b) => {
+            const nameA = a.caption.toUpperCase()
+            const nameB = b.caption.toUpperCase()
+            return a.isFolder ? -1 : nameA < nameB ? -1 : (nameA > nameB ? 1 : 0)
+          })
+          centerFolderShortcut = centerFolderShortcut.concat({
+            ID: '',
+            isFolder: 1,
+            caption: UB.i18n('Довідка'),
+            pad: padding,
+            fontSize: 16
+          }, dictionaryListFolder)
+        }
+        if (otherReportFolder.length) {
+          otherReportFolder.sort((a, b) => {
+            const nameA = a.caption.toUpperCase()
+            const nameB = b.caption.toUpperCase()
+            return a.isFolder ? -1 : nameA < nameB ? -1 : (nameA > nameB ? 1 : 0)
+          })
+          lastFolderShortcut = lastFolderShortcut.concat({
+            ID: '',
+            isFolder: 1,
+            caption: UB.i18n('Табель'),
+            pad: padding,
+            fontSize: 16
+          }, otherReportFolder)
+        }
+      }
+    }
+
+    let padding = 30
+    let leftFolderShortcut = []
+
+    padding = 0
+    const folder = baseFolder.find(o => o.get('code') === 'trf_allReportsCfg')
+    let centerFolderShortcut = []
+    let lastFolderShortcut = []
+
+    if (folder) {
+      getShortcutByParent(folder.get('ID'), leftFolderShortcut, padding, true)
+    }
+    const paramsFolder = baseFolder.find(o => o.get('code') === 'trf_regReportParamsCfg')
+    leftFolderShortcut.push({
+      ID: '',
+      isFolder: 1,
+      caption: '-',
+      pad: 30,
+      fontSize: 16
+    })
+
+    if (paramsFolder) {
+      getShortcutByParent(paramsFolder.get('ID'), leftFolderShortcut, padding)
+    }
+    result.push(leftFolderShortcut)
+    result.push(centerFolderShortcut)
+    result.push(lastFolderShortcut)
+    return result
+  },
+  onReportClick: function (e) {
+    e.preventDefault()
+    if (e.target.dataset.id && e.target.dataset.id !== '') {
+      const store = UB.core.UBStoreManager.getNavigationShortcutStore()
+      const shortcut = _.find(store.data.items, item => { return item.get('ID') === Number(e.target.dataset.id) })
+
+      if (shortcut.get('code') === 'trf_reportParamsList') {
+        const me = this
+        $App.doCommand({
+          cmdType: 'showForm',
+          formCode: 'trf_reportParamsList',
+          entity: 'ac_repFavorites',
+          sender: me
+        })
+      } else {
+        $App.runShortcutCommand(shortcut.get('code'), shortcut.get('inWindow'))
+      }
+    }
+  }
+})

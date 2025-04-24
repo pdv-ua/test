@@ -1,0 +1,133 @@
+{
+  "caption": "Навчання",
+  "description": "Навчання",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "semester",
+      "dataType": "Int",
+      "caption": "Семестр",
+      "documentation": "Семестр",
+      "description": "Семестр"
+    },
+    {
+      "name": "groupID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStudGroup",
+      "caption": "Група",
+      "documentation": "Група",
+      "description": "Група",
+      "allowNull": false
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Факультет",
+      "description": "Факультет",
+      "documentation": "Факультет"
+    },
+    {
+      "name": "depName",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Факультет",
+      "description": "Факультет",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 dep.name from hr_department dep where dep.mi_data_id = {self}.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dep.name from hr_department dep where dep.mi_data_id = {self}.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "studyYear",
+      "dataType": "Int",
+      "caption": "Курс",
+      "description": "Курс",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CEILING(semester/2.0))"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CEILING(semester/2.0)::int)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

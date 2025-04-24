@@ -1,0 +1,172 @@
+/* global UB */
+
+exports.formDef = {
+  requiredFields: ['orderID', 'empOrderType', 'organizationID', 'organizationID.mi_data_id'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      layout: { type: 'vbox', align: 'stretch' },
+      style: 'border-bottom: 1px solid #BFBFBF',
+      items: [
+        {
+          attributeName: 'actionType'
+        },
+        {
+          layout: 'hbox',
+          items: [
+            {
+              attributeName: 'dateFrom',
+              fieldLabel: UB.i18n('Вступ в дію з')
+            },
+            {
+              attributeName: 'isTemporary'
+            },
+            {
+              attributeName: 'planDateTo',
+              disabled: true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'acGrid',
+      name: 'empOrderChgPositionAttrsDet',
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_empOrderChgposition_empOrderChgPositionAttrsDet'),
+      region: 'center',
+      flex: 1,
+      autoScroll: true,
+      split: true,
+      notWriteChanges: true,
+      storeType: 'local',
+      showToolBar: true,
+      disablePaging: true,
+      entity: 'hr_empOrderChgPositionAttrsDet',
+      formCode: 'hr_empOrderChgPositionAttrsDet',
+      loadMaskMessage: UB.i18n('Завантаження даних...'),
+      hideActions: ['addNewByCurrent'],
+      getRowClass: () => {},
+      fields: [
+        { name: 'ID' },
+        { name: 'orderID' },
+        { name: 'paraID' },
+        { name: 'dictEmpPosAttrID' },
+        { name: 'curValue' },
+        { name: 'newValue' },
+        { name: 'mi_modifyDate' },
+        {
+          name: 'dictEmpPosAttrID.name',
+          columnConfig: {
+            text: UB.i18n('Параметр')
+          }
+        },
+        {
+          name: 'changeAll',
+          columnConfig: {
+            text: UB.i18n('Змінити всі'),
+            booleanFormat: true,
+            width: 100,
+            align: 'center'
+          }
+        },
+        {
+          name: 'curValueText',
+          columnConfig: {
+            text: UB.i18n('Поточне значення'),
+            flex: 1
+          }
+        },
+        {
+          name: 'newValueText',
+          columnConfig: {
+            text: UB.i18n('Нове значення'),
+            flex: 1
+          }
+        }
+      ]
+    },
+    {
+      xtype: 'acGrid',
+      name: 'empOrderChgPositionEmpDet',
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_empOrderChgposition_empOrderChgPositionEmpDet'),
+      region: 'south',
+      flex: 2,
+      split: true,
+      autoScroll: true,
+      cellEditing: true,
+      notWriteChanges: true,
+      storeType: 'local',
+      showToolBar: true,
+      disablePaging: true,
+      loadMaskMessage: UB.i18n('Завантаження даних...'),
+      summaryDataOnClient: true,
+      ignoreAttr: ['employeePositionID.description'],
+      hideActions: ['addNewByCurrent'],
+      onBeforeEdit: (control, context) => {
+        const me = context.grid.up('form')
+        me.setIsDirty(true)
+        return me.beforeGridEdit(control, context)
+      },
+      onValidateEdit: (editor, context) => {
+        const me = context.grid.up('form')
+        return me.onValidateEdit(editor, context)
+      },
+      fields: [
+        { name: 'ID' },
+        { name: 'orderID' },
+        { name: 'paraID' },
+        { name: 'organizationID' },
+        { name: 'employeeNumberID' },
+        { name: 'employeeID' },
+        { name: 'employeePositionID' },
+        { name: 'employeePositionID.description',
+          columnConfig: {
+            text: UB.i18n('Працівники'),
+            flex: 1,
+            editor: {
+              dataType: 'Entity',
+              hideEntityItemInContext: true,
+              associatedEntity: 'hr_employeePositionS',
+              allowBlank: false,
+              disableClearSelection: true,
+              disableContextMenu: true,
+              storeAttributeValueField: 'employeePositionID',
+              fieldList: ['ID', 'description', 'employeeNumberID', 'employeeID', 'posName', 'employeeID.firstName', 'employeeID.lastName', 'employeeID.middleName']
+            }
+          }
+        },
+        { name: 'mi_modifyDate' },
+        { name: 'firstName' },
+        { name: 'lastName' },
+        { name: 'middleName' },
+        { name: 'itemIdx' },
+        { name: 'title' },
+        { name: 'empOrderType' },
+        { name: 'description' }
+      ],
+      customToolBarActions: [
+        {
+          xtype: 'button',
+          name: 'fillBtn',
+          tooltip: UB.i18n('Заповнити'),
+          iconCls: 'fas fa-angle-double-down',
+          cls: 'fill-action',
+          handler: function (btn) {
+            const me = btn.up('form')
+            me.setEmployeePositions(me)
+          }
+        }
+      ]
+    }
+  ]
+}

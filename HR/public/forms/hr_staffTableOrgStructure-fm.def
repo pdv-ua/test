@@ -1,0 +1,249 @@
+// @description Планування Структури"
+
+/* global HR AC UB */
+exports.formDef = {
+  requiredFields: ['orderState', 'entryDate', 'description', 'entryOrderID.orderNumber', 'entryOrderID.orderDate',
+    'entryOrderID.entryDate', 'entryOrderID.respEmployeePositionID.employeeID.fullFIO', 'orgName', 'document',
+    'empOrderType', 'reportSettings', 'docText', 'withChild'
+  ],
+  parentConfig: {
+    hideActions: ['docActiondocument'],
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 6,
+          actionId: 'createOrder'
+        },
+        {
+          orderId: 7,
+          actionId: 'printReports',
+          iconCls: 'fas fa-print',
+          cls: 'blue-action'
+        },
+        {
+          orderId: 8,
+          actionId: 'checkQuantity',
+          text: UB.i18n('Перевірити'),
+          handler: function (btn) {
+            const me = btn.up('form')
+            me.checkOrgStructureQuantity()
+          }
+        },
+        {
+          orderId: 8,
+          actionId: 'startReconciliation'
+        },
+        {
+          orderId: 9,
+          actionId: 'stopReconciliation'
+        },
+        {
+          orderId: 10,
+          actionId: 'toCompletion'
+        },
+        {
+          orderId: 11,
+          actionId: 'renewTask'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      autoScroll: true,
+      listeners: {
+        tabchange: function (tabPanel, activeTab) {
+          let me = tabPanel.up('form')
+          if (activeTab.ubID === 'report') {
+            if (!me.isPdfCreated) {
+              if (!me.record.get('docText') && !['ON_RECONCILATION', 'RECONCILED', 'POSTED'].includes(me.record.get('orderState'))) {
+                HR.reportTab.editHtml(me)
+              } else {
+                HR.reportTab.setReportMode(me, 'view')
+              }
+              me.isPdfCreated = true
+            } else {
+              HR.reportTab.setReportMode(me, ['ON_RECONCILATION', 'RECONCILED', 'POSTED'].includes(me.record.get('orderState')) ? 'view' : 'edit')
+            }
+          } else if (me.isNewInstance) {
+            me.saveForm().then(result => {
+              if (result === -1) {
+                me.down('tabpanel').setActiveTab(0)
+              }
+            })
+          }
+        }
+      },
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: {
+            type: 'hbox'
+          },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: {
+                labelWidth: 130
+              },
+              flex: 1,
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      attributeName: 'orderNumber',
+                      allowBlank: true,
+                      flex: 1,
+                      labelWidth: 130
+                    },
+                    {
+                      attributeName: 'orderDate',
+                      labelWidth: 60,
+                      width: 320,
+                      hidden: true
+                    }
+                  ]
+                },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      attributeName: 'docType',
+                      flex: 1,
+                      labelWidth: 130
+                    },
+                    {
+                      attributeName: 'changeListNumber',
+                      vtype: 'numberValidator',
+                      maskRe: AC.validators.maskRe('number'),
+                      maxValue: 2147483647,
+                      minValue: 1,
+                      labelWidth: 150,
+                      width: 320
+                    }
+                  ]
+                },
+                {
+                  attributeName: 'staffTableOrgStructureID',
+                  orderList: { orderBy: { 'expression': '[orderDate]', 'order': 'desc' } }
+                },
+                {
+                  attributeName: 'name'
+                },
+                {
+                  attributeName: 'textOrder'
+                },
+                {
+                  attributeName: 'comment'
+                },
+                {
+                  attributeName: 'orgID',
+                  readOnly: true,
+                  fieldList: ['mi_data_id', 'description'],
+                  valueField: 'mi_data_id',
+                  displayField: 'description',
+                  __mip_recordhistory_all: true,
+                  whereList: {
+                    state: {
+                      expression: '[state]',
+                      condition: 'equal',
+                      values: {
+                        state: 'ACTIVE'
+                      }
+                    }
+                  }
+                },
+                {
+                  attributeName: 'printLead'
+                }
+              ]
+            },
+            {
+              xtype: 'ubfieldset',
+              title: UB.i18n('Інформація про введення в дію'),
+              flex: 1,
+              defaults: {
+                labelWidth: 130
+              },
+              layout: { type: 'vbox', align: 'stretch' },
+              autoScroll: true,
+              items: [
+                {
+                  xtype: 'textfield',
+                  name: 'hrOrderNumber',
+                  fieldLabel: UB.i18n('Номер наказу'),
+                  readOnly: true
+                },
+                {
+                  xtype: 'textfield',
+                  name: 'hrOrderDate',
+                  fieldLabel: UB.i18n('Дата початку'),
+                  readOnly: true
+                },
+                {
+                  xtype: 'textfield',
+                  name: 'hrRespEmployee',
+                  fieldLabel: UB.i18n('Підписав'),
+                  readOnly: true
+                },
+                {
+                  xtype: 'textfield',
+                  name: 'hrEntryDate',
+                  fieldLabel: UB.i18n('Дата введення в дію'),
+                  readOnly: true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Структура'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'staffTreeControl',
+              name: 'staffTreeControl',
+              stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_staffTableOrgStructure_staffTreeControl'),
+              empOrderType: 'ORGSTRUCTURE',
+              calcPositionCount: (ctrl) => {
+                const me = ctrl.up('form')
+                me.calcPositionCount(me)
+              }
+            }
+          ]
+        },
+        HR.reportTab.getTabConfig({ getRepName: 'getReportName', repTabIndex: 2, addExcel: true }),
+        {
+          title: UB.i18n('Маршрут'),
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          items: [
+            {
+              xtype: 'recpanel',
+              name: 'recpanel'
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,399 @@
+/* global AC UB */
+
+exports.formDef = {
+  requiredFields: ['dictBenefitsKindID.name', 'impSourceID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'center',
+      xtype: 'tabpanel',
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          ubID: 'hr_employeeBenefits',
+          layout: {
+            type: 'border'
+          },
+          items: [
+            {
+              region: 'north',
+              autoScroll: false,
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              items: [
+                {
+                  attributeName: 'employeeID',
+                  hidden: true
+                },
+                {
+                  attributeName: 'dictBenefitsKindID',
+                  fieldLabel: UB.i18n('Категорія Особи (вид пільги)'),
+                  labelWidth: 210,
+                  margin: '10 15 5 15'
+                },
+                {
+                  layout: {
+                    type: 'hbox',
+                    align: 'middle'
+                  },
+                  items: [
+                    {
+                      attributeName: 'dateFrom',
+                      fieldLabel: UB.i18n('Дата початку'),
+                      labelWidth: 210
+                    },
+                    {
+                      attributeName: 'dateToEmpty'
+                    }
+                  ]
+                },
+                {
+                  attributeName: 'employeeFamilyID',
+                  fieldList: ['ID', 'peopleID.shortFIO'],
+                  fieldLabel: UB.i18n('Людина, на догляд за якою надається пільга'),
+                  labelWidth: 210
+                },
+                /*
+                {
+                  layout: {
+                    type: 'hbox',
+                    align: 'middle'
+                  },
+                  items: [{
+                    attributeName: 'docNumber',
+                    width: 232,
+                    minWidth: 232,
+                    maxWidth: 232
+                  },
+                  {
+                    attributeName: 'docDate'
+                  },
+                  {
+                    attributeName: 'issued',
+                    flex: 1
+                  }
+                  ]
+                },
+                {
+                  attributeName: 'avgSum',
+                  vtype: 'floatValidator',
+                  decimalPrecision: 2,
+                  allowExponential: false
+                },
+                {
+                  attributeName: 'coef',
+                  vtype: 'floatValidator',
+                  decimalPrecision: 2,
+                  allowExponential: false
+                },
+                */
+                {
+                  attributeName: 'comment',
+                  labelWidth: 210
+                },
+                { attributeName: 'employeeDisabilityID',
+                  fieldList: ['ID', 'description'],
+                  displayField: 'description',
+                  hideEntityItemInContext: true,
+                  labelWidth: 210
+                }
+              ]
+            },
+            {
+              xtype: 'panel',
+              region: 'center',
+              layout: 'fit',
+              items: [
+                {
+                  name: 'benefitsDoc',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  flex: 1,
+                  hideActions: ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  rowEditing: true,
+                  cmdType: 'showList',
+                  description: UB.i18n('Документи'),
+                  entity: 'hr_employeeBenefitsDoc',
+                  masterFields: ['employeeID', 'ID'],
+                  detailFields: ['employeeID', 'employeeBenefitID'],
+                  onBeforeEdit: function (rowEditor, context) {
+                    context.grid.optimizeColumnWidth(true)
+                    context.grid.up('form').docGridBeforeEdit(rowEditor, context)
+                  },
+                  cmdData: {
+                    params: [{
+                      entity: 'hr_employeeBenefitsDoc',
+                      method: 'select',
+                      fieldList: [{
+                        name: 'employeeDocID.description',
+                        description: UB.i18n('Документ'),
+                        editor: {
+                          fieldList: ['ID', 'description']
+                        }
+                      },
+                      {
+                        name: 'comment'
+                      },
+                      {
+                        name: 'employeeDocID.docSeries',
+                        visibility: false
+                      },
+                      {
+                        name: 'employeeDocID.docNumber',
+                        visibility: false
+                      },
+                      {
+                        name: 'employeeDocID.docIssuedDate',
+                        visibility: false
+                      },
+                      {
+                        name: 'ID',
+                        visibility: false
+                      }]
+                    }]
+                  },
+                  cmpInitConfig: {
+                    customInit: function () {}
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Пільги ПДФО'),
+          xtype: 'ubdetailgrid',
+          region: 'center',
+          autoScroll: true,
+          flex: 1,
+          ubID: 'hr_employeeTaxLimit',
+          sortableColumns: false,
+          entityConfig: {
+            entity: 'hr_employeeTaxLimit',
+            method: 'select',
+            fieldList: [
+              { name: 'taxLimitID.name', description: UB.i18n('Вид пільги') },
+              { name: 'dateFromEmpty', format: 'm.Y' },
+              { name: 'dateToEmpty', format: 'm.Y' },
+              { name: 'amountChild' }
+            ],
+            orderList: { orderBy: { 'expression': '[dateFromEmpty]', 'order': 'asc' } }
+          },
+          masterFields: ['ID'],
+          detailFields: ['employeeBenefitsID'],
+          cmpInitConfig: {
+            onDeterminateForm: function (grid) {
+              return {
+                entityName: 'hr_employeeTaxLimit',
+                formCode: 'hr_employeeTaxLimit',
+                cmpInitConfig: {
+                  defaultValues: {
+                    employeeNumberID: grid.up('form').employeeNumberID,
+                    dateFromEmpty: grid.up('form').record.get('dateFrom')
+                  }
+                }
+              }
+            }
+          }
+        },
+        /*
+        {
+          title: UB.i18n('Пільги лікарняних'),
+          flex: 1,
+          xtype: 'ubdetailgrid',
+          autoScroll: true,
+          ubID: 'hr_employeeSickLimit',
+          entityConfig: {
+            entity: 'hr_employeeSickLimit',
+            method: 'select',
+            fieldList: [
+              { name: 'typeSickLimit' },
+              { name: 'dateFrom' },
+              { name: 'dateToEmpty' },
+              { name: 'docNumber' },
+              { name: 'docDate' }
+            ]
+          },
+          masterFields: ['ID'],
+          detailFields: ['employeeBenefitsID'],
+          cmpInitConfig: {
+            onDeterminateForm: function (grid) {
+              let me = grid.up('form')
+              let docgrid = me.down('[name=benefitsDoc]')
+              let defaultDocNumber, defaultDocDate
+              if (docgrid && docgrid.store) {
+                if (docgrid.store.data.length > 0) {
+                  defaultDocNumber = docgrid.store.data.items[0].data['employeeDocID.docSeries']
+                  defaultDocNumber += ' № ' + docgrid.store.data.items[0].data['employeeDocID.docNumber']
+                  defaultDocDate = docgrid.store.data.items[0].data['employeeDocID.docIssuedDate']
+                }
+              }
+              return {
+                entityName: 'hr_employeeSickLimit',
+                formCode: 'hr_employeeSickLimit',
+                cmpInitConfig: {
+                  defaultValues: {
+                    employeeID: grid.up('form').record.get('employeeID'),
+                    dateFrom: grid.up('form').record.get('dateFrom'),
+                    employeeFamilyID: grid.up('form').record.get('employeeFamilyID'),
+                    docNumber: defaultDocNumber,
+                    docDate: defaultDocDate
+                  }
+                }
+              }
+            }
+          }
+        },
+        */
+        {
+          title: UB.i18n('Пільги лікарняних'),
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'employeeSickLimit',
+              autoScroll: true,
+              hideActions: [],
+              flex: 1,
+              disableSearchBar: true,
+              sortableColumns: false,
+              entityConfig: {
+                entity: 'hr_employeeSickLimit',
+                method: 'select',
+                fieldList: [
+                  { name: 'typeSickLimit', description: UB.i18n('Вид пільги') },
+                  { name: 'employeeID', visibility: false },
+                  { name: 'dateFrom', description: UB.i18n('Діє з') },
+                  { name: 'dateToEmpty', description: UB.i18n('Діє по') },
+                  { name: 'employeeFamilyID.peopleID.shortFIO', description: UB.i18n('Людина, на догляд за якою надається пільга') },
+                  { name: 'docNumber', description: UB.i18n('Серія та № документа') },
+                  { name: 'docDate', description: UB.i18n('Дата видачі') },
+                  { name: 'avgSum', description: UB.i18n('Середньоденний заробіток') }
+                ],
+                orderList: { orderBy: { 'expression': '[dateFrom]', 'order': 'asc' } }
+              },
+              rowEditing: true,
+              masterEntityName: 'hr_employeeBenefits',
+              masterFields: ['ID'],
+              detailFields: ['employeeBenefitsID'],
+              onBeforeEdit: function (rowEditor, context) {
+                let grid = context.grid
+                grid.optimizeColumnWidth(true)
+                if (grid.isEditDisabled) {
+                  return false
+                }
+
+                let editor = rowEditor.editor
+                let me = editor.up('form')
+                let docgrid = me.down('[name=benefitsDoc]')
+                let defaultDocNumber, defaultDocDate
+                if (docgrid && docgrid.store) {
+                  if (docgrid.store.data.length > 0) {
+                    defaultDocNumber = docgrid.store.data.items[0].data['employeeDocID.docSeries'] + ' № ' + docgrid.store.data.items[0].data['employeeDocID.docNumber']
+                    defaultDocDate = docgrid.store.data.items[0].data['employeeDocID.docIssuedDate']
+                  }
+                }
+
+                AC.viewUtils.setWhereListProperty(editor.query(`[name=employeeFamilyID.peopleID.shortFIO]`)[0], [
+                  ['employeeID', '=', me.record.get('employeeID')]
+                ])
+                context.record.set('employeeID', me.record.get('employeeID'))
+                context.record.set('dateFrom', me.record.get('dateFrom'))
+                context.record.set('docNumber', defaultDocNumber)
+                context.record.set('docDate', defaultDocDate)
+
+                const typeSickLimitCtrl = editor.query(`[name=typeSickLimit]`)[0]
+                typeSickLimitCtrl.on('change', (ctrl, value) => {
+                  if (value !== '1' && value !== '2') {
+                    editor.query(`[name=employeeFamilyID.peopleID.shortFIO]`)[0].setValue(null)
+                  } else {
+                    editor.query(`[name=employeeFamilyID.peopleID.shortFIO]`)[0].setValue(me.down('[name=employeeFamilyID]').getFieldValue('peopleID.shortFIO'))
+                  }
+                  editor.query(`[name=employeeFamilyID.peopleID.shortFIO]`)[0].setReadOnly(value !== '1' && value !== '2')
+                  editor.query(`[name=avgSum]`)[0].setReadOnly(value !== '4')
+                  editor.query(`[name=avgSum]`)[0].setValue(null)
+                })
+                return true
+              },
+              listeners: {
+                changeData: function (grid, event) {
+                  if (event === 'insert') {
+                    grid.store.reload()
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Право на відпустки'),
+          autoScroll: true,
+          flex: 1,
+          xtype: 'ubdetailgrid',
+          ubID: 'hr_empVacationPlan',
+          entityConfig: {
+            entity: 'hr_empVacationPlan',
+            method: 'select',
+            fieldList: [
+              { name: 'dictVacationKindID.name', description: UB.i18n('Вид відпустки') },
+              { name: 'dateFrom' },
+              { name: 'dateToEmpty' },
+              { name: 'dayCount' }
+            ]
+          },
+          masterFields: ['ID'],
+          detailFields: ['employeeBenefitsID'],
+          cmpInitConfig: {
+            onDeterminateForm: function (grid) {
+              return {
+                entityName: 'hr_empVacationPlan',
+                formCode: 'hr_empVacationPlan',
+                cmpInitConfig: {
+                  defaultValues: {
+                    employeeID: grid.up('form').record.get('employeeID'),
+                    employeeNumberID: grid.up('form').employeeNumberID,
+                    dateFrom: grid.up('form').record.get('dateFrom')
+                  }
+                }
+              }
+            }
+          }
+        }
+      /*
+      {
+        title: UB.i18n('Скан-копії'),
+        autoScroll: true,
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        flex: 1,
+        items: [{
+          xtype: 'docAttachment',
+          entity: 'hr_attachDoc',
+          detailFields: 'entityID',
+          fieldList: ['ID', 'caption', 'description', 'sheetsQuantity', 'document', 'mi_createDate',
+            'mi_modifyDate', 'entityID'
+          ],
+          masterFields: 'ID',
+          showOriginal: true,
+          minHeight: 55,
+          maxHeight: 140,
+          height: 95
+        }]
+      }
+      */
+      ]
+    }
+  ]
+}

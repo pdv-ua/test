@@ -1,0 +1,74 @@
+{
+  "caption": "Розрахункова відомість (зведена) за видами оплати",
+  "description": "Розрахункова відомість (зведена) за видами оплати",
+  "descriptionAttribute": "periodID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "periodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Розрахунковий період",
+      "description": "Розрахунковий період",
+      "documentation": "Розрахунковий період",
+      "allowNull": false
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "documentation": "Організаційна одиниця",
+      "allowNull": false
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати",
+      "description": "Вид оплати",
+      "documentation": "Вид оплати",
+      "allowNull": false
+    },
+    {
+      "name": "paySum",
+      "dataType": "Currency",
+      "caption": "Сума",
+      "description": "Сума",
+      "documentation": "Сума"
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_PAYCALCSUM_ORGPER": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "periodID": {
+            "sort": "ASC"
+          },
+          "orgID": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mapping":[{
+    "name": "AnsiSQL",
+    "selectName": "hr_payCalcSummarySheet",
+    "execName": "hr_payCalcSummarySheet",
+    "pkGenerator": "S_HR_PAYCALCSUMMARYSHEET"
+  }],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": false,
+      "safeDelete": false
+    },
+    "audit": {
+      "enabled": false
+    }
+  }
+}

@@ -1,0 +1,154 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['organizationID', 'docID', 'participantID', 'mi_wfState',
+    'resolution', 'participantID.recStageID.docID', 'docID.orderClass.entityName', 'docID.empOrderType',
+    'participantID.recStageID.docID.staffTableID', 'resolutionText'],
+  parentConfig: {
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'container',
+      region: 'center',
+      layout: 'fit',
+      flex: 5,
+      padding: '4 2 4 2',
+      items: [
+        {
+          attributeName: 'participantID.recStageID.docID.document',
+          xtype: 'ubdocument',
+          documentMIME: 'application/pdf',
+          name: 'docDocument',
+          expanded: true,
+          readOnly: true,
+          hidden: true,
+          split: true,
+          style: {
+            background: 'white'
+          }
+        }
+      ]
+    },
+    {
+      region: 'east',
+      autoScroll: true,
+      split: true,
+      flex: 3,
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [
+        {
+          xtype: 'container',
+          flex: 2,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            { attributeName: 'participantID.recStageID.stageKind', readOnly: true },
+            { attributeName: 'docID.description', readOnly: true },
+            { attributeName: 'employeePositionID', readOnly: true },
+            { attributeName: 'participantID.executionTerm', readOnly: true },
+            { attributeName: 'comments', readOnly: true, hidden: true, fieldLabel: UB.i18n('Коментар, доданий при відновлені погодження') },
+            { attributeName: 'resolutionText', fieldLabel: UB.i18n('Зміст резолюції') },
+            { attributeName: 'isVerificationAct', labelWidth: 130 },
+            { attributeName: 'executionDate', fieldLabel: UB.i18n('Дата виконання'), readOnly: true, hidden: true }
+          ]
+        },
+        {
+          layout: 'hbox',
+          align: 'stretch',
+          margin: '0 2 10 2',
+          items: [
+            {
+              xtype: 'button',
+              text: UB.i18n('Внести зміни'),
+              flex: 1,
+              hidden: true,
+              event: 'editOrder',
+              margin: '2 2 2 2'
+            }
+          ]
+        },
+        {
+          layout: 'hbox',
+          align: 'stretch',
+          margin: '0 2 20 2',
+          items: [
+            {
+              xtype: 'button',
+              text: UB.i18n('Відкрити документ'),
+              flex: 1,
+              event: 'showOrder',
+              margin: '2 2 2 2'
+            }
+          ]
+        },
+        {
+          layout: 'hbox',
+          align: 'stretch',
+          items: [
+            {
+              xtype: 'button',
+              text: UB.i18n('Прийняти'),
+              iconCls: 'iconApprove',
+              arrowCls: 'splitArrow',
+              flex: 1,
+              event: 'approve',
+              margin: '2, 2, 2, 2'
+            },
+            {
+              xtype: 'button',
+              text: UB.i18n('Додати візуюцих'),
+              hidden: true,
+              flex: 1,
+              iconCls: 'iconAdditionalSight',
+              event: 'addVizier',
+              margin: '2, 2, 2, 2'
+            },
+            {
+              xtype: 'button',
+              text: UB.i18n('addVizierBySigner'),
+              hidden: true,
+              flex: 1,
+              iconCls: 'iconAdditionalSight',
+              event: 'addVizierBySigner',
+              margin: '2, 2, 2, 2'
+            }
+          ]
+        },
+        {
+          layout: 'hbox',
+          align: 'stretch',
+          items: [
+            {
+              xtype: 'button',
+              text: UB.i18n('Відхилити'),
+              flex: 1,
+              iconCls: 'iconReject',
+              event: 'reject',
+              margin: '2, 2, 2, 2'
+            },
+            {
+              xtype: 'button',
+              text: UB.i18n('Змінити'),
+              flex: 1,
+              hidden: true,
+              iconCls: 'iconEdit',
+              event: 'makeChanges',
+              margin: '2, 2, 2, 2'
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

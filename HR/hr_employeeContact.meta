@@ -1,0 +1,187 @@
+{
+  "caption": "Контакт",
+  "description": "Контакт",
+  "descriptionAttribute": "value",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "contactTypeID",
+      "dataType": "Entity",
+      "associatedEntity": "cdn_contacttype",
+      "caption": "Тип контакту",
+      "description": "Тип контакту",
+      "documentation": "Тип контакту",
+      "allowNull": false
+    },
+    {
+      "name": "value",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Значення",
+      "description": "Значення",
+      "documentation": "Значення",
+      "allowNull": false
+    },
+    {
+      "name": "taxCode",
+      "dataType": "String",
+      "size": 20,
+      "caption": "РНОКПП",
+      "description": "РНОКПП",
+      "documentation": "Використовується тільки при імпорті",
+      "allowNull": true,
+      "isUnique": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "fullFIO",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Повне ім'я особи",
+      "description": "Повне ім'я особи",
+      "documentation": "Використовується тільки при імпорті",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "birthDate",
+      "dataType": "Date",
+      "caption": "Дата народження",
+      "description": "Дата народження",
+      "documentation": "Використовується тільки при імпорті",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "impContactType",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Тип контакту",
+      "description": "Тип контакту",
+      "defaultView": false,
+      "documentation": "Якщо точного співпадання з переліком значень немає, то перевіряти наявність значення в 'Таблиці відповідності довідників', Інакше значення 'Інший', імпортоване значення зберігати в окремому imp__ полі"
+    },{
+      "name": "impSourceID",
+      "dataType": "Bigint",
+      "caption": "Код джерела",
+      "description": "Код джерела даних імпорту",
+      "documentation": "Код джерела даних імпорту",
+      "defaultView": false,
+      "allowNull": true
+    },{
+      "name": "impEmployeeID",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Зовнішній код",
+      "description": "Зовнішній код",
+      "defaultView": false,
+      "documentation": "Використовується тільки при імпорті",
+      "allowNull": true
+    },
+    {
+      "name": "isSystemNotificationAddress",
+      "dataType": "Boolean",
+      "caption": "Адреса отримання повідомлень з системи",
+      "description": "Адреса отримання повідомлень з системи",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isDefault",
+      "dataType": "Boolean",
+      "caption": "За замовчуванням (основний)",
+      "description": "За замовчуванням (основний)",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "documentation": "Діє з",
+      "description": "Діє з",
+      "defaultView": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "documentation": "Діє по",
+      "description": "Діє по",
+      "defaultView": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "documentation": "Діє з",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+
+}

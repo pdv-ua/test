@@ -1,0 +1,109 @@
+/* global $App Ext HR AC */
+exports.formDef = 'HR.empOrderVacationlongGDet'
+
+Ext.define('HR.empOrderVacationlongGDet', {
+  extend: 'Ext.form.Panel',
+  width: 900,
+  height: 600,
+  autoScroll: true,
+  alias: 'widget.empOrderVacationlongGDet',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  layout: { type: 'vbox', align: 'stretch' },
+  initComponent: function () {
+    const me = this
+    me.orderForm = me.sender.up('form')
+    me.mainPanel = HR.controlService.getVacationGroupPanel(me, {
+      dictVacationKind: {
+        whereList: {
+          isDay: {
+            expression: '[isDay]',
+            condition: 'equal',
+            value: false
+          },
+          dNot: {
+            expression: '[code]',
+            condition: 'equal',
+            value: 'dNot'
+          }
+        },
+        logicalPredicates: ['([isDay] OR [dNot])']
+      }
+    })
+    me.buttonPanel = {
+      layout: { type: 'hbox', pack: 'center' },
+      items: [
+        {
+          xtype: 'button',
+          name: 'btnSelect',
+          text: UB.i18n('Створити'),
+          margin: '10 5 10 5',
+          iconCls: 'u-icon-check',
+          cls: 'green-action',
+          handler: btn => {
+            if (!me.isValid()) {
+              return
+            }
+            const gridEmployees = me.down('[name=employees]')
+            if (gridEmployees.getStore().getCount() === 0) {
+              $App.dialogInfo(UB.i18n('Не вибрано працівників'), UB.i18n('Увага'))
+              return
+            }
+            me.addOrderItems()
+          }
+        },
+        {
+          xtype: 'button',
+          name: 'btnCancel',
+          text: UB.i18n('Відмінити'),
+          margin: '10 5 10 5',
+          iconCls: 'fa fa-ban',
+          cls: 'red-action',
+          handler: btn => {
+            me.up('window').close()
+          }
+        }
+      ]
+    }
+    me.items = [
+      me.mainPanel,
+      me.buttonPanel
+    ]
+    me.addOrderItems = function () {
+      me.setLoading(true)
+      const gridEmployees = me.down('[name=employees]')
+      const store = gridEmployees.getStore()
+      const dictVacationKindIDCtrl = me.down('[name=dictVacationKindID]')
+      const dateFromCtrl = me.down('[name=dateFrom]')
+      const dateToCtrl = me.down('[name=dateTo]')
+      const dayCountCtrl = me.down('[name=dayCount]')
+      const reasonCtrl = me.down('[name=reason]')
+      const empNumIDs = store.data.items.map(rec => rec.get('ID'))
+      $App.connection.run({
+        entity: 'hr_empOrderVacationlongDet',
+        method: 'addOrderItems',
+        orderID: me.orderForm && me.orderForm.record.get('ID'),
+        orgID: me.orderForm && me.orderForm.record.get('organizationID'),
+        employeeNumberIDs: empNumIDs,
+        dictVacationKindID: dictVacationKindIDCtrl.getValue(),
+        dateFrom: dateFromCtrl.getValue(),
+        dateTo: dateToCtrl.getValue(),
+        dayCount: dayCountCtrl.getValue(),
+        reason: reasonCtrl.getValue()
+      }).then((mParams) => {
+        if (mParams.msg) {
+          $App.dialogInfo(mParams.msg, UB.i18n('Увага'))
+          return
+        }
+        if (mParams.res) {
+          const grid = AC.gridUtils.getSenderGrid(me)
+          me.setLoading(false)
+          me.up('window').close()
+          grid.onRefresh()
+        }
+      })
+    }
+    me.callParent(arguments)
+  }
+})

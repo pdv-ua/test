@@ -1,0 +1,79 @@
+exports.formDef = (function () {
+  return {
+    requiredFields: ['organizationID', 'empOrderType', 'orderID'],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      }
+    },
+    defaults: {
+      layout: 'fit'
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [
+      { attributeName: 'itemIdx', hidden: true }, // № (№ за порядком),
+      {
+        layout: { type: 'hbox', align: 'top' },
+        items: [
+          {
+            attributeName: 'task',
+            maxLength: 100000,
+            rows: 10,
+            flex: 1
+          },
+          {
+            xtype: 'button',
+            cls: 'list-icon',
+            name: 'taskButton',
+            tooltip: UB.i18n('Вибрати'),
+            width: 35,
+            height: 35,
+            margin: '0 2 0 -45',
+            handler: btn => btn.up('form').getField('task').selectHandler(btn)
+          }
+        ]
+      }, // Завдання (Завдання),
+      {
+        attributeName: 'respEmployeePositionID',
+        disableContextMenu: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+        fieldList: ['ID', 'description', 'organizationID'],
+        gridFieldList: ['description'],
+        listeners: {
+          select: ctrl => {
+            const me = ctrl.up('form')
+            me.record.set('organizationID', ctrl.getFieldValue('organizationID'))
+          }
+        }
+      },
+      {
+        attributeName: 'linkedEmployeePositionID',
+        disableContextMenu: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+        fieldList: ['ID', 'description', 'organizationID'],
+        gridFieldList: ['description'],
+        listeners: {
+          select: ctrl => {
+            const me = ctrl.up('form')
+            me.record.set('organizationID', ctrl.getFieldValue('organizationID'))
+          }
+        }
+      },
+      {
+        xtype: 'label',
+        margin: '11 10 12 10',
+        forId: 'myFieldId',
+        text: UB.i18n('* Після заповнення поля "Працівник", даний наказ просто буде відображатись у переліку "Накази" у Картці вказаного працівника'),
+        style: {
+          'float': 'left',
+          'color': '#818181',
+          'font-weight': 600
+        }
+      }
+    ]
+  }
+})()

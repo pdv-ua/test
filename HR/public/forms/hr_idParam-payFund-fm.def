@@ -1,0 +1,32 @@
+exports.formDef = {
+  requiredFields: ['orgID', 'listParamID', 'valuesID'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      // attributeName: 'valuesID',
+      xtype: 'ubcombobox',
+      fieldLabel: UB.i18n('Елемент обліку'),
+      displayField: 'name',
+      valueField: 'ID',
+      itemId: 'payFundID',
+      allowBlank: false,
+      ubRequest: {
+        entity: 'hr_payFund',
+        method: UB.core.UBCommand.methodName.SELECT,
+        fieldList: ['ID', 'name']
+      },
+      listeners: {
+        change: function (fld) {
+          const form = fld.up('form')
+          const val = fld.getValue()
+
+          form.record.set('valuesID', val)
+        }
+      },
+      width: 500
+    }
+  ]
+}

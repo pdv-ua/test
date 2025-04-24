@@ -1,0 +1,272 @@
+/* global AC $App UB _ appAC */
+exports.formDef = {
+  parentConfig: {
+    hideActions: ['docActiondocument'],
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      listeners: {
+        tabchange: function (tabPanel, activeTab) {
+          const me = tabPanel.up('form')
+          if (activeTab.ubID === 'report') {
+            if (!me.isPdfCreated) {
+              if (!me.record.get('docText')) {
+                HR.reportTab.editHtml(me)
+              } else {
+                HR.reportTab.setReportMode(me, 'view')
+              }
+            }
+            me.isPdfCreated = true
+          }
+        }
+      },
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: {
+            type: 'vbox'
+          },
+          items: [
+            {
+              xtype: 'panel',
+              layout: { type: 'vbox', align: 'stretch' },
+              width: '100%',
+              items: [
+                { attributeName: 'name' },
+                {
+                  attributeName: 'organizationID',
+                  fieldList: ['mi_data_id', 'description', 'ID'],
+                  valueField: 'mi_data_id',
+                  displayField: 'description',
+                  fieldLabel: UB.i18n('Організація'),
+                  whereList: {
+                    state: {
+                      expression: '[state]',
+                      condition: 'equal',
+                      values: {
+                        state: 'ACTIVE'
+                      }
+                    }
+                  }
+                },
+                { attributeName: 'notificationKind' },
+                { attributeName: 'subject' },
+                { attributeName: 'dictExperienceID', hidden: true },
+                { attributeName: 'notificationTerm1', width: 100 },
+                { attributeName: 'notificationTerm2', width: 100 },
+                { attributeName: 'notificationTerm3', width: 100 },
+                {
+                  xtype: 'panel',
+                  name: 'textInfoPanel',
+                  layout: { type: 'vbox', align: 'stretch' },
+                  title: 'Пояснення до тексту',
+                  collapsible: true,
+                  collapsed: true,
+                  cls: 'panel-bordered',
+                  header: {
+                    style: 'background-color: #e7e7e7;'
+                  },
+                  margin: '0 15 10 15',
+                  items: [
+                    {
+                      xtype: 'label',
+                      name: 'textInfoLabel',
+                      html: 'Складаємо довільний текст нагадування використовуючи наступні «плейсхолдери» (поля, які будуть заповнюватись автоматично з бази)<br>' +
+                          'Прізвище {{{lastName}}}<br>' +
+                          'Ім’я {{{firstName}}}<br>' +
+                          'По батькові {{{middleName}}}<br>' +
+                          'Повне прізвище та ініціали {{{shortFIO}}}<br>' +
+                          'Повне ПІБ {{{fullFIO}}}<br>' +
+                          'Родовий (кого?) {{{genName}}}<br>' +
+                          'Давальний (кому?) {{{datName}}}<br>' +
+                          'Знахідний (про кого?) {{{accusativeName}}}<br>' +
+                          'Орудний (ким?) {{{insName}}}<br>' +
+                          'Місцевий (на кому?) {{{locName}}}<br>' +
+                          'Кличний {{{vocName}}}<br>' +
+                          'Увага! Зображення мають бути завантажені у форматі .jpg та лише через меню "Вставити". Інакше їх відображення може бути не корректним.',
+                      cls: 'field-label-blue',
+                      padding: '5 5 5 5'
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Текст повідомлення'),
+          ubID: 'emailText',
+          layout: {
+            type: 'border'
+          },
+          items: [
+            {
+              region: 'center',
+              flex: 4,
+              xtype: 'container',
+              layout: 'fit',
+              items: [
+                {
+                  xtype: 'ubreporteditor',
+                  enableTemplateEditor: false,
+                  attributeName: 'docText',
+                  labelWidth: 0,
+                  fieldLabel: '',
+                  isMainEditor: true,
+                  height: '100%',
+                  flex: 1,
+                  style: {
+                    background: 'white'
+                  },
+                  tinyMCEConfig: {
+                    object_resizing: false,
+                    entity_encoding: 'named',
+                    entities: '160,nbsp',
+                    toolbar1: 'undo redo | bold italic underline | alignleft aligncenter alignright alignjustify | formatselect fontsizeselect | pageOrientation | Colontitle | borderL borderR borderT borderB borderE borderA | forecolor | bullist numlist outdent indent | pagebreak nonbreaking'
+                  }
+                }
+              ]
+            }
+          ],
+          listeners: {
+            afterrender: function (ctrl) {
+              const me = ctrl.up('form')
+            }
+          }
+        },
+        {
+          title: UB.i18n('Список адресатів'),
+          name: 'receiverListTab',
+          layout: 'fit',
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'receiverList',
+              autoScroll: true,
+              rowEditing: true,
+              notWriteChanges: true,
+              hideActions: [ 'itemLink',
+                'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'
+              ],
+              entityConfig: {
+                entity: 'hr_dictMailTmplByEventsDt',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'employeeNumberID.description',
+                    description: UB.i18n('Працівник'),
+                    config: { width: 500 },
+                    editor: {
+                      fieldList: ['ID', 'description', 'employeeID'],
+                      gridFieldList: ['description'],
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                    }
+                  },
+                  {
+                    name: 'email',
+                    description: 'E-mail',
+                    config: { width: 900 },
+
+                    editor: {
+                      dataType: 'String',
+                      maxLength: 200
+                    }
+                  }
+                ]
+              },
+              masterFields: ['ID'],
+              detailFields: ['dictMailTmplByEventsID'],
+              onBeforeEdit: function (editor, context) {
+                const me = context.grid.up('form')
+                let onDate = appAC.globalApplicationDate()
+                AC.viewUtils.setWhereListProperty(editor.editor.query(`[name=employeeNumberID.description]`)[0], [
+                  ['orgID', '=', me.attr.organizationID.getValue() || appAC.globalOrganization()],
+                  ['dateFrom', '<=', onDate],
+                  ['dateTo', '>=', onDate]
+                ])
+
+                me.attr[`receiverList.employeeNumberID.description`].field.on('change', async (ctrl, value) => {
+                  if (value) {
+                    let employeeID = ctrl.getFieldValue('employeeID')
+                    let email = await UB.Repository('hr_employeeContact')
+                      .attrs(['ID', 'value'])
+                      .where('employeeID', '=', employeeID)
+                      .where('contactTypeID.code', '=', 'email')
+                      .where('isSystemNotificationAddress', '=', true)
+                      .orderBy('mi_createDate', 'desc')
+                      .selectSingle()
+                    if (email && email.value) me.attr[`receiverList.email`].field.setValue(email.value)
+                  } else {
+                    me.attr[`receiverList.email`].field.setValue()
+                  }
+                })
+              },
+              listeners: {
+                changeData: function (grid, event) {
+                  const me = grid.up('form')
+                  me.setIsDirty(true)
+                }
+              },
+              customActions: [
+                {
+                  actionId: 'fillPersons',
+                  text: UB.i18n('Вибрати працівників'),
+                  iconCls: 'fas fa-angle-double-down',
+                  cls: 'fill-action',
+                  handler: async function (btn) {
+                    const me = btn.up('form')
+                    const grid = me.attr.receiverList
+                    let onDate = appAC.globalApplicationDate()
+                    HR.orderManager.empOrderEmployeeSearch({
+                      orgID: me.attr.organizationID.getValue(),
+                      onDate: onDate,
+                      entityID: me.instanceID,
+                      onSelectData: async function (data, isDelete) {
+                        if (isDelete) grid.removeAll()
+                        const addData = []
+
+                        for (let idx = 0; idx < data.length; idx++) {
+                          let params = {
+                            employeeNumberID: data[idx].employeeNumberID,
+                            'employeeNumberID.description': data[idx]['employeeNumberID.description']
+                          }
+                          let email = await UB.Repository('hr_employeeContact')
+                            .attrs(['ID', 'value'])
+                            .where('employeeID', '=', data[idx].employeeID)
+                            .where('contactTypeID.code', '=', 'email')
+                            .where('isSystemNotificationAddress', '=', true)
+                            .orderBy('mi_createDate', 'desc')
+                            .selectSingle()
+                          if (email && email.value) params.email = email.value
+                          addData.push(params)
+                        }
+
+                        // const store = grid.getStore()
+                        // store.insert(store.data.length, addData)
+                        AC.gridUtils.insert(me.attr.receiverList, addData)
+
+                        me.setIsDirty(true)
+
+                        // me.loadEmployees(data, isDelete)
+                      }
+                    })
+                  }
+                }
+              ]
+            }]
+        }
+
+      ]
+    }
+  ]
+}

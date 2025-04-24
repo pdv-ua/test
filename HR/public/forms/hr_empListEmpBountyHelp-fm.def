@@ -1,0 +1,485 @@
+/* global Ext UB $App AC HR appAC UB */
+exports.formDef = 'HR.empListExpAllowanceOrder'
+const accMainReportsSubOrg = AC.entityUtils.verifyRightsMethod('ac_service', 'subOrg')
+
+Ext.define('HR.empListExpAllowanceOrder', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.empListExpAllowanceOrder',
+  layout: { type: 'border' },
+  width: 1100,
+  height: 600,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        name: 'paramPanel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'hbox', align: 'middle' },
+            collapsed: false,
+            items: [
+              {
+                xtype: 'panel',
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getOrgCombo({
+                        labelWidth: 145,
+                        width: 700,
+                        flex: 1,
+                        readOnly: !accMainReportsSubOrg,
+                        ubRequest: {
+                          entity: 'hr_organization',
+                          fieldList: ['mi_data_id', 'description', 'mi_treePath'],
+                          whereList: {
+                            state: {
+                              expression: '[state]',
+                              condition: '=',
+                              values: {
+                                state: 'ACTIVE'
+                              }
+                            },
+                            path: {
+                              expression: accMainReportsSubOrg ? '[mi_treePath]' : '[mi_data_id]',
+                              condition: accMainReportsSubOrg ? 'like' : '=',
+                              values: {
+                                state: accMainReportsSubOrg ? `/${appAC.globalOrganization()}/` : appAC.globalOrganization()
+                              }
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'description' } },
+                          __mip_ondate: appAC.globalApplicationDate()
+                        },
+                        listeners: {
+                          change: function (ctrl) {
+                            const form = ctrl.up('[name=paramPanel]')
+                            HR.controlService.onChangeIncludeChildOrgs(form)
+                          }
+                        }
+                      }),
+                      HR.controlService.getIncludeChildOrgs(accMainReportsSubOrg)
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getDepCombo({
+                        labelWidth: 145,
+                        width: 700,
+                        displayField: 'description',
+                        flex: 1,
+                        listeners: {
+                          change: function (ctrl, value) {
+                            const form = ctrl.up('[name=paramPanel]')
+                            form.down('[name=includeChildDepts]').setReadOnly(!value)
+                            if (!value) {
+                              form.down('[name=includeChildDepts]').setValue()
+                            }
+                          }
+                        }
+                      }),
+                      HR.controlService.getIncludeChildDepts()
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'datefield',
+                        name: 'dateFrom',
+                        labelWidth: 145,
+                        width: 277,
+                        fieldLabel: UB.i18n('Період з'),
+                        allowBlank: false,
+                        listeners: {
+                          change: function (fld) {
+                            me.clearData()
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'datefield',
+                        name: 'dateTo',
+                        labelWidth: 60,
+                        width: 170,
+                        fieldLabel: UB.i18n('по'),
+                        allowBlank: false,
+                        listeners: {
+                          change: function (fld) {
+                            me.clearData()
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'checkboxfield',
+                        labelWidth: 145,
+                        name: 'byOrder',
+                        fieldLabel: UB.i18n('За наказами'),
+                        width: 277,
+                        checked: true,
+                        listeners: {
+                          change: function (ctrl) {
+                            const me = ctrl.up('[name=paramPanel]').ownerCt
+                            const isChecked = ctrl.getValue()
+                            me.attr.byAccrual.setValue(!isChecked)
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'byAccrual',
+                        fieldLabel: UB.i18n('За виплатами'),
+                        checked: false,
+                        listeners: {
+                          change: function (ctrl) {
+                            const me = ctrl.up('[name=paramPanel]').ownerCt
+                            const isChecked = ctrl.getValue()
+                            me.attr.byOrder.setValue(!isChecked)
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'ubboxselect',
+                    name: 'payElID',
+                    fieldLabel: UB.i18n('Вид оплати'),
+                    labelWidth: 145,
+                    flex: 1,
+                    gridFieldList: ['description'],
+                    valueField: 'ID',
+                    displayField: 'description',
+                    allowBlank: true,
+                    width: 700,
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                    disableModifyEntity: true,
+                    ubRequest: {
+                      entity: 'hr_payEl',
+                      fieldList: ['ID', 'description'],
+                      whereList: {
+                        methodId: {
+                          expression: '[methodID.methodGroupID.code]',
+                          condition: '=',
+                          values: {
+                            value: '7'
+                          }
+                        }
+                      },
+                      orderList: { orderBy: { expression: 'codeSort' } }
+                    },
+                    listeners: {
+                      change: () => {
+                        me.clearData()
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'dictStaffCatID',
+                    fieldLabel: UB.i18n('Категорія персоналу'),
+                    labelWidth: 145,
+                    width: 700,
+                    flex: 1,
+                    gridFieldList: ['code', 'name'],
+                    valueField: 'ID',
+                    displayField: 'name',
+                    allowBlank: true,
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                    disableModifyEntity: true,
+                    ubRequest: {
+                      entity: 'hr_dictStaffCat',
+                      fieldList: ['ID', 'code', 'name'],
+                      orderList: { orderBy: { expression: 'name' } }
+                    },
+                    listeners: {
+                      change: () => {
+                        me.clearData()
+                      }
+                    }
+                  },
+                  HR.controlService.getRespEmpCombo({
+                    name: 'respID',
+                    fieldLabel: UB.i18n('Відповідальний'),
+                    labelWidth: 145,
+                    width: 700,
+                    allowBlank: true,
+                    defaultOrgBoss: false,
+                    listeners: {
+                      change: function (fld) {
+                        me.clearData()
+                      }
+                    }
+                  })
+                ]
+              },
+              {
+                xtype: 'button',
+                tooltip: UB.i18n('Сформувати'),
+                iconCls: 'fas fa-search',
+                width: 30,
+                cls: 'green-action',
+                margin: '5 0 0 0',
+                handler: function (btn) {
+                  let me = btn.up('[name=paramPanel]').ownerCt
+                  me.refreshData(me)
+                }
+              },
+              {
+                xtype: 'button',
+                tooltip: UB.i18n('Очистити'),
+                iconCls: 'fas fa-eraser',
+                width: 30,
+                cls: 'fill-action',
+                margin: '5 0 0 0',
+                handler: function (btn) {
+                  me.clearSearch()
+                }
+              },
+              {
+                xtype: 'button',
+                iconCls: 'fas fa-print',
+                width: 30,
+                cls: 'blue-action',
+                margin: '5 0 0 0',
+                tooltip: UB.i18n('Друкувати'),
+                handler: function () {
+                  me.doReport()
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'allowanceGrid',
+        region: 'center',
+        autoScroll: true,
+        flex: 1,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink',
+          'commandLink', 'showDetail', 'audit', 'refresh'],
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        entityConfig: {
+          entity: 'hr_empListEmpBountyHelp',
+          method: 'search',
+          fieldList: [
+            { name: 'employeeID', visibility: false },
+            { name: 'employeeNumberID', visibility: false },
+            { name: 'tabNum', description: UB.i18n('Таб. №'), tooltip: UB.i18n('Табельний номер') },
+            { name: 'fullFIO', description: UB.i18n('ПІБ'), tooltip: UB.i18n('Прізвище, Ім\'я, По батькові') },
+            { name: 'addDescrPerson', description: UB.i18n('Додаткова інформація') },
+            { name: 'payElName', description: UB.i18n('Вид нарахування (назва)'), tooltip: UB.i18n('Вид нарахування (назва)') },
+            { name: 'accrual', description: UB.i18n('Встановлене значення'), tooltip: UB.i18n('Встановлене значення') },
+            { name: 'orderDescription', description: UB.i18n('За наказом'), tooltip: UB.i18n('За наказом') },
+            { name: 'posName', description: UB.i18n('Посада') },
+            { name: 'actualPositionName', description: UB.i18n('Фактична посада') },
+            { name: 'depName', description: UB.i18n('Підрозділ') },
+            { name: 'cancelOrder', description: UB.i18n('Скасовано наказом') },
+            { name: 'depFirst', description: UB.i18n('Структурний підрозділ') },
+            { name: 'orgName', description: UB.i18n('Організація') },
+            { name: 'dictStaffCatName', description: UB.i18n('Категорія персоналу') },
+            { name: 'workPlaceName', description: UB.i18n('Місце роботи') }
+          ]
+        },
+        cmpInitConfig: {
+          onDeterminateForm: HR.employeeTabs.onDeterminateCard,
+          listeners: {
+            render: (grid) => {
+              grid.menu.removeAll()
+              grid.menu.add([HR.employeeTabs.getEmpCardMenu(grid)])
+              const showAddDescrPerson = !!AC.settings.get('hrShowAddDescrPerson', appAC.globalOrganization())
+              const colPersonDescr = AC.gridUtils.getColumnByIndex(grid, 'addDescrPerson')
+              colPersonDescr.setVisible(showAddDescrPerson)
+              const useActualPositionName = AC.settings.get('hrOrderActualPositionName', appAC.globalOrganization()) === true
+              const colActualPositionName = AC.gridUtils.getColumnByIndex(grid, 'actualPositionName')
+              colActualPositionName.setVisible(useActualPositionName)
+            }
+          },
+
+          selModel: {
+            selectionMode: 'MULTI',
+            showHeaderCheckbox: true,
+            checkOnly: false,
+            selType: 'checkboxmodel'
+          }
+        },
+        getExportTitle: function () {
+          return UB.i18n('Список працівників, яким призначено матдопомогу')
+        }
+      }
+    ]
+
+    me.refreshData = (me) => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+
+      const store = me.attr.grid.getStore()
+      let req = store.ubRequest
+      req.organizationID = me.attr.organizationID.getValue()
+      req.includeChildOrgs = me.attr.includeChildOrgs.getValue()
+      req.departmentID = me.attr.departmentID.getValue()
+      req.includeChildDepts = me.attr.includeChildDepts.getValue()
+      req.dateFrom = AC.dateService.shiftDate(me.attr.dateFrom.getValue())
+      req.dateTo = AC.dateService.shiftDate(me.attr.dateTo.getValue())
+      req.payElID = me.attr.payElID.getValue()
+      req.dictStaffCatID = me.attr.dictStaffCatID.getValue()
+      req.byOrder = me.attr.byOrder.getValue()
+      req.byAccrual = me.attr.byAccrual.getValue()
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      const grid = me.down('[name=allowanceGrid]')
+      me.attr = {
+        grid: grid,
+        byOrder: me.down('[name=byOrder]'),
+        byAccrual: me.down('[name=byAccrual]'),
+        dateFrom: me.down('[name=dateFrom]'),
+        dateTo: me.down('[name=dateTo]'),
+        payElID: me.down('[name=payElID]'),
+        respID: me.down('[name=respID]'),
+        organizationID: me.down('[name=organizationID]'),
+        includeChildOrgs: me.down('[name=includeChildOrgs]'),
+        departmentID: me.down('[name=departmentID]'),
+        includeChildDepts: me.down('[name=includeChildDepts]'),
+        dictStaffCatID: me.down('[name=dictStaffCatID]')
+      }
+      me.setDefaultParams()
+    }, me)
+
+    me.clearSearch = () => {
+      me.setDefaultParams()
+    }
+
+    me.clearData = function () {
+      const allowanceGrid = me.down('[name=allowanceGrid]')
+      if (allowanceGrid && allowanceGrid.store && allowanceGrid.store.data) {
+        allowanceGrid.store.data.items = []
+        allowanceGrid.view.refresh()
+      }
+    }
+
+    me.setDefaultParams = () => {
+      const me = this
+      me.attr.dateFrom.setValue(new Date((new Date()).getFullYear(), (new Date()).getMonth(), 1, 0, 0, 0, 0))
+      me.attr.dateTo.setValue(AC.dateService.lastDayOfMonth(new Date((new Date()).getFullYear(), (new Date()).getMonth(), 1, 0, 0, 0, 0)))
+      me.attr.payElID.setValue()
+      me.attr.byOrder.setValue(1)
+      me.attr.byAccrual.setValue()
+      me.attr.organizationID.setValue(appAC.globalOrganization())
+      me.attr.includeChildOrgs.setValue()
+      me.attr.departmentID.setValue()
+      me.attr.includeChildDepts.setValue()
+      me.attr.dictStaffCatID.setValue()
+      me.setDefaultRespParam(me.attr.respID)
+    }
+
+    me.setDefaultRespParam = (ctrl) => {
+      let empNumberID = $App.connection.userData().employeeNumberID
+      UB.Repository('hr_employeePositionS')
+        .attrs('ID', 'dateFrom')
+        .where('employeeNumberID', '=', empNumberID)
+        .where('isActive', '=', 1)
+        .orderBy('dateFrom', 'desc')
+        .selectSingle()
+        .then(posInfo => {
+          posInfo ? ctrl.setValueById(posInfo.ID) : ctrl.setValueById(null)
+        })
+    }
+
+    me.report_code = 'hr_empListEmpBountyHelp'
+    me.doReport = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+
+      const execParams = {
+        organizationID: me.attr.organizationID.getValue(),
+        includeChildOrgs: me.attr.includeChildOrgs.getValue(),
+        departmentID: me.attr.departmentID.getValue(),
+        includeChildDepts: me.attr.includeChildDepts.getValue(),
+        dateFrom: AC.dateService.shiftDate(me.attr.dateFrom.getValue()),
+        dateTo: AC.dateService.shiftDate(me.attr.dateTo.getValue()),
+        payElID: me.attr.payElID.getValue(),
+        byAccrual: me.attr.byAccrual.getValue(),
+        respID: me.attr.respID.getValue(),
+        dictStaffCatID: me.attr.dictStaffCatID.getValue()
+      }
+
+      $App.doCommand({
+        cmdType: 'showReport',
+        caption: UB.i18n('Друкована форма'),
+        tabId: 'printDocument' + me.report_code + Date.now(),
+        target: $App.getViewport().centralPanel,
+        cmdData: {
+          reportCode: me.report_code,
+          reportParams: execParams,
+          reportOptions: {
+            allowExportToExcel: true,
+            isModal: false
+          }
+        }
+      })
+    }
+
+    me.callParent(arguments)
+
+    me.validateParams = () => {
+      let res
+      let params = []
+      let dateFromCtrl = me.attr.dateFrom
+      let dateFrom = dateFromCtrl.getValue()
+      if (!dateFrom || !dateFromCtrl.isValid()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"За період з "')))
+      }
+      let dateToCtrl = me.attr.dateTo
+      let dateTo = dateToCtrl.getValue()
+      if (!dateTo || !dateToCtrl.isValid()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"по"')))
+      }
+      if (params.length) {
+        res = {
+          msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+        }
+      } else {
+        if (dateFrom > dateTo) {
+          res = {
+            msg: UB.i18n(`Дата {0} не може перевищувати дату {1}`, AC.viewUtils.formatFieldLabel('"За період з"'), AC.viewUtils.formatFieldLabel('"по"'))
+          }
+        }
+        if (dateTo > AC.dateService.addYears(dateFrom, 1)) {
+          res = {
+            msg: UB.i18n(`Дата {0} не може перевищувати дату {1} більше ніж на рік`, AC.viewUtils.formatFieldLabel('"по"'), AC.viewUtils.formatFieldLabel('"За період з"'))
+          }
+        }
+      }
+      return res
+    }
+  }
+})

@@ -1,0 +1,203 @@
+/* global Ext _ AC appAC $App UB */
+
+exports.formDef = 'HR.empAssessmentList'
+
+Ext.define('HR.empAssessmentList', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  autoScroll: true,
+  alias: 'widget.empAssessmentList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        layout: 'fit',
+        flex: 1,
+        hideActions: ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        stateful: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_empAssessmentList_grid'),
+        cmdType: 'showList',
+        cmdData: {
+          params: [{
+            entity: 'hr_empAssessment',
+            method: 'select',
+            fieldList: [
+              { name: 'assessmentType', config: { width: 120 } },
+              { name: 'assessmentTaskType', config: { width: 100 } },
+              { name: 'year', config: { align: 'center', width: 60 }, format: '0' },
+              { name: 'employeeNumberID.description', description: UB.i18n('Працівник'), simpleFilter: true, config: { width: 250 } },
+              { name: 'positionID.name', description: UB.i18n('Посада'), simpleFilter: true, config: { width: 250 } },
+              { name: 'positionID.psCategory', description: UB.i18n('Категорія посади'), config: { width: 100 } },
+              { name: 'departmentID.name', description: UB.i18n('Підрозділ'), simpleFilter: true, config: { width: 250 } },
+              { name: 'assessmentValue', config: { width: 100 } },
+              { name: 'avgValue', config: { align: 'center', width: 120 } },
+              { name: 'agreementState', config: { width: 100 } },
+              { name: 'appealDate', config: { align: 'center', width: 120 } },
+              { name: 'hasResult', visibility: false },
+              { name: 'empAssessmentResultID', visibility: false },
+              { name: 'orderState', visibility: false },
+              { name: 'employeeNumberID', visibility: false }
+            ]
+          }]
+        },
+        cmpInitConfig: {
+          disableAutoLoadStore: true,
+          hideActions: ['showDetail'],
+          getRowClass: function (row) {
+            return AC.gridUtils.getOrderRowClass(row.get('orderState'))
+          },
+          customInit: function () {
+            const me = this
+            me.onDeterminateForm = () => {
+              return {
+                entityName: 'hr_empAssessment',
+                formCode: 'hr_empAssessment'
+              }
+            }
+            AC.gridUtils.tuneGridColumns(me, {
+              avgValue: {
+                renderer: function (value) {
+                  if (!value) return
+                  return value.toFixed(2)
+                }
+              }
+            })
+          },
+          afterInit: function () {
+            const grid = this
+            AC.gridUtils.setGlobalOrganization(grid, 'organizationID')
+            let actCol = Ext.create('Ext.grid.column.Column', {
+              xtype: 'actioncolumn',
+              dataIndex: 'ID',
+              text: '',
+              width: 40,
+              align: 'center',
+              filterable: false,
+              sortable: false,
+              renderer: function (value, meta, record) {
+                if (record.get && record.get('hasResult') > 0) {
+                  let id = Ext.id()
+                  Ext.defer(function () {
+                    Ext.widget('button', {
+                      renderTo: Ext.query('#' + id)[0],
+                      tooltip: UB.i18n('Переглянути висновок'),
+                      scale: 'small',
+                      margin: '0 0 0 0',
+                      iconCls: 'fas fa-file-invoice',
+                      cls: 'blue-action',
+                      handler: function (btn) {
+                        const empAssessmentResultID = record.get('empAssessmentResultID')
+                        $App.doCommand({
+                          cmdType: 'showForm',
+                          entity: 'hr_empAssessmentResult',
+                          formCode: 'hr_empAssessmentResult',
+                          instanceID: empAssessmentResultID,
+                          tabId: 'hr_empAssessmentResult' + empAssessmentResultID,
+                          target: $App.getViewport().centralPanel,
+                          title: UB.i18n(`Результат виконання завдань`)
+                        })
+                      }
+                    })
+                  }, 50)
+                  return Ext.String.format('<div id="{0}"></div>', id)
+                } else if (_.isArray(record)) {
+                  // експорт в Excel
+                  return record[record.length - 3] // ID
+                }
+              }
+            })
+            grid.headerCt.insert(0, actCol)
+            grid.columns.unshift(actCol)
+
+            const whereList = grid.getStore().ubRequest.whereList
+            whereList.posDateDelete = {
+              expression: '[positionID.mi_deleteDate]',
+              condition: '=',
+              value: '#maxdate'
+            }
+            whereList.posState = {
+              expression: '[positionID.state]',
+              condition: '=',
+              value: 'ACTIVE'
+            }
+            whereList.depDateDelete = {
+              expression: '[departmentID.mi_deleteDate]',
+              condition: '=',
+              value: '#maxdate'
+            }
+            whereList.depState = {
+              expression: '[departmentID.state]',
+              condition: '=',
+              value: 'ACTIVE'
+            }
+            whereList.posDateFrom = {
+              expression: '[positionID.mi_dateFrom]',
+              condition: '<=',
+              value: appAC.globalApplicationDate()
+            }
+            whereList.posDateTo = {
+              expression: '[positionID.mi_dateTo]',
+              condition: '>=',
+              value: appAC.globalApplicationDate()
+            }
+            whereList.depDateFrom = {
+              expression: '[departmentID.mi_dateFrom]',
+              condition: '<=',
+              value: appAC.globalApplicationDate()
+            }
+            whereList.depDateTo = {
+              expression: '[departmentID.mi_dateTo]',
+              condition: '>=',
+              value: appAC.globalApplicationDate()
+            }
+            whereList.posIsNull = {
+              expression: '[positionID]',
+              condition: 'isNull'
+            }
+            whereList.depIsNull = {
+              expression: '[departmentID]',
+              condition: 'isNull'
+            }
+            grid.getStore().ubRequest.logicalPredicates = ['[organizationID] AND (([posDateDelete] AND [posState] AND [posDateFrom] AND [posDateTo]) OR [posIsNull]) AND (([depDateDelete] AND [depState] AND [depDateFrom] AND [depDateTo]) OR [depIsNull])']
+          },
+          optimizeColumnWidth: function () {}
+        }
+      }
+    ]
+  },
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+    me.changeGlobal = function () {
+      const store = me.down('ubdetailgrid').getStore()
+      const globalDate = appAC.globalApplicationDate()
+      store.ubRequest.whereList.posDateFrom.value = globalDate
+      store.ubRequest.whereList.posDateTo.value = globalDate
+      store.ubRequest.whereList.depDateFrom.value = globalDate
+      store.ubRequest.whereList.depDateTo.value = globalDate
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      $App.on('ac:app:operationDateChanged', me.changeGlobal)
+    }, me)
+    me.on('destroy', () => {
+      $App.un('ac:app:operationDateChanged', me.changeGlobal)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

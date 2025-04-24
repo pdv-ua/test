@@ -1,0 +1,148 @@
+/* jshint maxerr: 10000 */
+/* global UB AC */
+
+exports.formDef = (function () {
+  return {
+    requiredFields: [],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    defaults: {
+      layout: 'fit'
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      listeners: {
+        tabchange: function (tp, t) {
+
+        }
+      },
+      items: [{
+        title: UB.i18n('Загальне'),
+        ubID: 'tabMain',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            layout: {
+              type: 'hbox',
+              align: 'stretch'
+            },
+            items: [{
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              flex: 1,
+              items: [
+                { attributeName: 'code' }, // Код (Код),
+                { attributeName: 'name' }, // Назва (Назва),
+                { attributeName: 'statisticType' },
+                { attributeName: 'dictStReportID' },
+                { attributeName: 'reportNumStr' },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    { attributeName: 'dateFromEmpty' },
+                    { attributeName: 'dateToEmpty', labelWidth: 160 }
+                  ]
+                }
+              ]
+            }]
+          },
+          {
+            xtype: 'tabpanel',
+            region: 'center',
+            layout: 'fit',
+            ubID: 'tpDetail',
+            flex: 1,
+            items: [{
+              title: UB.i18n('Елементи'),
+              name: 'hr_repSetElement',
+              xtype: 'ubdetailgrid',
+              autoScroll: true,
+              customActions: [{
+                itemId: 'valuesList',
+                text: UB.i18n('Додати списком'),
+                actionId: 'addByList',
+                iconCls: 'fas fa-angle-double-down',
+                cls: 'fill-action',
+                handler: btn => btn.up('form').addByListHandler(btn)
+              }],
+              hideActions: [],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_repSetElement',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'elementSetTypeID.name',
+                    description: UB.i18n('Вид елемента'),
+                    visibility: true
+                  },
+                  {
+                    name: 'elementSetTypeID.code',
+                    description: UB.i18n('Код виду елемента'),
+                    visibility: false
+                  },
+                  {
+                    name: 'elementSetTypeID',
+                    description: UB.i18n('ID виду елемента'),
+                    visibility: false
+                  },
+                  {
+                    name: 'elementID',
+                    description: UB.i18n('ID значення елемента'),
+                    visibility: false
+                  },
+                  {
+                    name: 'repSetParamID',
+                    visibility: true
+                  },
+                  {
+                    name: 'elementInfo',
+                    description: UB.i18n('Значення елемента'),
+                    visibility: true
+                  },
+                  {
+                    name: 'dateFrom',
+                    visibility: true
+                  },
+                  {
+                    name: 'dateToEmpty',
+                    visibility: true
+                  },
+                  {
+                    name: 'mi_modifyDate',
+                    visibility: false
+                  }
+                ]
+              },
+              masterFields: ['ID'],
+              detailFields: ['repSetParamID'],
+              cmpInitConfig: {
+                customInit: function () {
+                  let grid = this
+                  AC.gridUtils.tuneGridColumns(grid, {})
+                }
+              }
+            }
+            ]
+          }
+        ]
+      }]
+    }]
+  }
+})()

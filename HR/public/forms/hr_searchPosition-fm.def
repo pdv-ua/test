@@ -1,0 +1,410 @@
+/* global Ext UB HR */
+exports.formDef = 'HR.searchPositionForm'
+
+Ext.define('HR.searchPositionForm', {
+  extend: 'Ext.form.Panel',
+  autoScroll: true,
+  layout: 'card',
+  initComponent: function () {
+    let me = this
+    me.srchEmpParams = {
+      baseEntity: 'hr_position',
+      baseEntityAlias: 'hrpos',
+      baseEntityKey: 'id',
+      baseJoinField: 'id',
+      joinExclusions: {
+        ac_address: { type: 'changeKeyFields', joinBaseAlias: 'emp', joinBaseField: 'ID', joinParentField: 'ownerID' },
+        hr_organization: {
+          type: 'changeKeyFields',
+          // встановлюється, якщо дана категорія ідентифікується не по ID
+          baseJoinField: 'mi_data_id',
+          // Поле в базовій сутсноті hrpos
+          joinBaseField: 'orgID',
+          // поле для зв'язку з базовою сутністю hrpos
+          joinParentField: 'mi_data_id'
+          // joinOuterWhere: `AND {0} between [self].mi_dateFrom and [self].mi_dateTo` - по даті фільтрується за рахунок фільтру історичності (макс. чи на дату)
+          // histWhere: `AND [self].state = 'ACTIVE'` /* додається по searchService.globalWhereAttr4Entity */
+        },
+        hr_department: {
+          type: 'changeKeyFields',
+          baseJoinField: 'mi_data_id',
+          joinBaseField: 'parentUnitID',
+          joinParentField: 'mi_data_id'
+          // joinOuterWhere: `AND {0} between [self].mi_dateFrom and [self].mi_dateTo` - - по даті фільтрується за рахунок фільтру історичності (макс. чи на дату)
+          // histWhere: `AND [self].state = 'ACTIVE'` /* додається по searchService.globalWhereAttr4Entity */
+        },
+        hr_position: {
+          type: 'changeKeyFields',
+          baseJoinField: 'mi_data_id',
+          joinBaseField: 'mi_data_id',
+          joinParentField: 'mi_data_id',
+          exclusionEntities: ['hr_positionFundSource']
+          // joinOuterWhere: `AND [self].mi_deleteDate >= '9999-12-31'`, /* додається автоматично */
+          /* AND [self].state <> 'NEW' - фільтрується через searchService.globalWhereAttr4Entity */
+          /* AND {0} between [self].mi_dateFrom and [self].mi_dateTo - по даті фільтрується за рахунок фільтру історичності (макс. чи на дату) */
+          // histWhere: `AND [self].state <> 'NEW'` /* додається по searchService.globalWhereAttr4Entity */
+        },
+        hr_employeePosition: {
+          type: 'addEntity',
+          /* Коренева категорія - hr_position, якщо кореневу поставити hr_employeePosition, то вона буде повторюватися в 1-ій та 2-ій каьегоріях */
+          joinBaseEntity: 'hr_position',
+          joinBaseAlias: 'pos',
+          joinBaseField: 'id',
+          joinParentField: 'id',
+          joinField: 'employeeID',
+          joinOuterClause: `INNER JOIN hr_employeePosition [self] ON [self].positionID = pos.mi_data_id
+            INNER JOIN hr_employee emp ON emp.ID = [self].employeeID and emp.mi_deleteDate >= '9999-12-31'`,
+          /* AND [self].mi_deleteDate >= '9999-12-31' - додається автоматично */
+          /* AND {0} between [self].mi_dateFrom and [self].dateTo - по даті фільтрується за рахунок фільтру історичності (макс. чи на дату) */
+          joinInnerWhere: `AND {0} between [self].dateFrom and [self].dateTo`,
+          aliasMap: { hr_employee: 'emp' }
+        },
+        hr_employee: {
+          type: 'addEntity',
+          joinBaseEntity: 'hr_position',
+          joinBaseAlias: 'pos',
+          joinBaseField: 'id',
+          joinParentField: 'id',
+          joinField: 'id',
+          joinOuterClause: `INNER JOIN hr_employeePosition ep ON ep.positionID = pos.mi_data_id
+              AND ep.mi_deleteDate >= '9999-12-31'
+              AND {0} between ep.dateFrom and ep.dateTo
+            INNER JOIN hr_employee [self] ON [self].ID = ep.employeeID and [self].mi_deleteDate >= '9999-12-31'`,
+          aliasMap: { hr_employeePosition: 'ep' }
+        },
+        hr_positionAccrual: {
+          type: 'addEntity',
+          joinBaseEntity: 'hr_position',
+          joinBaseAlias: 'pos',
+          joinBaseField: 'id',
+          joinParentField: 'id',
+          joinField: 'positionID',
+          joinOuterClause: `INNER JOIN hr_positionAccrual [self] ON [self].positionID = pos.id and [self].mi_deleteDate >= '9999-12-31'`,
+          joinInnerWhere: `AND {0} between [self].dateFrom and [self].dateTo`
+        }
+      },
+      searchEntity: 'hr_searchPosition',
+      getSqlMethod: 'getSearchSql',
+      templateEntity: 'hr_position',
+      categoryValueField: 'categoryCode',
+      categoryDisplayField: 'categoryName',
+      categoryGroupField: 'parentGroupCode',
+      categoryRequest: {
+        entity: 'hr_searchAttr',
+        method: 'selectCategories4pos',
+        fieldList: HR.searchAttrFieldList.getSearchParamsFields('category')
+      },
+      attrValueField: 'attributeCode',
+      attrDisplayField: 'attributeDesc',
+      attrRequest: {
+        entity: 'hr_searchAttr',
+        method: 'selectAttr4pos',
+        fieldList: HR.searchAttrFieldList.getSearchParamsFields('attribute')
+      },
+      addCatInAttrEntity: null,
+      mainPanel: null,
+      attrPanel: null,
+      condPanel: null,
+      attrBlockParams: null,
+      condBlockParams: null,
+      dataPanel: null,
+      searchGrid: null,
+      sqlLabel: null
+    }
+    me.tabs = Ext.create('Ext.tab.Panel', {
+      items: [
+        {
+          title: UB.i18n('Форма пошуку'),
+          autoScroll: true,
+          iconCls: 'fa fa-search-plus',
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              xtype: 'toolbar',
+              dock: 'top',
+              items: HR.searchUtils.get('toolbar_items', me.srchEmpParams)
+            },
+            {
+              autoScroll: true,
+              layout: {
+                type: 'hbox',
+                align: 'stretch'
+              },
+              items: [
+                {
+                  xtype: 'panel',
+                  ubID: 'condPanel',
+                  autoScroll: true,
+                  width: '100%',
+                  margins: '0 0 10 0',
+                  bodyStyle: { 'background-color': '#f3f2d7' },
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  items: []
+                }
+              ]
+            },
+            {
+              xtype: 'panel',
+              ubID: 'attrPanel',
+              autoScroll: true,
+              bodyStyle: { 'background-color': '#e8eee9' },
+              layout: {
+                type: 'hbox',
+                align: 'stretch'
+              },
+              items: []
+            }
+          ]
+        },
+        {
+          xtype: 'panel',
+          ubID: 'dataPanel',
+          title: UB.i18n('Результат пошуку'),
+          layout: 'border',
+          iconCls: 'fa fa-list',
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              ubID: 'searchGrid',
+              region: 'center',
+              flex: 1,
+              cmdType: 'showList',
+              description: UB.i18n('Посади'),
+              entity: 'hr_searchPosition',
+              emptyText: UB.i18n('За вказаними умовами не знайдено жодного запису'),
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              cmdData: {
+                params: [
+                  {
+                    entity: 'hr_searchPosition',
+                    method: 'select4search',
+                    fieldList: [
+                      { name: 'ID', visibility: false },
+                      { name: 'mi_data_id', visibility: false },
+                      { name: 'orgName' },
+                      { name: 'depName' },
+                      { name: 'structDepName' },
+                      { name: 'posName' },
+                      { name: 'posCode' },
+                      { name: 'quantity', config: { align: 'center' } },
+                      { name: 'accrualSum' },
+                      { name: 'accrualAddSumDesc' },
+                      { name: 'dictWagePayName' },
+                      { name: 'psCategory' },
+                      { name: 'dictStatePayName' },
+                      { name: 'state' },
+                      { name: 'mi_dateFrom', format: 'd.m.Y', config: { align: 'center' } },
+                      { name: 'mi_dateTo', format: 'd.m.Y', config: { align: 'center' } },
+                      { name: 'entryOrder' },
+                      { name: 'staffOrder' },
+                      { name: 'fullName' },
+                      { name: 'dictPosName' },
+                      { name: 'workScheduleName' },
+                      { name: 'dictTarifCoeffName' },
+                      { name: 'dictSpecialtyName' },
+                      { name: 'dictEmpCategoryName' },
+                      { name: 'dictStaffCatName' },
+                      { name: 'dictPositionKindName' },
+                      { name: 'dictPositionGroupName' },
+                      { name: 'dictFundSourceName' },
+                      { name: 'paymentType' },
+                      { name: 'dictSalarySchemeName' },
+                      { name: 'dictCostTypeName' },
+                      { name: 'fundBasePay' },
+                      { name: 'fundAddPay' },
+                      { name: 'fundOtherPay' },
+                      { name: 'fundTotal' },
+                      { name: 'addDescrPosition' },
+                      { name: 'posComment' }
+                    ],
+                    __totalRecCount: false
+                  }
+                ]
+              },
+              dockedItems: [
+                {
+                  xtype: 'toolbar',
+                  dock: 'bottom',
+                  ubID: 'selectButtonToolbar',
+                  hidden: true,
+                  items: [
+                    {
+                      xtype: 'button',
+                      ubID: 'hideEmpGridBtn',
+                      iconCls: 'u-icon-arrow-down',
+                      cls: 'fill-action',
+                      handler: function (ctrl) {
+                        me.srchEmpParams.searchDetGrid.hide()
+                        ctrl.hide()
+                        me.down('[ubID=showEmpGridBtn]').show()
+                      }
+                    },
+                    {
+                      xtype: 'button',
+                      ubID: 'showEmpGridBtn',
+                      iconCls: 'u-icon-arrow-up',
+                      cls: 'fill-action',
+                      hidden: true,
+                      handler: function (ctrl) {
+                        me.srchEmpParams.searchDetGrid.show()
+                        ctrl.hide()
+                        me.down('[ubID=hideEmpGridBtn]').show()
+                      }
+                    },
+                    { xtype: 'component', flex: 1 },
+                    {
+                      xtype: 'button',
+                      text: UB.i18n('Вибрати'),
+                      margin: '0 20 00 0',
+                      handler: function () {
+                        const grid = me.down('[ubID=searchGrid]')
+                        const selection = grid.getSelectionModel().selected.items
+                        if (!selection.length) {
+                          AC.viewUtils.showToast(UB.i18n('Необхідно вибрати хоча б один запис'))
+                          return
+                        }
+                        if (me.onSelectData && _.isFunction(me.onSelectData)) {
+                          const data = []
+                          selection.forEach(item => {
+                            data.push(item.getData())
+                          })
+                          me.onSelectData(data)
+                        }
+                        me.up('window').close()
+                      }
+                    }
+                  ]
+                }
+              ],
+              cmpInitConfig: {
+                selModel: me.customParams && me.customParams.showSelectButton
+                  ? {
+                    selectionMode: 'MULTI',
+                    showHeaderCheckbox: true,
+                    checkOnly: false,
+                    selType: 'checkboxmodel'
+                  }
+                  : false,
+                onSelectionChange: function (selectionModel, selected) {
+                  HR.searchUtils.onMasterSelectionChange(me.srchEmpParams, selected[0])
+                }
+              },
+              onDeterminateForm: function (grid) {
+                return {
+                  entityName: 'hr_position',
+                  formCode: 'hr_position'
+                }
+              },
+              contextMenuType: 'position'
+              // customActions: HR.searchUtils.get('results_toolbar', me.srchEmpParams)
+            },
+            {
+              xtype: 'ubdetailgrid',
+              ubID: 'searchDetGrid',
+              region: 'south',
+              height: 300,
+              cmdType: 'showList',
+              description: UB.i18n('Працівники'),
+              entity: 'hr_searchEmployee',
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              loadStoreImmediately: false,
+              cmdData: {
+                params: [
+                  {
+                    entity: 'hr_searchEmployee',
+                    method: 'select4searchPos',
+                    fieldList: [
+                      { name: 'ID', visibility: false },
+                      { name: 'positionID', visibility: false },
+                      { name: 'employeeID', visibility: false },
+                      { name: 'employeeNumberID', visibility: false },
+                      { name: 'taxCode' },
+                      { name: 'lastName' },
+                      { name: 'firstName' },
+                      { name: 'middleName' },
+                      { name: 'birthDate', format: 'd.m.Y', config: { align: 'center' } },
+                      { name: 'dateFrom', format: 'd.m.Y', config: { align: 'center' } },
+                      { name: 'dateTo', format: 'd.m.Y', config: { align: 'center' } },
+                      { name: 'citizenshipName' },
+                      { name: 'sexType' },
+                      { name: 'phoneMobile' },
+                      { name: 'phoneWorking' },
+                      { name: 'phoneHome' },
+                      { name: 'email' }
+                    ],
+                    __totalRecCount: false
+                  }
+                ]
+              },
+              masterFields: ['mi_data_id'],
+              detailFields: ['positionID'],
+              onDeterminateForm: HR.employeeTabs.onDeterminateCard,
+              contextMenuType: 'employee'
+            }
+          ]
+        },
+        {
+          title: 'SQL',
+          autoScroll: true,
+          hidden: true,
+          iconCls: 'fa fa-eye',
+          layout: 'card',
+          items: [
+            {
+              xtype: 'label',
+              ubID: 'sqlLabel',
+              margin: '10 5 0 10',
+              fieldStyle: {
+                fontWeight: 'bold',
+                border: 'none'
+              }
+            }
+          ]
+        }
+      ]
+    })
+    me.items = [
+      me.tabs
+    ]
+    me.callParent(arguments)
+    me.srchEmpParams.mainPanel = me.tabs
+    me.srchEmpParams.dataPanel = me.down('[ubID=dataPanel]')
+    me.srchEmpParams.searchGrid = me.down('[ubID=searchGrid]')
+    me.srchEmpParams.searchDetGrid = me.down('[ubID=searchDetGrid]')
+    me.srchEmpParams.sqlLabel = me.down('[ubID=sqlLabel]')
+    me.srchEmpParams.attrPanel = me.down('[ubID=attrPanel]')
+    me.srchEmpParams.condPanel = me.down('[ubID=condPanel]')
+    if (me.customParams) {
+      me.srchEmpParams.searchAllOrg = me.customParams.searchAllOrg
+      me.srchEmpParams.searchOrgMode = me.customParams.searchOrgMode
+      me.srchEmpParams.senderParams = me.customParams.senderParams
+    }
+    HR.searchUtils.initNewSearch(me.srchEmpParams)
+    if (me.customParams && me.customParams.searchParams) {
+      HR.searchUtils.addCondItems(me.srchEmpParams, me.customParams.searchParams)
+    }
+    me.on('afterrender', () => {
+      const me = this
+      if (me.customParams && me.customParams.showSelectButton) {
+        const tb = me.down('[ubID=selectButtonToolbar]')
+        if (tb) {
+          tb.show()
+          const grid = me.srchEmpParams.searchGrid
+          const store = grid.getStore()
+          store.on('load', () => {
+            if (grid && grid.floatToolbarEl) {
+              // adjust pager
+              grid.floatToolbarEl.setStyle({ bottom: '64px', right: '28px' })
+            }
+          })
+        }
+      }
+    })
+  }
+})

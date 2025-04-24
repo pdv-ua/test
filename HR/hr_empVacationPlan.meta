@@ -1,0 +1,300 @@
+{
+  "caption": "Право на відпустку",
+  "description": "Право на відпустку",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "allowNull": false
+    },
+    {
+      "name": "orgName",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Організація",
+      "description": "Організація"
+    },
+    {
+      "name": "dictVacationKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictVacationKind",
+      "caption": "Вид відпустки",
+      "description": "Вид відпустки",
+      "documentation": "Вид відпустки",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення"
+    },
+    {
+      "name": "dayCount",
+      "dataType": "Int",
+      "caption": "Днів відпустки за рік",
+      "description": "Днів відпустки за рік",
+      "documentation": "Днів відпустки за рік",
+      "allowNull": false
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Наказ підстава",
+      "description": "Наказ підстава",
+      "documentation": "Наказ підстава"
+    },
+    {
+      "name": "orderDetID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Наказ підстава",
+      "description": "Наказ підстава надання",
+      "documentation": "Наказ підстава надання"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "allowNull": true,
+      "customSettings": {
+        "compositeFields": [
+          "dictVacationKindID.name",
+          "dayCount"
+        ],
+        "compositeSeparator": " = "
+      }
+    },
+    {
+      "name": "reason",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Підстава",
+      "description": "Підстава",
+      "documentation": "Підстава",
+      "allowNull": true
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null when 2099 then null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null when 2099 then null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "dayDiff",
+      "dataType": "Int",
+      "caption": "Залишилося днів",
+      "description": "Залишилося днів",
+      "documentation": "Залишилося днів",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT COALESCE(SUM(per.dayDiff),0) FROM hr_empVacationPeriod per WHERE per.empVacationPlanID = {self}.ID and per.isCanceled = 0 and per.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "dayComp",
+      "dataType": "Int",
+      "caption": "Компенсовано днів",
+      "description": "Компенсовано днів",
+      "documentation": "Компенсовано днів",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT COALESCE(SUM(vc.dayComp),0) FROM hr_empVacationPeriod per LEFT JOIN (select vc.empVacationPeriodID, SUM(vc.dayComp) as dayComp from hr_empVacationComp vc group by vc.empVacationPeriodID) vc ON vc.empVacationPeriodID = per.ID WHERE per.empVacationPlanID = {self}.ID and per.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "dayReturn",
+      "dataType": "Int",
+      "caption": "Відраховано днів",
+      "description": "Відраховано днів",
+      "documentation": "Відраховано днів",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT COALESCE(SUM(vc.dayReturn),0) FROM hr_empVacationPeriod per LEFT JOIN (select vc.empVacationPeriodID, SUM(vc.dayReturn) as dayReturn from hr_empVacationComp vc group by vc.empVacationPeriodID) vc ON vc.empVacationPeriodID = per.ID WHERE per.empVacationPlanID = {self}.ID and per.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "dayDiffAll",
+      "dataType": "Int",
+      "caption": "Залишилося днів",
+      "description": "Залишилося днів (усіх періодів без пропорційності)",
+      "documentation": "Залишилося днів (усіх періодів без пропорційності)",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "0"
+        }
+      ]
+    },
+    {
+      "name": "dayToUse",
+      "dataType": "Int",
+      "caption": "Доступно днів",
+      "description": "Доступно днів",
+      "documentation": "Доступно днів",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "0"
+        }
+      ]
+    },
+    {
+      "name": "employeeBenefitsID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeBenefits",
+      "caption": "Право на пільгу (підстава)",
+      "description": "Право на пільгу (підстава)",
+      "documentation": "Право на пільгу (підстава)",
+      "allowNull": true
+    },
+    {
+      "name": "otherReasons",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Інше (підстава)",
+      "description": "Інше (підстава)",
+      "documentation": "Інше (підстава)"
+    },
+    {
+      "name": "isPause",
+      "dataType": "Boolean",
+      "caption": "Тимчасово припинено",
+      "description": "Тимчасово припинено",
+      "documentation": "Тимчасово припинено",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isPauseNotNull",
+      "dataType": "Boolean",
+      "caption": "Тимчасово припинено",
+      "description": "Тимчасово припинено",
+      "documentation": "Тимчасово припинено",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "COALESCE({self}.isPause,0)"
+        }
+      ]
+    },
+    {
+      "name": "pauseOrderDetID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Підстава для тимчасового припинення",
+      "description": "Підстава для тимчасового припинення",
+      "documentation": "Підстава для тимчасового припинення"
+    },
+    {
+      "name": "errorText",
+      "dataType": "String",
+      "size": 1024,
+      "caption": "Виявлені помилки",
+      "documentation": "Виявлені помилки",
+      "description": "Виявлені помилки"
+    },
+    {
+      "name": "impEmployeeID",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Зовнішній код",
+      "description": "Зовнішній код",
+      "documentation": "Використовується тільки при імпорті",
+      "allowNull": true
+    },
+    {
+      "name": "impSourceID",
+      "dataType": "Bigint",
+      "caption": "Код джерела",
+      "description": "Код джерела даних імпорту",
+      "documentation": "Код джерела даних імпорту",
+      "allowNull": true
+    },
+    {
+      "name": "impDateAppoint",
+      "dataType": "Date",
+      "caption": "Дата прийому на роботу",
+      "description": "Дата прийому на роботу",
+      "documentation": "Використовується тільки при імпорті"
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_EMPVACATIONPLAN_DATA": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeeNumberID": { "sort": "ASC" },
+          "dictVacationKindID": { "sort": "ASC" },
+          "dateFrom": { "sort": "ASC" },
+          "dateTo": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

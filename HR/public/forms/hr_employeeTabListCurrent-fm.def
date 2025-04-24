@@ -1,0 +1,196 @@
+// @isModal true
+/* global Ext AC UB $App appAC */
+
+exports.formDef = 'HR.employeeTabListCurrent'
+
+Ext.define('HR.employeeTabListCurrent', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.employeeTabList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'ubdetailgrid',
+        stateful: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_employeeNumber_grid'),
+        autoScroll: true,
+        name: 'employeeTabListGrid',
+        region: 'center',
+        flex: 1,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        cmdData: {
+          params: [{
+            entity: 'hr_employeeNumberS',
+            method: 'select',
+            fieldList: [
+              { name: 'ID', visibility: false },
+              { name: 'mi_deleteDate', visibility: false },
+              { name: 'workPlaceCode', visibility: false },
+              { name: 'limitedAccess', visibility: false },
+              { name: 'isLock', description: ' ', config: { align: 'center', width: 20, text: '' }, filterable: false, sortable: false },
+              { name: 'tabNum' },
+              { name: 'employeeID.ID', visibility: false },
+              { name: 'employeeID.fullFIO', description: UB.i18n('ПIБ') },
+              { name: 'employeeID.taxCode', description: UB.i18n('РНОКПП') },
+              { name: 'appointDateFrom', description: UB.i18n('Дата початку призначення'), format: 'd.m.Y' },
+              { name: 'appointDateTo', description: UB.i18n('Дата закінчення'), format: 'd.m.Y' },
+              { name: 'dateFrom', description: UB.i18n('Дата прийому'), format: 'd.m.Y' },
+              { name: 'dateToEmpty', description: UB.i18n('Дата звільнення'), format: 'd.m.Y' },
+              { name: 'posName' },
+              { name: 'depName' },
+              { name: 'mtCount', config: { align: 'center' }, format: '0.00' },
+              { name: 'payElName' },
+              { name: 'accrualSum' },
+              { name: 'workSchedule' },
+              { name: 'workerType' },
+              { name: 'workPlace', description: UB.i18n('Місце роботи') },
+              { name: 'employeeID.sexType', description: UB.i18n('Стать') },
+              { name: 'employeeID.birthDate', description: UB.i18n('Дата народження'), format: 'd.m.Y' },
+              { name: 'selfStructDepName', description: UB.i18n('Самостійний структурний підрозділ') },
+              { name: 'parentUnitDepName', description: UB.i18n('Підпорядкування підрозділу') },
+              { name: 'addDescrPerson', description: UB.i18n('Додаткова інформація') },
+              { name: 'factPosition', description: UB.i18n('Фактична посада') }
+            ],
+            orderList: { tabNum: { expression: 'tabNumSort' } }
+          }]
+        },
+        cmpInitConfig: {
+          getRowClass: function (record, rowIndex, rowParams, store) {
+            let cls = ''
+            let { dateToEmpty, workPlaceCode } = record.data
+            let miDeleteUser = record.data.mi_deleteUser
+            if (miDeleteUser) cls = 'grd-color-grey'
+            else if (workPlaceCode) {
+              if (['1', '3'].includes(workPlaceCode)) cls = dateToEmpty ? 'grd-color-blue' : ''
+              else if (workPlaceCode === '2') cls = dateToEmpty ? 'grd-color-blue-italic' : 'grd-italic'
+              else if (workPlaceCode === '4') cls = dateToEmpty ? 'grd-color-blue' : 'grd-color-lightgreen'
+            }
+            return cls
+          },
+          afterInit: function () {
+            AC.gridUtils.setGlobalOrganization(this, 'orgID')
+            AC.gridUtils.setGlobalDate(this)
+            AC.gridUtils.setCustomSorter(this, 'tabNum')
+            const checkEdit = AC.settings.get('onlyOwnerCanEditEmployee', null, null)
+            const limitedAccess = !AC.entityUtils.verifyRightsMethod('hr_employeeNumber', 'employeeLimitedAccess')
+            const notShowSalary = AC.entityUtils.verifyRightsMethod('hr_service', 'notShowSalary') && !AC.entityUtils.isAdmin()
+            if (checkEdit || limitedAccess || notShowSalary) {
+              const renderer = {}
+              if (checkEdit) {
+                let curDate = AC.dateService.currentDate()
+                renderer.isLock = {
+                  renderer: function (value, meta, record) {
+                    if (!record || !record.get) return ''
+                    return record.data.dateToEmpty && record.data.dateToEmpty < curDate ? '<i class="fa fa-lock"></i>' : ''
+                  }
+                }
+              }
+              if (limitedAccess || notShowSalary) {
+                renderer.accrualSum = {
+                  renderer: function (value, meta, record) {
+                    return notShowSalary ? 0 : (record.get ? record.get('limitedAccess') : record[3]) ? 0 : value
+                  }
+                }
+              }
+              AC.gridUtils.tuneGridColumns(this, renderer)
+            }
+          },
+          onDeterminateForm: function (grid) {
+            let reco = AC.gridUtils.getCurrentRecord(grid)
+            if (reco) {
+              return {
+                formCode: 'hr_employee',
+                entityName: 'hr_employee',
+                entity: 'hr_employee',
+                instanceID: reco.get('employeeID.ID'),
+                cmpInitConfig: {
+                  employeeNumberID: reco.get('ID')
+                }
+              }
+            }
+          }
+        }
+      }
+    ]
+
+    me.createUser = async function (record) {
+      me.setLoading(true)
+      const usr = await UB.Repository('uba_user')
+        .attrs(['ID', 'name'])
+        .where('employeeNumberID', '=', record.get('ID'))
+        .limit(1)
+        .selectSingle()
+      me.setLoading(false)
+      const msg = usr
+        ? UB.i18n('Для працівника {0} вже створено користувача системи з логіном {1}. Додати ще користувача?', record.get('employeeID.fullFIO'), usr['name'])
+        : UB.i18n('Створити користувача для працівника {0}?', record.get('employeeID.fullFIO'))
+      const result = await $App.dialogYesNo('Увага', msg)
+      if (result) {
+        me.setLoading(true)
+        $App.connection.run({
+          entity: 'hr_user',
+          method: 'createUsers',
+          employeeNumberID: record.get('ID'),
+          orgID: appAC.globalOrganization()
+        }).then((mParams) => {
+          me.setLoading(false)
+          if (mParams.userID) {
+            $App.doCommand({
+              cmdType: 'showForm',
+              entity: 'uba_user',
+              formCode: 'hr_user',
+              instanceID: mParams.userID
+            })
+          }
+        }, function (err) {
+          me.setLoading(false)
+          throw err
+        })
+      }
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      let tb = me.down('toolbar')
+      let allActions = tb && tb.query('[menuId=AllActions]')[0]
+      tb.insert(4,
+        Ext.create('Ext.Button', {
+          tooltip: UB.i18n('Пошук по розділам картки працівників'),
+          iconCls: 'fas fa-neuter',
+          cls: 'green-action',
+          listeners: {
+            click: function () {
+              $App.doCommand({
+                cmdType: 'showForm',
+                formCode: 'hr_empSearch'
+              })
+            }
+          }
+        })
+      )
+      if (!allActions || !AC.entityUtils.verifyRightsMethod('hr_user', 'createUsers')) {
+        return
+      }
+      allActions.menu.add({
+        text: UB.i18n('Створити користувача'),
+        handler: () => {
+          const grid = me.down('[name=employeeTabListGrid]')
+          const reco = AC.gridUtils.getCurrentRecord(grid)
+          if (reco) {
+            me.createUser(reco)
+          } else {
+            AC.viewUtils.showToast(UB.i18n('Необхідно вибрати працівника'), UB.i18n('Увага'))
+          }
+        }
+      })
+    })
+    me.callParent(arguments)
+  }
+})

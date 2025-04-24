@@ -1,0 +1,222 @@
+/* global UB Ext appAC UB $App AC */
+
+exports.formDef = 'HR.massSalaryCalcAccruals'
+
+Ext.define('HR.massSalaryCalcAccruals', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.massSalaryCalcAccruals',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        layout: 'vbox',
+        items: [
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'label',
+                text: UB.i18n('Розраховувати'),
+                cls: 'x-form-item-label',
+                margin: '10 0 0 20',
+                width: 170
+              },
+              {
+                xtype: 'radiogroup',
+                name: 'calculationMode',
+                columns: 1,
+                vertical: true,
+                listeners: {
+                  change: (ctrl, value) => {
+                    const me = ctrl.up('form')
+                    me.down('[name=rate]').setDisabled(value.calculation === 'PROP')
+                    me.down('[name=rate]').setAllowBlank(value.calculation === 'PROP')
+                  }
+                },
+                items: [
+                  {
+                    name: 'calculation',
+                    boxLabel: UB.i18n('Пропорційно зміні окладу'),
+                    inputValue: 'PROP',
+                    width: 250,
+                    checked: true
+                  },
+                  {
+                    name: 'calculation',
+                    boxLabel: UB.i18n('Відсоток підвищення'),
+                    inputValue: 'VAL',
+                    width: 250
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'numberfield',
+            name: 'rate',
+            labelWidth: 200,
+            margin: '10 0 0 20',
+            fieldLabel: UB.i18n('Відсоток підвищення'),
+            allowDecimals: true,
+            allowExponential: false,
+            hideTrigger: true,
+            allowBlank: true,
+            disabled: true,
+            vtype: 'floatValidator',
+            decimalPrecision: 2,
+            width: 400
+          },
+          {
+            xtype: 'ubcombobox',
+            fieldLabel: UB.i18n('Заокруглювати значення'),
+            labelWidth: 200,
+            width: 400,
+            margin: '20 0 0 20',
+            name: 'roundUpTo',
+            hideEntityItemInContext: true,
+            valueField: 'code',
+            ubRequest: {
+              entity: 'ubm_enum',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['ID', 'name', 'code', 'eGroup', 'sortOrder'],
+              whereList: {
+                enumGroupFilter: {
+                  expression: '[eGroup]',
+                  condition: 'equal',
+                  values: {
+                    val: 'HR_ROUND'
+                  }
+                }
+              },
+              orderList: {
+                orderBy: { expression: 'sortOrder', order: 'asc' }
+              }
+            }
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'label',
+                text: UB.i18n('Заокруглювати'),
+                cls: 'x-form-item-label',
+                margin: '10 0 0 20',
+                width: 170
+              },
+              {
+                xtype: 'radiogroup',
+                name: 'roundingCtrl',
+                columns: 1,
+                vertical: true,
+                items: [
+                  {
+                    name: 'roundingWay',
+                    boxLabel: UB.i18n('арифметичне заокруглення'),
+                    inputValue: 'DEF',
+                    width: 250,
+                    checked: true
+                  },
+                  {
+                    name: 'roundingWay',
+                    boxLabel: UB.i18n('в меншу сторону'),
+                    inputValue: 'DOWN',
+                    width: 250
+                  },
+                  {
+                    name: 'roundingWay',
+                    boxLabel: UB.i18n('в більшу сторону'),
+                    inputValue: 'UP',
+                    width: 250
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'label',
+            cls: 'x-form-item-label grd-italic',
+            margin: '20 10 10 15',
+            width: 650,
+            text: UB.i18n('Увага! Даний функціонал забезпечує зміну таких постійних нарахувань, які встановлені сумою. Функціонал не змінює постійних нарахувань, які встановлені як відсоток.')
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Розрахувати'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              const calcMode = me.down('[name=calculationMode]').getChecked()[0].inputValue
+              const rateCtrl = me.down('[name=rate]')
+              if (!rateCtrl.getValue() && calcMode === 'VAL') {
+                rateCtrl.markInvalid(UB.i18n(rateCtrl.blankText))
+                AC.viewUtils.showToast(UB.i18n('Не задано параметр збільшення нарахувань'), UB.i18n('Помилка'))
+                return
+              }
+              me.closeAndCalc()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.closeAndCalc = function () {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_massSalaryChange',
+        method: 'calcAccruals',
+        execParams: {
+          staffTableID: me.staffTableID,
+          onDate: me.onDate,
+          calculationMode: me.down('[name=calculationMode]').getChecked()[0].inputValue,
+          rate: me.down('[name=rate]').getValue(),
+          roundUpTo: me.down('[name=roundUpTo]').getValue(),
+          roundingMode: me.down('[name=roundingCtrl]').getChecked()[0].inputValue
+        }
+      }).finally(() => {
+        me.setLoading(false)
+        if (me.sender && me.sender.loadInstance) {
+          me.sender.loadInstance()
+        }
+        me.up('window').close()
+      })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      const win = this.window
+      if (win) {
+        win.height = 450
+        win.width = 700
+      }
+      me.down('[name=roundUpTo]').setValueById(AC.settings.get('hrRoundAccrualStaffTable', me.orgID || appAC.globalOrganization()) || '1')
+      me.down('[name=rate]').setValue(me.rate)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

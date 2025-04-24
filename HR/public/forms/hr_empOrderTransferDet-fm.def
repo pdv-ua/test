@@ -1,0 +1,267 @@
+/* global UB $App AC HR appHR */
+exports.formDef = {
+  requiredFields: ['orderID', 'employeeNumberID', 'empOrderType', 'organizationID', 'lastName', 'firstName', 'middleName',
+    'orderID.organizationID', 'transferDepartmentID.mi_data_id'
+  ],
+  parentConfig: {
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 700
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          items: [
+            {
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              padding: '5 0 0 0',
+              defaults: {
+                labelWidth: 150
+              },
+              autoScroll: true,
+              split: true,
+              items: [
+                {
+                  attributeName: 'employeePositionID',
+                  fieldLabel: UB.i18n('Перевести з посади'),
+                  fieldList: ['ID', 'description', 'employeeID.firstName', 'employeeID.lastName', 'employeeID.middleName',
+                    'employeeID', 'employeeNumberID', 'departmentID', 'organizationID', 'vacancyDateFrom', 'vacancyDateTo',
+                    'workPlace', 'dictStaffCatID', 'positionType', 'positionID'
+                  ],
+                  xtype: 'empPositionCombobox',
+                  addWorkPlace: true,
+                  gridFieldList: ['description'],
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                  allowBlank: false,
+                  listeners: {
+                    select: ctrl => {
+                      let reco = AC.gridUtils.getCurrentRecord(ctrl)
+                      let me = ctrl.up('form')
+                      if (reco) {
+                        me.record.set('firstName', reco.get('employeeID.firstName'))
+                        me.record.set('lastName', reco.get('employeeID.lastName'))
+                        me.record.set('middleName', reco.get('employeeID.middleName'))
+                      } else {
+                        me.record.set('firstName', null)
+                        me.record.set('lastName', null)
+                        me.record.set('middleName', null)
+                      }
+                    }
+                  }
+                },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    { // Дата звільнення (Дата звільнення)
+                      attributeName: 'dateFrom',
+                      labelWidth: 150,
+                      width: 270,
+                      allowBlank: false
+                    },
+                    { // Причина звільнення (Причина звільнення)
+                      attributeName: 'dictReasonDismID',
+                      labelWidth: 160,
+                      flex: 1
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'hbox',
+                    align: 'top'
+                  },
+                  flex: 1,
+                  hidden: true,
+                  items: [
+                    {
+                      attributeName: 'reason',
+                      labelWidth: 150,
+                      margin: '5 25 5 15',
+                      flex: 1
+                    },
+                    {
+                      xtype: 'button',
+                      cls: 'list-icon',
+                      name: 'reasonButton',
+                      tooltip: UB.i18n('Вибрати'),
+                      width: 35,
+                      height: 35,
+                      margin: '0 10 0 -25',
+                      handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+                    }
+                  ]
+                },
+                {
+                  xtype: 'ubcombobox',
+                  attributeName: 'transferOrgID',
+                  fieldLabel: UB.i18n('До організації'),
+                  valueField: 'mi_data_id',
+                  displayField: 'description',
+                  gridFieldList: ['description', 'code'],
+                  flex: 1,
+                  labelWidth: 150,
+                  fieldList: ['mi_data_id', 'description'],
+                  whereList: {
+                    isActive: {
+                      expression: '[state]',
+                      condition: 'equal',
+                      value: 'ACTIVE'
+                    }
+                  },
+                  orderList: {
+                    orderBy: {
+                      expression: 'description',
+                      order: 'asc'
+                    }
+                  }
+                },
+                {
+                  layout: { type: 'hbox' },
+                  margin: '0 15 0 0',
+                  items: [
+                    {
+                      attributeName: 'transferDepartmentID',
+                      name: 'transferDepartmentID',
+                      fieldLabel: UB.i18n('Підрозділ'),
+                      labelWidth: 150,
+                      flex: 1,
+                      valueField: 'ID',
+                      displayField: 'description',
+                      fieldList: ['ID', 'description', 'mi_data_id'],
+                      whereList: {
+                        isActive: {
+                          expression: '[state]',
+                          condition: 'equal',
+                          value: 'ACTIVE'
+                        },
+                        orgID: {
+                          expression: '[orgID]',
+                          condition: 'equal',
+                          value: 0
+                        }
+                      },
+                      orderList: {
+                        orderBy: {
+                          expression: 'description',
+                          order: 'asc'
+                        }
+                      },
+                      gridFieldList: [ { name: 'ID', visibility: false }, 'code', 'description', { name: 'parentName', description: UB.i18n('Підпорядкування') } ],
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                      disableModifyEntity: true
+                    },
+                    {
+                      xtype: 'button',
+                      cls: 'treeIconNotFocus',
+                      ubID: 'btnSelectByTree',
+                      width: 35,
+                      height: 35,
+                      hidden: true,
+                      margin: '0 2 0 -12',
+                      name: 'btnSelectByTree',
+                      listeners: {
+                        click: function (ctrl) {
+                          const me = ctrl.up('form')
+                          const departAttr = me.attr.transferDepartmentID
+                          if (departAttr && (departAttr.readOnly || departAttr.disabled)) return
+                          me.showStaffTree({
+                            searchFeature: true,
+                            useFundSource: false,
+                            dictFundSourceID: null
+                          })
+                        },
+                        focus: function setFocused (btn) {
+                          btn.removeCls('treeIconNotFocus')
+                          btn.addCls('treeIconFocus')
+                        },
+                        blur: function setNotFocused (btn) {
+                          btn.removeCls('treeIconFocus')
+                          btn.addCls('treeIconNotFocus')
+                        },
+                        render: ctrl => {
+                          ctrl.setTooltip(UB.i18n('Вибір підрозділу та посади з дерева орг. структури'))
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  xtype: 'checkboxfield',
+                  name: 'isVacantPos',
+                  fieldLabel: UB.i18n('Тільки вакантні посади'),
+                  labelWidth: 150,
+                  flex: 1,
+                  value: 1,
+                  listeners: {
+                    change: (ctrl, value) => {
+                      const me = ctrl.up('form')
+                      me.setBtnSelectByTreeState(value)
+                      me.filterPosition(value)
+                    }
+                  }
+                },
+                {
+                  attributeName: 'transferPositionID',
+                  name: 'transferPositionID',
+                  fieldLabel: UB.i18n('Посада'),
+                  labelWidth: 150,
+                  valueField: 'ID',
+                  displayField: 'description',
+                  fieldList: ['ID', 'description', 'code', 'psCategory', 'positionType'],
+                  gridFieldList: [{ name: 'ID', visibility: false }, 'code', 'description', 'psCategory', 'positionType'],
+                  whereList: {
+                    isActive: {
+                      expression: '[state]',
+                      condition: 'equal',
+                      value: 'ACTIVE'
+                    },
+                    orgID: {
+                      expression: '[orgID]',
+                      condition: 'equal',
+                      value: 0
+                    }
+                  },
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                  disableModifyEntity: true
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              margin: '0 15 0 0',
+              items: [
+                {
+                  attributeName: 'mtCount',
+                  width: 250,
+                  labelWidth: 150,
+                  decimalPrecision: 2
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      listeners: {
+        tabchange: function (tabPanel) {
+          const me = tabPanel.up('form')
+          if (me.isDirty()) {
+            me.saveForm()
+          }
+        }
+      }
+    }
+  ]
+}

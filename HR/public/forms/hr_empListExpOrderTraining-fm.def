@@ -1,0 +1,389 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+/* eslint-disable no-unused-vars */
+/* global Ext AC $App HR _ UB appAC moment */
+exports.formDef = 'HR.empListExpOrderTraining'
+
+Ext.define('HR.empListExpOrderTraining', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.empListExpOrderTraining',
+  layout: { type: 'border' },
+  width: 1100,
+  height: 600,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            name: 'orderID',
+            xtype: 'ubcombobox',
+            fieldLabel: UB.i18n('Наказ'),
+            displayField: 'description',
+            gridFieldList: [
+              { name: 'orderNumberFullView' },
+              { name: 'orderDate', description: UB.i18n('Дата наказу'), format: 'd.m.Y' },
+              { name: 'titleOrder', description: UB.i18n('Заголовок') },
+              { name: 'employeeList', description: UB.i18n('Список осіб') },
+              {
+                name: 'orderState',
+                description: UB.i18n('Стан')
+              }],
+            labelWidth: 130,
+            ubRequest: {
+              entity: 'hr_empOrder',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['ID', 'description', 'entryDate'],
+              whereList: {
+                orderState: {
+                  expression: '[orderState]',
+                  condition: '=',
+                  values: {
+                    orderState: 'PROJECT'
+                  }
+                },
+                organizationID: {
+                  expression: '[masterOrganizationID]',
+                  condition: '=',
+                  values: {
+                    organizationID: appAC.globalOrganization()
+                  }
+                },
+                orderType: {
+                  expression: '[empOrderType]',
+                  condition: 'equal',
+                  values: {
+                    orderType: me.defaultValues.empOrderType
+                  }
+                }
+              }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            labelWidth: 130,
+            width: 635,
+            fieldLabel: UB.i18n('Заклад освіти'),
+            allowBlank: false,
+            gridFieldList: ['name', 'code'],
+            name: 'destOrganizationName',
+            ubRequest: {
+              entity: 'ac_contractor',
+              fieldList: ['ID', 'name'],
+              whereList: {
+                orgBusinessType: {
+                  expression: '[orgBusinessTypeID.code]',
+                  condition: 'equal',
+                  value: 'edu'
+                }
+              },
+              orderList: { orderBy: { 'expression': 'name', 'order': 'asc' } }
+            },
+            maxLength: 200,
+            displayField: 'name',
+            allowCustomText: true,
+            disableModifyEntity: true,
+            triggerCls: 'hr-list-trigger',
+            listeners: {
+              focus: ctrl => {
+                ctrl.inputEl.dom.setAttribute('maxlength', 200)
+              },
+              select: ctrl => {
+                const ctrlReco = AC.gridUtils.getCurrentRecord(ctrl)
+                ctrlReco && (me.destOrganizationID = ctrlReco.get('ID'))
+                ctrl.setValue(ctrl.rawValue)
+                me.destOrganizationName = ctrl.rawValue
+              },
+              change: ctrl => {
+                let oldValue = me.destOrganizationName
+                if (oldValue !== ctrl.rawValue) {
+                  me.destOrganizationName = ctrl.rawValue ? ctrl.rawValue : null
+                  me.destOrganizationID = null
+                }
+              },
+              blur: ctrl => {
+                ctrl.setValue(ctrl.rawValue)
+                me.destOrganizationName = ctrl.rawValue
+              }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            gridFieldList: ['description', 'code'],
+            name: 'cityName',
+            allowBlank: false,
+            labelWidth: 130,
+            fieldLabel: UB.i18n('Нас. пункт'),
+            ubRequest: {
+              entity: 'cdn_city',
+              fieldList: ['ID', 'description'],
+              whereList: {
+                description: {
+                  expression: '[description]',
+                  condition: 'notIsNull'
+                }
+              }
+            },
+            valueField: 'description',
+            displayField: 'description',
+            allowCustomText: true,
+            triggerCls: 'hr-list-trigger',
+            listeners: {
+              change: ctrl => {
+                me.cityID = null
+              },
+              select: ctrl => {
+                const ctrlReco = AC.gridUtils.getCurrentRecord(ctrl)
+                if (ctrlReco) {
+                  me.cityID = ctrlReco.get('ID')
+                }
+                ctrl.setValue(ctrl.rawValue)
+              },
+              blur: ctrl => {
+                ctrl.setValue(ctrl.rawValue)
+              }
+            }
+          },
+          {
+            layout: {
+              type: 'vbox'
+            },
+            items: [
+              {
+                name: 'dateFrom',
+                xtype: 'ubdatefield',
+                labelWidth: 130,
+                fieldLabel: UB.i18n('Дата з'),
+                allowBlank: false,
+                listeners: {
+                  focus: ctrl => {
+                    ctrl._oldValue = ctrl.getRawValue()
+                  },
+                  blur: ctrl => {
+                    me.calcPeriod(ctrl)
+                  }
+                }
+              },
+              {
+                name: 'dayCount',
+                labelWidth: 130,
+                fieldLabel: UB.i18n('Днів'),
+                xtype: 'numberfield',
+                allowBlank: false,
+                allowDecimals: false,
+                allowExponential: false,
+                hideTrigger: true,
+                width: 250,
+                listeners: {
+                  focus: ctrl => {
+                    ctrl._oldValue = ctrl.getRawValue()
+                  },
+                  blur: ctrl => {
+                    me.calcPeriod(ctrl)
+                  }
+                }
+              },
+              {
+                name: 'dateTo',
+                xtype: 'ubdatefield',
+                labelWidth: 130,
+                fieldLabel: UB.i18n('Дата по'),
+                allowBlank: false,
+                listeners: {
+                  focus: ctrl => {
+                    ctrl._oldValue = ctrl.getRawValue()
+                  },
+                  blur: ctrl => {
+                    me.calcPeriod(ctrl)
+                  }
+                }
+              }
+            ]
+          },
+          {
+            name: 'dictProfCompDevelopFormID',
+            xtype: 'ubcombobox',
+            fieldLabel: UB.i18n('Вид професійного навчання'),
+            displayField: 'name',
+            labelWidth: 130,
+            ubRequest: {
+              entity: 'hr_dictProfCompDevelopForm',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['ID', 'name', 'code']
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            gridFieldList: ['name', 'code'],
+            name: 'dictTrainingTopicName',
+            isFormField: true,
+            fieldLabel: UB.i18n('Тематика'),
+            valueField: 'name',
+            displayField: 'name',
+            allowCustomText: true,
+            disableModifyEntity: true,
+            triggerCls: 'hr-list-trigger',
+            labelWidth: 130,
+            maxLength: 200,
+            ubRequest: {
+              entity: 'hr_dictTrainingTopic',
+              fieldList: ['ID', 'name'],
+              orderList: {
+                orderBy: {
+                  'expression': 'name',
+                  'order': 'asc'
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 150,
+            height: 30,
+            iconCls: 'u-icon-close',
+            cls: 'red-action',
+            margin: '10 10 10 0',
+            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+            handler: function () {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Створити наказ'),
+            width: 150,
+            height: 30,
+            margin: '10 10 10 0',
+            iconCls: 'u-icon-save-and-close',
+            cls: 'blue-action',
+            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+            handler: function () {
+              me.createOrder()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.createOrder = function () {
+      const notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Увага'), notValidParams.msg)
+        return
+      }
+      const execParams = {
+        orgID: appAC.globalOrganization(),
+        masterOrganizationName: appAC.globalOrganizationName(),
+        masterOrganizationID: appAC.globalOrganization(),
+        orderID: me.attr.orderID.getValue(),
+        destOrganizationName: me.destOrganizationName,
+        destOrganizationID: me.destOrganizationID,
+        dictTrainingTopicID: me.attr.dictTrainingTopicName.getFieldValue('ID'),
+        dictTrainingTopicName: me.attr.dictTrainingTopicName.getFieldValue('name'),
+        cityID: me.cityID,
+        cityName: me.attr.cityName.getValue(),
+        dateFrom: me.attr.dateFrom.getValue(),
+        dateTo: me.attr.dateTo.getValue(),
+        dayCount: me.attr.dayCount.getValue(),
+        dictProfCompDevelopFormID: me.attr.dictProfCompDevelopFormID.getValue(),
+        empPositions: me.empNumbers.items.map(o => o.get('employeePositionID'))
+      }
+      $App.connection.run({
+        entity: 'hr_empListEmpExperience',
+        method: (me.defaultValues && me.defaultValues.empOrderType === 'MISSION') ? 'createOrderBusinessTripEducation' : 'createOrderEducation',
+        execParams: execParams
+      }).then(response => {
+        if (response && response.execParams && response.execParams.orderID) {
+          $App.doCommand({
+            cmdType: 'showForm',
+            entityName: 'hr_empOrder',
+            entity: 'hr_empOrder',
+            isModal: false,
+            tabId: 'hr_empOrder' + response.execParams.orderID,
+            target: $App.getViewport().centralPanel,
+            instanceID: response.execParams.orderID
+          })
+        }
+        me.up('window').close()
+      })
+    }
+
+    me.calcPeriod = function (ctrl) {
+      if (ctrl.getValue()) {
+        let dateFrom = me.attr.dateFrom
+        let dateTo = me.attr.dateTo
+        let dayCount = me.attr.dayCount
+        switch (ctrl.name) {
+          case 'dateFrom':
+            if (dayCount.getValue()) {
+              dateTo.setValue(moment(dateFrom.getValue()).add(dayCount.getValue() - 1, 'days').toDate())
+            } else if (dateTo.getValue()) {
+              dayCount.setValue(moment(dateTo.getValue()).diff(moment(dateFrom.getValue()), 'days') + 1)
+            }
+            break
+          case 'dateTo':
+            if (dateFrom.getValue()) {
+              dayCount.setValue(moment(dateTo.getValue()).diff(moment(dateFrom.getValue()), 'days') + 1)
+            }
+            break
+          case 'dayCount':
+            if (dateFrom.getValue()) {
+              dateTo.setValue(moment(dateFrom.getValue()).add(dayCount.getValue() - 1, 'days').toDate())
+            }
+            break
+        }
+      }
+    }
+
+    me.validateParams = () => {
+      let res
+      const params = []
+      const requiredParams = ['destOrganizationName', 'cityName', 'dateTo', 'dateFrom', 'dayCount']
+      requiredParams.forEach(attr => {
+        if (!me.attr[attr].isValid()) {
+          params.push(AC.viewUtils.formatFieldLabel(`"${me.attr[attr].fieldLabel}"`))
+        }
+      })
+      if (params.length) {
+        res = {
+          msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+        }
+      }
+      return res
+    }
+
+    me.on('afterrender', () => {
+      me.attr = {
+        orderID: me.down('[name=orderID]'),
+        destOrganizationName: me.down('[name=destOrganizationName]'),
+        cityName: me.down('[name=cityName]'),
+        dictProfCompDevelopFormID: me.down('[name=dictProfCompDevelopFormID]'),
+        dictTrainingTopicName: me.down('[name=dictTrainingTopicName]'),
+        dateFrom: me.down('[name=dateFrom]'),
+        dateTo: me.down('[name=dateTo]'),
+        dayCount: me.down('[name=dayCount]')
+      }
+
+      if (me.caption) { me.up('window').setTitle(me.caption) }
+
+      me.destOrganizationID = null
+      me.destOrganizationName = null
+      me.dictTrainingTopicID = null
+      me.dictTrainingTopicName = null
+      me.cityID = null
+    }, me)
+    me.callParent(arguments)
+  }
+})

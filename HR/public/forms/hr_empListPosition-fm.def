@@ -1,0 +1,654 @@
+/* global Ext UB appAC $App AC */
+
+exports.formDef = 'HR.empListPosition'
+
+Ext.define('HR.empListPosition', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empListPosition',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        title: UB.i18n('Параметри'),
+        layout: { type: 'hbox' },
+        collapsed: false,
+        items: [
+          {
+            xtype: 'panel',
+            flex: 1,
+            region: 'north',
+            layout: 'accordion',
+            layoutConfig: {
+              collapsible: true,
+              collapsed: false
+            },
+            items: [
+              {
+                xtype: 'panel',
+                hidden: true,
+                collapsed: true
+              },
+              {
+                title: UB.i18n('Параметри'),
+                name: 'panelParams',
+                collapsed: false,
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    defaults: { width: '99%' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'positionID',
+                        labelWidth: 165,
+                        fieldLabel: UB.i18n('Працівник'),
+                        displayField: 'description',
+                        ubRequest: {
+                          entity: 'hr_employeePositionS',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description', 'employeeNumberID', 'organizationID',
+                            'positionID.psCategory', 'positionID.dictStatePayID', 'accrualSum'],
+                          whereList: {}
+                        },
+                        listeners: {
+                          beforeQuerySend: function () {
+                            this.store.ubRequest.whereList = {
+                              orgID: {
+                                expression: '[organizationID]',
+                                condition: 'equal',
+                                value: appAC.globalOrganization()
+                              },
+                              dateTo: {
+                                expression: '[dateTo]',
+                                condition: '>=',
+                                value: appAC.globalApplicationDate()
+                              },
+                              dateFrom: {
+                                expression: '[dateFrom]',
+                                condition: '<=',
+                                value: appAC.globalApplicationDate()
+                              },
+                              posDateDelete: {
+                                expression: '[positionID.mi_deleteDate]',
+                                condition: '=',
+                                value: AC.dateService.maxDate()
+                              },
+                              posDateFrom: {
+                                expression: '[positionID.mi_dateFrom]',
+                                condition: '<=',
+                                value: appAC.globalApplicationDate()
+                              },
+                              posDateTo: {
+                                expression: '[positionID.mi_dateTo]',
+                                condition: '>=',
+                                value: appAC.globalApplicationDate()
+                              },
+                              posState: {
+                                expression: '[positionID.state]',
+                                condition: '=',
+                                value: 'ACTIVE'
+                              }
+                            }
+                            if (!this.whereListIsSet) this.whereListIsSet = true
+                            else this.store.reload()
+                          },
+                          change: function (ctrl) {
+                            let me = ctrl.up('form')
+                            me.down('[name=organizationID]').setValueById(ctrl.getFieldValue('organizationID'))
+                            me.down('[name=psCategory]').setValueById(ctrl.getFieldValue('positionID.psCategory'))
+                            me.down('[name=dictStatePayID]').setValueById(ctrl.getFieldValue('positionID.dictStatePayID'))
+                            me.down('[name=salaryFrom]').setValue(ctrl.getFieldValue('accrualSum'))
+                            me.down('[name=salaryTo]').setValue(ctrl.getFieldValue('accrualSum'))
+                            // get region
+                            UB.Repository('ac_address')
+                              .attrs(['regionID'])
+                              .where('addressType', 'in', ['1', '2'])
+                              .where('ownerID', '=', ctrl.getFieldValue('organizationID'))
+                              .orderBy('addressType')
+                              .selectScalar().then(data => {
+                                me.down('[name=regionID]').setValueById(data)
+                              })
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    defaults: { width: '98%' },
+                    items: [
+                      {
+                        xtype: 'ubfieldset',
+                        title: UB.i18n('Організація'),
+                        border: true,
+                        layout: {
+                          type: 'vbox',
+                          align: 'stretch'
+                        },
+                        layoutConfig: {
+                          collapsible: true
+                        },
+                        defaults: { labelWidth: 155 },
+                        margin: '0 0 0 15',
+                        items: [
+                          {
+                            xtype: 'ubcombobox',
+                            name: 'organizationID',
+                            fieldLabel: UB.i18n('Організація'),
+                            labelWidth: 150,
+                            flex: 1,
+                            width: 350,
+                            valueField: 'mi_data_id',
+                            displayField: 'fullName',
+                            ubRequest: {
+                              entity: 'hr_organization',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['mi_data_id', 'ID', 'fullNameGen', 'fullName'],
+                              whereList: {
+                                state: {
+                                  expression: '[state]',
+                                  condition: 'equal',
+                                  values: {
+                                    val: 'ACTIVE'
+                                  }
+                                },
+                                mi_dateTo: {
+                                  expression: '[mi_dateTo]',
+                                  condition: 'equal',
+                                  value: '#maxdate'
+                                }
+                              }
+                            }
+                          },
+                          {
+                            xtype: 'ubcombobox',
+                            name: 'regionID',
+                            fieldLabel: UB.i18n('Регіон'),
+                            labelWidth: 150,
+                            flex: 1,
+                            width: 350,
+                            valueField: 'ID',
+                            ubRequest: {
+                              entity: 'cdn_region',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['ID', 'name', 'regionTypeID.code'],
+                              whereList: {
+                                regionType: {
+                                  expression: '[regionTypeID.code]',
+                                  condition: 'equal',
+                                  values: { 'regionType': 'REGION' }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            xtype: 'ubcombobox',
+                            name: 'cityID',
+                            fieldLabel: UB.i18n('Населенный пункт'),
+                            labelWidth: 150,
+                            flex: 1,
+                            width: 350,
+                            valueField: 'ID',
+                            ubRequest: {
+                              entity: 'cdn_city',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['ID', 'name']
+                            }
+                          },
+                          {
+                            xtype: 'ubcombobox',
+                            name: 'powerBranch',
+                            fieldLabel: UB.i18n('Гілка влади'),
+                            labelWidth: 150,
+                            width: 350,
+                            valueField: 'code',
+                            ubRequest: {
+                              entity: 'ubm_enum',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['ID', 'name', 'code', 'eGroup'],
+                              whereList: {
+                                enumGroupFilter: {
+                                  expression: '[eGroup]',
+                                  condition: 'equal',
+                                  values: {
+                                    val: 'HR_POWERBRANCH'
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            xtype: 'ubcombobox',
+                            name: 'dictGovernmTypeID',
+                            fieldLabel: UB.i18n('Тип державного органу'),
+                            labelWidth: 150,
+                            flex: 1,
+                            width: 350,
+                            valueField: 'ID',
+                            ubRequest: {
+                              entity: 'hr_dictGovernmType',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['ID', 'name']
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox',
+                      align: 'stretch'
+                    },
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'label',
+                            width: 140,
+                            text: UB.i18n('Вимоги до стажу державної служби, не більше:'),
+                            cls: 'x-form-item-label',
+                            margin: '5 0 5 15'
+                          },
+                          {
+                            attributeName: 'year',
+                            disabled: true,
+                            xtype: 'numberfield',
+                            vtype: 'numberValidator',
+                            maxValue: 99,
+                            minValue: 0,
+                            width: 100,
+                            flex: 1,
+                            name: 'year',
+                            margin: '20 0 0 30'
+                          },
+                          {
+                            xtype: 'label',
+                            width: 100,
+                            flex: 1,
+                            text: UB.i18n('років'),
+                            cls: 'x-form-item-label',
+                            margin: '23 0 0 30'
+                          },
+                          {
+                            attributeName: 'month',
+                            xtype: 'numberfield',
+                            vtype: 'numberValidator',
+                            maxValue: 12,
+                            disabled: true,
+                            minValue: 0,
+                            width: 100,
+                            flex: 1,
+                            name: 'month',
+                            margin: '20 0 0 30'
+                          },
+                          {
+                            xtype: 'label',
+                            width: 100,
+                            flex: 1,
+                            text: UB.i18n('місяців'),
+                            cls: 'x-form-item-label',
+                            margin: '23 0 0 30'
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    defaults: { width: '98%' },
+                    items: [
+                      {
+                        xtype: 'ubfieldset',
+                        title: UB.i18n('Вимоги до освіти'),
+                        border: true,
+                        collapsed: false,
+                        layout: {
+                          type: 'vbox',
+                          align: 'stretch'
+                        },
+                        defaults: { labelWidth: 155 },
+                        margin: '0 0 0 15',
+                        items: [
+                          {
+                            xtype: 'ubcombobox',
+                            name: 'dictEducationLevelID',
+                            fieldLabel: UB.i18n('Рівень освіти'),
+                            disabled: true,
+                            labelWidth: 150,
+                            width: 350,
+                            valueField: 'ID',
+                            ubRequest: {
+                              entity: 'hr_dictEducationLevel',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['ID', 'name']
+                            }
+                          },
+                          {
+                            xtype: 'ubcombobox',
+                            name: 'employeeEducationID',
+                            fieldLabel: UB.i18n('Напрям освіти'),
+                            disabled: true,
+                            labelWidth: 150,
+                            width: 350,
+                            valueField: 'ID',
+                            ubRequest: {
+                              entity: 'hr_employeeEducation',
+                              fieldList: ['ID', 'educationName']
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    defaults: { width: '98%' },
+                    items: [
+                      {
+                        xtype: 'ubfieldset',
+                        title: UB.i18n('Вимоги до посади'),
+                        border: true,
+                        collapsed: false,
+                        layout: {
+                          type: 'vbox',
+                          align: 'stretch'
+                        },
+                        defaults: { labelWidth: 155 },
+                        margin: '0 0 0 15',
+                        items: [
+                          {
+                            xtype: 'ubcombobox',
+                            name: 'dictWagePayID',
+                            fieldLabel: UB.i18n('Тип посади держслужбовця'),
+                            labelWidth: 150,
+                            flex: 1,
+                            width: 350,
+                            valueField: 'ID',
+                            ubRequest: {
+                              entity: 'hr_dictWagePay',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['ID', 'name']
+                            }
+                          },
+                          {
+                            xtype: 'ubcombobox',
+                            name: 'psCategory',
+                            fieldLabel: UB.i18n('Категорія посади держслужбовця'),
+                            labelWidth: 150,
+                            flex: 1,
+                            width: 350,
+                            valueField: 'code',
+                            ubRequest: {
+                              entity: 'ubm_enum',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['ID', 'name', 'code', 'eGroup'],
+                              whereList: {
+                                enumGroupFilter: {
+                                  expression: '[eGroup]',
+                                  condition: 'equal',
+                                  values: {
+                                    val: 'HR_POSITION_PSCATEGORY'
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          {
+                            xtype: 'ubcombobox',
+                            name: 'dictStatePayID',
+                            fieldLabel: UB.i18n('Група оплати праці держслужбовців'),
+                            labelWidth: 150,
+                            flex: 1,
+                            width: 350,
+                            valueField: 'ID',
+                            ubRequest: {
+                              entity: 'hr_dictStatePay',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['ID', 'name']
+                            }
+                          },
+                          {
+                            xtype: 'ubcombobox',
+                            name: 'name',
+                            fieldLabel: UB.i18n('Назва посади'),
+                            labelWidth: 150,
+                            flex: 1,
+                            width: 350,
+                            valueField: 'name',
+                            ubRequest: {
+                              entity: 'hr_position',
+                              fieldList: ['ID', 'name']
+                            }
+                          },
+                          {
+                            layout: { type: 'hbox' },
+                            defaults: { width: '98%' },
+                            items: [
+                              {
+                                xtype: 'label',
+                                width: 140,
+                                text: UB.i18n('Оклад, грн.'),
+                                cls: 'x-form-item-label',
+                                margin: '5 0 5 15'
+                              },
+                              {
+                                xtype: 'numberfield',
+                                name: 'salaryFrom',
+                                flex: 1,
+                                width: 100,
+                                fieldLabel: UB.i18n('від'),
+                                labelWidth: 30
+                              },
+                              {
+                                xtype: 'numberfield',
+                                name: 'salaryTo',
+                                flex: 1,
+                                width: 100,
+                                fieldLabel: UB.i18n('до'),
+                                labelWidth: 30
+                              }
+                            ]
+                          },
+                          {
+                            xtype: 'ubcombobox',
+                            name: 'tarifGroupID',
+                            fieldLabel: UB.i18n('Тарифна группа'),
+                            labelWidth: 150,
+                            flex: 1,
+                            width: 350,
+                            valueField: 'ID',
+                            ubRequest: {
+                              entity: 'hr_dictTariffGroup',
+                              fieldList: ['ID', 'description']
+                            }
+                          },
+                          {
+                            xtype: 'checkboxfield',
+                            name: 'isVacant',
+                            fieldLabel: UB.i18n('Тільки вакантні посади'),
+                            labelWidth: 150,
+                            flex: 1,
+                            width: 350
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            region: 'north',
+            layoutConfig: {
+              collapsible: true,
+              collapsed: false
+            },
+            layout: { type: 'hbox' },
+            defaults: { width: '98%' },
+            items: [
+              {
+                xtype: 'button',
+                tooltip: UB.i18n('Шукати'),
+                iconCls: 'fas fa-search',
+                width: 30,
+                cls: 'green-action',
+                margin: '5 5 0 15',
+                handler: function (btn) {
+                  let me = btn.up('form')
+                  me.searchEmployee()
+                }
+              },
+              {
+                xtype: 'button',
+                tooltip: UB.i18n('Очистити'),
+                iconCls: 'fas fa-eraser',
+                width: 30,
+                cls: 'fill-action',
+                margin: '5 20 0 0',
+                handler: function (btn) {
+                  let me = btn.up('form')
+                  me.clearSearch()
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'empListPositionGrid',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink',
+          'commandLink', 'showDetail', 'audit'],
+        cmdData: {
+          params: [{
+            entity: 'hr_empListPosition',
+            method: 'search',
+            fieldList: [
+              { name: 'recordID', visibility: false },
+              { name: 'organizationID', description: UB.i18n('Організація') },
+              { name: 'name', description: UB.i18n('Назва посади') },
+              { name: 'positionCount', description: UB.i18n('Кількість посад'), config: { align: 'center' } },
+              { name: 'dictWagePayID', description: UB.i18n('Тип посади') },
+              { name: 'psCategory', description: UB.i18n('Категорія посади') },
+              { name: 'dictStatePayID', description: UB.i18n('Група оплати праці') },
+              { name: 'accrualSum', description: UB.i18n('Оклад'), config: { align: 'right' } },
+              { name: 'vacantCount', description: UB.i18n('Вакантних ставок'), config: { align: 'center' } },
+              { name: 'regionID', description: UB.i18n('Регіон') },
+              { name: 'cityID', description: UB.i18n('Населений пункт') }
+            ]
+          }]
+        },
+        cmpInitConfig: {
+          onDeterminateForm: function (grid) {
+            throw new UB.UBAbortError()
+          },
+          onItemDblClick: function (grid, record) {
+            if (record.get('recordID')) {
+              $App.doCommand({
+                cmdType: 'showForm',
+                entityName: 'hr_position',
+                entity: 'hr_position',
+                isModal: true,
+                instanceID: record.get('recordID'),
+                cmpInitConfig: {
+                  defaultValues: {
+                    setFullReadOnly: true
+                  }
+                }
+              })
+            }
+          }
+        }
+      }
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=empListPositionGrid]'),
+        organizationID: me.down('[name=organizationID]'),
+        regionID: me.down('[name=regionID]'),
+        cityID: me.down('[name=cityID]'),
+        powerBranch: me.down('[name=powerBranch]'),
+        dictGovernmTypeID: me.down('[name=dictGovernmTypeID]'),
+        dictWagePayID: me.down('[name=dictWagePayID]'),
+        psCategory: me.down('[name=psCategory]'),
+        dictStatePayID: me.down('[name=dictStatePayID]'),
+        name: me.down('[name=name]'),
+        salaryFrom: me.down('[name=salaryFrom]'),
+        salaryTo: me.down('[name=salaryTo]'),
+        tarifGroupID: me.down('[name=tarifGroupID]'),
+        isVacant: me.down('[name=isVacant]')
+      }
+    }, me)
+
+    me.setDefaultValues = function () {
+      me.attr.organizationID.setValue()
+      me.attr.regionID.setValue()
+      me.attr.cityID.setValue()
+      me.attr.powerBranch.setValue()
+      me.attr.dictGovernmTypeID.setValue()
+      me.attr.dictWagePayID.setValue()
+      me.attr.psCategory.setValue()
+      me.attr.dictStatePayID.setValue()
+      me.attr.name.setValue()
+      me.attr.salaryFrom.setValue()
+      me.attr.salaryTo.setValue()
+      me.attr.tarifGroupID.setValue()
+      me.attr.isVacant.setValue()
+    }
+
+    me.searchEmployee = function () {
+      const store = me.attr.grid.getStore()
+      let req = store.ubRequest
+      req.onDate = appAC.globalApplicationDate()
+      if (me.attr.organizationID.getValue()) { req.organizationID = me.attr.organizationID.getValue() } else { req.organizationID = null }
+      if (me.attr.regionID.getValue()) { req.regionID = me.attr.regionID.getValue() } else { req.regionID = null }
+      if (me.attr.cityID.getValue()) { req.cityID = me.attr.cityID.getValue() } else { req.cityID = null }
+      if (me.attr.powerBranch.getValue()) { req.powerBranch = me.attr.powerBranch.getValue() } else { req.powerBranch = null }
+      if (me.attr.dictGovernmTypeID.getValue()) { req.dictGovernmTypeID = me.attr.dictGovernmTypeID.getValue() } else { req.dictGovernmTypeID = null }
+      if (me.attr.dictWagePayID.getValue()) { req.dictWagePayID = me.attr.dictWagePayID.getValue() } else { req.dictWagePayID = null }
+      if (me.attr.psCategory.getValue()) { req.psCategory = me.attr.psCategory.getValue() } else { req.psCategory = null }
+      if (me.attr.dictStatePayID.getValue()) { req.dictStatePayID = me.attr.dictStatePayID.getValue() } else { req.dictStatePayID = null }
+      if (me.attr.name.getValue()) { req.name = me.attr.name.getValue() } else { req.name = null }
+      if (me.attr.salaryFrom.getValue()) { req.salaryFrom = me.attr.salaryFrom.getValue() } else { req.salaryFrom = null }
+      if (me.attr.salaryTo.getValue()) { req.salaryTo = me.attr.salaryTo.getValue() } else { req.salaryTo = null }
+      if (me.attr.tarifGroupID.getValue()) { req.tarifGroupID = me.attr.tarifGroupID.getValue() } else { req.tarifGroupID = null }
+      if (me.attr.isVacant.getValue()) { req.isVacant = me.attr.isVacant.getValue() } else { req.isVacant = null }
+      store.load().then((store) => {
+        if (!store.data.items.length) {
+          AC.viewUtils.showToast(UB.i18n('За даними параметрами пошуку не знайдено жодної посади'))
+        }
+      })
+      me.down('[name=panelParams]').collapse(true)
+    }
+
+    me.clearSearch = function () {
+      me.setDefaultValues()
+    }
+
+    me.callParent(arguments)
+  }
+})

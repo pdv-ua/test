@@ -1,0 +1,392 @@
+{
+  "caption": "Нарахування працівника",
+  "description": "Нарахування працівника",
+  "descriptionAttribute": "descriptionExt",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "isActive",
+      "dataType": "Boolean",
+      "caption": "Актуальний",
+      "description": "Актуальний",
+      "documentation": "Актуальний",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид нарахування",
+      "description": "Вид нарахування",
+      "documentation": "Вид нарахування",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "accrualSum",
+      "dataType": "Currency",
+      "caption": "Сума",
+      "description": "Сума",
+      "documentation": "Сума"
+    },
+    {
+      "name": "accrualRate",
+      "dataType": "Float",
+      "caption": "Відсоток",
+      "description": "Відсотока",
+      "documentation": "Відсоток"
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ"
+    },
+    {
+      "name": "changeOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Змінено наказом",
+      "description": "Змінено наказом",
+      "documentation": "Змінено наказом"
+    },
+    {
+      "name": "changeDateTo",
+      "dataType": "DateTime",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "defaultView": false
+    },
+    {
+      "name": "priorID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeAccrual",
+      "caption": "Попередній",
+      "description": "Вузол попередній",
+      "defaultView": true
+    },
+    {
+      "name": "nextID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeAccrual",
+      "caption": "Наступний",
+      "description": "Вузол наступний",
+      "defaultView": false
+    },
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Наказ №",
+      "description": "Номер наказу",
+      "documentation": "Номер наказу"
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата",
+      "description": "Дата наказу",
+      "documentation": "Дата наказу"
+    },
+    {
+      "name": "changeOrderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Наказ припинення №",
+      "description": "Наказ припинення №"
+    },
+    {
+      "name": "changeOrderDate",
+      "dataType": "Date",
+      "caption": "Наказ припинення дата",
+      "description": "Наказ припинення дата"
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_fundSource",
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування",
+      "documentation": "Джерело фінансування"
+    },
+    {
+      "name": "accountID",
+      "dataType": "Entity",
+      "associatedEntity": "gl_account",
+      "caption": "Рахунок витрат",
+      "documentation": "Рахунок витрат",
+      "description": "Рахунок витрат"
+    },
+    {
+      "name": "d0",
+      "dataType": "BigInt",
+      "caption": "d0",
+      "defaultView": false
+    },
+    {
+      "name": "d0Value",
+      "dataType": "BigInt",
+      "caption": "d0",
+      "defaultView": false
+    },
+    {
+      "name": "d1",
+      "dataType": "BigInt",
+      "caption": "d1",
+      "defaultView": false
+    },
+    {
+      "name": "d1Value",
+      "dataType": "BigInt",
+      "caption": "d1",
+      "defaultView": false
+    },
+    {
+      "name": "d2",
+      "dataType": "BigInt",
+      "caption": "d2",
+      "defaultView": false
+    },
+    {
+      "name": "d2Value",
+      "dataType": "BigInt",
+      "caption": "d2",
+      "defaultView": false
+    },
+    {
+      "name": "d3",
+      "dataType": "BigInt",
+      "caption": "d3",
+      "defaultView": false
+    },
+    {
+      "name": "d3Value",
+      "dataType": "BigInt",
+      "caption": "d3",
+      "defaultView": false
+    },
+    {
+      "name": "d4",
+      "dataType": "BigInt",
+      "caption": "d4",
+      "defaultView": false
+    },
+    {
+      "name": "d4Value",
+      "dataType": "BigInt",
+      "caption": "d4",
+      "defaultView": false
+    },
+    {
+      "name": "d5",
+      "dataType": "BigInt",
+      "caption": "d5",
+      "defaultView": false
+    },
+    {
+      "name": "d5Value",
+      "dataType": "BigInt",
+      "caption": "d5",
+      "defaultView": false
+    },
+    {
+      "name": "d6",
+      "dataType": "BigInt",
+      "caption": "d6",
+      "defaultView": false
+    },
+    {
+      "name": "d6Value",
+      "dataType": "BigInt",
+      "caption": "d6",
+      "defaultView": false
+    },
+    {
+      "name": "d7",
+      "dataType": "BigInt",
+      "caption": "d7",
+      "defaultView": false
+    },
+    {
+      "name": "d7Value",
+      "dataType": "BigInt",
+      "caption": "d7",
+      "defaultView": false
+    },
+    {
+      "name": "d8",
+      "dataType": "BigInt",
+      "caption": "d8",
+      "defaultView": false
+    },
+    {
+      "name": "d8Value",
+      "dataType": "BigInt",
+      "caption": "d8",
+      "defaultView": false
+    },
+    {
+      "name": "d9",
+      "dataType": "BigInt",
+      "caption": "d9",
+      "defaultView": false
+    },
+    {
+      "name": "d9Value",
+      "dataType": "BigInt",
+      "caption": "d9",
+      "defaultView": false
+    },
+    {
+      "name": "missingEmployeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник, що заміщується",
+      "description": "Працівник, що заміщується",
+      "documentation": "Працівник, що заміщується",
+      "defaultView": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "defaultValue": "POSTED",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Опис",
+      "description": "Опис наказу",
+      "defaultValue": "Постійні нарахування працівника"
+    },
+    {
+      "name": "descriptionExt",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Розширений опис",
+      "description": "Розширений опис",
+      "defaultView": false
+    },
+    {
+      "name": "accrualParams",
+      "dataType": "Json",
+      "caption": "Параметри нарахування",
+      "description": "Параметри нарахування"
+    },
+    {
+      "name": "isFactHourHarmful",
+      "dataType": "Boolean",
+      "caption": "Формувати години роботи у шкідливих умовах за замовчуванням",
+      "description": "Формувати години роботи у шкідливих умовах за замовчуванням",
+      "defaultValue": "0"
+    },
+    {
+      "name": "limitSum",
+      "dataType": "Currency",
+      "caption": "Сума обмеження",
+      "description": "Сума обмеження"
+    },
+    {
+      "name": "remindSum",
+      "dataType": "Currency",
+      "caption": "Залишок",
+      "description": "Залишок"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "rls": {
+      "func": "hr_employeeAccrual.rls"
+    }
+  }
+
+}

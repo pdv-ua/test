@@ -1,0 +1,65 @@
+{
+  "caption": "База нарахування ЄСВ",
+  "description": "База нарахування ЄСВ",
+  "descriptionAttribute": "dateFrom",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата",
+      "description": "Дата",
+      "documentation": "Дата",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "allowNull": false,
+      "defaultView": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "minSum",
+      "dataType": "Currency",
+      "caption": "Мінімальна сума",
+      "description": "Мінімальна сума",
+      "documentation": "Мінімальна сума"
+    },
+    {
+      "name": "maxSum",
+      "dataType": "Currency",
+      "caption": "Максимальна сума",
+      "description": "Максимальна сума",
+      "documentation": "Максимальна сума"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

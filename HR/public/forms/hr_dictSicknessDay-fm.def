@@ -1,0 +1,38 @@
+exports.formDef = {
+  requiredFields: ['dictIllnessReasonID'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 200 },
+          flex: 1,
+          items: [
+            { attributeName: 'dictIllnessReasonID' },
+            { attributeName: 'maxDay' },
+            {
+              xtype: 'ubdetailgrid',
+              layout: 'fit',
+              height: 200,
+              entityConfig: {
+                entity: 'hr_dictSicknessDayDt',
+                method: 'select',
+                fieldList: ['illnessRegime', 'dateFrom', 'dateTo', 'minAge', 'maxAge']
+              },
+              masterFields: ['ID'],
+              detailFields: ['dictSicknessDayID']
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

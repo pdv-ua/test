@@ -1,0 +1,38 @@
+/* global HR */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['organizationID'],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      defaults: { labelWidth: 160 }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [
+      { attributeName: 'respPosition' },
+      HR.controlService.getAttrOrgCombo({
+        attributeName: 'sourceOrgID',
+        labelWidth: 160
+      }),
+      HR.controlService.getAttrDepPosBlock({
+        valueField: 'mi_data_id',
+        orgIDField: 'sourceOrgID',
+        labelWidth: 160,
+        showPosCategory: false
+      }),
+      {
+        layout: { type: 'hbox' },
+        items: [
+          { attributeName: 'dateFromEmpty', labelWidth: 160, width: 280 },
+          { attributeName: 'dateToEmpty', labelWidth: 70, width: 190 }
+        ]
+      },
+      { attributeName: 'useFullNamePosition' }
+    ]
+  }
+})()

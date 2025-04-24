@@ -1,0 +1,297 @@
+// @isModal true
+/* global UB Ext AC _ appAC */
+
+exports.formDef = 'HR.hr_employeeCPHSearch'
+
+Ext.define('HR.hr_employeeCPHSearch', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.employeeCPHSearch',
+  initComponent: function () {
+    let me = this
+    let grid
+    let store = Ext.create('Ext.data.ArrayStore', {
+      fields: [
+        'ID',
+        'employeeNumberID',
+        'employeeNumberID.tabNum',
+        'employeeNumberID.description',
+        'employeeNumberID.employeeID',
+        'orderNumber',
+        'orderDate',
+        'dateFrom',
+        'dateTo',
+        'payElID',
+        'payElID.name',
+        'paySum',
+        'dogCPHPayID'
+      ],
+      data: []
+    })
+    me.items = [
+      Ext.widget('panel', {
+        xtype: 'panel',
+        region: 'north',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            layout: 'hbox',
+            items: [
+              {
+                xtype: 'datefield',
+                name: 'dateFrom',
+                fieldLabel: UB.i18n('Період дії з:'),
+                value: me.dateFrom,
+                listeners: {
+                  change: ctrl => me.onDateChange(ctrl),
+                  blur: () => {
+                    if (me.attr.dateFrom.getValue() && me.attr.dateTo.getValue() && me.attr.dateFrom.getValue() > me.attr.dateTo.getValue()) {
+                      me.attr.dateFrom.setValue(me.attr.dateTo.getValue())
+                    }
+                    me.setEmployeeCPH()
+                  }
+                }
+              },
+              {
+                xtype: 'datefield',
+                name: 'dateTo',
+                fieldLabel: UB.i18n('Період дії по:'),
+                value: me.dateTo,
+                listeners: {
+                  change: ctrl => me.onDateChange(ctrl),
+                  blur: () => {
+                    if (me.attr.dateFrom.getValue() && me.attr.dateTo.getValue() && me.attr.dateFrom.getValue() > me.attr.dateTo.getValue()) {
+                      me.attr.dateTo.setValue(me.attr.dateFrom.getValue())
+                    }
+                    me.setEmployeeCPH()
+                  }
+                }
+              }
+            ]
+          },
+          {
+            xtype: 'radiogroup',
+            name: 'stateEmployeeCPH',
+            items: [
+              { boxLabel: UB.i18n('Всі'), name: 'rb', inputValue: 1 },
+              { boxLabel: UB.i18n('Тільки діючі'), name: 'rb', inputValue: 2, checked: true },
+              { boxLabel: UB.i18n('Тільки зачинені'), name: 'rb', inputValue: 3 }
+            ],
+            listeners: {
+              change: () => {
+                me.setEmployeeCPH()
+              }
+            }
+          }
+        ]
+      }),
+      grid = Ext.widget('grid', {
+        xtype: 'grid',
+        stripeRows: true,
+        store: store,
+        autoScroll: true,
+        flex: 1,
+        split: true,
+        region: 'center',
+        selModel: Ext.create('Ext.selection.CheckboxModel', {
+          selType: 'rowmodel',
+          showHeaderCheckbox: false
+        }),
+        tbar: Ext.create('Ext.toolbar.Toolbar', {
+          height: 40,
+          items: [
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Вибрати'),
+              iconCls: 'fas fa-share-square',
+              scale: 'medium',
+              cls: 'save-action',
+              handler: function (btn) {
+                if (me.onSelect) {
+                  const data = []
+                  const selModel = grid.getSelectionModel()
+                  selModel.selected.each(record => {
+                    data.push(record.getData())
+                  })
+                  me.onSelect(data)
+                }
+                me.up('window').close()
+              }
+            },
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Відмітити всі'),
+              iconCls: 'u-icon-check',
+              cls: 'green-action',
+              listeners: {
+                click: function () {
+                  grid.getSelectionModel().selectAll(true)
+                }
+              }
+            },
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Очистити відмітки'),
+              iconCls: 'u-icon-close',
+              cls: 'red-action',
+              listeners: {
+                click: function () {
+                  grid.getSelectionModel().deselectAll(true)
+                }
+              }
+            }
+          ]
+
+        }),
+        columns: [
+          {
+            header: UB.i18n('Таб.№'),
+            tooltip: UB.i18n('Таб.№'),
+            dataIndex: 'employeeNumberID.tabNum',
+            flex: 1
+          },
+          {
+            header: UB.i18n('ПІБ'),
+            tooltip: UB.i18n('ПІБ'),
+            dataIndex: 'employeeNumberID.description',
+            flex: 1
+          },
+          {
+            header: UB.i18n('№ договору'),
+            tooltip: UB.i18n('№ договору'),
+            dataIndex: 'orderNumber',
+            flex: 1
+          },
+          {
+            header: UB.i18n('Дата договору'),
+            tooltip: UB.i18n('Дата договору'),
+            dataIndex: 'orderDate',
+            renderer: Ext.util.Format.dateRenderer('d.m.Y')
+          },
+          {
+            header: UB.i18n('Діє з'),
+            tooltip: UB.i18n('Діє з'),
+            dataIndex: 'dateFrom',
+            renderer: Ext.util.Format.dateRenderer('d.m.Y')
+          },
+          {
+            header: UB.i18n('Діє по'),
+            tooltip: UB.i18n('Діє по'),
+            dataIndex: 'dateTo',
+            renderer: (value) => {
+              if (_.isDate(value)) {
+                if (AC.dateService.shiftDate(value) < AC.dateService.maxDate()) {
+                  return AC.dateService.formatDate(value)
+                } else {
+                  return ''
+                }
+              } else {
+                return value
+              }
+            }
+          },
+          {
+            header: UB.i18n('Вид оплати'),
+            tooltip: UB.i18n('Вид оплати'),
+            dataIndex: 'payElID.name',
+            flex: 1
+          },
+          {
+            header: UB.i18n('Сума договору'),
+            tooltip: UB.i18n('Сума договору'),
+            dataIndex: 'paySum',
+            renderer: AC.gridUtils.rendererToCurrency
+          }
+        ]
+      })
+    ]
+
+    me.onDateChange = ctrl => {
+      const regs = [
+        /^[0-3]$/,
+        /^(0[1-9]|[12][0-9]|3[01])$/,
+        /^(0[1-9]|[12][0-9]|3[01])\.$/,
+        /^(0[1-9]|[12][0-9]|3[01])\.(0|1)$/,
+        /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[012])$/,
+        /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[012])\.$/,
+        /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[012])\.(1|2)$/,
+        /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[012])\.(19|20)$/,
+        /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[012])\.(19|20)\d$/,
+        /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[012])\.(19|20)\d\d$/
+      ]
+      const pointRegs = [
+        /^(0[1-9]|[12][0-9]|3[01])$/,
+        /^(0[1-9]|[12][0-9]|3[01])\.(0[1-9]|1[012])$/
+      ]
+      let value = ctrl.getRawValue()
+      while (value && !regs.some(re => re.test(value))) value = value.slice(0, -1)
+      if (pointRegs.some(re => re.test(value))) value += '.'
+      if (value !== ctrl.getRawValue()) ctrl.setRawValue(value)
+    }
+
+    me.setEmployeeCPH = () => {
+      store.removeAll()
+      let employeeCPH = UB.Repository('hr_employeeCPH')
+        .attrs([
+          'ID',
+          'employeeNumberID',
+          'employeeNumberID.tabNum',
+          'employeeNumberID.description',
+          'employeeNumberID.employeeID',
+          'orderNumber',
+          'orderDate',
+          'dateFrom',
+          'dateTo',
+          'payElID',
+          'payElID.name',
+          'paySum'
+        ])
+        .where('employeeNumberID.orgID', '=', appAC.globalOrganization())
+      if (me.attr.stateEmployeeCPH.getValue().rb === 2) {
+        if (me.attr.dateFrom.getValue()) {
+          employeeCPH = employeeCPH.where('dateTo', '>=', me.attr.dateFrom.getValue(), 'dateTo')
+          employeeCPH = employeeCPH.where('dateTo', 'isNull', undefined, 'dateToIsNull')
+          employeeCPH = employeeCPH.logic('([dateTo] OR [dateToIsNull])')
+        }
+        if (me.attr.dateTo.getValue()) {
+          employeeCPH = employeeCPH.where('dateFrom', '<=', me.attr.dateTo.getValue())
+        }
+      } else if (me.attr.stateEmployeeCPH.getValue().rb === 3) {
+        if (me.attr.dateFrom.getValue()) {
+          employeeCPH = employeeCPH.where('dateTo', '<', me.attr.dateFrom.getValue(), 'dateFrom')
+        }
+        if (me.attr.dateTo.getValue()) {
+          employeeCPH = employeeCPH.where('dateFrom', '>', me.attr.dateTo.getValue(), 'dateTo')
+        }
+        if (me.attr.dateFrom.getValue() && me.attr.dateTo.getValue()) {
+          employeeCPH = employeeCPH.logic('[dateFrom] OR [dateTo]')
+        }
+      }
+      employeeCPH.selectAsObject().then(data => {
+        let dogCPHPay = UB.Repository('hr_docRegDogCPHPay')
+          .attrs(['ID', 'employeeCPHID'])
+          .where('employeeCPHID', 'in', data.map(o => o.ID))
+        dogCPHPay.selectAsObject().then(subData => {
+          subData.forEach(sd => {
+            let res = data.find(d => d.ID === sd.employeeCPHID)
+            if (res) res.dogCPHPayID = sd.ID
+          })
+          store.loadData(data)
+          if (me.selectData) {
+            grid.getSelectionModel().select(store.data.items.filter(o => me.selectData.includes(o.data.dogCPHPayID)))
+          }
+        })
+      })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      AC.viewUtils.setAttr(me)
+      me.setEmployeeCPH()
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

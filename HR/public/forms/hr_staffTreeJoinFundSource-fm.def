@@ -1,0 +1,231 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+/* global UB $App Ext appAC AC _ */
+
+exports.formDef = 'HR.staffTreeJoinFundSource'
+
+Ext.define(exports.formDef, {
+  ident: 'staffTreeJoinFundSource',
+  extend: 'Ext.panel.Panel',
+  layout: 'border',
+  isModal: true,
+  listeners: {
+    render: function () {
+      let me = this
+      let win = me.window
+      if (win) {
+        if (!win.height) {
+          win.height = 300
+        }
+        if (!win.width) {
+          win.width = 600
+        }
+        win.center()
+      }
+    }
+  },
+  items: [
+    {
+      xtype: 'panel',
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'center',
+      items: [
+        {
+          xtype: 'textfield',
+          name: 'targetPosition',
+          fieldLabel: UB.i18n('Посада-отримувач'),
+          labelWidth: 125,
+          readOnly: true
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              xtype: 'ubcombobox',
+              name: 'positionID',
+              fieldLabel: UB.i18n('Посада, яку об\'єднують'),
+              labelWidth: 125,
+              valueField: 'ID',
+              flex: 1,
+              displayField: 'description',
+              hideEntityItemInContext: true,
+              disableModifyEntity: true,
+              allowBlank: false,
+              ubRequest: {
+                entity: 'hr_position',
+                fieldList: ['ID', 'description', 'dictPositionID', 'accrualSum', 'dictTarifCoeffID'],
+                whereList: {
+                  stateActive: {
+                    expression: '[state]',
+                    condition: '=',
+                    value: 'ACTIVE'
+                  },
+                  notLiquidate: {
+                    expression: '[liquidate]',
+                    condition: '=',
+                    value: 0
+                  },
+                  parentUnitID: {
+                    expression: '[parentUnitID]',
+                    condition: '=',
+                    value: 0
+                  }
+                },
+                orderList: { orderBy: { expression: 'description' } },
+                __mip_ondate: appAC.globalApplicationDate()
+              }
+            },
+            {
+              xtype: 'button',
+              cls: 'treeIconNotFocus',
+              ubID: 'btnSelectByTree',
+              width: 50,
+              margin: '0 2 0 -12',
+              name: 'btnSelectByTree',
+              listeners: {
+                click: function (ctrl) {
+                  const me = this.up('[ident=staffTreeJoinFundSource]')
+                  $App.doCommand({
+                    cmdType: 'showForm',
+                    formCode: 'hr_staffTreeSelect',
+                    customParams: {
+                      organizationID: appAC.globalOrganization(),
+                      onDate: appAC.globalApplicationDate(),
+                      useFundSource: true,
+                      rootID: me.defaultValues.parentID,
+                      onSelectNodeHandler: tree => {
+                        const record = tree.getCurrentRecord()
+                        const data = record.raw || {}
+                        if (data.nodeType === 'POSUNIT') {
+                          me.attr.positionID.setValueById(data['ID'])
+                          return Promise.resolve(true)
+                        }
+                        return Promise.resolve(false)
+                      }
+                    }
+                  })
+                },
+                focus: function setFocused (btn) {
+                  btn.removeCls('treeIconNotFocus')
+                  btn.addCls('treeIconFocus')
+                },
+                blur: function setNotFocused (btn) {
+                  btn.removeCls('treeIconFocus')
+                  btn.addCls('treeIconNotFocus')
+                },
+                render: ctrl => {
+                  ctrl.setTooltip(UB.i18n('Вибір посади з дерева орг. структури'))
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      layout: { type: 'hbox', pack: 'end' },
+      region: 'south',
+      style: 'border-top: 1px solid #BFBFBF',
+      items: [
+        {
+          xtype: 'button',
+          text: UB.i18n('cancel'),
+          width: 120,
+          height: 30,
+          margin: '10 10 10 0',
+          handler: function () {
+            this.up('window').close()
+          }
+        },
+        {
+          xtype: 'button',
+          text: UB.i18n('Продовжити'),
+          width: 120,
+          height: 30,
+          margin: '10 10 10 0',
+          handler: function () {
+            const me = this.up('[ident=staffTreeJoinFundSource]')
+            if (!me.attr.positionID.getValue()) {
+              AC.viewUtils.showToast(UB.i18n('Потрібно вибрати посаду, яку потрібо об\'єднати'))
+              return
+            }
+            if (me.defaultValues.targetID === me.attr.positionID.getValue()) {
+              AC.viewUtils.showToast(UB.i18n('Потрібно обрати різні посади'))
+              return
+            }
+            if (!me.targetPos) {
+              AC.viewUtils.showToast(UB.i18n('Не знайдено посаду-отримувач'))
+              return
+            }
+            const isEqual = me.checkedFields.every(attr => me.targetPos[attr] === me.attr.positionID.getFieldValue(attr))
+            const checkPromise = isEqual
+              ? Promise.resolve(true)
+              : $App.dialogYesNo(UB.i18n('Увага'), UB.i18n('Посади мають різні атрибути! Продовжити?'))
+            checkPromise.then((result) => {
+              if (result) {
+                me.setLoading(true)
+                $App.connection.run({
+                  entity: 'hr_position',
+                  method: 'joinPositionFundSource',
+                  targetID: me.defaultValues.targetID,
+                  sourceID: me.attr.positionID.getValue(),
+                  onDate: appAC.globalApplicationDate()
+                }).then(async () => {
+                  const me = this.up('[ident=staffTreeJoinFundSource]')
+                  me.setLoading(false)
+                  const treeControl = me.sender
+                  treeControl.reloadNode(me.parentNode)
+                  this.up('window').close()
+                }).catch(err => {
+                  me.setLoading(false)
+                  AC.viewUtils.showToast(UB.i18n('Помилка'), err.message)
+                })
+              }
+            })
+          }
+        }
+      ]
+    }
+  ],
+  initComponent: function () {
+    let me = this
+    me.checkedFields = ['dictPositionID', 'accrualSum', 'dictTarifCoeffID']
+    me.on('afterrender', async () => {
+      const me = this
+      me.attr = {
+        positionID: me.down('[name=positionID]'),
+        targetPosition: me.down('[name=targetPosition]')
+      }
+      me.targetPos = await UB.Repository('hr_position')
+        .attrs(['ID', 'mi_data_id', 'description'].concat(me.checkedFields))
+        .misc({
+          __mip_recordhistory_all: true,
+          __allowSelectSafeDeleted: true
+        })
+        .selectById(me.defaultValues.targetID)
+      const store = me.attr.positionID.getStore()
+      store.ubRequest.whereList.parentUnitID = {
+        expression: '[parentUnitID]',
+        condition: '=',
+        value: me.defaultValues.parentID
+      }
+      store.ubRequest.whereList.notSame = {
+        expression: '[ID]',
+        condition: '!=',
+        value: me.defaultValues.targetID
+      }
+      if (me.targetPos) {
+        me.checkedFields.forEach(field => {
+          store.ubRequest.whereList[field] = {
+            expression: `[${field}]`,
+            condition: me.targetPos[field] ? '=' : 'isNull',
+            value: me.targetPos[field]
+          }
+        })
+      }
+      me.attr.targetPosition.setValue(me.targetPos.description)
+    }, me)
+    me.callParent(arguments)
+  }
+})

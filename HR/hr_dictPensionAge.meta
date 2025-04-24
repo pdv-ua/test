@@ -1,0 +1,103 @@
+{
+  "caption": "Вік виходу на пенсію",
+  "description": "Вік виходу на пенсію",
+  "descriptionAttribute": "age",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "sexType",
+      "dataType": "Enum",
+      "enumGroup": "HR_SEX_TYPE",
+      "caption": "Стать",
+      "documentation": "Стать",
+      "description": "Стать",
+      "allowNull": false
+    },
+    {
+      "name": "years",
+      "dataType": "Int",
+      "caption": "Вік, роки",
+      "description": "Вік, роки",
+      "documentation": "Вік, роки",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "months",
+      "dataType": "Int",
+      "caption": "Вік, місяці",
+      "description": "Вік, місяці",
+      "documentation": "Вік, місяці",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 50,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "customSettings": {
+        "compositeFields": ["sexType", "years", "months"],
+        "compositeSeparator": ["", ": ", " р. ", " м."]
+      }
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "age",
+      "dataType": "Float",
+      "caption": "Вік",
+      "description": "Пенсійний вік",
+      "documentation": "Пенсійний вік",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(years + months / 12.0)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

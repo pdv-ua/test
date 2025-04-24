@@ -1,0 +1,339 @@
+/* global $App AC appHR UB HR */
+
+exports.formDef = {
+  requiredFields: ['description', 'filterParams', 'orderType', 'orderNumber', 'hasPosted'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'hbox' },
+      items: [
+        { attributeName: 'orderDate', hidden: true },
+        { attributeName: 'orderType', hidden: true, readOnly: false },
+        { attributeName: 'organizationID', hidden: true },
+        { attributeName: 'orderState', hidden: true },
+        {
+          layout: { type: 'vbox' },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'orderNumber',
+              fieldLabel: UB.i18n('Номер'),
+              allowBlank: false,
+              width: 500
+            },
+            {
+              attributeName: 'periodID',
+              fieldLabel: UB.i18n('Період'),
+              allowBlank: false,
+              pageSize: 50,
+              width: 500,
+              fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+              orderList: {
+                orderBy: {
+                  expression: 'dateFrom',
+                  order: 'desc'
+                }
+              },
+              listeners: {
+                expand: appHR.periodExpand
+              }
+            },
+            {
+              layout: { type: 'hbox' },
+              flex: 1,
+              items: [
+                {
+                  xtype: 'label',
+                  text: UB.i18n('Період заміни:'),
+                  cls: 'x-form-item-label',
+                  margin: '8 0 0 15',
+                  width: 100
+                },
+                {
+                  xtype: 'button',
+                  text: '<',
+                  margin: '2 0 0 0',
+                  tooltip: UB.i18n('Попередній період'),
+                  name: 'priorSalaryPeriod',
+                  width: 30,
+                  handler: (btn) => {
+                    const me = btn.up('form')
+                    const priorID = me.attr.periodSalaryID.getFieldValue('priorPeriodID')
+                    if (priorID) {
+                      me.attr.periodSalaryID.setValueById(priorID)
+                    }
+                  }
+                },
+                {
+                  attributeName: 'periodSalaryID',
+                  fieldLabel: '',
+                  allowBlank: false,
+                  labelWidth: 0,
+                  pageSize: 50,
+                  width: 310,
+                  fieldList: ['ID', 'description', 'name', 'dateFrom', 'dateTo', 'orgID', 'priorPeriodID', 'nextPeriodID'],
+                  orderList: {
+                    orderBy: {
+                      expression: 'dateFrom',
+                      order: 'desc'
+                    }
+                  },
+                  listeners: {
+                    expand: appHR.periodExpand
+                  }
+                },
+                {
+                  xtype: 'button',
+                  text: '>',
+                  margin: '2 30 0 0',
+                  tooltip: UB.i18n('Наступний період'),
+                  name: 'nextSalaryPeriod',
+                  width: 30,
+                  handler: (btn) => {
+                    const me = btn.up('form')
+                    const nextID = me.attr.periodSalaryID.getFieldValue('nextPeriodID')
+                    if (nextID) {
+                      me.attr.periodSalaryID.setValueById(nextID)
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'name',
+              xtype: 'ubtextfield',
+              fieldLabel: UB.i18n('Назва')
+            },
+            {
+              attributeName: 'payElID',
+              fieldLabel: UB.i18n('Вид оплати'),
+              fieldList: ['ID', 'description', 'code', 'name', 'dateFrom', 'dateTo', 'methodID.code'],
+              pageSize: 50,
+              allowBlank: false,
+              orderList: {
+                orderBy: {
+                  expression: 'dateFrom',
+                  order: 'desc'
+                }
+              },
+              listeners: {
+                expand: appHR.periodExpand
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      items: [
+        {
+          xtype: 'ubdetailgrid',
+          name: 'orderRegistryDt',
+          autoScroll: true,
+          hideActions: ['addNew', 'del',
+            'addNewByCurrent', 'prefilter',
+            'exportXls', 'exportCsv', 'exportHtml', 'showPreview',
+            'itemLink', 'commandLink', 'history', 'edit'
+          ],
+          stateful: true,
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_orderRegistryDt_orderRegistrySickness'),
+          disableMenuItemDetails: true,
+          flex: 1,
+          summary: { paySum: 'sum', days: 'sum', hours: 'sum' },
+          entityConfig: {
+            entity: 'hr_docRegShift',
+            method: 'select',
+            fieldList: [
+              { name: 'ID', visibility: false },
+              { name: 'employeeNumberID', visibility: false },
+              { name: 'checked', description: ' ', config: HR.orderManager.checkBoxColumnConfig() },
+              { name: 'employeeNumberID.tabNum', description: UB.i18n('Таб.№') },
+              { name: 'employeeNumberID.description', description: UB.i18n('Працівник') },
+              { name: 'dateFrom', description: UB.i18n('Початок') },
+              { name: 'dateTo', description: UB.i18n('Закінчення') },
+              { name: 'paySum', description: UB.i18n('Сума') },
+              { name: 'posName', description: UB.i18n('Посада') },
+              { name: 'depName', description: UB.i18n('Підрозділ') },
+              { name: 'mi_createDate', description: UB.i18n('Дата створення'), tooltip: UB.i18n('Дата створення'), visibility: false },
+              { name: 'mi_createUser.fullName', description: UB.i18n('Користувач, що створив'), tooltip: UB.i18n('Користувач, що створив'), visibility: false },
+              { name: 'mi_modifyDate', description: UB.i18n('Дата останнього коригування'), tooltip: UB.i18n('Дата останнього коригування'), visibility: false },
+              { name: 'mi_modifyUser.fullName', description: UB.i18n('Користувач, що останнім коригував'), tooltip: UB.i18n('Користувач, що останнім коригував'), visibility: false }
+            ],
+            orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } }
+          },
+          masterFields: ['ID'],
+          detailFields: ['orderRegistryID'],
+          cmpInitConfig: {
+            getRowClass: function (row) {
+              return row.get('orderState') === 'POSTED' ? 'ub-row-green' : 'ub-row-lightgrey'
+            },
+            afterInit: function () {
+              const grid = this
+              this.menu.add([
+                {
+                  text: UB.i18n('Видалити'),
+                  scale: 'medium',
+                  iconCls: 'far fa-trash-alt',
+                  cls: 'delete-action',
+                  handler: () => {
+                    const reco = AC.gridUtils.getCurrentRecord(grid)
+                    if (reco && reco.get('ID')) {
+                      $App.connection.run({
+                        entity: 'hr_docRegShift',
+                        method: 'delete',
+                        execParams: {
+                          ID: reco.get('ID')
+                        }
+                      }).then(() => {
+                        grid.onRefresh()
+                      })
+                    }
+                  }
+                }
+              ])
+            },
+            customActions: [
+              {
+                text: UB.i18n(`Додати документ Заміна`),
+                actionId: 'addNewOrder',
+                iconCls: 'u-icon-add',
+                scale: 'medium',
+                cls: 'add-new-action',
+                handler: function (btn) {
+                  const me = btn.up('form')
+                  const grid = btn.up('ubdetailgrid')
+                  me.saveForm()
+                    .then(function (result) {
+                      if (result !== -1) {
+                        $App.doCommand({
+                          cmdType: 'showForm',
+                          formCode: 'hr_docRegShift',
+                          entity: 'hr_docRegShift',
+                          tabId: 'hr_docRegShiftNew' + Date.now(),
+                          title: UB.i18n(`Заміна`),
+                          description: UB.i18n(`Заміна`),
+                          target: $App.getViewport().centralPanel,
+                          cmpInitConfig:
+                            {
+                              defaultValues: {
+                                orderRegistryID: me.record.get('ID'),
+                                'orderRegistryID.organizationID': me.record.get('organizationID'),
+                                periodSalaryID: me.record.get('periodSalaryID'),
+                                'periodSalaryID.dateFrom': me.attr.periodID.getFieldValue('dateFrom'),
+                                'periodSalaryID.dateTo': me.attr.periodID.getFieldValue('dateTo'),
+                                'orderRegistryID.periodID': me.record.get('periodID'),
+                                /* 'orderRegistryID.periodID.dateFrom': me.attr.periodID.getFieldValue('dateFrom'),
+                                'orderRegistryID.periodID.dateTo': me.attr.periodID.getFieldValue('dateTo'), */
+                                'orderRegistryID.payElID': me.record.get('payElID'),
+                                'orderRegistryID.payElID.description': me.attr.payElID.getFieldValue('description'),
+                                'orderRegistryID.payElID.code': me.attr.payElID.getFieldValue('code'),
+                                'orderRegistryID.payElID.name': me.attr.payElID.getFieldValue('name')
+                              }
+                            }
+                        })
+                      } else {
+                        $App.dialogInfo(UB.i18n('Необхідно спочатку зберегти документ'))
+                      }
+                    })
+                }
+              }
+            ],
+            onItemDblClick: function (grid, record) {
+              if (record.get('ID')) {
+                const ubdetailgrid = grid.up('ubdetailgrid')
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: 'hr_docRegShift',
+                  entity: 'hr_docRegShift',
+                  title: UB.i18n(`Документ Заміна`),
+                  isModal: false,
+                  instanceID: record.get('ID'),
+                  tabId: 'hr_docRegShift' + record.get('ID'),
+                  target: $App.getViewport().centralPanel,
+                  sender: ubdetailgrid.getView(),
+                  store: ubdetailgrid.store
+                })
+              }
+            }
+          },
+          listeners: {
+            render: grid => {
+              grid.menu.add([
+                HR.orderManager.getOrderRegistryRlAction(grid),
+                HR.orderManager.getOrderRegistryEmployeeAction(grid),
+                {
+                  text: UB.i18n('Тарифікація'),
+                  iconCls: 'fas fa-money-check',
+                  ubID: 'itemShowWorkPlace',
+                  handler: function () {
+                    const record = AC.gridUtils.getCurrentRecord(grid)
+                    if (record) {
+                      UB.Repository('trf_workPlace')
+                        .attrs(['ID'])
+                        .where('employeeNumberID', '=', record.get('employeeNumberID'))
+                        .where('state', '=', 'POSTED')
+                        .where('documentID.type', '=', 'FACT')
+                        .where('dateFrom', '<=', AC.dateService.unshiftDate(record.get('dateTo')))
+                        .where('dateTo', '>=', AC.dateService.unshiftDate(record.get('dateFrom')))
+                        .selectScalar().then(instanceID => {
+                          if (instanceID) {
+                            $App.doCommand({
+                              cmdType: 'showForm',
+                              formCode: 'trf_workPlaceEdit',
+                              entity: 'trf_workPlace',
+                              instanceID,
+                              tabId: `trf_workPlace-${record.get('employeeNumberID')}`,
+                              target: $App.getViewport().centralPanel
+                            })
+                          } else {
+                            $App.dialogInfo(UB.i18n(`Тарифікація для працівника {0} не створена`, record.get('employeeNumberID.description')))
+                          }
+                        })
+                    }
+                  }
+                }
+              ])
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

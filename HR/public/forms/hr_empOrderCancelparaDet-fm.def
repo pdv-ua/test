@@ -1,0 +1,67 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+/* eslint-disable no-unused-vars */
+/* global AC $App HR */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'empOrderType', 'organizationID', 'isGroup',
+    'positionID', 'employeeNumberID', 'employeePositionID.employeeNumberID', 'employeeID'
+  ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  defaults: {
+    layout: 'fit'
+  },
+  size: {
+    width: 1100,
+    height: 700
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'dummyAction'
+        }
+      ]
+    }
+  ],
+  items: [{
+    xtype: 'tabpanel',
+    region: 'center',
+    listeners: {
+      tabchange: function (tp, t) {}
+    },
+    items: [{
+      title: UB.i18n('Загальне'),
+      ubID: 'tabMain',
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [
+        {
+          attributeName: 'employeeID',
+          fieldLabel: UB.i18n('Працівник'),
+          fieldList: ['ID', 'description'],
+          labelWidth: 150,
+          displayField: 'description',
+          allowBlank: false
+        },
+        {
+          attributeName: 'canceledParaID',
+          fieldLabel: UB.i18n('Скасувати пункт'),
+          labelWidth: 150,
+          fieldList: ['descriptionExtView', 'orderID', 'ID', 'employeePositionID', 'employeeNumberID', 'employeeID'],
+          displayField: 'descriptionExtView',
+          allowBlank: false
+        }
+      ]
+    }]
+  }]
+}

@@ -1,0 +1,96 @@
+/* global Ext UB AC appAC HR */
+exports.formDef = 'HR.groupParam'
+
+Ext.define('HR.groupParam', {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.hr_groupParam',
+  width: 400,
+  height: 600,
+  layout: { type: 'vbox', align: 'stretch' },
+  actionId: {
+    save: 'save'
+  },
+  eventId: {
+    save: 'save'
+  },
+  hotKeys: {
+    save: {
+      key: Ext.EventObject.ENTER,
+      shift: false,
+      ctrl: true,
+      text: ' (Ctrl+Enter)'
+    }
+  },
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [],
+      ubID: 'mainToolbar',
+      enableOverflow: true
+    }]
+    me.items = [
+      {
+        layout: { type: 'vbox' },
+        items: [
+          {
+            xtype: 'textfield',
+            name: 'fullName',
+            fieldLabel: UB.i18n('Назва повна'),
+            labelWidth: 130,
+            width: 550,
+            allowBlank: false
+          },
+          {
+            xtype: 'textfield',
+            name: 'name',
+            fieldLabel: UB.i18n('Назва скорочена'),
+            labelWidth: 130,
+            width: 550,
+            allowBlank: false
+          }
+        ]
+      }
+
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      me.createToolbarButtons(me)
+      me.attr = {
+        fullName: me.down('[name=fullName]'),
+        name: me.down('[name=name]')
+      }
+      me.parentForm = me.gridSender.up('form') || {}
+      const record = (me.gridRecord ? me.gridRecord.getData() : me.formData) || {}
+      me.attr.fullName.setValue(record.fullName)
+      me.attr.name.setValue(record.name)
+    }, me)
+
+    me.callParent(arguments)
+  },
+  createToolbarButtons: function (me) {
+    let tb = me.down('toolbar')
+    tb.insert(tb.items.length - 2, {
+      xtype: 'button',
+      scale: 'medium',
+      name: 'saveAndClose',
+      iconCls: 'fas fa-share-square',
+      tooltip: UB.i18n('saveAndClose') + me.hotKeys[me.actionId.save].text,
+      cls: 'save-action',
+      handler: function () {
+        me.onButtonSave(me)
+      }
+    })
+  },
+  onButtonSave: function (me) {
+    if (me.attr.name.getValue() && me.attr.fullName.getValue() && me.attr.name.isValid() && me.attr.fullName.isValid()) {
+      const formData = {
+        name: me.attr.name.getValue(),
+        fullName: me.attr.fullName.getValue()
+      }
+      me.onSave(me.parentForm, me.gridSender, me.gridRecord, formData)
+      me.up('window').close()
+    }
+  }
+})

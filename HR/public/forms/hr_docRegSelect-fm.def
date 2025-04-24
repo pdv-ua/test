@@ -1,0 +1,76 @@
+/* global Ext UB */
+
+exports.formDef = 'HR.docRegSelect'
+
+Ext.define('HR.docRegSelect', {
+  extend: 'Ext.form.Panel',
+  width: 600,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        xtype: 'acGrid',
+        name: 'documentList',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        notWriteChanges: true,
+        storeType: 'local',
+        showToolBar: false,
+        disablePaging: true,
+        loadMaskMessage: UB.i18n('Завантаження даних...'),
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        viewConfig: {
+          markDirty: false
+        },
+        onItemDoubleClick: (row, record) => {
+          if (record.get('ID')) {
+            me.onSelect(record.getData())
+            me.up('window').close()
+          }
+        },
+        fields: [
+          { name: 'ID' },
+          {
+            name: 'dateFrom',
+            columnConfig: {
+              text: UB.i18n('з'),
+              width: 100,
+              sortBy: 'Date',
+              renderer: Ext.util.Format.dateRenderer('d.m.Y')
+            }
+          },
+          {
+            name: 'dateTo',
+            columnConfig: {
+              text: UB.i18n('по'),
+              width: 100,
+              sortBy: 'Date',
+              renderer: Ext.util.Format.dateRenderer('d.m.Y')
+            }
+          },
+          {
+            name: 'payElID.description',
+            columnConfig: {
+              text: UB.i18n('Вид оплати'),
+              flex: 1
+            }
+          }
+        ]
+      }
+    ]
+
+    me.on('afterrender', function () {
+      me.attr = {
+        documentList: me.down('[name=documentList]')
+      }
+      if (me.sourceData) {
+        me.attr.documentList.setLocalStoreData(me.sourceData)
+      }
+    })
+    me.callParent(arguments)
+  }
+})

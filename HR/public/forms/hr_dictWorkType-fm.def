@@ -1,0 +1,50 @@
+exports.formDef = {
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 800,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'vbox' },
+      defaults: { labelWidth: 160 },
+      items: [
+        { attributeName: 'code', width: 300 },
+        { attributeName: 'shortName', width: 500 },
+        { attributeName: 'name', width: 800 },
+        {
+          attributeName: 'payElID',
+          width: 800,
+          fieldList: ['ID', 'description', 'methodID.code', 'codeSort'],
+          orderList: { orderBy: { expression: 'codeSort' } },
+          whereList: {
+            methodCode: {
+              expression: '[methodID.methodGroupID.groupType]',
+              condition: 'in',
+              value: ['PAYMENT']
+            }
+          }
+        }
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      name: 'gridTariff',
+      disableSearchBar: true,
+      entityConfig: {
+        entity: 'hr_dictWorkTypeTariff',
+        method: 'select',
+        fieldList: [
+          { name: 'tariffSum', config: { align: 'center', width: 180 } },
+          { name: 'dateFrom', config: { align: 'center', width: 140 } },
+          { name: 'dateToEmpty', config: { align: 'center', width: 140 } }
+        ]
+      },
+      masterFields: ['ID'],
+      detailFields: ['dictWorkTypeID']
+    }
+  ]
+}

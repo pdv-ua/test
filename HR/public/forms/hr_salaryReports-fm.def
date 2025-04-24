@@ -1,0 +1,417 @@
+/* global Ext UB $App _ */
+exports.formDef = 'HR.salaryReports'
+
+Ext.define('HR.salaryReports', {
+  extend: 'Ext.form.Panel',
+  requires: [
+    'UB.core.UBCommand',
+    'UB.core.UBUtil'
+  ],
+  width: 1280,
+  height: 800,
+  layout: { type: 'vbox', align: 'stretch' },
+  flex: 1,
+  items: [
+    {
+      xtype: 'panel',
+      region: 'center',
+      name: 'reportPanel',
+      flex: 1,
+      items: []
+    }
+  ],
+  initComponent: function () {
+    const me = this
+    const control = Ext.create('Ext.Component', {
+      flex: 1,
+      margin: 0,
+      autoEl: {
+        tag: 'iframe'
+      }
+    })
+    const container = Ext.create('Ext.panel.Panel', {
+      layout: { type: 'vbox', align: 'stretch' },
+      flex: 1,
+      items: [
+        {
+          flex: 1,
+          autoScroll: true,
+          layout: { type: 'hbox', pack: 'center', align: 'stretch' },
+          bodyCls: 'ub-panel-gray',
+          items: [control]
+        }
+      ]
+    })
+    me.items = [container]
+    me.reportControl = control
+    me.on('afterrender', function () {
+      const me = this
+      me.showDesktop()
+    })
+    me.callParent(arguments)
+  },
+  showDesktop: async function () {
+    const me = this
+    me.setLoading(true)
+    const iFrame = me.reportControl.getEl().dom
+    const iFrameDoc = iFrame.contentDocument
+    let shTemplate = ''
+    let por = 0
+    me.onReportClick = me.onReportClick.bind(me)
+    const shortcutData = await me.prepareShortcut()
+    while (shortcutData[por]) {
+      const data = {
+        shData1: shortcutData[por] || [],
+        shData2: shortcutData[por + 1] || [],
+        shData3: shortcutData[por + 2] || []
+      }
+      for (let r = 0, l = _.max([data.shData1.length, data.shData2.length, data.shData3.length]); r < l; r++) {
+        shTemplate += '<tr>'
+        for (let i = 1; i <= 3; i++) {
+          const width = i === 1 ? 'width:350px;' : i === 2 || 3 ? 'width:550px;' : ''
+          shTemplate += `<td 
+            style="${width}font-size:${data[`shData${i}`][r] ? data[`shData${i}`][r].fontSize : 14}px;${data[`shData${i}`][r] && data[`shData${i}`][r].isFolder ? 'vertical-align: bottom;' : ''}height:24px;padding-left: ${data[`shData${i}`][r] ? data[`shData${i}`][r].pad : 0}px;">
+            ${data[`shData${i}`][r] && data[`shData${i}`][r].isFolder ? '<b>' : '<a href="#" data-id=' + (data[`shData${i}`][r] ? data[`shData${i}`][r].ID : '') + ' >'}
+            ${data[`shData${i}`][r] ? (data[`shData${i}`][r].caption === '-' ? '<hr  align="left" width="300"  size="2">' : data[`shData${i}`][r].caption) : ''}
+            ${data[`shData${i}`][r] && data[`shData${i}`][r].isFolder ? '</b>' + (data[`shData${i}`][r].caption === '-' ? '' : '<br/><br/>') : '</a>'}
+          </td>`
+        }
+        shTemplate += '</tr>'
+      }
+      shTemplate += '<tr><td style="height:10px;"></td><td></td><td></td><td></td></tr>'
+      por += 3
+    }
+
+    iFrameDoc.head.innerHTML = `
+      <style type="text/css">
+        body {
+          background-color: #FFFFFF;
+          color: #000000;
+          font-family: Roboto, Arial, Helvetica, sans-serif;
+          font-size: 14px;
+          line-height: 1.3;
+        }
+        a {
+          text-decoration: none;
+          color: #2f7c94;
+          word-wrap: break-word;
+          word-break: break-word;
+        }
+        td,th {
+          font-family: Roboto,Arial,Helvetica,sans-serif;
+          font-size: 14px;
+          word-wrap: break-word;
+          word-break: break-word;          
+        }
+      </style>`
+    iFrameDoc.body.innerHTML = `
+      <table
+        style="
+          border-collapse: collapse;
+          width: 100%;
+          word-break: break-all;
+        "
+        border="0px"
+        cellspacing="0"
+        cellpadding="3px"
+      >
+        <tbody>
+          ${shTemplate}
+        </tbody>
+      </table>`
+
+    const refs = iFrameDoc.getElementsByTagName('a')
+    for (let i = 0, L = refs.length; i < L; i++) {
+      refs[i].addEventListener('click', me.onReportClick, true)
+    }
+    me.setLoading(false)
+  },
+  prepareShortcut: async function () {
+    const me = this
+    const result = []
+
+    const parentCodes = ['hr_regReportSalaryCfg', 'hr_allReportSalaryCfg', 'hr_regReportSalaryParamsCfg']
+    const parents = await UB.Repository('ubm_navshortcut')
+      .attrs('ID')
+      .where('code', 'in', parentCodes)
+      .selectAsObject()
+
+    const favorites = await UB.Repository('ac_repFavorites')
+      .attrs(['ID', 'reportCode'])
+      .where('userID', '=', $App.connection.userData().userID)
+      .where('reportsType', '=', 1)
+      .selectAsObject()
+
+    const shortcuts = UB.core.UBStoreManager.getNavigationShortcutStore().data.items
+      .filter(o => { return parentCodes.indexOf(o.get('code')) !== -1 || parents.map(item => item.ID).indexOf(o.get('parentID')) !== -1 })
+
+    const baseFolder = shortcuts.filter(o => { return o.get('parentID') === null && o.get('isFolder') === true })
+
+    function getShortcutByParent (parentID, folderShortcut, padding, checkFavorites = false) {
+      const shcuts = shortcuts.filter(o => { return o.get('parentID') === parentID })
+      // Консолідовані звіти
+      let consolReportsList = ['accSalary_reportConsolAccDeduc', 'accSalary_accrualReportPaySummary', 'accSalary_accrualReportIncTax',
+        'accSalary_accrualReportConsolCateg', 'accSalary_accrualReportN7', 'accSalary_memorialOrder5', 'accSalary_memorialOrder5PayEl',
+        'accSalary_accrualReportCalcFunds', 'accSalary_posGroup', 'accSalary_accrualReportFOP', 'accSalary_accrualReportIndividualEmpContract',
+        'accSalary_annexMemorialOrder', 'accSalary_payrollEducation', 'accSalary_summaryActualCosts', 'accSalary_accrualReportGeneralRegistry', 'accSalary_accrualReport1NC',
+        'accSalary_accrualReportGroupReport', 'accSalary_accrualReportCostItems'
+      ]
+      // Звіти для контроля розрахунку нарахувань/утримань
+      let accrualReportCalcList = ['saSalary_reportDeducMilitaryTax', 'saSalary_reportDeducTax', 'saSalary_accrualReportUnionPay', 'saSalary_accrualReportMinWage',
+        'saSalary_accrualReportVacation', 'accSalary_accrualReportSickRegister', 'saSalary_accrualReportPaySickness', 'saSalary_accrualReportAliment', 'saSalary_accrualReportBonus',
+        'accSalary_accrualReportControlCalcVacReserve', 'saSalary_reportControlCalcESV', 'saSalary_consolidatedStatementDeductions',
+        'saSalary_consolidatedStatementDictProgClass', 'saSalary_consolidatedStatementDepartment']
+      // Списки для контролю
+      let controlList = ['saSalary_reportListDebtEmployees', 'saSalary_reportListAppointDismissEmployees', 'saSalary_empListSickLimit', 'saSalary_empListTaxLimit', 'saSalary_reportAddCostsECB',
+        'saSalary_reportGreaterMaxECB', 'saSalary_reportAccrualReleased', 'accSalary_accrualReportTimeCost', 'accSalary_accrualReportByLongVacation', 'accSalary_employeeAccrualList']
+      // Довідки
+      let dictionaryList = ['hr_accrualReportAvgSalaryFSS', 'hr_accrualReportIncomeTax', 'hr_accrualReportIncome', 'hr_accrualReportCredit',
+        'hr_accrualReportEmbassyPayroll', 'hr_accrualReportRequirePayroll', 'hr_accrualReportPayIndexSalary', 'hr_accrualReportAvgSalary13', 'hr_accrualReportAvgSalaryMain']
+      // Звіти розрахунку для працівника
+      let employeeReportCalcList = ['saSalary_reportInfoCard', 'saSalary_reportRL', 'saSalary_reportRLMonth', 'accSalary_accrualReportN6', 'saSalary_reportRLEmail', 'saSalary_reportRLMonthEdu']
+
+      let consolReportsFolder = []
+      let accrualReportCalcFolder = []
+      let controlFolder = []
+      let dictionaryFolder = []
+      let employeeReportCalcFolder = []
+      let isfirst = true
+      if (!checkFavorites) {
+        shcuts.forEach(sh => {
+          let isPush = true
+          if (checkFavorites) {
+            isPush = favorites.find(o => o.reportCode === sh.get('code'))
+          }
+          if (isPush) {
+            folderShortcut.push(
+              {
+                ID: sh.get('isFolder') ? '' : sh.get('ID'),
+                isFolder: sh.get('isFolder'),
+                caption: sh.get('caption'),
+                pad: padding,
+                fontSize: sh.get('isFolder') ? 14 : 14
+              }
+            )
+          }
+          if (sh.get('isFolder')) {
+            getShortcutByParent(sh.get('ID'), folderShortcut, padding, checkFavorites)
+          }
+        })
+      } else {
+        shcuts.forEach(sh => {
+          let isPush = true
+          if (checkFavorites) {
+            isPush = favorites.find(o => o.reportCode === sh.get('code'))
+          }
+          if (isPush) {
+            if (consolReportsList.includes(sh.get('code'))) {
+              consolReportsFolder.push(
+                {
+                  ID: sh.get('ID'),
+                  isFolder: 0,
+                  caption: sh.get('caption'),
+                  pad: padding,
+                  fontSize: 14
+                }
+              )
+            }
+            if (accrualReportCalcList.includes(sh.get('code'))) {
+              accrualReportCalcFolder.push(
+                {
+                  ID: sh.get('ID'),
+                  isFolder: 0,
+                  caption: sh.get('caption'),
+                  pad: padding,
+                  fontSize: 14
+                }
+              )
+            }
+            if (controlList.includes(sh.get('code'))) {
+              controlFolder.push(
+                {
+                  ID: sh.get('ID'),
+                  isFolder: 0,
+                  caption: sh.get('caption'),
+                  pad: padding,
+                  fontSize: 14
+                }
+              )
+            }
+            if (dictionaryList.includes(sh.get('code'))) {
+              dictionaryFolder.push(
+                {
+                  ID: sh.get('ID'),
+                  isFolder: 0,
+                  caption: sh.get('caption'),
+                  pad: padding,
+                  fontSize: 14
+                }
+              )
+            }
+            if (employeeReportCalcList.includes(sh.get('code'))) {
+              employeeReportCalcFolder.push(
+                {
+                  ID: sh.get('ID'),
+                  isFolder: 0,
+                  caption: sh.get('caption'),
+                  pad: padding,
+                  fontSize: 14
+                }
+              )
+            }
+          }
+        })
+
+        const addEmptyRow = (folderShortcut) => {
+          return folderShortcut.concat({
+            ID: '',
+            isFolder: 1,
+            caption: '',
+            pad: padding,
+            fontSize: 16
+          })
+        }
+        if (consolReportsFolder.length) {
+          consolReportsFolder.sort((a, b) => {
+            const nameA = a.caption.toUpperCase()
+            const nameB = b.caption.toUpperCase()
+            return a.isFolder ? -1 : nameA < nameB ? -1 : (nameA > nameB ? 1 : 0)
+          })
+          isfirst = false
+          centerFolderShortcut = centerFolderShortcut.concat({
+            ID: '',
+            isFolder: 1,
+            caption: UB.i18n('Консолідовані звіти'),
+            pad: padding,
+            fontSize: 16
+          }, consolReportsFolder)
+        }
+        if (accrualReportCalcFolder.length) {
+          accrualReportCalcFolder.sort((a, b) => {
+            const nameA = a.caption.toUpperCase()
+            const nameB = b.caption.toUpperCase()
+            return a.isFolder ? -1 : nameA < nameB ? -1 : (nameA > nameB ? 1 : 0)
+          })
+          if (!isfirst) centerFolderShortcut = addEmptyRow(centerFolderShortcut)
+          isfirst = true
+          centerFolderShortcut = centerFolderShortcut.concat({
+            ID: '',
+            isFolder: 1,
+            caption: UB.i18n('Звіти для контроля розрахунку нарахувань/утримань'),
+            pad: padding,
+            fontSize: 16
+          }, accrualReportCalcFolder)
+        }
+
+        if (controlFolder.length) {
+          controlFolder.sort((a, b) => {
+            const nameA = a.caption.toUpperCase()
+            const nameB = b.caption.toUpperCase()
+            return a.isFolder ? -1 : nameA < nameB ? -1 : (nameA > nameB ? 1 : 0)
+          })
+          if (!isfirst) rightFolderShortcut = addEmptyRow(rightFolderShortcut)
+          isfirst = false
+          rightFolderShortcut = rightFolderShortcut.concat({
+            ID: '',
+            isFolder: 1,
+            caption: UB.i18n('Списки для контролю'),
+            pad: padding,
+            fontSize: 16
+          }, controlFolder)
+        }
+        if (dictionaryFolder.length) {
+          dictionaryFolder.sort((a, b) => {
+            const nameA = a.caption.toUpperCase()
+            const nameB = b.caption.toUpperCase()
+            return a.isFolder ? -1 : nameA < nameB ? -1 : (nameA > nameB ? 1 : 0)
+          })
+          if (!isfirst) rightFolderShortcut = addEmptyRow(rightFolderShortcut)
+          isfirst = false
+          rightFolderShortcut = rightFolderShortcut.concat({
+            ID: '',
+            isFolder: 1,
+            caption: UB.i18n('Довідки'),
+            pad: padding,
+            fontSize: 16
+          }, dictionaryFolder)
+        }
+        if (employeeReportCalcFolder.length) {
+          employeeReportCalcFolder.sort((a, b) => {
+            const nameA = a.caption.toUpperCase()
+            const nameB = b.caption.toUpperCase()
+            return a.isFolder ? -1 : nameA < nameB ? -1 : (nameA > nameB ? 1 : 0)
+          })
+          if (!isfirst) rightFolderShortcut = addEmptyRow(rightFolderShortcut)
+          isfirst = false
+          rightFolderShortcut = rightFolderShortcut.concat({
+            ID: '',
+            isFolder: 1,
+            caption: UB.i18n('Звіти розрахунку для працівника'),
+            pad: padding,
+            fontSize: 16
+          }, employeeReportCalcFolder)
+        }
+      }
+    }
+
+    let padding = 30
+    const leftFolderShortcut = []
+
+    const regReportFolder = baseFolder.find(o => o.get('code') === 'hr_regReportSalaryCfg')
+    leftFolderShortcut.push({
+      ID: '',
+      isFolder: 1,
+      caption: UB.i18n('Регламентовані звіти'),
+      pad: padding,
+      fontSize: 16
+    })
+    if (regReportFolder) {
+      getShortcutByParent(regReportFolder.get('ID'), leftFolderShortcut, padding)
+    }
+
+    const paramsFolder = baseFolder.find(o => o.get('code') === 'hr_regReportSalaryParamsCfg')
+    leftFolderShortcut.push({
+      ID: '',
+      isFolder: 1,
+      caption: '-',
+      pad: padding,
+      fontSize: 16
+    })
+
+    if (paramsFolder) {
+      getShortcutByParent(paramsFolder.get('ID'), leftFolderShortcut, padding)
+    }
+    result.push(leftFolderShortcut)
+
+    padding = 0
+    const folder = baseFolder.find(o => o.get('code') === 'hr_allReportSalaryCfg')
+    let centerFolderShortcut = []
+    let rightFolderShortcut = []
+
+    if (folder) {
+      getShortcutByParent(folder.get('ID'), rightFolderShortcut, padding, true)
+    }
+
+    result.push(centerFolderShortcut, rightFolderShortcut)
+    return result
+  },
+  onReportClick: function (e) {
+    e.preventDefault()
+    if (e.target.dataset.id && e.target.dataset.id !== '') {
+      const store = UB.core.UBStoreManager.getNavigationShortcutStore()
+      const shortcut = _.find(store.data.items, item => { return item.get('ID') === Number(e.target.dataset.id) })
+
+      if (shortcut.get('code') === 'hr_salaryReportList') {
+        const me = this
+        $App.doCommand({
+          cmdType: 'showForm',
+          formCode: 'hr_salaryReportsList',
+          entity: 'ac_repFavorites',
+          sender: me
+        })
+      } else {
+        $App.runShortcutCommand(shortcut.get('code'), shortcut.get('inWindow'))
+      }
+    }
+  }
+})

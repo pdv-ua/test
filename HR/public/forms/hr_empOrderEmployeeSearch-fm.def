@@ -1,0 +1,1291 @@
+// @isModal true
+/* global UB Ext appAC UB $App _ AC */
+
+exports.formDef = 'HR.empOrderEmployeeSearch'
+
+Ext.define('HR.empOrderEmployeeSearch', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empOrderEmployeeSearch',
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'vbox', align: 'stretch' },
+            name: 'paramsPanel',
+            collapsed: false,
+            items: [
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Тип посади'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'posTypeSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              const sourceData = []
+                              UB.core.UBEnumManager.getArrayStore('HR_POSITION_TYPE').data.items.forEach(item => {
+                                sourceData.push({
+                                  ID: item.get('code'),
+                                  description: item.get('name')
+                                })
+                              })
+                              $App.doCommand({
+                                cmdType: 'showForm',
+                                formCode: 'hr_elementSelectEx',
+                                cmpInitConfig: {
+                                  sourceData,
+                                  selectedData: me.params.positionType,
+                                  onSelectData: (data) => {
+                                    me.params.positionType = data.selected
+                                    me.params.positionTypeText = data.selected.reduce((res, item) => {
+                                      res += item.description + ';'
+                                      return res
+                                    }, '')
+                                    me.attr.positionTypeText.setValue(me.params.positionTypeText)
+                                  }
+                                }
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'positionTypeText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Місце роботи'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'workPlaceSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              const sourceData = []
+                              UB.core.UBEnumManager.getArrayStore('HR_WORKER_PLACE').data.items.forEach(item => {
+                                sourceData.push({
+                                  ID: item.get('code'),
+                                  description: item.get('name')
+                                })
+                              })
+                              $App.doCommand({
+                                cmdType: 'showForm',
+                                formCode: 'hr_elementSelectEx',
+                                cmpInitConfig: {
+                                  sourceData,
+                                  selectedData: me.params.workPlace,
+                                  onSelectData: (data) => {
+                                    me.params.workPlace = data.selected
+                                    me.params.workPlaceText = data.selected.reduce((res, item) => {
+                                      res += item.description + ';'
+                                      return res
+                                    }, '')
+                                    me.attr.workPlaceText.setValue(me.params.workPlaceText)
+                                  }
+                                }
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'workPlaceText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Категорія персоналу'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'dictStaffCatSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              UB.Repository('hr_dictStaffCat')
+                                .attrs(['ID', 'name'])
+                                .orderBy('name')
+                                .selectAsObject({
+                                  'name': 'description'
+                                }).then(sourceData =>
+                                  $App.doCommand({
+                                    cmdType: 'showForm',
+                                    formCode: 'hr_elementSelectEx',
+                                    cmpInitConfig: {
+                                      sourceData,
+                                      selectedData: me.params.dictStaffCat,
+                                      onSelectData: (data) => {
+                                        me.params.dictStaffCat = data.selected
+                                        me.params.dictStaffCatText = data.selected.reduce((res, item) => {
+                                          res += item.description + ';'
+                                          return res
+                                        }, '')
+                                        me.attr.dictStaffCatText.setValue(me.params.dictStaffCatText)
+                                      }
+                                    }
+                                  })
+                                )
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'dictStaffCatText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Тип договору'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'contractTypeSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              const sourceData = []
+                              UB.core.UBEnumManager.getArrayStore('HR_CONTRACT_TYPE').data.items.forEach(item => {
+                                sourceData.push({
+                                  ID: item.get('code'),
+                                  description: item.get('name')
+                                })
+                              })
+                              $App.doCommand({
+                                cmdType: 'showForm',
+                                formCode: 'hr_elementSelectEx',
+                                cmpInitConfig: {
+                                  sourceData,
+                                  selectedData: me.params.contractType,
+                                  onSelectData: (data) => {
+                                    me.params.contractType = data.selected
+                                    me.params.contractTypeText = data.selected.reduce((res, item) => {
+                                      res += item.description + ';'
+                                      return res
+                                    }, '')
+                                    me.attr.contractTypeText.setValue(me.params.contractTypeText)
+                                  }
+                                }
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'contractTypeText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Підрозділ'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'selectPosType',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              UB.Repository('hr_department')
+                                .attrs(['mi_data_id', 'name', 'description'])
+                                .where('orgID', '=', me.orgID || appAC.globalOrganization())
+                                .misc({ __mip_ondate: me.onDate || appAC.globalApplicationDate() })
+                                .where('state', '=', 'ACTIVE')
+                                .orderBy('code')
+                                .selectAsObject({
+                                  'mi_data_id': 'ID'
+                                }).then(sourceData =>
+                                  $App.doCommand({
+                                    cmdType: 'showForm',
+                                    formCode: 'hr_elementSelectEx',
+                                    cmpInitConfig: {
+                                      sourceData,
+                                      selectedData: me.params.department,
+                                      onSelectData: (data) => {
+                                        me.params.department = data.selected
+                                        me.params.departmentText = data.selected.reduce((res, item) => {
+                                          res += item.description + ';'
+                                          return res
+                                        }, '')
+                                        me.attr.departmentText.setValue(me.params.departmentText)
+                                      }
+                                    }
+                                  })
+                                )
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'departmentText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Посади'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'posSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              UB.Repository('hr_dictPosition')
+                                .attrs(['ID', 'description'])
+                                .where('isActive', '=', 1)
+                                .orderBy('description')
+                                .selectAsObject().then(sourceData =>
+                                  $App.doCommand({
+                                    cmdType: 'showForm',
+                                    formCode: 'hr_elementSelectEx',
+                                    cmpInitConfig: {
+                                      sourceData,
+                                      selectedData: me.params.position,
+                                      onSelectData: (data) => {
+                                        me.params.position = data.selected
+                                        me.params.positionText = data.selected.reduce((res, item) => {
+                                          res += item.description + ';'
+                                          return res
+                                        }, '')
+                                        me.attr.positionText.setValue(me.params.positionText)
+                                      }
+                                    }
+                                  })
+                                )
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'positionText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Група підрозділів'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'selectDepGroup',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              UB.Repository('hr_dictMultiGroup')
+                                .attrs(['ID', 'name', 'description'])
+                                .where('orgID', '=', me.orgID || appAC.globalOrganization())
+                                .where('isClose', '=', false)
+                                .misc({ __mip_ondate: me.onDate || appAC.globalApplicationDate() })
+                                .orderBy('code')
+                                .selectAsObject().then(sourceData =>
+                                  $App.doCommand({
+                                    cmdType: 'showForm',
+                                    formCode: 'hr_elementSelectEx',
+                                    cmpInitConfig: {
+                                      sourceData,
+                                      selectedData: me.params.department,
+                                      onSelectData: (data) => {
+                                        me.params.depGroup = data.selected
+                                        me.params.depGroupText = data.selected.reduce((res, item) => {
+                                          res += item.description + ';'
+                                          return res
+                                        }, '')
+                                        me.attr.depGroupText.setValue(me.params.depGroupText)
+                                      }
+                                    }
+                                  })
+                                )
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'depGroupText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Стать'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'sexTypeSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              const sourceData = []
+                              UB.core.UBEnumManager.getArrayStore('HR_SEX_TYPE').data.items.forEach(item => {
+                                sourceData.push({
+                                  ID: item.get('code'),
+                                  description: item.get('name')
+                                })
+                              })
+                              $App.doCommand({
+                                cmdType: 'showForm',
+                                formCode: 'hr_elementSelectEx',
+                                cmpInitConfig: {
+                                  sourceData,
+                                  selectedData: me.params.sexType,
+                                  onSelectData: (data) => {
+                                    me.params.sexType = data.selected
+                                    me.params.sexTypeText = data.selected.reduce((res, item) => {
+                                      res += item.description + ';'
+                                      return res
+                                    }, '')
+                                    me.attr.sexTypeText.setValue(me.params.sexTypeText)
+                                  }
+                                }
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'sexTypeText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Група працівників'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'selectEmpGroup',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              UB.Repository('hr_employeeGroup')
+                                .attrs(['ID', 'name'])
+                                .where('organizationID', '=', me.orgID || appAC.globalOrganization())
+                                .orderBy('name')
+                                .selectAsObject({
+                                  'name': 'description'
+                                }).then(sourceData =>
+                                  $App.doCommand({
+                                    cmdType: 'showForm',
+                                    formCode: 'hr_elementSelectEx',
+                                    cmpInitConfig: {
+                                      sourceData,
+                                      selectedData: me.params.empGroup,
+                                      onSelectData: (data) => {
+                                        me.params.empGroup = data.selected
+                                        me.params.empGroupText = data.selected.reduce((res, item) => {
+                                          res += item.description + ';'
+                                          return res
+                                        }, '')
+                                        me.attr.empGroupText.setValue(me.params.empGroupText)
+                                      }
+                                    }
+                                  })
+                                )
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'empGroupText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'fieldset',
+                    title: UB.i18n('Джерело фінансування'),
+                    margin: '5 5 0 5',
+                    padding: '0 0 5 5',
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            xtype: 'button',
+                            name: 'fundSourceSelectBtn',
+                            margin: '5 5 5 5',
+                            height: 30,
+                            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+                            iconCls: 'fas fa-filter',
+                            cls: 'fill-action',
+                            handler: function () {
+                              $App.connection.run({
+                                entity: 'ac_fundSource',
+                                method: 'selectByOrg',
+                                fieldList: [ 'ID', 'name' ],
+                                orgID: appAC.globalOrganization()
+                              }).then(result => {
+                                const sourceData = []
+                                result.resultData.data.forEach(item => {
+                                  sourceData.push({
+                                    ID: item[0],
+                                    description: item[1]
+                                  })
+                                })
+                                $App.doCommand({
+                                  cmdType: 'showForm',
+                                  formCode: 'hr_elementSelectEx',
+                                  cmpInitConfig: {
+                                    sourceData,
+                                    selectedData: me.params.dictFundSource,
+                                    onSelectData: (data) => {
+                                      me.params.dictFundSource = data.selected
+                                      me.params.dictFundSourceText = data.selected.reduce((res, item) => {
+                                        res += item.description + ';'
+                                        return res
+                                      }, '')
+                                      me.attr.dictFundSourceText.setValue(me.params.dictFundSourceText)
+                                    }
+                                  }
+                                })
+                              })
+                            }
+                          },
+                          {
+                            xtype: 'textfield',
+                            flex: 1,
+                            name: 'dictFundSourceText',
+                            readOnly: true
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'checkbox',
+                        width: 160,
+                        labelWidth: 120,
+                        fieldLabel: UB.i18n('З підлеглими'),
+                        name: 'includeSubDepGroup'
+                      },
+                      {
+                        xtype: 'checkbox',
+                        flex: 1,
+                        labelWidth: 300,
+                        fieldLabel: UB.i18n('З довготривало відсутніми працівниками'),
+                        name: 'withLongTermAbsc'
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        labelWidth: 130,
+                        name: 'dateFired',
+                        fieldLabel: UB.i18n('Звільнені після')
+                      },
+                      {
+                        xtype: 'component',
+                        flex: 1
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'combobox',
+                        name: 'posAccrualCheck',
+                        labelWidth: 200,
+                        flex: 1,
+                        fieldLabel: UB.i18n('Відповідність окладів'),
+                        valueField: 'code',
+                        displayField: 'name',
+                        defaultValue: 'ALL',
+                        store: Ext.create('Ext.data.Store', {
+                          fields: [
+                            { name: 'name' },
+                            { name: 'code' }
+                          ],
+                          data: [
+                            { name: UB.i18n('без обмежень'), code: 'ALL' },
+                            { name: UB.i18n('відповідає посаді'), code: 'CORRESPOND' },
+                            { name: UB.i18n('не відповідає посаді'), code: 'NOT_CORRESPOND' }
+                          ]
+                        }),
+                        listeners: {
+                          change: (ctrl, value) => {
+                            me.attr.datePosCheck.setDisabled(value === 'ALL')
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        labelWidth: 130,
+                        name: 'datePosCheck',
+                        fieldLabel: UB.i18n('На дату')
+                      },
+                      {
+                        xtype: 'component',
+                        flex: 1
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'acGrid',
+        stripeRows: true,
+        storeType: 'local',
+        disablePaging: true,
+        autoScroll: true,
+        name: 'employeeList',
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_empOrderEmployeeSearch_employeeList'),
+        notWriteChanges: true,
+        showToolBar: true,
+        enableMultifilter: true,
+        useCheckBoxColumn: true,
+        checkboxModelConfig: {
+          showHeaderCheckbox: true
+        },
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        flex: 1,
+        region: 'center',
+        /* tbar: Ext.create('Ext.toolbar.Toolbar', {
+          height: 40,
+          items: [
+            {
+              xtype: 'button',
+              text: UB.i18n('Вибрати'),
+              tooltip: UB.i18n('Вибрати'),
+              iconCls: 'fas fa-angle-double-down',
+              cls: 'fill-action',
+              handler: function () {
+                me.selectEmployeeNumbers()
+              }
+            },
+            {
+              xtype: 'checkbox',
+              name: 'hideSelected',
+              labelWidth: 200,
+              fieldLabel: UB.i18n('Не показувати вже доданих'),
+              listeners: {
+                change: function (ctrl) {
+                  const me = ctrl.up('form')
+                  if (me.loaded && me.selected.length) me.selectEmployeeNumbers()
+                }
+              }
+            }
+          ]
+        }), */
+        customToolBarActions: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Вибрати'),
+            tooltip: UB.i18n('Вибрати'),
+            iconCls: 'fas fa-angle-double-down',
+            cls: 'fill-action',
+            handler: function () {
+              me.selectEmployeeNumbers()
+            }
+          },
+          {
+            xtype: 'checkbox',
+            name: 'hideSelected',
+            labelWidth: 200,
+            fieldLabel: UB.i18n('Не показувати вже доданих'),
+            listeners: {
+              change: function (ctrl) {
+                const me = ctrl.up('form')
+                if (me.loaded && me.selected.length) me.selectEmployeeNumbers()
+              }
+            }
+          }
+        ],
+        fields: [
+          { name: 'tabNum', columnConfig: { text: UB.i18n('Таб. №'), width: 80, sortBy: 'Number', filterBy: 'string' } },
+          { name: 'employeeID.lastName', columnConfig: { text: UB.i18n('Прізвище'), flex: 1, filterBy: 'string' } },
+          { name: 'employeeID.firstName', columnConfig: { text: UB.i18n('Ім\'я'), flex: 1, filterBy: 'string' } },
+          { name: 'employeeID.middleName', columnConfig: { text: UB.i18n('По батькові'), flex: 1, filterBy: 'string' } },
+          { name: 'employeeID.sexType.name', columnConfig: { text: UB.i18n('Стать'), flex: 1, filterBy: 'string' } },
+          { name: 'posName', columnConfig: { text: UB.i18n('Посада'), flex: 1, filterBy: 'string' } },
+          { name: 'depName', columnConfig: { text: UB.i18n('Підрозділ'), flex: 1, filterBy: 'string' } },
+          { name: 'dateFrom',
+            columnConfig: {
+              text: UB.i18n('Зміна призначення'),
+              flex: 1,
+              sortBy: 'Date',
+              renderer: Ext.util.Format.dateRenderer('d.m.Y'),
+              filterBy: 'date'
+            }
+          },
+          { name: 'employeeNumberID.dateFrom',
+            columnConfig: {
+              text: UB.i18n('Прийнято в організацію'),
+              flex: 1,
+              sortBy: 'Date',
+              renderer: Ext.util.Format.dateRenderer('d.m.Y'),
+              filterBy: 'date'
+            }
+          },
+          { name: 'fundSourceName', columnConfig: { text: UB.i18n('Джерело фінансування'), flex: 1, filterBy: 'string' } },
+          { name: 'contractType.name', columnConfig: { text: UB.i18n('Тип договору'), flex: 1, filterBy: 'string' } },
+          { name: 'contractType' },
+          { name: 'workPlace' },
+          { name: 'description' },
+          { name: 'employeeNumberID' },
+          { name: 'employeeNumberID.description' },
+          { name: 'positionTypeName' },
+          { name: 'dictPositionID' },
+          { name: 'dictStaffCatID.name' },
+          { name: 'dictStaffCatID' },
+          { name: 'employeePositionID' },
+          { name: 'employeeID' }
+        ],
+        getRowClass: function (row) {
+          const seletedRow = me.selected.find(o => o === row.get(me.field === 'employeeNumberID' ? 'employeeNumberID' : 'employeePositionID'))
+          if (seletedRow) {
+            return 'grd-color-blue-italic'
+          }
+        }
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 120,
+            height: 30,
+            iconCls: 'u-icon-close',
+            cls: 'red-action',
+            margin: '10 10 10 0',
+            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+            handler: function () {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Замінити'),
+            height: 30,
+            margin: '10 10 10 0',
+            iconCls: 'fas fa-exchange-alt',
+            cls: 'green-action',
+            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+            handler: function () {
+              me.closeAndLoad(true)
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Додати'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            iconCls: 'fas fa-plus',
+            cls: 'blue-action',
+            style: 'border: 1px solid #BFBFBF; border-radius: 4px;',
+            handler: function () {
+              me.closeAndLoad(false)
+            }
+          }
+        ]
+      }
+    ]
+
+    me.closeAndLoad = function (isDelete = false) {
+      const selection = me.attr.grid.getSelectionModel().selected.items
+      if (!selection.length) {
+        $App.dialogInfo(UB.i18n('Не вибраний жодний працівник'), UB.i18n('Увага'))
+        return
+      }
+      let saver
+      if (me.entityID) {
+        if (!me.params.ID) {
+          saver = $App.connection.insert({
+            entity: 'hr_empFilterParam',
+            execParams: {
+              entityID: me.entityID,
+              params: me.params
+            }
+          })
+        } else {
+          saver = $App.connection.update({
+            entity: 'hr_empFilterParam',
+            execParams: {
+              ID: me.params.ID,
+              params: me.params
+            }
+          })
+        }
+      } else {
+        saver = Promise.resolve()
+      }
+      saver.then(() => {
+        if (me.onSelectData && _.isFunction(me.onSelectData)) {
+          const data = []
+          selection.forEach(item => {
+            data.push(item.getData())
+          })
+          me.onSelectData(data, isDelete)
+        }
+        me.up('window').close()
+      })
+    }
+
+    me.selectEmployeeNumbers = async (empNumIDs = []) => {
+      me.setLoading(true)
+      const onDate = me.onDate || appAC.globalApplicationDate()
+      const excludeEmpNumIDs = []
+      if (!me.attr.withLongTermAbsc.getValue()) {
+        const longTermAbscEmpNum = await UB.Repository('hr_empLongTermAbsc')
+          .attrs('employeeNumberID')
+          .where('organizationID', '=', me.orgID || appAC.globalOrganization())
+          .where('dateFrom', '<=', onDate)
+          .where('dateTo', '>=', onDate)
+          .where('employeeNumberID.mi_deleteDate', '>=', '#maxdate')
+          .selectAsObject()
+        excludeEmpNumIDs.push(...longTermAbscEmpNum.map(o => o.employeeNumberID))
+      }
+      const empPosition = UB.Repository('hr_employeePositionS')
+        .attrs(['ID', 'tabNum', 'employeeNumberID', 'employeeID', 'employeeID.lastName', 'employeeID.firstName', 'employeeID.middleName',
+          'posName', 'depName', 'workPlace', 'dateFrom', 'dateTo', 'description', 'employeeID.fullFIO', 'contractType', 'contractType.name', 'employeeID.sexType.name',
+          'fundSourceNames', 'employeeNumberID.dateFrom', 'employeeNumberID.description', 'dictStaffCatID', 'dictStaffCatID.name', 'positionTypeName', 'dictPositionID'
+        ])
+        .where('organizationID', '=', me.orgID || appAC.globalOrganization())
+        .where('employeeNumberID.mi_deleteDate', '>=', '#maxdate')
+        .orderBy('employeeID.fullFIO', 'ASC')
+      if (me.attr.dateFired.getValue()) {
+        empPosition.where('employeeNumberID.dateTo', '>=', me.attr.dateFired.getValue())
+          .where('employeeNumberID.dateTo', '<=', appAC.globalApplicationDate())
+          .where('[dateTo]=[maxDateTo]', 'custom')
+      } else {
+        empPosition.where('dateFrom', '<=', me.dateTo ? me.dateTo : onDate)
+          .where('dateTo', '>=', me.dateFrom ? me.dateFrom : onDate)
+      }
+      if (empNumIDs.length) {
+        empPosition.where('employeeNumberID', 'in', empNumIDs)
+      } else {
+        if (excludeEmpNumIDs.length) {
+          empPosition.where('employeeNumberID', 'notIn', excludeEmpNumIDs)
+        }
+        if (me.attr.hideSelected.getValue()) {
+          empPosition.where(me.field === 'employeeNumberID' ? 'employeeNumberID' : 'ID', 'notIn', me.selected)
+        }
+        if (me.params.positionType.length) {
+          empPosition.where('positionType', 'in', me.params.positionType.map(o => o.value))
+        }
+        if (me.params.dictStaffCat.length) {
+          empPosition.where('dictStaffCatID', 'in', me.params.dictStaffCat.map(o => o.value))
+        }
+        if (me.params.workPlace.length) {
+          empPosition.where('workPlace', 'in', me.params.workPlace.map(o => o.value))
+        }
+        if (me.params.position.length) {
+          empPosition.exists(
+            UB.Repository('hr_position')
+              .attrs('mi_data_id')
+              .where('dictPositionID', 'in', me.params.position.map(o => o.value))
+              .where('mi_dateFrom', '<=', onDate)
+              .where('mi_dateTo', '>=', onDate)
+              .where('mi_deleteDate', '>=', '#maxdate')
+              .where('state', '=', 'ACTIVE')
+              .correlation('mi_data_id', 'positionID')
+          )
+        }
+        if (me.params.contractType.length) {
+          empPosition.where('contractType', 'in', me.params.contractType.map(o => o.value))
+        }
+        if (me.params.sexType.length) {
+          empPosition.where('employeeID.sexType', 'in', me.params.sexType.map(o => o.value))
+        }
+        if (me.params.dictFundSource.length) {
+          empPosition.exists(UB.Repository('hr_empPosFundSource')
+            .correlation('employeePositionID', 'ID')
+            .where('dictFundSourceID', 'in', me.params.dictFundSource.map(o => o.value))
+          )
+        }
+        if (me.params.department.length || me.params.depGroup.length) {
+          let depIDList = []
+
+          if (me.params.department.length) {
+            depIDList = depIDList.concat(me.params.department.map(o => o.value))
+          }
+          if (me.params.depGroup.length) {
+            let dictMultiGroupDepsID = await UB.Repository('hr_dictMultiGroupDep')
+              .attrs('departmentID')
+              .where('dictMultiGroupID', 'in', me.params.depGroup.map(o => o.value))
+              .selectAsArrayOfValues()
+            if (dictMultiGroupDepsID.length) {
+              depIDList = depIDList.concat(dictMultiGroupDepsID)
+            }
+          }
+          if (me.attr.includeSubDepGroup.getValue() && depIDList.length) {
+            let subDepList = []
+            for (let i = 0; i < depIDList.length; i++) {
+              let childDep = await UB.Repository('hr_department')
+                .attrs('mi_data_id')
+                .where('mi_treePath', 'like', `%${depIDList[i]}%`)
+                .where('state', '=', 'ACTIVE')
+                .misc({ __mip_ondate: onDate })
+                .selectAsArrayOfValues()
+              subDepList = subDepList.concat(childDep)
+            }
+            depIDList = depIDList.concat(subDepList)
+          }
+          empPosition.whereIf(depIDList.length, 'departmentID', 'in', depIDList)
+        }
+      }
+      if (me.params.empGroup.length) {
+        empPosition.where('employeeNumberID', 'in', UB.Repository('hr_employeeGroupDet')
+          .attrs('employeeNumberID')
+          .where('employeeGroupID', 'in', me.params.empGroup.map(o => o.value))
+        )
+      }
+      if (me.employeeLimitedAccess && !AC.entityUtils.verifyRightsMethod('hr_employeeNumber', 'employeeLimitedAccess')) {
+        empPosition.where('employeeNumberID.limitedAccess', '=', 0)
+      }
+      if (me.attr.posAccrualCheck.getValue() !== 'ALL') {
+        const datePosCheck = me.attr.datePosCheck.getValue() || onDate || appAC.globalApplicationDate()
+        if (!me.attr.datePosCheck.getValue()) {
+          me.attr.datePosCheck.setValue(datePosCheck)
+        }
+        if (me.attr.posAccrualCheck.getValue() === 'CORRESPOND') {
+          empPosition.where('[positionID.accrualSum] = [accrualSum]', 'custom')
+        }
+        if (me.attr.posAccrualCheck.getValue() === 'NOT_CORRESPOND') {
+          empPosition.where('[positionID.accrualSum] <> [accrualSum]', 'custom')
+        }
+        empPosition
+          .joinCondition('positionID.mi_dateFrom', '<=', AC.dateService.shiftDate(datePosCheck))
+          .joinCondition('positionID.mi_dateTo', '>=', AC.dateService.shiftDate(datePosCheck))
+          .joinCondition('positionID.mi_deleteDate', '>=', '#maxdate')
+          .joinCondition('positionID.state', '=', 'ACTIVE')
+      }
+      try {
+        const data = await empPosition.selectAsObject({
+          'ID': 'employeePositionID'
+        })
+        let resultData = []
+        data.forEach(item => {
+          item['fundSourceName'] = (item['fundSourceNames'] || []).map(row => `${row.name} (${row.mtCount})`).join(', ')
+          if (me.uniqueEmployeeNumbers) {
+            let e = resultData.find(e => e.employeeNumberID === item.employeeNumberID)
+            if (!e) {
+              resultData.push(item)
+            } else {
+              if (AC.dateService.shiftDate(item.dateFrom) > AC.dateService.shiftDate(e.dateFrom)) {
+                for (const fld in item) {
+                  if (item.hasOwnProperty(fld)) {
+                    e[fld] = item[fld]
+                  }
+                }
+              }
+            }
+          }
+        })
+        me.setLoading(false)
+        if (empNumIDs.length) {
+          const notExistedIDs = []
+          _.uniq(empNumIDs).forEach(empNumID => {
+            if (!data.find(o => o.employeeNumberID === empNumID)) {
+              notExistedIDs.push(empNumID)
+            }
+          })
+          if (notExistedIDs.length) {
+            const emps = await UB.Repository('hr_employeeNumberS').attrs('description').where('ID', 'in', _.uniq(notExistedIDs)).selectAsObject()
+            $App.dialogInfo(UB.i18n('Неможливо додати наступних працівників: {0}. Не має діючого призначення', emps.map(o => o.description).join('<br />')), UB.i18n('Увага'))
+          }
+        }
+        const store = me.attr.grid.getStore()
+        me.attr.grid.removeAll()
+        store.insert(store.data.length, me.uniqueEmployeeNumbers ? resultData : data)
+        me.attr.panel.collapse()
+      } catch (e) {
+        me.setLoading(false)
+      }
+      me.loaded = true
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      const panel = me.down('[name=paramsPanel]')
+      panel.header.add({ xtype: 'component', flex: 1 })
+      panel.header.add(
+        {
+          xtype: 'button',
+          tooltip: UB.i18n('Пошук працівників'),
+          iconCls: 'fa fa-search',
+          cls: 'blue-action',
+          handler: function () {
+            me.attr.panel.collapse()
+            $App.doCommand({
+              cmdType: 'showForm',
+              formCode: 'hr_searchEmployee',
+              customParams: {
+                showSelectButton: true
+              },
+              cmpInitConfig: {
+                onSelectData: function (data, isDelete) {
+                  const empNumIDs = data.map(o => o.employeeNumberID)
+                  me.selectEmployeeNumbers(empNumIDs)
+                }
+              }
+            })
+          }
+        }
+      )
+      me.attr = {
+        panel,
+        grid: me.down('[name=employeeList]'),
+        positionTypeText: me.down('[name=positionTypeText]'),
+        dictStaffCatText: me.down('[name=dictStaffCatText]'),
+        departmentText: me.down('[name=departmentText]'),
+        depGroupText: me.down('[name=depGroupText]'),
+        workPlaceText: me.down('[name=workPlaceText]'),
+        positionText: me.down('[name=positionText]'),
+        dictFundSourceText: me.down('[name=dictFundSourceText]'),
+        contractTypeText: me.down('[name=contractTypeText]'),
+        sexTypeText: me.down('[name=sexTypeText]'),
+        hideSelected: me.down('[name=hideSelected]'),
+        withLongTermAbsc: me.down('[name=withLongTermAbsc]'),
+        includeSubDepGroup: me.down('[name=includeSubDepGroup]'),
+        dateFired: me.down('[name=dateFired]'),
+        posAccrualCheck: me.down('[name=posAccrualCheck]'),
+        datePosCheck: me.down('[name=datePosCheck]'),
+        empGroupText: me.down('[name=empGroupText]')
+      }
+      if (me.params.department.length) {
+        me.params.departmentText = me.params.department.reduce((res, item) => {
+          res += item.description + ';'
+          return res
+        }, '')
+        me.attr.departmentText.setValue(me.params.departmentText)
+      }
+      if (me.params.depGroup.length) {
+        me.params.depGroupText = me.params.depGroup.reduce((res, item) => {
+          res += item.description + ';'
+          return res
+        }, '')
+        me.attr.depGroupText.setValue(me.params.depGroupText)
+      }
+      if (me.params.workPlace.length) {
+        me.params.workPlaceText = me.params.workPlace.reduce((res, item) => {
+          res += item.description + ';'
+          return res
+        }, '')
+        me.attr.workPlaceText.setValue(me.params.workPlaceText)
+      }
+      if (me.params.position.length) {
+        me.params.positionText = me.params.position.reduce((res, item) => {
+          res += item.description + ';'
+          return res
+        }, '')
+        me.attr.positionText.setValue(me.params.positionText)
+      }
+      if (me.params.positionType.length) {
+        me.params.positionTypeText = me.params.positionType.reduce((res, item) => {
+          res += item.description + ';'
+          return res
+        }, '')
+        me.attr.positionTypeText.setValue(me.params.positionTypeText)
+      }
+      if (me.params.dictStaffCat.length) {
+        me.params.dictStaffCatText = me.params.dictStaffCat.reduce((res, item) => {
+          res += item.description + ';'
+          return res
+        }, '')
+        me.attr.dictStaffCatText.setValue(me.params.dictStaffCatText)
+      }
+      if (me.params.contractType.length) {
+        me.params.contractTypeText = me.params.contractType.reduce((res, item) => {
+          res += item.description + ';'
+          return res
+        }, '')
+        me.attr.contractTypeText.setValue(me.params.contractTypeText)
+      }
+      if (me.params.empGroup.length) {
+        me.params.empGroupText = me.params.empGroup.reduce((res, item) => {
+          res += item.name + ';'
+          return res
+        }, '')
+        me.attr.empGroupText.setValue(me.params.empGroupText)
+      }
+      const hideSelectedChkBox = me.down('[name=hideSelected]')
+      if (hideSelectedChkBox) {
+        hideSelectedChkBox.inputEl.el.setStyle('margin-top', '2px')
+      }
+      me.attr.posAccrualCheck.setValue('ALL')
+      if (me.onDate) {
+        me.attr.datePosCheck.setValue(AC.dateService.addDays(me.onDate, -1))
+      } else {
+        me.attr.datePosCheck.setValue(appAC.globalApplicationDate())
+      }
+    }, me)
+
+    me.params = {
+      ID: null,
+      positionType: me.positionType || [],
+      dictStaffCat: me.dictStaffCat || [],
+      workPlace: me.workPlace || [],
+      department: me.department || [],
+      depGroup: me.depGroup || [],
+      position: me.position || [],
+      dictFundSource: me.dictFundSource || [],
+      contractType: me.contractType || [],
+      sexType: me.sexType || [],
+      empGroup: me.empGroup || [],
+      positionTypeText: '',
+      dictStaffCatText: '',
+      workPlaceText: '',
+      departmentText: '',
+      depGroupText: '',
+      positionText: '',
+      dictFundSourceText: '',
+      contractTypeText: '',
+      sexTypeText: '',
+      empGroupText: ''
+    }
+    me.selected = me.selected || []
+    me.loaded = false
+
+    if (me.entityID) {
+      UB.Repository('hr_empFilterParam')
+        .attrs('ID', 'params')
+        .where('entityID', '=', me.entityID)
+        .selectSingle().then(data => {
+          if (data) {
+            me.params = _.merge(me.params, data.params)
+            me.params.ID = data.ID
+            if (me.department && me.department.length) {
+              me.params.department = me.department
+            } else {
+              me.attr.departmentText.setValue(me.params.departmentText)
+            }
+            if (me.depGroup && me.depGroup.length) {
+              me.params.depGroup = me.depGroup
+            } else {
+              me.attr.depGroupText.setValue(me.params.depGroupText)
+            }
+            if (me.workPlace && me.workPlace.length) {
+              me.params.workPlace = me.workPlace
+            } else {
+              me.attr.workPlaceText.setValue(me.params.workPlaceText)
+            }
+            if (me.position && me.position.length) {
+              me.params.position = me.position
+            } else {
+              me.attr.positionText.setValue(me.params.positionText)
+            }
+            if (me.dictStaffCat && me.dictStaffCat.length) {
+              me.params.dictStaffCat = me.dictStaffCat
+            } else {
+              me.attr.dictStaffCatText.setValue(me.params.dictStaffCatText)
+            }
+            if (me.positionType && me.positionType.length) {
+              me.params.positionType = me.positionType
+            } else {
+              me.attr.positionTypeText.setValue(me.params.positionTypeText)
+            }
+            if (me.dictFundSource && me.dictFundSource.length) {
+              me.params.dictFundSource = me.dictFundSource
+            } else {
+              me.attr.dictFundSourceText.setValue(me.params.dictFundSourceText)
+            }
+            if (me.contractType && me.contractType.length) {
+              me.params.contractType = me.contractType
+            } else {
+              me.attr.contractTypeText.setValue(me.params.contractTypeText)
+            }
+            if (me.sexType && me.sexType.length) {
+              me.params.sexType = me.sexType
+            } else {
+              me.attr.sexTypeText.setValue(me.params.sexTypeText)
+            }
+            if (me.empGroup && me.empGroup.length) {
+              me.params.empGroup = me.empGroup
+            } else {
+              me.attr.empGroupText.setValue(me.params.empGroupText)
+            }
+          }
+        })
+    }
+    me.callParent(arguments)
+  }
+})

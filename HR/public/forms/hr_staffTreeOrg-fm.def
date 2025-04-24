@@ -1,0 +1,121 @@
+/* global Ext appAC $App UB */
+
+exports.formDef = 'HR.staffTreeOrg'
+
+Ext.define(exports.formDef, {
+  extend: 'Ext.panel.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  width: 1100,
+  height: 600,
+  initComponent: function () {
+    let me = this
+    me.staffTreeControl = Ext.widget('staffTreeControl', {
+      xtype: 'staffTreeControl',
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_staffTreeOrg_staffTreeControl'),
+      readOnly: true,
+      onDate: appAC.globalApplicationDate(),
+      allOrganization: true,
+      searchFeature: true,
+      showNode: ['hr_organization'],
+      fields: [
+        {
+          name: 'ID',
+          type: 'number'
+        },
+        {
+          name: 'text',
+          type: 'string'
+        },
+        {
+          name: 'description',
+          type: 'string'
+        },
+        {
+          name: 'state',
+          type: 'string'
+        },
+        {
+          name: 'EDRPOUCode',
+          type: 'string'
+        },
+        {
+          name: 'dateFrom',
+          type: 'string'
+        },
+        {
+          name: 'dateTo',
+          type: 'string'
+        },
+        {
+          name: 'staffOrder',
+          type: 'string'
+        },
+        {
+          name: 'stateCode',
+          type: 'string'
+        },
+        {
+          name: 'mi_data_id',
+          type: 'number'
+        }
+      ],
+      columns: [
+        {
+          xtype: 'treecolumn',
+          flex: 1,
+          minWidth: 150,
+          sortable: false,
+          dataIndex: 'text'
+        },
+        {
+          text: UB.i18n('ЄДРПОУ'),
+          width: 100,
+          dataIndex: 'EDRPOUCode'
+        },
+        {
+          text: UB.i18n('Наказ'),
+          width: 100,
+          dataIndex: 'staffOrder'
+        },
+        {
+          text: UB.i18n('Дата початку дії'),
+          width: 100,
+          sortable: false,
+          dataIndex: 'dateFrom'
+        },
+        {
+          text: UB.i18n('Дата закінчення дії'),
+          width: 100,
+          sortable: false,
+          dataIndex: 'dateTo'
+        }
+      ]
+    })
+
+    me.items = [
+      me.staffTreeControl
+    ]
+
+    const changeGlobal = () => {
+      const node = me.staffTreeControl.tree.store.getRootNode()
+      if (node) {
+        me.staffTreeControl.onDate = appAC.globalApplicationDate()
+        me.staffTreeControl.clearTree(node)
+        me.staffTreeControl.appendItems([appAC.globalOrganization()], node)
+      }
+    }
+
+    me.on('afterrender', () => {
+      $App.on('ac:app:operationDateChanged', changeGlobal)
+    }, me)
+
+    me.on('destroy', () => {
+      $App.un('ac:app:operationDateChanged', changeGlobal)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

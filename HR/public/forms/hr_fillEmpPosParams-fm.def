@@ -1,0 +1,182 @@
+// @isModal true
+/* global appAC appHR UB Ext AC $App HR */
+
+exports.formDef = 'HR.fillEmpPosParams'
+
+Ext.define('HR.fillEmpPosParams', {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.fillEmpPosParams',
+  width: 600,
+  height: 400,
+  layout: {
+    type: 'border'
+  },
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  isModal: true,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        margin: {
+          top: 10
+        },
+        layout: { type: 'vbox' },
+        items: [
+          {
+            xtype: 'radiogroup',
+            name: 'source',
+            columns: 1,
+            vertical: true,
+            labelWidth: 100,
+            fieldLabel: UB.i18n('Заповнити'),
+            items: [
+              {
+                name: 'sourceItem',
+                boxLabel: UB.i18n('Призначення за Посадою'),
+                inputValue: 'position',
+                width: 450
+              },
+              {
+                name: 'sourceItem',
+                boxLabel: UB.i18n('Посади за Призначенням'),
+                inputValue: 'employee'
+              }
+            ]
+          },
+          {
+            xtype: 'checkbox',
+            checked: true,
+            name: 'fullUpdate',
+            boxLabelAlign: 'after',
+            boxLabel: UB.i18n('Оновлювати дані внесені раніше'),
+            labelWidth: 250,
+            margin: {
+              left: 140
+            }
+          }
+        ]
+      },
+      {
+        xtype: 'acGrid',
+        name: 'columnsList',
+        width: 450,
+        autoScroll: true,
+        storeType: 'local',
+        disablePaging: true,
+        notWriteChanges: true,
+        showToolBar: false,
+        region: 'center',
+        useCheckBoxColumn: true,
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        fields: [
+          { name: 'code' },
+          { name: 'description', columnConfig: { text: UB.i18n('Атрибути'), flex: 1 } }
+        ],
+        getRowClass: function (record) {
+          if (record.get('isChecked')) {
+            return 'ub-grid-row-selected'
+          }
+        },
+        onAfterRender: async (grid) => {
+          const storeData = [
+            // { code: 'positionType', description: UB.i18n('Тип посади') },
+            { code: 'workScheduleID', description: UB.i18n('Графік роботи') },
+            { code: 'payElID', description: UB.i18n('Вид оплати') },
+            { code: 'accrualSum', description: UB.i18n('Оклад') },
+            { code: 'dictStaffCatID', description: UB.i18n('Категорія персоналу') },
+            { code: 'dictTarifCoeffID', description: UB.i18n('Тарифний розряд') }
+          ]
+          const costType = await UB.Repository('hr_payDim')
+            .attrs('ID')
+            .where('dimension.entityName', '=', 'ac_dictCostType')
+            .where('dimension.mi_deleteDate', '=', '#maxdate')
+            .selectSingle()
+          if (costType) {
+            storeData.push({ code: 'dictCostTypeID', description: UB.i18n('Місце виникнення витрат') })
+          }
+          grid.setLocalStoreData(storeData)
+        },
+        onRowChecked: (grid, record) => {
+          if (!me.attrList) me.attrList = []
+          me.attrList.push(record.get('code'))
+        },
+        onRowUnchecked: (grid, record) => {
+          if (me.attrList) {
+            const idx = me.attrList.indexOf(record.get('code'))
+            if (idx >= 0) me.attrList.splice(idx, 1)
+          }
+        }
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 150,
+            height: 30,
+            cls: 'red-action',
+            margin: '10 10 10 0',
+            handler: function () {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Заповнити'),
+            width: 150,
+            height: 30,
+            margin: '10 10 10 0',
+            cls: 'blue-action',
+            handler: function () {
+              const source = me.down('[name=source]').getValue() || {}
+              if (!source['sourceItem'] && !me.attrList.length) return
+              const message = source['sourceItem'] === 'position'
+                ? UB.i18n('Заповнити атрибути призначення з посади?')
+                : UB.i18n('Заповнити атрибути посади з призначення?')
+              $App.dialogYesNo('Попередження', message).then(isAgree => {
+                if (!isAgree) {
+                  return
+                }
+                me.setLoading(true)
+                $App.connection.run({
+                  entity: 'hr_importCustom',
+                  method: 'fillEmpPosData',
+                  onDate: appAC.globalApplicationDate(),
+                  orgID: appAC.globalOrganization(),
+                  source: source['sourceItem'],
+                  fullUpdate: me.down('[name=fullUpdate]').getValue(),
+                  attrs: me.attrList
+                }).then(response => {
+                  me.setLoading(false)
+                  $App.dialogInfo(UB.i18n(`Операція успішно виконана.`))
+                }, (err) => {
+                  me.setLoading(false)
+                  if (err.config && err.config.timeout) {
+                    $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                  } else {
+                    throw err
+                  }
+                })
+              })
+            }
+          }
+        ]
+      }
+    ]
+
+    me.on('afterrender', async () => {
+      const me = this
+      me.attrList = []
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,222 @@
+/* global Ext $App HR AC appAC UB */
+exports.formDef = 'HR.reportListOrgstructure'
+
+Ext.define('HR.reportListOrgstructure', {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.reportListOrgstructure',
+  width: 800,
+  height: 400,
+  layout: { type: 'vbox', align: 'stretch' },
+  autoScroll: true,
+  flex: 1,
+  items: [
+    {
+      xtype: 'panel',
+      region: 'center',
+      name: 'reportPanel',
+      flex: 1,
+      items: []
+    }
+  ],
+  initComponent: function () {
+    const me = this
+    const control = Ext.create('Ext.Component', {
+      flex: 1,
+      margin: 0,
+      autoEl: {
+        tag: 'iframe'
+      }
+    })
+    const container = Ext.create('Ext.panel.Panel', {
+      layout: { type: 'vbox', align: 'stretch' },
+      flex: 1,
+      items: [
+        {
+          flex: 1,
+          autoScroll: true,
+          layout: { type: 'hbox', pack: 'center', align: 'stretch' },
+          bodyCls: 'ub-panel-gray',
+          items: [control]
+        }]
+    })
+    me.items = [container]
+    me.reportControl = control
+    me.on('afterrender', function () {
+      me.showDesktop()
+    })
+    me.callParent(arguments)
+  },
+  showDesktop: async function () {
+    const me = this
+
+    const iFrame = me.reportControl.getEl().dom
+    const iFrameDoc = iFrame.contentDocument
+    const style = [HR.controlService.getShortcutListStyle()]
+    let template = `<table style="border-collapse: collapse; word-break: break-word;" border="0px" cellspacing="0" cellpadding="3px">`
+    template += `<tbody>
+      <tr> 
+        <td width="600" style="vertical-align: top;">
+          <table style="border-collapse: collapse; word-break: break-word;" border="0px" cellspacing="0" cellpadding="3px">
+            <tbody>
+              <tr> 
+                <td width="600" style="font-size: 16px; height: 48px; font-weight: bold;">${UB.i18n('Звіти за оргструктурою')}</td>
+              </tr>
+              <tr> 
+                <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_organizationAddresses'>${UB.i18n('Адреси організацій')}</a></td>
+              </tr>
+              <tr> 
+                <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgcountsByCateg'>${UB.i18n('Довідка про кількість штатних одиниць та ФЗП за категоріями персоналу')}</a></td>
+              </tr>
+              <tr>
+                <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgstructConsolidated'>${UB.i18n('Зведений штатний розпис')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgstructConsolidatedAccrual'>${UB.i18n('Зведений штатний розпис з доплатами та надбавками')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportDepEvents'>${UB.i18n('Звіт про кадрові зміни по підрозділу (за період)')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgposCount'>${UB.i18n('Звіт щодо кількості посад у штатному розписі')}</a></td>
+              </tr>
+              <!--<tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgstructInfo'>${UB.i18n('Інформація до штатного розпису (змін до штатного розпису) органу виконавчої влади')}</a></td>
+              </tr>-->
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportPositionByType'>${UB.i18n('Кількість посад організації в розрізі категорій персоналу')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportEmpCountPositionByCategory'>${UB.i18n('Кількісний склад за категоріями посад')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportVacanciesList'>${UB.i18n('Перелік вакантних посад')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgplan'>${UB.i18n('Плановий штатний розпис')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportAboutStaffing'>${UB.i18n('Про укомплектованість')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgposExpanded'>${UB.i18n('Розширений штатно-посадовий список')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgcounts'>${UB.i18n('Структура та чисельність штатних одиниць')}</a></td>
+              </tr>
+              ${$App.domainInfo.models.HRMED ? `<tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportTariffing'>${UB.i18n('Тарифікаційний список (фактичний)')}</a></td>
+              </tr>` : ''}
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgstruct'>${UB.i18n('Штатний розпис')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgstructWithAccrual'>${UB.i18n('Штатний розпис з нарахуваннями')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportTypicalOrgPlanByPayGroup'>${UB.i18n('Штатний розпис з доплатами та надбавками (по видам нарахувань)')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportOrgpos'>${UB.i18n('Штатно-посадовий список')}</a></td>
+              </tr>   
+              <tr> 
+                <td width="600" style="font-size: 16px; height: 48px; font-weight: bold;">${UB.i18n('Списки для контролю даних')}</td>
+              </tr>    
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_empListdictPosition'>${UB.i18n('Штатні посади')}</a></td>
+              </tr>  
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_empListControlDictPosition'>${UB.i18n('Довідник посад')}</a></td>
+              </tr>    
+            </tbody>
+          </table>
+        </td>
+        <td width="600" style="vertical-align: top;">
+          <table style="border-collapse: collapse; word-break: break-word;" border="0px" cellspacing="0" cellpadding="3px">
+            <tbody>
+              <tr> 
+                <td width="600" style="font-size: 16px; height: 48px; font-weight: bold;">${UB.i18n('Звіти статистичні за ФОП')}</td>          
+              </tr>
+              <tr> 
+                <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_report_averageStatistics'>${UB.i18n('Звіт по середньообліковій чисельності та середньомісячній зарплаті')}</a></td>
+              </tr>
+              <tr> 
+                <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportAverageSalary'>${UB.i18n('Звіт по середній заробітній платі')}</a></td>
+              </tr>
+              <tr>
+                <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportForm31e'>${UB.i18n('Форма 31 енерго')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='accSalary_accrualReportFOP'>${UB.i18n('Звіт з ФОП')}</a></td>
+              </tr>  
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='accSalary_accrualReportIndividualEmpContract'>${UB.i18n('Звіт по індивідуальним трудовим договорам (контракт)')}</a></td>
+              </tr>   
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='accSalary_accrualReportWork'>${UB.i18n('Звіт з праці')}</a></td>
+              </tr>   
+              <tr>
+                <td width="600" style="font-size: 16px; height: 48px; font-weight: bold;">${UB.i18n('Регламентовані звіти')}</td>
+              </tr>
+              <tr>
+                <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_regReportSalary1PVK'>${UB.i18n('Звіт з праці 1-ПВ квартальна')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_regReportSalary1PVM'>${UB.i18n('Звіт з праці 1-ПВ місячна')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_regReportSalaryB'>${UB.i18n('Форма № 3-борг')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_regReportEmployment'>${UB.i18n('ІНФОРМАЦІЯ про зайнятість (річна)')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_regReport10PI'>${UB.i18n('Форма № 10-ПОІ (річна)')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 16px; height: 48px; font-weight: bold;">${UB.i18n('За наказами з персоналу')}</td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_empListDism'>${UB.i18n('Звільнені за період')}</a></td>        
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_empListMoved'>${UB.i18n('Переведені за період')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_empListAppointed'>${UB.i18n('Призначені за період')}</a></td>        
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_empListJobRequirements'>${UB.i18n('Список працівників за відповідністю вимогам по посаді')}</a></td>        
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 16px; height: 48px; font-weight: bold;">${UB.i18n('Звіти для контролю розрахунку')}</td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='accSalary_accrualReportPaySummary'>${UB.i18n('Розрахункова відомість (довільна форма)')}</a></td>
+              </tr>
+              <tr>
+                  <td width="600" style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='accSalary_accrualReportTimeCost'>${UB.i18n('Список працівників з елементами обліку у табелі')}</a></td>
+              </tr>
+            </tbody>
+          </table>              
+        </td>          
+      </tr>
+    </tbody></table>
+    `
+    iFrameDoc.body.innerHTML = template
+    iFrameDoc.head.innerHTML = `<style type="text/css">
+        ${style.join('\n')}
+      </style>`
+
+    const refs = iFrameDoc.getElementsByTagName('a')
+    for (let i = 0, L = refs.length; i < L; i++) {
+      refs[i].addEventListener('click', me.onReportClick, true)
+    }
+  },
+  onReportClick: (e) => {
+    e.preventDefault()
+    let shortcutCode = e.target.dataset.code
+    if (shortcutCode) {
+      $App.runShortcutCommand(shortcutCode)
+    }
+  }
+})

@@ -1,0 +1,119 @@
+/* global UB $App AC Ext */
+exports.formDef = {
+  size: {
+    width: 1100,
+    height: 600
+  },
+  requiredFields: ['dictSalarySchemeID', 'dictSalarySchemeID.schemeType', 'dictSalarySchemeID.setAccrualByMinValue'],
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 150 },
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'code', width: 300, labelWidth: 150 }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'sortNumber',
+              width: 300,
+              labelWidth: 150,
+              xtype: 'numberfield',
+              vtype: 'numberValidator',
+              maskRe: AC.validators.maskRe('number')
+            }
+          ]
+        },
+        { attributeName: 'name' },
+        { attributeName: 'dictPositionID' },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'accrualSumMin', width: 290, labelWidth: 150, hidden: true },
+            { attributeName: 'accrualSumMax', width: 290, labelWidth: 150, hidden: true },
+            { attributeName: 'accrualSum', width: 290, labelWidth: 150, hidden: true }
+          ]
+        },
+        { attributeName: 'isActive', labelWidth: 150 }
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      name: 'gridSalarySchemeDet',
+      entityConfig: {
+        entity: 'hr_dictSalarySchemeDet',
+        method: 'select',
+        fieldList: [
+          { name: 'coefMin' },
+          { name: 'coefMax' },
+          { name: 'accrualSum' },
+          { name: 'accrualSumMin' },
+          { name: 'accrualSumMax' },
+          {
+            name: 'accrualSumAvg',
+            decimalPrecision: 2,
+            columnConfig: {
+              text: UB.i18n('Середнє значення')
+            }
+          },
+          { name: 'dateFromEmpty', config: { align: 'center', width: 130 } },
+          { name: 'dateToEmpty', config: { align: 'center', width: 140 } }
+        ],
+        orderList: { orderBy: { expression: 'dateFrom' } }
+      },
+      customActions: [
+        {
+          xtype: 'button',
+          name: 'calcBtn',
+          text: UB.i18n('Розрахувати'),
+          iconCls: 'fas fa-calculator',
+          cls: 'fill-action',
+          handler: function (btn) {
+            const me = btn.up('form')
+            $App.dialogYesNo('Увага', 'Буде виконано перерозрахунок сум. Продовжити?').then(result => {
+              if (result) {
+                me.saveForm().then(result => {
+                  if (result !== -1) {
+                    me.setLoading(true)
+                    $App.connection.run({
+                      entity: me.entityName,
+                      method: 'recalcSalaryScheme',
+                      ID: me.instanceID
+                    }).then(() => {
+                      me.down('[name=gridSalarySchemeDet]').onRefresh()
+                    }).finally(() => {
+                      me.setLoading(false)
+                    })
+                  }
+                })
+              }
+            })
+          }
+        }
+      ],
+      cmpInitConfig: {
+        afterInit: function () {
+          AC.gridUtils.tuneGridColumns(this, {
+            coefMin: {
+              renderer: function (value) {
+                return _.isNumber(value) && value !== 0 ? Ext.util.Format.currency(value, '', 4) : ''
+              }
+            },
+            coefMax: {
+              renderer: function (value) {
+                return _.isNumber(value) && value !== 0 ? Ext.util.Format.currency(value, '', 4) : ''
+              }
+            }
+          })
+        }
+      },
+      masterFields: ['ID'],
+      detailFields: ['dictSalarySchemeLevelID']
+    }
+  ]
+}

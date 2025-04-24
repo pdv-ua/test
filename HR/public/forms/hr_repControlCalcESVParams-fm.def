@@ -1,0 +1,174 @@
+/* global UB Ext appAC UB $App _ AC */
+
+exports.formDef = 'HR.repControlCalcESVParams'
+
+Ext.define('HR.repControlCalcESVParams', {
+  extend: 'Ext.form.Panel',
+  width: 600,
+  height: 550,
+  layout: 'border',
+  alias: 'widget.repControlCalcESVParams',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        layout: 'hbox',
+        items: [
+          {
+            xtype: 'component',
+            width: 50
+          },
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            items: [
+              {
+                xtype: 'component',
+                height: 30
+              },
+              {
+                xtype: 'checkbox',
+                name: 'showOnlyErrors',
+                labelWidth: 200,
+                fieldLabel: UB.i18n('Показувати тільки записи з помилками'),
+                hidden: true
+              },
+              {
+                xtype: 'checkbox',
+                name: 'showPayEl',
+                labelWidth: 200,
+                fieldLabel: UB.i18n('Вид оплати'),
+                hidden: true
+              },
+              {
+                xtype: 'checkbox',
+                name: 'showPeriodCalc',
+                labelWidth: 200,
+                fieldLabel: UB.i18n('Розрахунковий період')
+              },
+              {
+                xtype: 'checkbox',
+                name: 'showPeriodSalary',
+                labelWidth: 200,
+                fieldLabel: UB.i18n('Обліковий період')
+              },
+              {
+                xtype: 'checkbox',
+                name: 'showEmployee',
+                labelWidth: 200,
+                fieldLabel: UB.i18n('Працівник'),
+                value: 1
+              },
+              {
+                xtype: 'checkbox',
+                name: 'showPayFund',
+                labelWidth: 200,
+                fieldLabel: UB.i18n('Нарахування ЄСВ'),
+                hidden: true
+              },
+              {
+                xtype: 'checkbox',
+                name: 'showRate',
+                labelWidth: 200,
+                fieldLabel: UB.i18n('Відсоток'),
+                hidden: true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.commandConfig.deferred.resolve(null)
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Застосувати'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.applyAndClose()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.applyAndClose = function () {
+      const params = {
+        showPeriodCalc: me.attr.showPeriodCalc.getValue(),
+        showPeriodSalary: me.attr.showPeriodSalary.getValue(),
+        showEmployee: me.attr.showEmployee.getValue(),
+        showPayEl: me.attr.showPayEl.getValue(),
+        showPayFund: me.attr.showPayFund.getValue(),
+        showRate: me.attr.showRate.getValue(),
+        showOnlyErrors: me.attr.showOnlyErrors.getValue()
+      }
+      me.commandConfig.deferred.resolve(params)
+      me.up('window').close()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      const win = this.window
+      if (win) {
+        win.height = 400
+        win.width = 400
+        me.attr = {
+          showPeriodCalc: me.down('[name=showPeriodCalc]'),
+          showPeriodSalary: me.down('[name=showPeriodSalary]'),
+          showEmployee: me.down('[name=showEmployee]'),
+          showPayEl: me.down('[name=showPayEl]'),
+          showPayFund: me.down('[name=showPayFund]'),
+          showRate: me.down('[name=showRate]'),
+          showOnlyErrors: me.down('[name=showOnlyErrors]')
+        }
+      }
+      const paramValue = me.customParams ? me.customParams.paramValue : null
+      if (paramValue === 'chargedFactSum' || paramValue === 'factSum') {
+        me.attr.showPayEl.show()
+        me.attr.showPayFund.show()
+        me.attr.showRate.show()
+        me.attr.showEmployee.setValue(false)
+        me.attr.showRate.setValue(true)
+      }
+      if (paramValue === 'chargedFactSum') {
+        me.attr.showPayEl.show()
+        me.attr.showPayFund.show()
+        me.attr.showRate.show()
+        me.attr.showRate.setValue(true)
+      }
+      if (['totalSum', 'paySumESVOn', 'paySumESVOff', 'dismAccrualSum'].includes(paramValue)) {
+        me.attr.showPayEl.show()
+        me.attr.showEmployee.setValue(false)
+        me.attr.showPayEl.setValue(true)
+      }
+      if (paramValue === 'controlChargedSum') {
+        me.attr.showPeriodCalc.hide()
+        me.attr.showPeriodSalary.hide()
+        me.attr.showEmployee.hide()
+        me.attr.showPayEl.hide()
+        me.attr.showPayFund.hide()
+        me.attr.showRate.hide()
+        me.attr.showOnlyErrors.show()
+        me.attr.showOnlyErrors.setValue(true)
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

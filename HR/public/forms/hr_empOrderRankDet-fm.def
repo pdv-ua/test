@@ -1,0 +1,130 @@
+/* global AC HR */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'organizationID', 'empOrderType', 'firstName', 'lastName', 'middleName', 'employeePositionID.employeeID'],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      }
+    },
+    defaults: {
+      layout: 'fit'
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [{
+      attributeName: 'employeePositionID',
+      fieldLabel: UB.i18n('Працівник'),
+      allowBlank: false,
+      labelWidth: 165,
+      fieldList: ['ID', 'description', 'employeeID.firstName', 'employeeID.lastName',
+        'employeeID.middleName', 'employeeID', 'employeeNumberID', 'workPlace', 'departmentID',
+        'organizationID', 'posCatCode', 'psCatCode', 'vacancyDateFrom', 'vacancyDateTo'
+      ],
+      xtype: 'empPositionCombobox',
+      addWorkPlace: true,
+      gridFieldList: ['description'],
+      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+      listeners: {
+        select: ctrl => {
+          let reco = AC.gridUtils.getCurrentRecord(ctrl)
+          let me = ctrl.up('form')
+          if (reco) {
+            me.record.set('firstName', reco.get('employeeID.firstName'))
+            me.record.set('lastName', reco.get('employeeID.lastName'))
+            me.record.set('middleName', reco.get('employeeID.middleName'))
+          } else {
+            me.record.set('firstName', null)
+            me.record.set('lastName', null)
+            me.record.set('middleName', null)
+          }
+        }
+      }
+    },
+    {
+      attributeName: 'rankAssignKindID',
+      allowBalnk: false,
+      labelWidth: 165
+    },
+    {
+      attributeName: 'dictRankID',
+      displayField: 'name',
+      fieldList: ['ID', 'code', 'name'],
+      whereList: {
+        isActive: {
+          expression: '[isActive]',
+          condition: 'equal',
+          value: true
+        }
+      },
+      allowBalnk: false,
+      labelWidth: 165
+    },
+    {
+      attributeName: 'dateFrom',
+      allowBalnk: false,
+      labelWidth: 165
+    },
+    {
+      attributeName: 'dictRankReasonID',
+      allowBalnk: false,
+      labelWidth: 165
+    },
+    {
+      layout: { type: 'hbox', align: 'top' },
+      margin: '0 10 0 0',
+      items: [
+        {
+          attributeName: 'reason',
+          flex: 1,
+          labelWidth: 165
+        },
+        {
+          xtype: 'button',
+          cls: 'list-icon',
+          name: 'reasonButton',
+          tooltip: UB.i18n('Вибрати'),
+          width: 35,
+          height: 35,
+          margin: '0 2 0 -45',
+          handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+        }
+      ]
+    },
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Зміна нарахувань'),
+      layout: { type: 'vbox', align: 'stretch' },
+      margin: '5 10 10 10',
+      padding: '0 0 5 0',
+      items: [
+        {
+          attributeName: 'payElID',
+          labelWidth: 140,
+          hideEntityItemInContext: true,
+          whereList: {
+            code: {
+              expression: '[methodID.code]',
+              condition: 'equal',
+              value: '5'
+            }
+          }
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'paySum',
+              labelWidth: 140,
+              width: 300
+            }
+          ]
+        }
+      ]
+    }
+    ]
+  }
+})()

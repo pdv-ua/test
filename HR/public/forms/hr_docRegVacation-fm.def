@@ -1,0 +1,986 @@
+/* global Ext _ UB AC $App appHR */
+
+exports.formDef = {
+  requiredFields: ['description', 'orderRegistryID', 'orderRegistryID.organizationID', 'orderRegistryID.periodID',
+    'orderRegistryID.periodID.dateFrom', 'flagsRec', 'flagsFix', 'orderState', 'parentID', 'empOrderID',
+    'empOrderID.description', 'empOrderDetID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'empNumAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'rlAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'calcVacation'
+        },
+        {
+          orderId: 7,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 8,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 9,
+          actionId: 'printDocumentAction'
+        },
+        {
+          orderId: 10,
+          actionId: 'addIntComb'
+        },
+        {
+          orderId: 11,
+          actionId: 'addWorkPlace'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 130 },
+          flex: 2,
+          items: [
+            { attributeName: 'employeeID', hidden: true },
+            { attributeName: 'employeeNumberID', hidden: true },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'employeePositionID',
+                  fieldList: [
+                    'ID', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'dateFrom', 'dateTo',
+                    'employeeNumberID.dateFrom', 'employeeNumberID.dateTo', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo',
+                    'employeeNumberID.empWorkPlace', 'employeeNumberID.mainEmpNumberID'
+                  ],
+                  orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                  addWorkPlace: true,
+                  addDateTo: true,
+                  xtype: 'empPositionCombobox',
+                  skipSetReadOnly: true,
+                  flex: 1
+                },
+                {
+                  attributeName: 'workPlaceOnly',
+                  labelWidth: 150,
+                  width: 170
+                }
+              ]
+            },
+            {
+              attributeName: 'payElID',
+              fieldList: ['ID', 'description', 'methodID.code', 'methodID.dayAccumCondition', 'includeSecondJobs'],
+              orderList: { orderBy: { expression: 'codeSort' } }
+            },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'orderNumber',
+                  readOnly: false,
+                  allowBlank: true,
+                  skipSetReadOnly: true,
+                  labelWidth: 130,
+                  width: 250
+                },
+                {
+                  attributeName: 'orderDate',
+                  skipSetReadOnly: true,
+                  labelWidth: 130,
+                  width: 250
+                }
+              ]
+            },
+            {
+              fieldLabel: UB.i18n('Документ-підстава'),
+              xtype: 'textfield',
+              name: 'orderDescription',
+              fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+              flex: 1,
+              hidden: true,
+              readOnly: true
+            },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'parentID',
+                  fieldList: ['ID', 'description', 'payElID.name', 'dateFrom', 'dateTo', 'payElID.methodID', 'avgCalcType', 'avgSum', 'dateFromAvg', 'dateToAvg'],
+                  gridFieldList: [{ name: 'ID', visibility: false }, { name: 'payElID.name', description: UB.i18n('Вид оплати') }, 'dateFrom', 'dateTo', 'description'],
+                  orderList: { orderBy: { expression: 'dateTo', order: 'desc' } },
+                  labelWidth: 130,
+                  disableModifyEntity: true,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                  skipSetReadOnly: true,
+                  flex: 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 140 },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'dateFrom',
+              skipSetReadOnly: true,
+              enableKeyEvents: true
+            },
+            { attributeName: 'calendarDayCount',
+              fieldLabel: UB.i18n('Календарні дні'),
+              minValue: 1,
+              maxValue: 180,
+              enableKeyEvents: true,
+              skipSetReadOnly: true
+            },
+            { attributeName: 'dayCount',
+              fieldLabel: UB.i18n('Оплачувані дні'),
+              minValue: 0,
+              maxValue: 180,
+              enableKeyEvents: true,
+              skipSetReadOnly: true
+            },
+            {
+              attributeName: 'dateTo',
+              enableKeyEvents: true,
+              skipSetReadOnly: true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          xtype: 'acGrid',
+          name: 'orderRegistryDt',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_docRegVacation_orderRegistryDt'),
+          title: UB.i18n('Розрахунок по місяцям'),
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          cellEditing: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: false,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          summary: { paySum: 'sum', days: 'sum', calendarDays: 'sum' },
+          summaryDataOnClient: true,
+          ignoreAttr: ['posName', 'depName'],
+          ignoreAttrNewByCurrent: ['posName', 'depName', 'employeeNumberID.description', 'employeeNumberID'],
+          includeContextMenuReadOnly: [],
+          hideActions: ['addNew', 'del', 'addNewByCurrent'],
+          onBeforeEdit: (control, context) => {
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null
+            }
+          },
+          edit: (control, context) => {
+            const me = context.grid.up('form')
+            me.onGridEdit(me, 'orderRegistryDt', context, control)
+            me.setIsDirty(true)
+          },
+          customPopupMenuItems: [
+            {
+              text: UB.i18n('Розрахунковий лист'),
+              iconCls: 'el-icon-tickets',
+              ubID: 'itemShowRl',
+              handler: function (context) {
+                const grid = context.up('').grid
+                const me = grid.up('form')
+                const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                if (record) {
+                  appHR.showRl(me.attr.employeeNumberID.getValue(), record.get('periodSalaryID'))
+                }
+              }
+            },
+            {
+              text: UB.i18n('Аналітика'),
+              iconCls: 'el-icon-notebook-2',
+              name: 'dimension',
+              cls: 'blue-action',
+              handler: (context) => {
+                const me = context.up('').grid.up('form')
+                let record = context.up('').record || AC.gridUtils.getCurrentRecord(me.attr.orderRegistryDt)
+                me.getDimension(me, record)
+              }
+            }
+          ],
+          fields: [
+            { name: 'ID' },
+            { name: 'mi_modifyDate' },
+            { name: 'orderRegistryID' },
+            { name: 'orderID' },
+            { name: 'orderNumber' },
+            { name: 'employeeNumberID' },
+            { name: 'payElID' },
+            { name: 'periodCalcID' },
+            { name: 'periodSalaryID' },
+            { name: 'periodCalc' },
+            { name: 'periodSalary' },
+            { name: 'mask' },
+            { name: 'maskAdd' },
+            { name: 'flagsFix' },
+            { name: 'flagsRec' },
+            { name: 'baseSum' },
+            { name: 'avgCalcType' },
+            { name: 'dateFromAvg' },
+            { name: 'dateToAvg' },
+            { name: 'koef' },
+            { name: 'accrualDt' },
+            { name: 'linkToParentID' },
+            {
+              name: 'periodSalaryID.name',
+              columnConfig: {
+                text: UB.i18n('Обліковий період'),
+                sortable: false,
+                flex: 1
+              }
+            },
+            {
+              name: 'dateFrom',
+              columnConfig: {
+                text: UB.i18n('З'),
+                flex: 1,
+                sortable: false,
+                dateFormat: 'd',
+                dataType: 'Date'
+              }
+            },
+            {
+              name: 'dateTo',
+              columnConfig: {
+                text: UB.i18n('По'),
+                flex: 1,
+                sortable: false,
+                dateFormat: 'd',
+                dataType: 'Date'
+              }
+            },
+
+            {
+              name: 'calendarDays',
+              columnConfig: {
+                text: UB.i18n('Календарних днів'),
+                sortable: false,
+                flex: 1,
+                dataType: 'Int'
+              }
+            },
+            {
+              name: 'days',
+              columnConfig: {
+                text: UB.i18n('Оплачуваних днів'),
+                flex: 1,
+                align: 'right',
+                sortable: false,
+                dataType: 'Int',
+                editor: {
+                  dataType: 'Int',
+                  minValue: 0,
+                  flagsFix: 1 << 6
+                }
+              }
+            },
+            {
+              name: 'paySum',
+              columnConfig: {
+                text: UB.i18n('Сума'),
+                flex: 1,
+                align: 'right',
+                sortable: false,
+                floatFormat: 2,
+                editor: {
+                  dataType: 'Currency',
+                  decimalPrecision: 2,
+                  minValue: 0,
+                  flagsFix: 1 << 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Середній заробіток'),
+          layout: { type: 'border' },
+          items: [
+            {
+              xtype: 'panel',
+              region: 'west',
+              split: true,
+              width: 400,
+              margin: '0 5 0 0',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  attributeName: 'avgCalcType',
+                  width: 500,
+                  enableKeyEvents: true
+                },
+                {
+                  attributeName: 'dateFromAvg',
+                  flagsFix: 1 << 10,
+                  enableKeyEvents: true
+                },
+                {
+                  attributeName: 'dateToAvg',
+                  flagsFix: 1 << 11,
+                  enableKeyEvents: true
+                },
+                {
+                  attributeName: 'avgSum',
+                  flagsFix: 1 << 0,
+                  enableKeyEvents: true,
+                  dataType: 'Currency',
+                  decimalPrecision: 2
+                }
+              ]
+            },
+            {
+              layout: { type: 'border' },
+              region: 'center',
+              items: [
+                {
+                  region: 'north',
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      xtype: 'button',
+                      name: 'avgDimension',
+                      iconCls: 'u-icon-layers',
+                      cls: 'blue-action',
+                      tooltip: UB.i18n('Коригування сум за аналітиками'),
+                      handler: function (btn) {
+                        const me = btn.up('form')
+                        appHR.setAvgDimensionEdit(me, 'accrualAvg', 143553, 'calcVacation')
+                      }
+                    },
+                    {
+                      xtype: 'button',
+                      name: 'fillBtn',
+                      text: UB.i18n('Додати суми з попереднього документу'),
+                      tooltip: UB.i18n('Додати суми з попереднього документу'),
+                      iconCls: 'fas fa-angle-double-down',
+                      cls: 'fill-action',
+                      handler: function (btn) {
+                        const me = btn.up('form')
+                        me.setAvgDataFromPriorDocument(me)
+                      }
+                    }
+                  ]
+                },
+                {
+                  xtype: 'acGrid',
+                  title: '',
+                  name: 'accrualAvg',
+                  stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_docRegVacation_accrualAvg'),
+                  stateHiddenColumn: false,
+                  region: 'center',
+                  flex: 1,
+                  autoScroll: true,
+                  cellEditing: true,
+                  notWriteChanges: true,
+                  storeType: 'local',
+                  showToolBar: false,
+                  disablePaging: true,
+                  loadMaskMessage: UB.i18n('Завантаження даних...'),
+                  baseSummary: true,
+                  summary: {
+                    opSum: (records, dataIndex) => {
+                      return records.reduce((sum, row) => {
+                        return sum + (row.get(dataIndex) ? (row.get(dataIndex) || 0) : 0)
+                      }, 0)
+                    },
+                    opDays: (records, dataIndex) => {
+                      return records.reduce((sum, row) => {
+                        return sum + (row.get(dataIndex) ? (row.get(dataIndex) || 0) : 0)
+                      }, 0)
+                    },
+                    baseSum: (records, dataIndex) => {
+                      return records.reduce((sum, row) => {
+                        return sum + (row.get(dataIndex) ? (row.get(dataIndex) || 0) : 0)
+                      }, 0)
+                    }
+                  },
+                  summaryDataOnClient: true,
+                  ignoreAttr: ['posName', 'depName'],
+                  hideActions: ['addNew', 'del', 'addNewByCurrent'],
+                  includeContextMenuReadOnly: [],
+                  onBeforeEdit: (control, context) => {
+                    context.column.field.prevValue = context.value
+                    if (context.record.phantom && context.record.dirtySave !== null) {
+                      context.record.dirtySave = null
+                    }
+                  },
+                  edit: (control, context) => {
+                    const me = context.grid.up('form')
+                    me.onGridEdit(me, 'orderRegistryDt', context, control)
+                    me.setIsDirty(true)
+                  },
+                  fields: [
+                    { name: 'ID' },
+                    { name: 'dateFrom' },
+                    { name: 'dateTo' },
+                    { name: 'orderID' },
+                    { name: 'periodID' },
+                    { name: 'flagsFix' },
+                    { name: 'accrualDt' },
+                    {
+                      name: 'periodID.name',
+                      columnConfig: {
+                        text: UB.i18n('Місяць'),
+                        sortable: false,
+                        width: 120
+                      }
+                    },
+                    {
+                      name: 'opDays',
+                      columnConfig: {
+                        text: UB.i18n('Днів'),
+                        width: 120,
+                        sortable: false,
+                        align: 'right',
+                        floatFormat: 2,
+                        renderer: (value, meta, record) => {
+                          if (record.get('flagsFix') & 1 << 6) {
+                            meta.tdCls = 'grd-color-blue'
+                          }
+                          return value
+                        },
+                        editor: {
+                          dataType: 'Currency',
+                          decimalPrecision: 2,
+                          minValue: 0,
+                          flagsFix: 1 << 6
+                        }
+                      }
+                    },
+                    {
+                      name: 'baseSum',
+                      columnConfig: {
+                        text: UB.i18n('Заробіток'),
+                        width: 120,
+                        align: 'right',
+                        sortable: false,
+                        floatFormat: 2,
+                        renderer: (value, meta, record) => {
+                          if (record.get('flagsFix') & 1) {
+                            meta.tdCls = 'grd-color-blue'
+                          }
+                          if (_.isNumber(value)) {
+                            return Ext.util.Format.currency(value, '', 2).replace(/ /g, '')
+                          } else return value
+                        },
+                        editor: {
+                          dataType: 'Currency',
+                          sortable: false,
+                          decimalPrecision: 2,
+                          minValue: 0,
+                          flagsFix: 1 << 0
+                        }
+                      }
+                    },
+                    {
+                      name: 'opKoef',
+                      columnConfig: {
+                        text: UB.i18n('Коеф. індексації'),
+                        hidden: true,
+                        flex: 1,
+                        align: 'right',
+                        sortable: false,
+                        floatFormat: 6,
+                        renderer: (value, meta, record) => {
+                          if (record.get('flagsFix') & 1 << 12) {
+                            meta.tdCls = 'grd-color-blue'
+                          }
+                          if (_.isNumber(value)) {
+                            return Ext.util.Format.currency(value, '', 6).replace(/ /g, '')
+                          } else return value
+                        },
+                        editor: {
+                          dataType: 'Float',
+                          decimalPrecision: 6,
+                          minValue: 0,
+                          flagsFix: 1 << 12
+                        }
+                      }
+                    },
+                    {
+                      name: 'baseSumNotIndex',
+                      columnConfig: {
+                        text: UB.i18n('Заробіток, що не індексується'),
+                        hidden: true,
+                        flex: 1,
+                        align: 'right',
+                        sortable: false,
+                        floatFormat: 2,
+                        renderer: (value, meta, record) => {
+                          if (record.get('flagsFix') & 1 << 13) {
+                            meta.tdCls = 'grd-color-blue'
+                          }
+                          if (_.isNumber(value)) {
+                            return Ext.util.Format.currency(value, '', 2).replace(/ /g, '')
+                          } else return value
+                        },
+                        editor: {
+                          dataType: 'Currency',
+                          sortable: false,
+                          decimalPrecision: 2,
+                          minValue: 0,
+                          flagsFix: 1 << 13
+                        }
+                      }
+                    },
+                    {
+                      name: 'opSum',
+                      columnConfig: {
+                        text: UB.i18n('Сума до розрахунку'),
+                        hidden: true,
+                        flex: 1,
+                        sortable: false,
+                        align: 'right',
+                        floatFormat: 2
+                      }
+                    }
+                  ],
+                  customPopupMenuItems: [
+                    {
+                      text: UB.i18n('Розрахунковий лист'),
+                      iconCls: 'el-icon-tickets',
+                      ubID: 'itemShowRl',
+                      handler: function (context) {
+                        const grid = context.up('').grid
+                        const me = grid.up('form')
+                        const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                        if (record) {
+                          appHR.showRl(me.attr.employeeNumberID.getValue(), record.get('periodID'))
+                        }
+                      }
+                    },
+                    {
+                      text: UB.i18n('Аналітика'),
+                      iconCls: 'el-icon-notebook-2',
+                      name: 'dimension',
+                      cls: 'blue-action',
+                      handler: (context) => {
+                        const grid = context.up('').grid
+                        const me = grid.up('form')
+                        // flagsFix 1 << 0 | 1 << 6 | 1 << 7 | 1 << 12 | 1 << 13
+                        appHR.showtAvgDimensinEdit(me, context.up('').record || AC.gridUtils.getCurrentRecord(grid), 12481, 'calcVacation')
+                      }
+                    },
+                    {
+                      text: UB.i18n('Коригування сум за аналітиками'),
+                      name: 'avgDimensionRow',
+                      iconCls: 'u-icon-layers',
+                      cls: 'blue-action',
+                      handler: function (context) {
+                        const grid = context.up('').grid
+                        const me = grid.up('form')
+                        appHR.setAvgDimensionRowEdit(me, context.up('').record || AC.gridUtils.getCurrentRecord(grid), 143553, 'calcVacation')
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          xtype: 'acGrid',
+          name: 'vacationDt',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_docRegVacation_vacationDt'),
+          title: UB.i18n('Використання відпустки'),
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          rowEditing: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          hideActions: ['addNewByCurrent'],
+          customToolBarActions: [
+            {
+              xtype: 'button',
+              name: 'fillBtn',
+              tooltip: UB.i18n('Заповнити'),
+              iconCls: 'fas fa-angle-double-down',
+              cls: 'fill-action',
+              handler: function (btn) {
+                const me = btn.up('form')
+                if (me.attr.vacationDt.getStore().count()) {
+                  $App.dialogYesNo('Попередження', UB.i18n('Раніше додані записи будуть видалені. Продовжити?'))
+                    .then(res => {
+                      if (res) {
+                        me.attr.vacationDt.removeAll()
+                        me.setIsDirty(true)
+                        me.saveForm().then(() => {
+                          me.addVacationPeriods()
+                        })
+                      }
+                    })
+                } else {
+                  me.addVacationPeriods()
+                }
+              }
+            },
+            {
+              xtype: 'button',
+              name: 'clearBtn',
+              tooltip: UB.i18n('Очистити'),
+              iconCls: 'fas fa-eraser',
+              cls: 'fill-action',
+              handler: function (btn) {
+                const me = btn.up('form')
+                if (me.attr.vacationDt.getStore().count()) {
+                  $App.dialogYesNo('Попередження', UB.i18n('Раніше додані записи будуть видалені. Продовжити?'))
+                    .then(function (res) {
+                      if (res) {
+                        me.attr.vacationDt.removeAll()
+                        me.setIsDirty(true)
+                        if (!me.isNewInstance) {
+                          return me.saveForm()
+                        }
+                      }
+                    })
+                }
+              }
+            }
+          ],
+          fields: [
+            { name: 'ID' },
+            { name: 'mi_modifyDate' },
+            { name: 'orderID' },
+            { name: 'dictVacationKindID' },
+            { name: 'empVacationPeriodID' },
+            {
+              name: 'dictVacationKindID.name',
+              columnConfig: {
+                text: UB.i18n('Вид відпустки'),
+                sortable: false,
+                flex: 1,
+                editor: {
+                  dataType: 'Entity',
+                  hideEntityItemInContext: true,
+                  associatedEntity: 'hr_dictVacationKind',
+                  allowBlank: false,
+                  disableClearSelection: true,
+                  disableContextMenu: true,
+                  storeAttributeValueField: 'dictVacationKindID',
+                  fieldList: ['ID', 'name'],
+                  whereList: {
+                    payElID: {
+                      expression: '[payElID]',
+                      condition: 'equal',
+                      value: '0'
+                    }
+                  }
+                }
+              }
+            },
+            {
+              name: 'empVacationPeriodID.descriptionEx',
+              columnConfig: {
+                text: UB.i18n('За період роботи'),
+                sortable: false,
+                flex: 1,
+                editor: {
+                  dataType: 'Entity',
+                  hideEntityItemInContext: true,
+                  associatedEntity: 'hr_empVacationPeriod',
+                  allowBlank: false,
+                  disableClearSelection: true,
+                  disableContextMenu: true,
+                  storeAttributeValueField: 'empVacationPeriodID',
+                  fieldList: ['ID', 'descriptionEx', 'dayDiff']
+                }
+              }
+            },
+            {
+              name: 'dateFrom',
+              columnConfig: {
+                text: UB.i18n('З'),
+                width: 150,
+                dateFormat: 'd.m.Y',
+                dataType: 'Date',
+                editor: {
+                  dataType: 'Date',
+                  allowBlank: false
+                }
+              }
+            },
+            {
+              name: 'dateTo',
+              columnConfig: {
+                text: UB.i18n('По'),
+                width: 150,
+                dateFormat: 'd.m.Y',
+                dataType: 'Date',
+                editor: {
+                  dataType: 'Date',
+                  allowBlank: false
+                }
+              }
+            },
+            {
+              name: 'dayDiff',
+              columnConfig: {
+                text: UB.i18n('Невикористані дні'),
+                sortable: false,
+                width: 150,
+                dataType: 'Int'
+              }
+            },
+            {
+              name: 'dayCount',
+              columnConfig: {
+                text: UB.i18n('Кількість днів за поточним документом'),
+                sortable: false,
+                width: 150,
+                dataType: 'Int',
+                editor: {
+                  dataType: 'Int',
+                  allowBlank: false
+                }
+              }
+            }
+          ],
+          summary: { dayCount: 'sum' },
+          summaryDataOnClient: true,
+          getRowClass: function (record, rowIndex, rowParams, store) {
+            return record.get('dayDiff') < record.get('dayCount') ? 'grd-color-red' : ''
+          },
+          onValidateEdit: function (editor, context) {
+            const vacationFrom = AC.dateService.truncTimeToUtcNull(editor.editor.up('form').attr.dateFrom.getValue())
+            const vacationTo = AC.dateService.truncTimeToUtcNull(editor.editor.up('form').attr.dateTo.getValue())
+            const newPeriodFrom = AC.dateService.truncTimeToUtcNull(editor.editor.form.findField('dateFrom').getValue())
+            const newPeriodTo = AC.dateService.truncTimeToUtcNull(editor.editor.form.findField('dateTo').getValue())
+            if (newPeriodFrom < vacationFrom) {
+              const errorMessage = UB.i18n('Не може бути менше ніж "дата початку"')
+              editor.editor.form.findField('dateFrom').markInvalid(errorMessage)
+              AC.viewUtils.showToast('Помилка', errorMessage)
+              return false
+            }
+            if (newPeriodTo > vacationTo) {
+              const errorMessage = UB.i18n('Не може бути більше ніж "дата закінчення"')
+              editor.editor.form.findField('dateTo').markInvalid(errorMessage)
+              AC.viewUtils.showToast('Помилка', errorMessage)
+              return false
+            }
+            const store = context.grid.getStore()
+            if (store.getCount() > 0) {
+              let hasError = false
+              store.each(record => {
+                if (context.record.internalId === record.internalId) return
+                const recordDateFrom = AC.dateService.truncTimeToUtcNull(record.get('dateFrom'))
+                const recordDateTo = AC.dateService.truncTimeToUtcNull(record.get('dateTo'))
+                if (!(newPeriodTo < recordDateFrom || newPeriodFrom > recordDateTo)) {
+                  hasError = true
+                }
+              })
+              if (hasError) {
+                const errorMessage = UB.i18n(`Періоди перетинаються. Виправіть перед збереженням`)
+                $App.dialogError(errorMessage)
+                return false
+              }
+            }
+            return true
+          },
+          edit: (control, context) => {
+            const me = context.grid.up('form')
+            me.setIsDirty(true)
+            let dayCount = context.grid.getData().reduce((result, item) => result + item['dayCount'], 0)
+            if (me.attr.dayCount.getValue() !== dayCount) {
+              me.attr.dayCount.setValue(dayCount)
+              me.attr.dayCount.calcValue = null
+              me.calcVacation(me, true, false, me.attr.dayCount.name, false)
+            }
+          },
+          onBeforeEdit: function (rowEditor, context) {
+            const editor = rowEditor.editor
+            const me = editor.up('form')
+            const reco = context.record
+            const dateFromCtrl = editor.query(`[name=dateFrom]`)[0]
+            const dateToCtrl = editor.query(`[name=dateTo]`)[0]
+            const dictVacationKindIDCtrl = editor.query(`[name=dictVacationKindID.name]`)[0]
+            const empVacationPeriodIDCtrl = editor.query(`[name=empVacationPeriodID.descriptionEx]`)[0]
+            const vacKindStore = dictVacationKindIDCtrl.getStore()
+            vacKindStore.isInternalChange = true
+            const vacPeriodStore = empVacationPeriodIDCtrl.getStore()
+            vacPeriodStore.isInternalChange = true
+            if (reco.phantom && !reco.get('orderID')) {
+              reco.set('orderID', me.instanceID)
+              const dateFrom = context.grid.getStore().count() > 1 ? AC.dateService.addDays(Math.max(...context.grid.getData().map(o => o.dateTo)), 1) : me.attr.dateFrom.getValue()
+              reco.set('dateFrom', dateFrom)
+              reco.set('dateTo', me.attr.dateTo.getValue())
+            }
+            AC.viewUtils.setWhereListProperty(dictVacationKindIDCtrl, [
+              ['payElID', '=', me.attr.payElID.getValue()]
+            ], undefined, ['clearWhereList', 'clearStore'])
+            const store = dictVacationKindIDCtrl.getStore()
+            store.ubRequest.whereList.hasDayDiff = {
+              expression: '',
+              condition: 'subquery',
+              subQueryType: 'exists',
+              value: {
+                entity: 'hr_empVacationPeriod',
+                fieldList: [],
+                method: 'select',
+                whereList: {
+                  cond: {
+                    expression: '[empVacationPlanID.dictVacationKindID]=[{master}.ID]',
+                    condition: 'custom'
+                  },
+                  employeeNumberID: {
+                    condition: '=',
+                    expression: '[empVacationPlanID.employeeNumberID]',
+                    value: me.record.get('employeeNumberID')
+                  },
+                  dayDiff: {
+                    condition: '>',
+                    expression: '[dayDiff]',
+                    value: 0
+                  },
+                  mi_deleteDate: {
+                    condition: '>=',
+                    expression: '[empVacationPlanID.mi_deleteDate]',
+                    value: '#maxdate'
+                  }
+                }
+              }
+            }
+
+            dateFromCtrl.on('change', (ctrl, value) => {
+              if (value && dateToCtrl.getValue() < value) {
+                dateToCtrl.setValue(value)
+              }
+              me.recalcVacPeriodDays(editor, context.record)
+            })
+            dateToCtrl.on('change', (ctrl, value) => {
+              if (value && dateFromCtrl.getValue() > value) {
+                dateFromCtrl.setValue(value)
+              }
+              me.recalcVacPeriodDays(editor, context.record)
+            })
+
+            let vacPeriodFilter = [
+              ['empVacationPlanID.employeeNumberID', '=', me.record.get('employeeNumberID')],
+              ['empVacationPlanID.dictVacationKindID', '=', reco.get('dictVacationKindID') || 0],
+              ['dayDiff', '>', 0],
+              ['empVacationPlanID.mi_deleteDate', '>=', '#maxdate']
+            ]
+            if (context.grid.getStore().count()) {
+              const usedVacPeriods = []
+              context.grid.getStore().each(row => {
+                if (reco.internalId === row.internalId) return
+                usedVacPeriods.push(row.get('empVacationPeriodID'))
+              })
+              vacPeriodFilter.push([
+                'ID', 'notIn', usedVacPeriods.filter(Boolean).concat([0])
+              ])
+            }
+            AC.viewUtils.setWhereListProperty(empVacationPeriodIDCtrl, vacPeriodFilter)
+
+            empVacationPeriodIDCtrl.on('change', ctrl => {
+              reco.set('dayDiff', ctrl.getFieldValue('dayDiff'))
+            })
+
+            dictVacationKindIDCtrl.on('change', ctrl => {
+              if (vacKindStore.isInternalChange) {
+                vacKindStore.isInternalChange = false
+                return
+              }
+              const vacPeriodStore = empVacationPeriodIDCtrl.getStore()
+              vacPeriodStore.isInternalChange = true
+              let vacPeriodFilter = [
+                ['empVacationPlanID.employeeNumberID', '=', me.record.get('employeeNumberID')],
+                ['empVacationPlanID.dictVacationKindID', '=', ctrl.getFieldValue('ID')],
+                ['dayDiff', '>', 0],
+                ['empVacationPlanID.mi_deleteDate', '>=', '#maxdate']
+              ]
+              if (context.grid.getStore().count()) {
+                const usedVacPeriods = []
+                context.grid.getStore().each(row => {
+                  if (reco.internalId === row.internalId) return
+                  usedVacPeriods.push(row.get('empVacationPeriodID'))
+                })
+                vacPeriodFilter.push([
+                  'ID', 'notIn', usedVacPeriods.filter(Boolean).concat([0])
+                ])
+              }
+              AC.viewUtils.setWhereListProperty(empVacationPeriodIDCtrl, vacPeriodFilter,
+                undefined, ['clearWhereList', 'clearStore', 'clearValue'])
+              me.recalcVacPeriodDays(editor, context.record)
+            })
+          }
+        },
+        {
+          title: UB.i18n('Додаткові параметри'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'dictFundSourceID',
+              hideEntityItemInContext: true
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додатки'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'docAttachment',
+              entity: 'hr_orderAttachment',
+              detailFields: 'documentID',
+              masterFields: 'ID',
+              showOriginal: true,
+              minHeight: 55,
+              maxHeight: 140,
+              height: 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

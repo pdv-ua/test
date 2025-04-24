@@ -1,0 +1,540 @@
+{
+  "caption": "Наказ з персоналу",
+  "description": "Наказ з персоналу",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер наказу",
+      "description": "Номер наказу",
+      "documentation": "Номер наказу",
+      "allowNull": false
+    },
+    {
+      "name": "orderNumberFull",
+      "dataType": "String",
+      "size": 40,
+      "caption": "Номер з індексом",
+      "description": "Номер з індексом",
+      "documentation": "Номер з індексом",
+      "allowNull": true
+    },
+    {
+      "name": "orderNumberFullView",
+      "dataType": "String",
+      "size": 40,
+      "caption": "Номер з індексом",
+      "description": "Номер з індексом",
+      "documentation": "Номер з індексом",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select case when {self}.orderNumberFull is not null then {self}.orderNumberFull when {self}.dictEmpOrderIndexID is null then {self}.orderNumber else CONCAT({self}.orderNumber, '/', (select i.code from hr_dictEmpOrderIndex i where i.ID = {self}.dictEmpOrderIndexID)) end)"
+        }
+      ]
+    },
+    {
+      "name": "dictEmpOrderIndexID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictEmpOrderIndex",
+      "caption": "Індекс",
+      "description": "Індекс",
+      "documentation": "Індекс",
+      "allowNull": true
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу",
+      "description": "Дата наказу",
+      "documentation": "Дата наказу"
+    },
+    {
+      "name": "entryDate",
+      "dataType": "Date",
+      "caption": "Дата вступу в дію",
+      "description": "Дата вступу в дію",
+      "documentation": "Дата вступу в дію",
+      "allowNull": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultValue": "PROJECT",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "associationAttr": "mi_data_id",
+      "allowNull": false
+    },
+    {
+      "name": "masterOrganizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "Головна організація",
+      "description": "Головна організація",
+      "documentation": "Головна організація",
+      "associationAttr": "mi_data_id",
+      "allowNull": true
+    },
+    {
+      "name": "masterOrganizationName",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Головна організація",
+      "description": "Головна організація",
+      "documentation": "Головна організація"
+    },
+    {
+      "name": "respEmployeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Підписав",
+      "description": "Підписав",
+      "documentation": "Підписав"
+    },
+    {
+      "name": "respPositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Підписант 1 (посада)",
+      "description": "Підписант 1 (посада)",
+      "documentation": "Підписант 1 (посада)"
+    },
+    {
+      "name": "respEmployeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Підписав",
+      "description": "Підписав",
+      "documentation": "Підписав",
+      "allowNull": true
+    },
+    {
+      "name": "respPosition2ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Підписант 2 (посада)",
+      "description": "Підписант 2 (посада)",
+      "documentation": "Підписант 2 (посада)"
+    },
+    {
+      "name": "respEmployeePosition2ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Підписав",
+      "description": "Підписав",
+      "documentation": "Підписав",
+      "allowNull": true
+    },
+    {
+      "name": "respEmployeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Підписав",
+      "description": "Підписав",
+      "documentation": "Підписав",
+      "allowNull": true
+    },
+    {
+      "name": "respEmployeeNumID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Відповідальний",
+      "description": "Відповідальний",
+      "documentation": "Відповідальний"
+    },
+    {
+      "name": "titleOrder",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Заголовок",
+      "description": "Заголовок",
+      "documentation": "Заголовок",
+      "allowNull": true
+    },
+    {
+      "name": "preamble",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Преамбула",
+      "description": "Преамбула",
+      "documentation": "Преамбула",
+      "allowNull": true
+    },
+    {
+      "name": "reason",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Підстава",
+      "description": "Підстава",
+      "documentation": "Підстава",
+      "allowNull": true
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Коментар",
+      "description": "Коментар",
+      "documentation": "Коментар",
+      "allowNull": true
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 128,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "allowNull": false,
+      "customSettings": {
+        "template": "Наказ про ${empOrderType.shortName} № ${orderNumber} від ${orderDate}"
+      }
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false
+    },
+    {
+      "name": "positionType",
+      "dataType": "Enum",
+      "enumGroup": "HR_POSITION_TYPE",
+      "caption": "Тип посади",
+      "documentation": "Тип посади (для наказів про призначення)",
+      "description": "Тип посади",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "empOrderKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictEmpOrderKind",
+      "caption": "Вид наказу",
+      "documentation": "Вид наказу",
+      "description": "Вид наказу",
+      "allowNull": true
+    },
+    {
+      "name": "docText",
+      "dataType": "Text",
+      "caption": "Збережений текст",
+      "documentation": "Збережений текст",
+      "description": "Збережений текст",
+      "allowNull": true
+    },
+    {
+      "name": "document",
+      "dataType": "Document",
+      "caption": "PDF образ",
+      "documentation": "PDF образ",
+      "description": "PDF образ",
+      "allowNull": true
+    },
+    {
+      "name": "documentPrintable",
+      "dataType": "Document",
+      "caption": "PDF образ для друку",
+      "documentation": "PDF образ для друку",
+      "description": "PDF образ для друку",
+      "allowNull": true
+    },
+    {
+      "name": "docLastChangeDate",
+      "dataType": "DateTime",
+      "caption": "docLastChangeDate",
+      "documentation": "Last change date of document",
+      "description": "docLastChangeDate",
+      "allowNull": true
+    },
+    {
+      "name": "fieldLastChangeDate",
+      "dataType": "DateTime",
+      "caption": "fieldLastChangeDate",
+      "documentation": "Last change date doc field",
+      "description": "fieldLastChangeDate",
+      "allowNull": true
+    },
+    {
+      "name": "reportSettings",
+      "dataType": "Text",
+      "caption": "Налаштування звіту",
+      "documentation": "Налаштування звіту",
+      "description": "Налаштування звіту",
+      "allowNull": true
+    },
+    {
+      "name": "orderClass",
+      "dataType": "Entity",
+      "associatedEntity": "hr_orderClass",
+      "caption": "Тип документа - підстави",
+      "description": "Тип документа - підстави",
+      "documentation": "Тип документа - підстави"
+    },
+    {
+      "name": "parentOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Батьківський документ",
+      "description": "Документ, на основі якого створено наказ",
+      "documentation": "Документ, на основі якого створено наказ (наприклад, заява (hr_request))"
+    },
+    {
+      "name": "staffTableID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffTable",
+      "caption": "Штатний розпис",
+      "description": "Штатний розпис",
+      "documentation": "Штатний розпис"
+    },
+    {
+      "name": "staffTableOrgStructureID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffTableOrgStructure",
+      "caption": "Структура",
+      "description": "Структура",
+      "documentation": "Структура"
+    },
+    {
+      "name": "staffTariffingID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffTariffing",
+      "caption": "Тарифікаційний список",
+      "description": "Тарифікаційний список",
+      "documentation": "Тарифікаційний список"
+    },
+    {
+      "name": "periodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Звітній період",
+      "description": "Звітній період",
+      "documentation": "Звітній період"
+    },
+    {
+      "name": "periodCalcID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Розрахунковий період",
+      "description": "Розрахунковий період",
+      "documentation": "Розрахунковий період"
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати",
+      "description": "Вид оплати",
+      "documentation": "Вид оплати",
+      "allowNull": true
+    },
+    {
+      "name": "bonusSum",
+      "dataType": "Float",
+      "caption": "Сума",
+      "description": "Сума",
+      "documentation": "Сума",
+      "allowNull": true
+    },
+    {
+      "name": "bonusRate",
+      "dataType": "Float",
+      "caption": "Відсоток",
+      "description": "Відсоток",
+      "documentation": "Відсоток",
+      "allowNull": true
+    },
+    {
+      "name": "isGroupDepart",
+      "dataType": "Boolean",
+      "caption": "Групувати за підрозділом",
+      "documentation": "Групувати за підрозділом",
+      "description": "Групувати за підрозділом",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "isGroup",
+      "dataType": "Boolean",
+      "caption": "Груповий",
+      "documentation": "Чи являється наказ груповим",
+      "description": "Чи являється наказ груповим",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "isService",
+      "dataType": "Boolean",
+      "caption": "Технічна операція",
+      "documentation": "Технічна операція",
+      "description": "Чи наказ додано/проведено в результаті технічнної операції. Скасування такого наказу неможливе",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "particle",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Суфікс друкованої форми",
+      "description": "Суфікс, який визначає форму друкованої форми",
+      "documentation": "Суфікс, який визначає форму друкованої форми"
+    },
+    {
+      "name": "impDateAppoint",
+      "dataType": "Date",
+      "caption": "Дата прийому на роботу",
+      "description": "Дата прийому на роботу",
+      "documentation": "Використовується тільки при імпорті"
+    },
+    {
+      "name": "employeeList",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Список перших працівників",
+      "description": "Список перших працівників",
+      "documentation": "Список перших працівників"
+    },
+    {
+      "name": "isAppendix",
+      "dataType": "Boolean",
+      "caption": "Наказ з додатком",
+      "documentation": "Наказ з додатком",
+      "description": "Наказ з додатком",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "organizationName",
+      "dataType": "String",
+      "size": 400,
+      "caption": "По організації",
+      "documentation": "Організація, по якій створено наказ",
+      "description": "Організація, по якій створено наказ",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 description from hr_organization org  where org.mi_data_id = {self}.organizationID and org.state = 'ACTIVE' and {self}.entryDate between org.mi_dateFrom and org.mi_dateTo and mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select description from hr_organization org  where org.mi_data_id = {self}.organizationID and org.state = 'ACTIVE' and {self}.entryDate between org.mi_dateFrom and org.mi_dateTo and mi_deleteDate >= '9999-12-31' limit 1)"
+        }
+      ]
+    },
+    {
+      "name": "mOrganizationName",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Видано в ",
+      "documentation": "Головна организація",
+      "description": "Головна организація",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select(coalesce({self}.masterOrganizationName, (select top 1 description from hr_organization org  where org.mi_data_id = {self}.masterOrganizationID and org.state = 'ACTIVE' and {self}.entryDate between org.mi_dateFrom and org.mi_dateTo and mi_deleteDate >= '9999-12-31'))))"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select(coalesce({self}.masterOrganizationName, (select description from hr_organization org  where org.mi_data_id = {self}.masterOrganizationID and org.state = 'ACTIVE' and {self}.entryDate between org.mi_dateFrom and org.mi_dateTo and mi_deleteDate >= '9999-12-31' limit 1))))"
+        }
+      ]
+    },
+    {
+      "name": "allowPosting",
+      "dataType": "Boolean",
+      "caption": "Дозволено проведення",
+      "documentation": "Дозволено проведення",
+      "description": "Дозволено проведення",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "skipCancelReconciliation",
+      "dataType": "Int",
+      "caption": "Не відміняти погодження",
+      "description": "Не відміняти погодження",
+      "documentation": "Не відміняти погодження",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "sortItems",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMP_ORDER_SORT",
+      "caption": "Сортувати в тексті",
+      "description": "Сортувати в тексті",
+      "documentation": "Сортувати в тексті"
+    },
+    {
+      "name": "documentOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_DOCUMENT_APPOINT",
+      "caption": "Вид документа",
+      "documentation": "Вид документа",
+      "description": "Вид документа"
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_EMPORDER_TYPE": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "empOrderType": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_EMPORDER_ORGSTATE": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "organizationID": { "sort": "ASC" },
+          "orderState": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "rls": {
+      "func": "RLS.byEmpOrderOrganization"
+    }
+  }
+}

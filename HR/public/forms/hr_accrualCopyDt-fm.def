@@ -1,0 +1,175 @@
+/* global Ext appAC $App UB AC */
+exports.formDef = 'HR.accrualCopyDt'
+
+Ext.define('HR.accrualCopyDt', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_accrualCopyDt',
+  height: 400,
+  width: 800,
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        xtype: 'acGrid',
+        name: 'protocol',
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_accrualCopyDtPr'),
+        flex: 1,
+        autoScroll: true,
+        region: 'center',
+        storeType: 'local',
+        disablePaging: true,
+        notWriteChanges: true,
+        showToolBar: true,
+        enableMultifilter: true,
+        summary: { paySum: 'sum', copyPaySum: 'sum' },
+        exportExcel: {
+          title: async function (grid) {
+            const me = grid.up('hr_accrualCopyDt')
+            const orgName = await UB.Repository('ac_organization').attrs('name').where('ID', '=', appAC.globalOrganization()).selectScalar()
+            return `Організація ${orgName}${me.parentForm.attr.childOrg.getValue() ? ' з підлеглими' : ''}\r\nЗа період ${me.parentForm.attr.periodID.getValue() ? me.parentForm.attr.periodID.getFieldValue('name') : me.parentForm.currentPeriod.name}`
+          },
+          showFilterData: true,
+          titleHeight: 30,
+          fileName: UB.i18n('Протокол порівняння'),
+          renderer: {
+            copyDate: (dataIndex, row) => {
+              return AC.dateService.formatDate(row.copyDate, 'dd.mm.yyyy hh:nn:ss')
+            }
+          }
+        },
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        onItemDoubleClick: function (grid, record) {
+          if (record.get('employeeNumberID')) {
+            $App.doCommand({
+              cmdType: 'showForm',
+              formCode: 'hr_rl',
+              tabId: 'hr_rl' + record.get('employeeNumberID') + record.get('periodCalcID'),
+              target: $App.getViewport().centralPanel,
+              cmpInitConfig: {
+                defaultValues: {
+                  employeeNumberID: record.get('employeeNumberID'),
+                  periodID: record.get('periodCalcID'),
+                  makeBold: record.get('payElID') ? 'accrual' : 'accrualFund',
+                  payElID: record.get('payElID'),
+                  payFundID: record.get('payFundID'),
+                  periodSalaryID: record.get('periodSalaryID')
+                }
+              }
+            })
+          }
+        },
+        fields: [
+          { name: 'orgID' },
+          { name: 'periodCalcID' },
+          { name: 'periodSalaryID' },
+          { name: 'payElID' },
+          { name: 'payFundID' },
+          { name: 'employeeNumberID' },
+          { name: 'orgName', columnConfig: { text: UB.i18n('Організація'), width: 100, filterBy: 'string' } },
+          {
+            name: 'tabNum',
+            columnConfig: {
+              text: UB.i18n('Таб.№'),
+              width: 100,
+              filterBy: 'string'
+            }
+          },
+          {
+            name: 'fullFIO',
+            columnConfig: {
+              text: UB.i18n('Працівник'),
+              width: 150,
+              filterBy: 'string'
+            }
+          },
+          {
+            name: 'description',
+            columnConfig: {
+              text: UB.i18n('Опис'),
+              flex: 1,
+              filterBy: 'string'
+            }
+          },
+          {
+            name: 'periodCalc',
+            columnConfig: {
+              text: UB.i18n('Розрахунковий період'),
+              width: 150,
+
+              filterBy: 'string'
+            }
+          },
+          {
+            name: 'periodSalary',
+            columnConfig: {
+              text: UB.i18n('Обліковий період'),
+              width: 150,
+              filterBy: 'string'
+            }
+          },
+          {
+            name: 'copyPaySum',
+            columnConfig: {
+              text: UB.i18n('Сума стара'),
+              width: 150,
+              floatFormat: 2,
+              align: 'right',
+              sortBy: 'Number',
+              filterBy: 'float'
+            }
+          },
+          {
+            name: 'paySum',
+            columnConfig: {
+              text: UB.i18n('Сума нова'),
+              width: 150,
+              floatFormat: 2,
+              align: 'right',
+              sortBy: 'Number',
+              filterBy: 'float'
+            }
+          },
+          {
+            name: 'additional',
+            columnConfig: {
+              text: UB.i18n('Додатково'),
+              flex: 1,
+              filterBy: 'string'
+            }
+          },
+          {
+            name: 'tableType',
+            columnConfig: {
+              text: UB.i18n('Тип таблиці'),
+              flex: 1,
+              filterBy: 'string'
+            }
+          },
+          {
+            name: 'copyDate',
+            columnConfig: {
+              text: UB.i18n('Копія створена'),
+              width: 200,
+              dateFormat: 'd.m.Y H:i:s',
+              dataType: 'Date',
+              filterBy: 'date'
+            }
+          }
+        ]
+      }
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+      me.attr = {
+        protocol: me.down('[name=protocol]')
+      }
+      me.attr.protocol.setLocalStoreData(me.protocolData || [])
+    })
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,475 @@
+/* global AC appAC HR UB */
+
+exports.formDef = {
+  requiredFields: ['organizationID', 'orderState', 'empOrderType', 'document'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [
+      {
+        orderId: 6,
+        actionId: 'startReconciliation'
+      },
+      {
+        orderId: 7,
+        actionId: 'stopReconciliation'
+      },
+      {
+        orderId: 8,
+        actionId: 'toCompletion'
+      },
+      {
+        orderId: 9,
+        actionId: 'renewTask'
+      }
+    ]
+  }],
+  parentConfig: {
+    hideActions: ['docActiondocument'],
+    layout: {
+      type: 'border'
+    }
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      flex: 1,
+      listeners: {
+        tabchange: function (tabPanel, activeTab) {
+          let me = tabPanel.up('form')
+          if (activeTab.ubID === 'report') {
+            if (!me.isPdfCreated) {
+              if (!me.record.get('docText')) {
+                me.editHtml()
+              } else {
+                me.setReportMode('view')
+              }
+            }
+            me.isPdfCreated = true
+          } else if (me.isNewInstance) {
+            me.saveForm().then(result => {
+              if (result === -1) {
+                me.down('tabpanel').setActiveTab(0)
+              }
+            })
+          }
+        }
+      },
+      items: [
+        {
+          title: UB.i18n('Загальні дані'),
+          region: 'center',
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          items: [
+            {
+              attributeName: 'assessmentID',
+              labelWidth: 160,
+              fieldLabel: UB.i18n('Оцінювання'),
+              valueField: 'ID',
+              displayField: 'description',
+              hidden: true,
+              skipSetReadOnly: true,
+              fieldList: ['ID', 'description', 'employeeNumberID'],
+              whereList: {
+                orgID: {
+                  expression: '[organizationID]',
+                  condition: '=',
+                  value: appAC.globalOrganization()
+                },
+                notExists: {
+                  expression: '',
+                  condition: 'subquery',
+                  subQueryType: 'notExists',
+                  value: {
+                    entity: 'hr_empAssessmentResult',
+                    fieldList: [],
+                    method: 'select',
+                    whereList: {
+                      cond: {
+                        expression: '[assessmentID]=[{master}.ID]',
+                        condition: 'custom'
+                      },
+                      miDel: {
+                        expression: '[mi_deleteUser]',
+                        condition: 'isNull'
+                      }
+                    }
+                  }
+                }
+              },
+              listeners: {
+                change: (ctrl, value) => {
+                  const me = ctrl.up('form')
+                  me.assessmentChanged(ctrl, value)
+                }
+              }
+            },
+            {
+              xtype: 'textfield',
+              fieldLabel: UB.i18n('Працівник'),
+              labelWidth: 160,
+              name: 'employeeDescription',
+              skipSetReadOnly: true,
+              readOnly: true
+            },
+            {
+              layout: { type: 'hbox' },
+              margin: '10 0 0 0',
+              items: [
+                {
+                  xtype: 'textfield',
+                  fieldLabel: UB.i18n('Тип оцінювання'),
+                  name: 'assessmentType',
+                  labelWidth: 160,
+                  width: 370,
+                  readOnly: true
+                },
+                {
+                  xtype: 'textfield',
+                  fieldLabel: UB.i18n('Тип завдання'),
+                  name: 'assessmentTaskType',
+                  labelWidth: 120,
+                  width: 360,
+                  readOnly: true
+                },
+                {
+                  xtype: 'textfield',
+                  fieldLabel: UB.i18n('Рік'),
+                  name: 'assessmentYear',
+                  labelWidth: 50,
+                  width: 120,
+                  readOnly: true
+                }
+              ]
+            },
+            {
+              xtype: 'fieldset',
+              title: UB.i18n('Період'),
+              layout: { type: 'hbox' },
+              margin: '0 10 0 10',
+              padding: '0 0 10 10',
+              items: [
+                {
+                  xtype: 'textfield',
+                  fieldLabel: UB.i18n('Період'),
+                  name: 'assessmentPeriod',
+                  readOnly: true,
+                  labelWidth: 140,
+                  width: 280
+                },
+                {
+                  xtype: 'ubdatefield',
+                  name: 'assessmentDateFrom',
+                  readOnly: true,
+                  fieldLabel: UB.i18n('з'),
+                  labelWidth: 40,
+                  width: 160
+                },
+                {
+                  xtype: 'ubdatefield',
+                  name: 'assessmentDateTo',
+                  readOnly: true,
+                  fieldLabel: UB.i18n('по'),
+                  labelWidth: 40,
+                  width: 160
+                }
+              ]
+            },
+            {
+              xtype: 'fieldset',
+              title: UB.i18n('Інформація про посаду'),
+              layout: { type: 'vbox', align: 'stretch' },
+              margin: '5 10 0 10',
+              padding: '0 0 10 10',
+              items: [
+                {
+                  xtype: 'textfield',
+                  fieldLabel: UB.i18n('Підрозділ'),
+                  readOnly: true,
+                  name: 'assessmentDepartment'
+                },
+                {
+                  xtype: 'textfield',
+                  fieldLabel: UB.i18n('Посада'),
+                  readOnly: true,
+                  name: 'assessmentPosition'
+                }
+              ]
+            },
+            {
+              xtype: 'fieldset',
+              title: UB.i18n('Результати оцінювання'),
+              layout: { type: 'hbox' },
+              autoScroll: true,
+              margin: '5 10 0 10',
+              padding: '0 0 5 10',
+              items: [
+                {
+                  layout: { type: 'vbox' },
+                  width: 420,
+                  items: [
+                    {
+                      attributeName: 'avgValue',
+                      xtype: 'numberfield',
+                      vtype: 'floatValidator',
+                      skipSetReadOnly: true,
+                      decimalPrecision: 2,
+                      maxValue: 4,
+                      minValue: 0,
+                      labelWidth: 140,
+                      width: 280
+                    },
+                    { attributeName: 'assessmentValue', labelWidth: 140, width: 280, skipSetReadOnly: true },
+                    { attributeName: 'assessmentDescription', labelWidth: 140, width: 400, skipSetReadOnly: true }
+                  ]
+                },
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  flex: 1,
+                  items: [
+                    {
+                      attributeName: 'dictCompetencyID',
+                      xtype: 'ubboxselect',
+                      fieldLabel: UB.i18n('Потреби у професійному навчанні'),
+                      labelWidth: 140,
+                      maxLength: 500,
+                      multiSelect: true,
+                      skipSetReadOnly: true,
+                      valueField: 'ID',
+                      displayField: 'description',
+                      ubRequest: {
+                        entity: 'hr_dictCompetency',
+                        fieldList: ['ID', 'description']
+                      }
+                    },
+                    {
+                      attributeName: 'conclusionDate',
+                      labelWidth: 140,
+                      width: 280,
+                      skipSetReadOnly: true
+                    }
+                  ]
+                }
+              ]
+            },
+            AC.viewUtils.getCollapsiblePanel(
+              // eslint-disable-next-line no-template-curly-in-string
+              '<span>${UB.i18n("Інформація про погодження")}</span><br>' +
+                // eslint-disable-next-line no-template-curly-in-string
+                '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Стан")}: </span> ${get("agreementState.name") || ""}<br>' +
+                // eslint-disable-next-line no-template-curly-in-string
+                '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Дата погодження")}: </span> ${get("agreementDate") ? moment(get("agreementDate")).format("DD.MM.YYYY") : ""}',
+              {
+                expandTitle: UB.i18n('Інформація про погодження'),
+                layout: {
+                  type: 'hbox'
+                },
+                margin: '5 10 0 10',
+                padding: '0 0 5 10',
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 420,
+                    items: [
+                      { attributeName: 'agreementState', labelWidth: 140, width: 280, skipSetReadOnly: true },
+                      { attributeName: 'agreementDate', labelWidth: 140, width: 280, skipSetReadOnly: true },
+                      { attributeName: 'acquaintanceDate', labelWidth: 140, width: 280, skipSetReadOnly: true }
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    flex: 1,
+                    items: [
+                      {
+                        attributeName: 'agreedByPositionID',
+                        labelWidth: 120,
+                        skipSetReadOnly: true,
+                        fieldList: ['ID', 'description'],
+                        whereList: {
+                          dateFrom: {
+                            expression: '[dateFrom]',
+                            condition: 'lessEqual',
+                            values: { value: appAC.globalApplicationDate() }
+                          },
+                          dateTo: {
+                            expression: '[dateTo]',
+                            condition: 'moreEqual',
+                            values: { value: appAC.globalApplicationDate() }
+                          },
+                          organizationID: {
+                            expression: '[organizationID]',
+                            condition: '=',
+                            values: { value: appAC.globalOrganization() }
+                          }
+                        },
+                        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                      },
+                      { attributeName: 'comment', labelWidth: 120, skipSetReadOnly: true }
+                    ]
+                  }
+                ]
+              }),
+            AC.viewUtils.getCollapsiblePanel(
+              // eslint-disable-next-line no-template-curly-in-string
+              '<span>${UB.i18n("Інформація про оскарження")}: </span><br />' +
+                // eslint-disable-next-line no-template-curly-in-string
+                '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Дата оскарження")}: </span> ${get("appealDate") ? moment(get("appealDate")).format("DD.MM.YYYY") : ""}' +
+                '',
+              {
+                expandTitle: UB.i18n('Інформація про оскарження'),
+                layout: {
+                  type: 'hbox'
+                },
+                margin: '5 10 0 10',
+                padding: '0 0 5 10',
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    width: 420,
+                    items: [
+                      { attributeName: 'appealDate', labelWidth: 140, width: 280, skipSetReadOnly: true },
+                      { attributeName: 'appealDescription', labelWidth: 140, width: 400, skipSetReadOnly: true }
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    flex: 1,
+                    items: [
+                      { attributeName: 'appealResult', labelWidth: 120, skipSetReadOnly: true },
+                      { attributeName: 'appealComment', labelWidth: 120, skipSetReadOnly: true }
+                    ]
+                  }
+                ]
+              })
+          ]
+        },
+        {
+          title: UB.i18n('Завдання'),
+          region: 'center',
+          items: [
+            {
+              xtype: 'acGrid',
+              name: 'empAssessmentTask',
+              stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_empAssessmentResult_empAssessmentTask'),
+              region: 'center',
+              entity: 'hr_empAssessmentTask',
+              formCode: 'hr_empAssessmentTask',
+              ubID: 'empAssessmentTaskResult',
+              flex: 1,
+              storeType: 'ub',
+              storeAutoLoad: false,
+              disablePaging: true,
+              onSaveEditData: true,
+              hideActions: ['del', 'addNew', 'addNewByCurrent'],
+              showToolBar: true,
+              // isReadOnly: true,
+              // readOnly: true,
+              multilineRows: true,
+              skipSetReadOnly: true,
+              enableExpandableRows: true,
+              ubStoreConfig: {
+                entity: 'hr_empAssessmentTask',
+                method: 'select',
+                fieldList: ['ID', 'number', 'taskText', 'deadlineDate', 'noAssessment', 'taskComment', 'doneDate',
+                  'dictTaskScoreID.score', 'resultDescription', 'resultComment'
+                ],
+                whereList: {
+                  empAssessmentID: {
+                    expression: '[empAssessmentID]',
+                    condition: 'equal',
+                    value: 0
+                  }
+                }
+              },
+              expandedRowConfig: {
+                onExpandBody: async function (rowNode, record, expandRow, eOpts) {
+                  const grid = this
+                  const form = grid.up('form')
+                  const view = grid.getView()
+                  view.addRowCls(record.index, 'grd-bold')
+                  let data = await form.loadTaskValues(grid, record)
+                  record.tasks = data
+                  let detail = ` <style type="text/css">.table { width: 100%; padding:10px;} #td { text-indent: 20px} .span { color: #2196F3} </style>
+                    <td class="x-grid-cell-rowbody" colspan="10"><div class="x-grid-rowbody">
+                    <div style="width: 100%"><TABLE style="width: 100%;">
+                    `
+                  data.forEach(item => {
+                    let valueText = AC.gridUtils.cutStringLen(item.valueText, 75)
+                    let comment = AC.gridUtils.cutStringLen(item.comment, 20)
+                    detail += `<TR>
+                      <TD style="width:4%; font-weight: normal;">${item.number}</TD>
+                      <TD style="width:50%; font-weight: normal;"><span class = "span">${valueText}</span></TD>
+                      <TD style="width:24%; font-weight: normal;">${UB.i18n('Плановий строк виконання')}: <span class = "span">${item.deadlineDate ? AC.dateService.formatDate(item.deadlineDate) : ''}</span></TD>
+                      <TD style="width:20%; font-weight: normal;">${UB.i18n('Коментар')}: <span class = "span">${comment}</span></TD>
+                      </TR>`
+                  })
+                  detail += '</TABLE></div></td>'
+                  expandRow.innerHTML = detail
+                  grid.getView().refreshSize()
+                },
+                onCollapseBody: function (rowNode, record, expandRow, eOpts) {
+                  const grid = this
+                  const view = grid.getView()
+                  view.removeRowCls(record.index, 'grd-bold')
+                }
+              },
+              fields: [
+                { name: 'ID' },
+                { name: 'number', columnConfig: { text: UB.i18n('Номер з/п'), dataType: 'Int', width: 100 } },
+                { name: 'taskText', columnConfig: { text: UB.i18n('Завдання'), width: 150 } },
+                { name: 'deadlineDate', columnConfig: { text: UB.i18n('Строк'), dataType: 'Date', width: 100, align: 'center', dateFormat: 'd.m.Y' } },
+                { name: 'noAssessment', columnConfig: { text: UB.i18n('Не оцінювати'), booleanFormat: true, width: 100, align: 'center' } },
+                { name: 'taskComment', columnConfig: { text: UB.i18n('Коментар до завдання'), width: 150 } },
+                { name: 'doneDate', columnConfig: { text: UB.i18n('Виконання'), dataType: 'Date', width: 100, align: 'center', dateFormat: 'd.m.Y' } },
+                { name: 'dictTaskScoreID.score', columnConfig: { text: UB.i18n('Бал'), width: 50, align: 'center' } },
+                { name: 'resultDescription', columnConfig: { text: UB.i18n('Примітка до результату'), width: 150 } },
+                { name: 'resultComment', columnConfig: { text: UB.i18n('Коментар до результату'), width: 150 } }
+              ]
+            }
+          ]
+        },
+        HR.reportTab.getTabConfig({ getRepName: 'getReportName', repTabIndex: 2 }),
+        {
+          title: UB.i18n('Додатки'),
+          autoScroll: true,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          flex: 1,
+          items: [{
+            xtype: 'docAttachment',
+            entity: 'hr_attachDoc',
+            detailFields: 'entityID',
+            fieldList: ['ID', 'caption', 'description', 'sheetsQuantity', 'document', 'mi_createDate',
+              'mi_modifyDate', 'entityID'
+            ],
+            masterFields: 'ID',
+            showOriginal: true,
+            minHeight: 55,
+            maxHeight: 140,
+            height: 95
+          }]
+        },
+        {
+          title: UB.i18n('Маршрут'),
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          items: [
+            {
+              xtype: 'recpanel',
+              name: 'recpanel'
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

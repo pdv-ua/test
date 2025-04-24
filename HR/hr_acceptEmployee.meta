@@ -1,0 +1,62 @@
+{
+  "caption": "Працівники організацій які погоджують документи",
+  "description": "Працівники організацій які погоджують документи",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "allowNull": false
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": true
+    },
+    {
+      "name": "orgName",
+      "dataType": "String",
+      "size": 256,
+      "caption": "Організація",
+      "description": "Організація",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 org.name from hr_organization org where org.mi_data_id = (select org2.mi_data_id from hr_organization org2 where org2.ID = {self}.organizationID) and org.state = 'ACTIVE' and org.mi_deleteDate >= '9999-12-31' order by org.mi_dateFrom desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select org.name from hr_organization org where org.mi_data_id = (select org2.mi_data_id from hr_organization org2 where org2.ID = {self}.organizationID) and org.state = 'ACTIVE' and org.mi_deleteDate >= '9999-12-31' order by org.mi_dateFrom desc LIMIT 1)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+
+}

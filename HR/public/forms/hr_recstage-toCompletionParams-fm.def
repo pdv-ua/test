@@ -1,0 +1,95 @@
+// @isModal true
+/* global UB Ext appAC */
+exports.formDef = 'HR.toCompletionParamsSelect'
+
+Ext.define(exports.formDef, {
+  ident: 'toCompletionParamsSelect',
+  extend: 'Ext.panel.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  width: 600,
+  height: 200,
+  isModal: true,
+  listeners: {
+  },
+  bbar: {
+    layout: {
+      pack: 'center'
+    },
+    style: 'border-style: solid',
+    border: 2,
+    items: [
+      {
+        xtype: 'button',
+        text: 'Ok',
+        width: 100,
+        height: 30,
+        iconCls: 'u-icon-check',
+        cls: 'green-action',
+        handler: function (btn) {
+          this.up('window').close()
+        }
+      },
+      {
+        xtype: 'button',
+        text: UB.i18n('cancel'),
+        width: 100,
+        height: 30,
+        iconCls: 'u-icon-close',
+        cls: 'red-action',
+        handler: function () {
+          this.up('window').close()
+        }
+      }
+    ]
+  },
+  items: [
+    {
+      xtype: 'ubcombobox',
+      name: 'stageKind',
+      fieldLabel: UB.i18n('Вид'),
+      labelWidth: 120,
+      width: 300,
+      valueField: 'code',
+      displayField: 'name',
+      margin: '10 10 10 15',
+      allowBlank: false,
+      ubRequest: {
+        entity: 'ubm_enum',
+        method: UB.core.UBCommand.methodName.SELECT,
+        fieldList: ['ID', 'code', 'name', 'eGroup', 'sortOrder'],
+        whereList: {
+          enumGroupFilter: {
+            expression: '[eGroup]',
+            condition: 'equal',
+            value: 'HR_RECSTAGEKIND'
+          },
+          code: {
+            expression: '[code]',
+            condition: 'in',
+            value: ['SIGN', 'VISA']
+          }
+        },
+        orderList: { orderBy: { expression: 'sortOrder' } }
+      }
+    }
+  ],
+  filterEmpPos: function () {
+    const me = this
+    const employeePositionCtrl = me.down('[name=employeePosition]')
+    const empPosStore = employeePositionCtrl.getStore()
+    empPosStore.ubRequest.onDate = appAC.globalApplicationDate()
+    empPosStore.ubRequest.organizationID = appAC.globalOrganization()
+    empPosStore.ubRequest.empOrderType = me.customParams.empOrderType || me.sender.record.get('empOrderType')
+    empPosStore.load()
+  },
+  initComponent: function () {
+    const me = this
+    me.on('afterrender', function () {
+      // me.filterEmpPos()
+    })
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,112 @@
+{
+  "caption": "Зміна графіку роботи працівника",
+  "description": "Зміна графіку роботи працівника",
+  "descriptionAttribute": "dateFrom",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "allowNull": true
+    },
+    {
+      "name": "workScheduleID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_workSchedule",
+      "caption": "Графік роботи",
+      "description": "Графік роботи",
+      "documentation": "Графік роботи",
+      "defaultView": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дiйсний з",
+      "description": "Дiйсний з",
+      "documentation": "Дiйсний з",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дiйсний до",
+      "description": "Дiйсний до",
+      "documentation": "Дiйсний до"
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Кінець",
+      "description": "Кінець",
+      "documentation": "Кінець",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ",
+      "defaultView": false
+    },
+    {
+      "name": "paraID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Деталь групового наказу",
+      "description": "Деталь групового наказу",
+      "documentation": "Деталь групового наказ"
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Коментар",
+      "description": "Коментар",
+      "documentation": "Коментар"
+    },
+    {
+      "name": "isActive",
+      "dataType": "Boolean",
+      "caption": "Актуальний",
+      "description": "Актуальний",
+      "documentation": "Актуальний",
+      "allowNull": false,
+      "defaultValue": "1"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

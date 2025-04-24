@@ -1,0 +1,61 @@
+<!--%pageOrientation:landscape-->
+
+<table style="font-family: TimesNewRoman; font-size: 12pt; line-height: 1.2; table-layout: fixed; border-collapse: collapse; word-break: normal; padding: 0px; margin: 0px 10px 0px 10px;" border="0px" width="{{sheetSize}}px" cellspacing="0" cellpadding="0px">
+<tbody>
+<tr>
+    <!--{{#reportFields}}-->
+    <td style="width: 200px; padding: 0; ">&nbsp;</td>
+    <!--{{/reportFields}}-->
+</tr>
+<tr>
+    <td>Найменування організації</td>
+    <td style="vertical-align: bottom; border-bottom-width: 1px; border-bottom-color: black; border-bottom-style: solid; padding: 0px 1px 0px 1px;" colspan="{{colSpan}}">{{organizationName}} <!--{{#includeChildOrgs}}-->(з підлеглими)<!--{{/includeChildOrgs}}--></td>
+</tr>
+<tr>
+    <td>Підрозділ</td>
+    <td style="vertical-align: bottom; border-bottom-width: 1px; border-bottom-color: black; border-bottom-style: solid; padding: 0px 1px 0px 1px;" colspan="{{colSpan}}">{{departmentName}} <!--{{#includeChildDepts}}-->(з підлеглими)<!--{{/includeChildDepts}}--></td>
+</tr>
+<tr>
+    <td>Станом на</td>
+    <td style="vertical-align: bottom; border-bottom-width: 1px; border-bottom-color: black; border-bottom-style: solid; padding: 0px 1px 0px 1px;">{{onDateStr}}</td>
+    <td style="padding: 0px 1px 0px 1px;" colspan="{{colSpan1}}">&nbsp;</td>
+</tr>
+<!--{{#groups}}-->
+<tr>
+    <td>{{caption}}</td>
+    <td style="vertical-align: bottom; border-bottom-width: 1px; border-bottom-color: black; border-bottom-style: solid; padding: 0px 1px 0px 1px;" colspan="{{colSpan}}">{{value}}</td>
+</tr>
+<!--{{/groups}}-->
+<tr>
+    <td colspan="{{colCount}}">&nbsp;</td>
+</tr>
+<tr style="text-align: center; background-color: #f0f0f0; font-weight: bold">
+    <!--{{#reportFields}}-->
+    <td style="width: 200px; border: 1px solid;">{{caption}}</td>
+    <!--{{/reportFields}}-->
+</tr>
+<!--{{#data}}-->
+<tr style="page-break-inside: avoid;">
+    <!--{{#info}}-->
+    <td style="vertical-align: top; text-align: left; border: 1px solid;">{{value}}</td>
+    <!--{{/info}}-->
+    <td style="vertical-align: top; text-align: right; border: 1px solid;" data-format="sum">{{#$fs}}"quantity","decimal2"{{/$fs}}</td>
+    <!--{{#sum}}-->
+    <td style="vertical-align: top; text-align: right; border: 1px solid;" data-format="sum">{{#$fs}}"value","{{roundTo}}"{{/$fs}}</td>
+    <!--{{/sum}}-->
+</tr>
+<!--{{/data}}-->
+<tr style="background-color: #f0f0f0; font-weight: bold; page-break-inside: avoid;">
+    <td style="vertical-align: top; text-align: right; border: 1px solid;" colspan="{{infoColCount}}">Разом</td>
+    <td style="vertical-align: top; text-align: right; border: 1px solid;" data-format="sum">{{#$fs}}"totalQuantity","decimal2"{{/$fs}}</td>
+    <!--{{#totals}}-->
+        <!--{{#isNumber}}-->
+        <td style="vertical-align: top; text-align: right; border: 1px solid;" data-format="sum">{{#$fs}}"value","{{roundTo}}"{{/$fs}}</td>
+        <!--{{/isNumber}}-->
+        <!--{{^isNumber}}-->
+        <td style="vertical-align: top; text-align: right; border: 1px solid;">{{value}}</td>
+        <!--{{/isNumber}}-->
+    <!--{{/totals}}-->
+</tr>
+</tbody>
+</table>

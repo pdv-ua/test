@@ -1,0 +1,88 @@
+/* global UB */
+/* global Ext $App UB saveAs Blob AC */
+
+exports.formDef = 'HR.exportMethodSelect'
+
+Ext.define('HR.exportMethodSelect', {
+  extend: 'Ext.form.Panel',
+  width: 650,
+  height: 100,
+  layout: 'border',
+  isModal: true,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        layout: { type: 'hbox' },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            fieldLabel: UB.i18n('Файли експорту'),
+            name: 'exportMethodSelect',
+            hideEntityItemInContext: true,
+            allowBlank: false,
+            selectOnFocus: true,
+            labelWidth: 140,
+            flex: 1,
+            valueField: 'code',
+            displayField: 'name',
+            enumGroupFilter: 'HR_EXPORT_METHOD_TYPE_FILE',
+            ubRequest: {
+              entity: 'ubm_enum',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+              whereList: {
+                eGroup: {
+                  expression: '[eGroup]',
+                  condition: 'equal',
+                  values: { 'eGroup': 'HR_EXPORT_METHOD_TYPE_FILE' }
+                }
+              }
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Створити'),
+            text: UB.i18n('Створити'),
+            cls: 'blue-action',
+            handler: function () {
+              const exportMethodSelect = me.down('[name=exportMethodSelect]').getValue()
+              if (exportMethodSelect === 'filePay') {
+                $App.doCommand({
+                  entity: 'hr_exportMethod',
+                  cmdType: 'showForm',
+                  formCode: 'hr_exportMethodFilePay'
+                })
+              }
+              if (exportMethodSelect === 'fileSAP') {
+                $App.doCommand({
+                  entity: 'hr_exportMethod',
+                  cmdType: 'showForm',
+                  formCode: 'hr_exportMethodFileSap'
+                })
+              }
+              if (exportMethodSelect === 'fileWFM') {
+                $App.doCommand({
+                  entity: 'hr_exportMethod',
+                  cmdType: 'showForm',
+                  formCode: 'hr_exportMethodFileWFM'
+                })
+              }
+              if (exportMethodSelect === 'fileExpress') {
+                $App.doCommand({
+                  entity: 'hr_exportMethod',
+                  cmdType: 'showForm',
+                  formCode: 'hr_exportMethodFileExpress'
+                })
+              }
+              me.up('window').close()
+            }
+          }
+        ]
+      }
+    ]
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,72 @@
+/* global Ext */
+
+exports.formDef = 'HR.orderRegistryAvgPayPElSelect'
+
+Ext.define('HR.orderRegistryAvgPayPElSelect', {
+  extend: 'Ext.form.Panel',
+  width: 800,
+  height: 100,
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        defaults: {
+          labelWidth: 160,
+          width: 400
+        },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            name: 'payElID',
+            fieldLabel: UB.i18n('Вид оплати'),
+            allowBlank: false,
+            ubRequest: {
+              entity: 'hr_payEl',
+              fieldList: ['ID', 'description', 'methodID.code', 'codeSort'],
+              whereList: {
+                byVacation: { expression: '[methodID.code]', condition: 'in', values: { codes: ['23', '44', '68', '73'] } }
+              },
+              orderList: { orderBy: { expression: 'codeSort' } }
+            }
+          }
+        ]
+      },
+      {
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Продовжити'),
+            width: 110,
+            height: 30,
+            margin: '10 20 10 0',
+            handler: function (btn) {
+              if (me.isValid() && me.attr.payElID.getValue()) {
+                me.createDocument({
+                  payElID: me.attr.payElID.getValue(),
+                  methodCode: me.attr.payElID.getFieldValue('methodID.code')
+                })
+                me.up('window') ? me.up('window').close() : me.close()
+              }
+            }
+          }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        payElID: me.down('[name=payElID]')
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

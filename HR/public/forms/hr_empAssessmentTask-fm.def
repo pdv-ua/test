@@ -1,0 +1,176 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['empAssessmentID'],
+  parentConfig: {
+    layout: { type: 'border' },
+    defaults: { layout: 'fit' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      items: [
+        {
+          xtype: 'fieldset',
+          title: UB.i18n('Завдання'),
+          layout: { type: 'vbox', align: 'stretch' },
+          margin: '0 10 5 10',
+          padding: '0 0 5 10',
+          items: [
+            {
+              layout: { type: 'hbox' },
+              margin: '0 0 0 15',
+              items: [
+                { attributeName: 'number', labelWidth: 150, width: 210, margin: '8 0 0 0' },
+                {
+                  xtype: 'checkboxfield',
+                  fieldLabel: UB.i18n('Протягом звітного періоду'),
+                  name: 'duringTheReportingPeriod',
+                  boxLabelAlign: 'before',
+                  labelWidth: 130,
+                  width: 150
+                },
+                { attributeName: 'deadlineDate', labelWidth: 130, width: 250 },
+                { attributeName: 'noAssessment', labelWidth: 120, width: 220 }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  flex: 1,
+                  items: [
+                    { attributeName: 'taskText', labelWidth: 150, flex: 1 }
+                  ]
+                },
+                {
+                  layout: { type: 'vbox' },
+                  width: 330,
+                  items: [
+                    { attributeName: 'taskComment', labelWidth: 100, width: 300 }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'issueDate', labelWidth: 150, width: 270 }
+              ]
+            }
+          ]
+        },
+        {
+          xtype: 'fieldset',
+          title: UB.i18n('Результат виконання'),
+          layout: { type: 'vbox', align: 'stretch' },
+          ubID: 'assessmentResultPanel',
+          margin: '5 10 5 10',
+          padding: '0 0 5 10',
+          items: [
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'doneDate', labelWidth: 150, width: 270 },
+                {
+                  attributeName: 'dictTaskScoreID',
+                  displayField: 'score',
+                  fieldList: ['ID', 'score', 'description'],
+                  labelWidth: 50,
+                  width: 120,
+                  margin: '8 15 0 20'
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'resultDescription', labelWidth: 150, flex: 1 },
+                { attributeName: 'resultComment', labelWidth: 100, width: 300 }
+              ]
+            }
+          ]
+        } /*,
+        AC.viewUtils.getCollapsiblePanel(
+          `<span>${UB.i18n('Результат виконання')}</span><br>
+            // eslint-disable-next-line no-template-curly-in-string
+            <span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;UB.i18n('Фактичний строк виконання'):</span> ${get("doneDate") ? moment(get("doneDate")).format("DD.MM.YYYY"):""}<br>') +
+            // eslint-disable-next-line no-template-curly-in-string
+            <span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;UB.i18n('Бал'): </span> ${get("dictTaskScoreID")? get("dictTaskScoreID.score") : ""}'),
+          {
+            expandTitle: UB.i18n('Результат виконання'),
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            margin: '5 10 5 10',
+            padding: '0 0 5 10',
+            items: [
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  { attributeName: 'doneDate', labelWidth: 150, width: 270 },
+                  {
+                    attributeName: 'dictTaskScoreID',
+                    displayField: 'score',
+                    fieldList: ['ID', 'score', 'description'],
+                    labelWidth: 50,
+                    width: 120,
+                    margin: '8 15 0 20'
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  { attributeName: 'resultDescription', labelWidth: 150, flex: 1 },
+                  { attributeName: 'resultComment', labelWidth: 70, width: 300 }
+                ]
+              }
+            ]
+          }
+        ) */
+      ]
+    },
+    {
+      region: 'center',
+      items: [
+        {
+          xtype: 'ubdetailgrid',
+          name: 'empAssessmentTaskValues',
+          stateful: true,
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_empAssessmentTask_empAssessmentTaskValues'),
+          flex: 1,
+          disableSearchBar: true,
+          hideActions: ['addNewByCurrent'],
+          entityConfig: {
+            entity: 'hr_empAssessmentTaskValue',
+            method: 'select',
+            fieldList: [
+              { name: 'empAssessmentTaskID.number', description: UB.i18n('№ завдання'), config: { width: 80, align: 'center' } },
+              { name: 'number', description: UB.i18n('№ з/п'), config: { width: 80, align: 'center' } },
+              { name: 'valueText' },
+              { name: 'deadlineDate', config: { width: 140, align: 'center' } },
+              { name: 'comment' }
+            ]
+          },
+          masterFields: ['ID'],
+          detailFields: ['empAssessmentTaskID'],
+          listeners: {
+            changeData: function (grid, action) {
+              let me = grid.up('form')
+              me.onAfterSave()
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

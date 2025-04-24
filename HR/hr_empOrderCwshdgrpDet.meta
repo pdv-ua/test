@@ -1,0 +1,189 @@
+{
+  "caption": "Наказ про роботу у вихідні дні (груповий)",
+  "description": "Наказ про роботу у вихідні дні (груповий)",
+  "descriptionAttribute": "orderID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "itemIdx",
+      "dataType": "Int",
+      "caption": "№",
+      "description": "№ за порядком",
+      "documentation": "№ за порядком"
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Наказ про зміни режиму роботи",
+      "description": "Наказ про зміни режиму роботи",
+      "documentation": "Наказ про зміни режиму роботи",
+      "allowNull": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultView": false
+    },
+    {
+      "name": "cancelOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrder",
+      "caption": "Скасовано наказом",
+      "description": "Наказ, що скасував даний пункт",
+      "documentation": "Наказ, що скасував даний пункт"
+    },
+    {
+      "name": "cancelParaID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Скасовано пунктом",
+      "description": "Пункт, що скасував даний пункт",
+      "documentation": "Пункт, що скасував даний пункт"
+    },
+
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false,
+      "defaultValue": "CWSHDGRP"
+    },
+    {
+      "name": "descriptionExt",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Опис",
+      "documentation": "Опис",
+      "description": "Опис",
+      "allowNull": true
+    },
+    {
+      "name": "dictTimeCostID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTimeCost",
+      "caption": "Елемент обліку робочого часу",
+      "description": "Елемент обліку робочого часу",
+      "documentation": "Елемент обліку робочого часу"
+    },
+    {
+      "name": "dictTimeCost2ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTimeCost",
+      "caption": "Елемент обліку робочого часу (додатково)",
+      "description": "Елемент обліку робочого часу (додатково)",
+      "documentation": "Елемент обліку робочого часу (додатково)"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "allowNull": true
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Інформація",
+      "documentation": "Інформація",
+      "description": "Інформація",
+      "allowNull": false
+    },
+    {
+      "name": "changedValues",
+      "dataType": "Text",
+      "caption": "Дані змінені при проведенні",
+      "description": "Дані змінені при проведенні",
+      "documentation": "Дані змінені при проведенні"
+    },
+    {
+      "name": "byRequest",
+      "dataType": "Boolean",
+      "caption": "День відпочинку буде визначений пізніше за окремою заявою працівника",
+      "description": "День відпочинку буде визначений пізніше за окремою заявою працівника",
+      "documentation": "День відпочинку буде визначений пізніше за окремою заявою працівника",
+      "defaultValue": "0"
+    },
+    {
+      "name": "typeCompensation",
+      "dataType": "Enum",
+      "enumGroup": "HR_COMPENSATION_TYPE",
+      "caption": "Вид компенсації",
+      "description": "Вид компенсації",
+      "documentation": "Вид компенсації",
+      "defaultView": false,
+      "allowNull": false,
+      "defaultValue": "HOLIDAY"
+    },
+    {
+      "name": "restDayScheduleDesc",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Розпорядок роботи",
+      "description": "Розпорядок роботи",
+      "documentation": "Розпорядок роботи",
+      "allowNull": true
+    },
+    {
+      "name": "isGroup",
+      "dataType": "Boolean",
+      "caption": "Груповий",
+      "documentation": "Чи являється наказ груповим",
+      "description": "Чи являється наказ груповим",
+      "allowNull": false,
+      "defaultValue": "1"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "unity": {
+      "entity": "hr_empOrderDet",
+      "attributeList": [
+        "organizationID",
+        "empOrderType",
+        "orderState",
+        "cancelOrderID",
+        "cancelParaID",
+        "orderID",
+        "changedValues",
+        "dateFrom",
+        "dateTo",
+        "description",
+        "itemIdx",
+        "isGroup"
+      ],"defaults": {
+        "isExternal": false,
+        "isGroup": true
+      }
+    }
+  }
+}

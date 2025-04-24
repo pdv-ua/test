@@ -1,0 +1,170 @@
+/* global Ext UB $App appAC AC */
+exports.formDef = 'HR.rlDimension'
+
+Ext.define('HR.rlDimension', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_rlDimension',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  readOnly: true,
+  checkPaySum: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'acGrid',
+        name: 'dimension',
+        flex: 1,
+        autoScroll: true,
+        region: 'center',
+        storeType: 'local',
+        disablePaging: true,
+        notWriteChanges: true,
+        formCode: me.readOnly ? null : 'hr_rlDimensionDt',
+        hideActions: [].concat(me.readOnly ? ['addNewByCurrent', 'addNew', 'edit', 'del'] : []),
+        summary: { paySum: 'sum' },
+        hideDefaultAction: me.readOnly,
+        showToolBar: !me.readOnly,
+        multilineRows: true,
+        enableExpandableRows: true,
+        expandedRowConfig: {
+          onExpandBody: function (rowNode, record, expandRow, eOpts) {
+            let detail = `<td class="x-grid-cell-rowbody" colspan="10"><div class="x-grid-rowbody ">
+            <div width: 100%"><TABLE style="width:100%"> `
+            for (let i = 0; i < 10; i++) {
+              if (record.get('d' + i)) {
+                detail += `<TR><TD style="width:24%"><em>${record.get('d' + i)}</em></TD>
+                <TD style="width:25%"><em>${record.get('d' + i + 'Value') || ''}</em></TD>
+                <TD style="width:50%"></TD>
+               </TR>`
+              }
+            }
+
+            detail += '</TABLE></div></td>'
+            expandRow.innerHTML = detail
+          }
+        },
+        onSaveEditData: function (form, grid, record, formData) {
+          me.saveAccrual(form, grid, record, formData)
+        },
+        customToolBarActions: [
+          {
+            name: 'saveButton',
+            tooltip: UB.i18n('Зберегти'),
+            iconCls: 'fas fa-save',
+            scale: 'medium',
+            cls: 'green-action',
+            injectActions: 'first',
+            handler: function (btn) {
+              me.saveAndClose()
+            }
+          }
+        ],
+        fields: [
+          Object.assign({
+            name: 'accountID'
+          }, me.typeData !== 'retention' ? {
+            columnConfig: {
+              text: UB.i18n('Рахунок'),
+              flex: 1
+            }
+          } : {}
+          ),
+          {
+            name: 'dictFundSourceID',
+            columnConfig: { text: UB.i18n('Джерело фінансування'),
+              flex: 1
+            }
+          },
+          {
+            name: 'dictProgClassID',
+            columnConfig: { text: UB.i18n('КПК'),
+              flex: 1,
+              hidden: true
+            }
+          },
+          {
+            name: 'dictProjectID',
+            columnConfig: { text: UB.i18n('Проєкт'),
+              flex: 1,
+              hidden: true
+            }
+          },
+          {
+            name: 'departmentID',
+            columnConfig: { text: UB.i18n('Підрозділ'),
+              flex: 1
+            }
+          },
+          {
+            name: 'paySum',
+            columnConfig: { text: UB.i18n('Сума'), width: 150, floatFormat: 2, align: 'right', sortBy: 'Number' }
+          },
+          { name: 'd0' }, { name: 'd0Value' },
+          { name: 'd1' }, { name: 'd1Value' }, { name: 'd2' }, { name: 'd2Value' },
+          { name: 'd3' }, { name: 'd3Value' }, { name: 'd4' }, { name: 'd4Value' },
+          { name: 'd5' }, { name: 'd5Value' }, { name: 'd6' }, { name: 'd6Value' },
+          { name: 'd7' }, { name: 'd7Value' }, { name: 'd8' }, { name: 'd8Value' },
+          { name: 'd9' }, { name: 'd9Value' }, { name: 'dtData' }
+        ]
+      }
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+
+      me.attr = {
+        grid: me.down('[name=dimension]')
+      }
+      if (me.defaultValues) {
+        me.attr.grid.setLocalStoreData(me.defaultValues)
+      }
+      AC.gridUtils.setGridColumnVisible(me.attr.grid, ['dictProgClassID'], AC.settings.get('hrProgClassAcc', me.orgID || appAC.globalOrganization()))
+      AC.gridUtils.setGridColumnVisible(me.attr.grid, ['dictProjectID'], AC.settings.get('hrProjectAcc', me.orgID || appAC.globalOrganization()))
+    }, me)
+
+    me.saveAndClose = () => {
+      const data = me.getData()
+      const paySum = data.reduce((sum, curValue) => AC.currencyService.round(sum + curValue.paySum), 0)
+      if (AC.currencyService.round(paySum) !== AC.currencyService.round(me.paySum) && me.checkPaySum) {
+        $App.dialogError(UB.i18n(`Сума записів деталізації ({0})не дорівнює сумі запису Розрахункового листа ({1})`, paySum, me.paySum))
+      } else {
+        if (me.onSave) {
+          me.onSave(data, paySum)
+        }
+        me.up('window').close()
+      }
+    }
+    me.getData = () => {
+      let result = []
+      let allRecord = me.attr.grid.getStore().snapshot || me.attr.grid.getStore().data
+      allRecord.items.forEach(function (item) {
+        result.push(JSON.parse(item.get('dtData') || '{}'))
+      })
+      return result
+    }
+
+    me.saveAccrual = (form, grid, record, formData) => {
+      if (record) {
+        record.set('dtData', JSON.stringify(formData))
+      }
+      const data = me.getData()
+      if (!record) {
+        data.push(formData)
+      }
+
+      $App.connection.run({
+        entity: 'hr_rl',
+        method: 'getDimension',
+        params: JSON.stringify(data),
+        orgID: me.orgID || appAC.globalOrganization()
+      }).then(response => {
+        const data = JSON.parse(response.resultData)
+        me.attr.grid.setLocalStoreData(data)
+      })
+    }
+
+    me.callParent(arguments)
+  }
+})

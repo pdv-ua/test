@@ -1,0 +1,89 @@
+/* global AC */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'organizationID', 'empOrderType'],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      }
+    },
+    defaults: {
+      layout: 'fit'
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [
+      {
+        attributeName: 'isExternal'
+      },
+      {
+        attributeName: 'employeePositionID',
+        gridFieldList: ['description'],
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+        hidden: true,
+        requiredIf: (ctrl, form) => !form.getField('isExternal').getValue(),
+        fieldLabel: UB.i18n('Особа'),
+        fieldList: ['ID', 'description', 'employeeID.firstName', 'employeeID.lastName', 'employeeID.middleName',
+          'employeeID', 'employeeNumberID', 'departmentID', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+        xtype: 'empPositionCombobox',
+        addWorkPlace: true,
+        showIf: (ctrl, form) => !form.getField('isExternal').getValue(),
+        listeners: {
+          select: ctrl => {
+            const reco = AC.gridUtils.getCurrentRecord(ctrl)
+            const me = ctrl.up('form')
+            if (reco) {
+              me.record.set('firstName', reco.get('employeeID.firstName'))
+              me.record.set('lastName', reco.get('employeeID.lastName'))
+              me.record.set('middleName', reco.get('employeeID.middleName'))
+            } else {
+              me.record.set('firstName', null)
+              me.record.set('lastName', null)
+              me.record.set('middleName', null)
+            }
+          }
+        }
+      },
+      {
+        attributeName: 'lastName',
+        allowBlank: true,
+        showIf: (ctrl, form) => form.record.get('isExternal'),
+        requiredIf: (ctrl, form) => form.record.get('isExternal'),
+        hidden: true
+      },
+      {
+        attributeName: 'firstName',
+        allowBlank: true,
+        showIf: (ctrl, form) => form.record.get('isExternal'),
+        requiredIf: (ctrl, form) => form.record.get('isExternal'),
+        hidden: true
+      },
+      {
+        attributeName: 'middleName',
+        allowBlank: true,
+        showIf: (ctrl, form) => form.record.get('isExternal'),
+        hidden: true
+      },
+      {
+        attributeName: 'title',
+        fieldLabel: UB.i18n('Посада'),
+        showIf: (ctrl, form) => form.record.get('isExternal'),
+        hidden: true
+      },
+      {
+        attributeName: 'bonusID',
+        fieldLabel: UB.i18n('Заохочення'),
+        whereList: {
+          isEnc: {
+            expression: '[isActive]',
+            condition: 'equal',
+            value: true
+          }
+        }
+      }
+    ]
+  }
+})()

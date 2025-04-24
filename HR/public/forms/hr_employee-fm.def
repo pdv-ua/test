@@ -1,0 +1,848 @@
+const empTabLabelWidth = 145
+const empTabCol1Width = 190
+const dateCtrlWidth = 120
+
+/* global _ UB, HR  $App appAC AC */
+exports.formDef = {
+  requiredFields: ['description', 'fullFIO', 'organizationID', 'impSourceID', 'oathOrgName'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'hbox',
+      align: 'stretch'
+    },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [{
+      orderId: 6,
+      actionId: 'printAction'
+    },
+    {
+      xtype: 'tbtext',
+      text: '',
+      orderId: 7,
+      ubID: 'personInfo',
+      style: {
+        'font-style': 'bold',
+        color: '#2196f3',
+        'font-size': '20px',
+        'margin-left': '0px'
+      }
+    }
+    ]
+  }],
+  listeners: {
+    render: function () {
+      const me = this
+      const tree = me.down('[ubID=treeInfo]')
+      me.setRootInitial().then(() => {
+        tree.updateNodes()
+      })
+    }
+  },
+  items: [{
+    width: '100%',
+    layout: {
+      type: 'hbox',
+      align: 'stretch'
+    },
+    items: [{
+      flex: 1.5,
+      xtype: 'panel',
+      collapsible: true,
+      ubId: 'menuPanel',
+      style: {
+        border: 'solid 1px lightgray'
+      },
+      animate: true,
+      collapseDirection: 'left',
+      layout: 'fit',
+      activateTab: function (nodeId, me) {
+        me.activateTab(nodeId, me)
+      },
+      layoutConfig: {
+        titleCollapse: true,
+        animate: true,
+        activeOnTop: false
+      },
+      items: [{
+        collapsed: false,
+        xtype: 'treepanel',
+        rootVisible: false,
+        multiSelect: false,
+        hideCollapseTool: true,
+        lines: false,
+        hideHeaders: true,
+        hideIcons: true,
+        ubID: 'treeInfo',
+        listeners: {
+          render: function (tree) {
+            const me = tree.view.up('form')
+            me.checkNodeSelection(tree, me)
+          },
+          select: function (tree, record) {
+            const me = tree.view.up('form')
+            me.treepanelSelect(tree, record)
+          }
+        },
+        findNodeId: function (nodeId) {
+          const rootNode = this.getRootNode()
+          return rootNode.findChildBy(function (node) {
+            return node.raw.nodeId === nodeId
+          }, null, true)
+        },
+        filters: [],
+        addFilterRemoveNodeId: function (nodeId) {
+          const me = this
+          me.filters.push(nodeId)
+        },
+        clearFilter: function () {
+          const me = this
+          while (me.filters.length) {
+            me.filters.pop()
+          }
+        },
+        updateNodes: function () {
+          const me = this
+          const rootNode = _.clone(me.rootInitial)
+          const filters = me.filters
+          const deleteNodeId = function (rootNode, nodeId) {
+            if (rootNode.children) {
+              const removeItems = []
+              for (let i = 0; i < rootNode.children.length; i++) {
+                let node = rootNode.children[i]
+                if (node.nodeId === nodeId) {
+                  removeItems.push(node)
+                  break
+                } else {
+                  deleteNodeId(node, nodeId)
+                }
+              }
+              removeItems.forEach(item => {
+                const index = rootNode.children.indexOf(item)
+                rootNode.children.splice(index, 1)
+              })
+            }
+          }
+          filters.forEach(item => {
+            deleteNodeId(rootNode, item)
+          })
+
+          me.setRootNode(rootNode)
+        },
+        rootInitial: {
+          expanded: true,
+          text: UB.i18n('Розділи'),
+          children: [
+          ]
+        }
+      }],
+      width: '30%'
+    },
+    {
+      xtype: 'tabpanel',
+      flex: 5,
+      plain: true,
+      tabPosition: 'top',
+      items: [{
+        title: UB.i18n('Загальні дані'),
+        nodeId: 'hr_employee',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        autoScroll: true,
+        items: [
+          {
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            items: [{
+              layout: {
+                type: 'hbox'
+              },
+              xtype: 'ubfieldset',
+              padding: '5 0 0 0',
+              items: [
+                {
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  flex: 1,
+                  defaults: { labelWidth: empTabLabelWidth },
+                  items: [
+                    {
+                      layout: {
+                        type: 'hbox'
+                      },
+                      items: [
+                        {
+                          attributeName: 'empTaxCodeType',
+                          labelWidth: empTabLabelWidth,
+                          width: empTabLabelWidth + empTabCol1Width
+                        },
+                        {
+                          attributeName: 'taxCode',
+                          vtype: 'taxCodeValidator',
+                          labelWidth: 110,
+                          flex: 1,
+                          fieldLabel: UB.i18n('Значення')
+                        }
+                      ]
+                    },
+                    {
+                      layout: {
+                        type: 'hbox'
+                      },
+                      items: [
+                        {
+                          attributeName: 'recordNumber',
+                          vtype: 'recordNumber',
+                          labelWidth: empTabLabelWidth,
+                          flex: 1
+                        },
+                        {
+                          attributeName: 'dictTaxCodeReasonID',
+                          labelWidth: 155,
+                          flex: 1,
+                          hidden: true
+                        }
+                      ]
+                    },
+                    {
+                      xtype: 'textfield',
+                      name: 'tabNum',
+                      fieldLabel: UB.i18n('Табельний номер'),
+                      readOnly: true,
+                      hidden: true
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      defaults: { labelWidth: empTabLabelWidth },
+                      items: [
+                        {
+                          attributeName: 'lastName',
+                          flex: 1
+                        },
+                        {
+                          attributeName: 'lastNameEng',
+                          flex: 1
+                        }
+                      ]
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      defaults: { labelWidth: empTabLabelWidth },
+                      items: [
+                        {
+                          attributeName: 'firstName',
+                          flex: 1
+                        },
+                        {
+                          attributeName: 'firstNameEng',
+                          flex: 1
+                        }
+                      ]
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      defaults: { labelWidth: empTabLabelWidth },
+                      items: [
+                        {
+                          attributeName: 'middleName',
+                          flex: 1
+                        },
+                        {
+                          attributeName: 'middleNameEng',
+                          flex: 1
+                        }
+                      ]
+                    },
+                    {
+                      attributeName: 'shortFIO',
+                      hidden: true
+                    },
+                    {
+                      attributeName: 'fullFIO',
+                      hidden: true
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    {
+                      attributeName: 'photo',
+                      flex: 0.5,
+                      width: 200,
+                      layout: 'auto',
+                      expanded: true,
+                      cmpConfig: {
+                        height: 200
+                      }
+                    },
+                    {
+                      xtype: 'image',
+                      name: 'emptyPhoto',
+                      src: '/models/HR/images/emptyPhoto.png',
+                      height: 200,
+                      hidden: true
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: {
+                type: 'hbox'
+              },
+              items: [{
+                attributeName: 'sexType',
+                labelWidth: empTabLabelWidth,
+                width: empTabLabelWidth + empTabCol1Width,
+                disableContextMenu: false,
+                hideEntityItemInContext: true
+              },
+              {
+                attributeName: 'dictMaritalStatusKindID',
+                labelWidth: 110,
+                flex: 1
+              }]
+            },
+            {
+              layout: {
+                type: 'hbox'
+              },
+              items: [
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [{
+                    attributeName: 'birthDate',
+                    labelWidth: empTabLabelWidth,
+                    width: empTabLabelWidth + dateCtrlWidth
+                  },
+                  {
+                    xtype: 'displayfield',
+                    attributeName: 'age',
+                    labelWidth: 70,
+                    width: empTabCol1Width - dateCtrlWidth + 15,
+                    style: {
+                      fontWeight: 'bold'
+                    }
+                  }]
+                },
+                {
+                  attributeName: 'citizenshipID',
+                  labelWidth: 110,
+                  flex: 1
+                }
+              ]
+            },
+            {
+              attributeName: 'birthPlace',
+              labelWidth: empTabLabelWidth,
+              flex: 1
+            },
+            {
+              attributeName: 'other',
+              xtype: 'textarea',
+              height: 90,
+              labelWidth: empTabLabelWidth
+            },
+            AC.viewUtils.getCollapsiblePanel(
+              (() => {
+                /**
+                 * Generates function which will take the content string as a param
+                 *
+                 * @param {string} tagName Tag name
+                 * @param {array<string>} styles Array of styles without semicolon
+                 * @return {function(string): string}
+                 */
+                const createHtmlEl = (tagName, styles) => {
+                  return (content) => `
+              <${tagName}
+                style="${styles.join('; ')}"
+              >
+                ${content}
+              </${tagName}>
+            `
+                }
+                /**
+                 * Generates html condition by field name
+                 *
+                 * @param {string} field Field name
+                 * @return {string}
+                 */
+                const buildCondition = (field) => 'get("' + field + '") === ""'
+                const fields = ['phoneMobile', 'phoneWorking', 'phoneHome']
+                const container = createHtmlEl('div', ['white-space: normal', 'color: #818181'])
+                const isEmpty = fields.map(buildCondition).join(' && ')
+                // eslint-disable-next-line no-template-curly-in-string
+                const emptyText = '<div style="${' + isEmpty + ' ? "" : "display: none"}">${UB.i18n("Контактні телефони")}</div>'
+                const rows = fields.map((field) => {
+                  const row = createHtmlEl('div', ['${' + buildCondition(field) + ' ? "display: none;" : ""}'])
+                  const labelContent = '${UB.i18n("hr_employee.' + field + '")}'
+                  const label = createHtmlEl('span', ['color: rgba(33, 150, 243, 0.8)', ' padding-left: 15px'])(labelContent)
+                  const value = '${' + field + '}'
+
+                  return row(label + value)
+                }).join('')
+                return container(rows + emptyText)
+              })(),
+              {
+                expandTitle: UB.i18n('Контактні телефони'),
+                margin: '5 15 5 15',
+                layout: {
+                  type: 'hbox'
+                },
+                items: [{
+                  flex: 1,
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  items: [{
+                    attributeName: 'phoneMobile',
+                    xtype: 'textfield'
+                  },
+                  {
+                    attributeName: 'phoneWorking',
+                    xtype: 'textfield'
+                  },
+                  {
+                    attributeName: 'phoneHome',
+                    xtype: 'textfield'
+                  }]
+                }
+                ]
+              }),
+            {
+              xtype: 'panel',
+              margin: '5 15 5 15',
+              name: 'panelEmpContact',
+              hidden: !AC.settings.get('hrHideEmployeeContact', appAC.globalOrganization()),
+              style: 'background-color: rgba(233,243,243,1); cursor: pointer; padding: 7px; color: #818181; border: 1px solid; border-color: grey; border-radius: 8px',
+              height: 14,
+              layout: { type: 'vbox', align: 'stretch' }
+            },
+            AC.viewUtils.getCollapsiblePanel(
+              (() => {
+                /**
+                 * Generates function which will take the content string as a param
+                 *
+                 * @param {string} tagName Tag name
+                 * @param {array<string>} styles Array of styles without semicolon
+                 * @return {function(string): string}
+                 */
+                const createHtmlEl = (tagName, styles) => {
+                  return (content) => `
+                            <${tagName}
+                              style="${styles.join('; ')}"
+                            >
+                              ${content}
+                            </${tagName}>
+                          `
+                }
+                /**
+                 * Generates html condition by field name
+                 *
+                 * @param {string} field Field name
+                 * @return {string}
+                 */
+                const buildCondition = (field) => 'get("' + field + '") === ""'
+                const fields = ['genName', 'datName', 'accusativeName', 'insName', 'locName', 'vocName']
+                const container = createHtmlEl('div', ['white-space: normal', 'color: #818181'])
+                const isEmpty = fields.map(buildCondition).join(' && ')
+                const emptyText = '<div style="${' + isEmpty + ' ? "" : "display: none"}">${UB.i18n("Відмінки")}</div>'
+                const rows = fields.map((field) => {
+                  const row = createHtmlEl('div', ['${' + buildCondition(field) + ' ? "display: none;" : ""}'])
+                  const labelContent = '${UB.i18n("hr_employee.' + field + '")}'
+                  const label = createHtmlEl('span', ['color: rgba(33, 150, 243, 0.8)', ' padding-left: 15px'])(labelContent)
+                  const value = '${' + field + '}'
+
+                  return row(label + value)
+                }).join('')
+                return container(rows + emptyText)
+              })(),
+              {
+                expandTitle: UB.i18n('Відмінки'),
+                margin: '5 15 5 15',
+                layout: {
+                  type: 'hbox'
+                },
+                items: [{
+                  flex: 1,
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  items: [{
+                    attributeName: 'genName',
+                    xtype: 'textfield',
+                    caseName: 'gen'
+                  },
+                  {
+                    attributeName: 'datName',
+                    xtype: 'textfield',
+                    caseName: 'dat'
+                  },
+                  {
+                    attributeName: 'accusativeName',
+                    xtype: 'textfield',
+                    caseName: 'acc'
+                  },
+                  {
+                    attributeName: 'insName',
+                    xtype: 'textfield',
+                    caseName: 'ins'
+                  },
+                  {
+                    attributeName: 'locName',
+                    xtype: 'textfield',
+                    caseName: 'loc'
+                  },
+                  {
+                    attributeName: 'vocName',
+                    xtype: 'textfield',
+                    caseName: 'voc'
+                  },
+                  {
+                    attributeName: 'engName',
+                    xtype: 'textfield'
+                  },
+                  {
+                    xtype: 'button',
+                    text: UB.i18n('Заповнити'),
+                    handler: btn => {
+                      const me = btn.up('form')
+                      const surname = me.getField('lastName')
+                      const name = me.getField('firstName')
+                      const lastname = me.getField('middleName')
+                      let gender = me.record.get('sexType')
+                      gender = gender === 'W' ? 'female' : gender === 'M' ? 'male' : null
+                      HR.nameCase.getNameCase((surname.getValue() || '').trim(), (name.getValue() || '').trim(), (lastname.getValue() || '').trim(), gender).then(nc => {
+                        me.query('[caseName]').forEach(item => {
+                          const value = nc.getSurName(item.caseName) + ' ' + nc.getName(item.caseName) + ' ' + nc.getLastName(item.caseName)
+                          item.setValue(value.trim())
+                        })
+                      })
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    text: UB.i18n('Налаштування'),
+                    hidden: !$App.connection.userData().roles.toUpperCase().split(',').includes('ADMIN'),
+                    handler: btn => {
+                      const me = btn.up('form')
+                      const surname = me.getField('lastName')
+                      const name = me.getField('firstName')
+                      const lastname = me.getField('middleName')
+                      $App.doCommand({
+                        cmdType: 'showForm',
+                        formCode: 'hr_namecase-list',
+                        entity: 'hr_namecase',
+                        cmpInitConfig: {
+                          checkNames: {
+                            surname: surname.getValue(),
+                            name: name.getValue(),
+                            lastname: lastname.getValue()
+                          }
+                        }
+                      })
+                    }
+                  }]
+                }
+                ]
+              })
+            ]
+          }
+        ]
+      },
+      {
+        title: UB.i18n('Загальні дані держслужбовця'),
+        nodeId: 'hr_employeeCivilCommon',
+        hidden: true,
+        autoScroll: true,
+        layout: {
+          type: 'vbox',
+          align: 'stretch',
+          flex: 1
+        },
+        items: [{
+          xtype: 'ubfieldset',
+          items: [{
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            flex: 1,
+            defaults: {
+              labelWidth: 260
+            },
+            items: [{
+              attributeName: 'oathDate'
+            },
+            {
+              attributeName: 'isCitizen'
+            },
+            {
+              name: 'oathOrgName',
+              xtype: 'ubcombobox',
+              fieldLabel: UB.i18n('Назва державного органу, де прийняв присягу'),
+              gridFieldList: ['code', 'name'],
+              hideActions: ['addNew', 'edit', 'addNewByCurrent', 'del'],
+              maxLength: 300,
+              ubRequest: {
+                // entity: 'cdn_organization',
+                entity: 'hr_organization',
+                fieldList: ['ID', 'name'],
+                __mip_ondate: appAC.globalApplicationDate(),
+                whereList: {
+                  active: {
+                    expression: '[state]',
+                    condition: 'equal',
+                    value: 'ACTIVE'
+                  }
+                }
+              },
+              isFormField: true,
+              displayField: 'name',
+              allowCustomText: true,
+              triggerCls: 'hr-list-trigger',
+              listeners: {
+                blur: ctrl => {
+                  ctrl.setValue(ctrl.rawValue)
+                  ctrl.up('form').record.set('oathOrgName', ctrl.rawValue)
+                },
+                select: ctrl => {
+                  ctrl.setValue(ctrl.rawValue)
+                  ctrl.up('form').record.set('oathOrgName', ctrl.rawValue)
+                },
+                focus: ctrl => {
+                  if (!ctrl.isMenuItemsDisabled) {
+                    ctrl.isMenuItemsDisabled = true
+                    HR.orderManager.disableContextMenuItems(ctrl, ['editItem', 'addItem'])
+                  }
+                  ctrl.inputEl.dom.setAttribute('maxlength', 300)
+                }
+              }
+            },
+            {
+              attributeName: 'docNumber'
+            },
+            {
+              attributeName: 'deputy'
+            },
+            {
+              attributeName: 'scientificWorks'
+            },
+            {
+              attributeName: 'civilOther'
+            },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 260 },
+              items: [
+                { attributeName: 'isInitiated', flex: 1, minWidth: 160, maxWidth: 360 },
+                {
+                  attributeName: 'dateIntroduction',
+                  labelWidth: 140,
+                  margin: '10 15 5 15',
+                  flex: 1,
+                  minWidth: 140,
+                  maxWidth: 260
+                }
+              ]
+            }
+            ]
+          },
+          {
+            flex: 0.5
+          }]
+        }]
+      },
+      {
+        title: UB.i18n('Пенсія'),
+        nodeId: 'hr_employeePension',
+        hidden: true,
+        autoScroll: true,
+        layout: {
+          type: 'vbox',
+          align: 'stretch',
+          flex: 1
+        },
+        items: [{
+          layout: {
+            type: 'hbox',
+            align: 'top'
+          },
+          xtype: 'ubfieldset',
+          items: [{
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            flex: 1,
+            defaults: {
+              labelWidth: 260
+            },
+            items: [{
+              xtype: 'ubfieldset',
+              title: UB.i18n('Пенсія'),
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              items: [{
+                attributeName: 'pensionDate'
+              },
+              {
+                attributeName: 'pensionTypeID'
+              },
+              {
+                attributeName: 'pensionDocID'
+              },
+              {
+                attributeName: 'pensionComment'
+              }]
+            },
+            {
+              xtype: 'ubfieldset',
+              title: UB.i18n('Смерть'),
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              items: [{
+                attributeName: 'deathDate'
+              },
+              {
+                attributeName: 'causeOfDeathID'
+              },
+              {
+                attributeName: 'deathComment'
+              }]
+            }
+            ]
+          },
+          {
+            flex: 0.5
+          }]
+        }]
+      },
+      {
+        title: UB.i18n('Додаткові дані за організацією'),
+        nodeId: 'hr_employeeOrgInfo',
+        hidden: true,
+        autoScroll: true,
+        layout: {
+          type: 'vbox',
+          align: 'stretch',
+          flex: 1
+        },
+        items: [{
+          layout: {
+            type: 'hbox',
+            align: 'top'
+          },
+          xtype: 'ubfieldset',
+          items: [{
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            flex: 1,
+            defaults: {
+              labelWidth: 260
+            },
+            items: [
+              {
+                attributeName: 'numberOS'
+              },
+              {
+                layout: { type: 'hbox' },
+                /*
+                width: 956,
+*/
+                items: [
+                  {
+                    attributeName: 'empOrderAppoint',
+                    labelWidth: 260,
+                    width: '95%'
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Заповнити даними з системи'),
+                    iconCls: 'fas fa-angle-double-down',
+                    cls: 'fill-action',
+
+                    width: '5%',
+
+                    margin: '15 15 0 10',
+                    handler: async function (btn) {
+                      let me = btn.up('form')
+                      if (me.employeeNumberID) {
+                        let orderList = await UB.Repository('hr_employeeNumber')
+                          .attrs(['orderID.description'])
+                          .where('employeeID', '=', me.instanceID)
+                          .selectAsArrayOfValues()
+                        me.attr.empOrderAppoint.setValue(orderList.join('; '))
+                      }
+                    }
+                  }
+                ]
+
+              },
+              {
+                attributeName: 'numberIdentCard'
+              },
+              {
+                attributeName: 'numberPermit'
+              },
+              {
+                attributeName: 'domainName'
+              },
+              {
+                attributeName: 'insuranceNum'
+              },
+              {
+                attributeName: 'whereRegisteredInPFU'
+              },
+              {
+                attributeName: 'comment'
+              },
+              {
+                attributeName: 'addInfo'
+              },
+              {
+                xtype: 'textareafield',
+                name: 'addDescrPerson',
+                fieldLabel: UB.i18n('Додаткова інформація'),
+                readOnly: true,
+                hidden: true
+              }
+            ]
+          },
+          {
+            flex: 0.5
+          }]
+        }]
+      }]
+    }]
+  }]
+}

@@ -1,0 +1,315 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['employeeNumberID.orgID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [{
+      orderId: 5,
+      actionId: 'ActionChangePasswordID'
+    }]
+  }],
+
+  items: [
+    {
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+
+              attributeName: 'employeeNumberID',
+              fieldList: ['ID', 'description', 'employeeID', 'employeeID.firstName', 'employeeID.lastName', 'employeeID.fullFIO',
+                'employeeID.taxCode', 'orgID', 'orgEDRPOUCode'],
+              xtype: 'empNumComboBox',
+              showEntityName: 'hr_employee',
+              showFormCode: 'hr_employee',
+              instanceAttr: 'employeeID',
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              gridFieldList: ['description']
+            },
+            {
+              attributeName: 'name'
+            },
+            {
+              attributeName: 'firstName',
+              hidden: true
+            },
+            {
+              attributeName: 'lastName',
+              hidden: true
+            },
+            {
+              attributeName: 'fullName',
+              hidden: true
+            },
+            {
+              attributeName: 'trustedIP'
+            },
+            {
+              attributeName: 'uData'
+            }
+          ]
+        }, {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'disabled'
+            },
+            {
+              attributeName: 'isPending'
+            }
+          ]
+        },
+        {
+          items: [
+            {
+              attributeName: 'avatar',
+              expanded: true,
+              width: 128,
+              height: 128
+            }
+          ]
+        }
+      ]
+    },
+    {
+      flex: 1,
+      xtype: 'tabpanel',
+      items: [
+        {
+          flex: 1,
+          xtype: 'ubdetailgrid',
+          name: 'usergroup',
+          title: UB.i18n('uba_usergroup'),
+          entity: 'uba_usergroup',
+          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+          entityConfig: {
+            entity: 'uba_usergroup',
+            method: 'select',
+            fieldList: [
+              {
+                name: 'groupID.name',
+                description: UB.i18n('Назва')
+              },
+              {
+                name: 'groupID.code',
+                description: UB.i18n('Код')
+              },
+              {
+                name: 'groupID.description',
+                description: UB.i18n('Опис')
+              }
+            ]
+          },
+          masterFields: ['ID'],
+          detailFields: ['userID'],
+          cmpInitConfig: {
+            customActions: [
+              {
+                text: UB.i18n('Редагувати'),
+                iconCls: 'u-icon-edit-alt',
+                scale: 'medium',
+                cls: 'fill-action',
+                handler: function (btn) {
+                  const grid = btn.up('grid')
+                  const form = grid.up('form')
+                  if (form.isNewInstance) {
+                    form.saveForm().then(result => {
+                      if (result !== -1) {
+                        form.changeGridValue(form, grid)
+                      }
+                    })
+                  } else {
+                    form.changeGridValue(form, grid)
+                  }
+                }
+              }
+            ],
+            onItemDblClick: function (grid) {
+              const form = grid.up('form')
+              form.changeGridValue(form, grid.ownerCt)
+            }
+          }
+        },
+        {
+          flex: 1,
+          title: UB.i18n('uba_userrole'),
+          xtype: 'ubdetailgrid',
+          entity: 'uba_userrole',
+          name: 'userrole',
+          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+          entityConfig: {
+            entity: 'uba_userrole',
+            method: 'select',
+            fieldList: [
+              {
+                name: 'roleID.name',
+                description: UB.i18n('Назва')
+              },
+              {
+                name: 'roleID.description',
+                description: UB.i18n('Опис')
+              }
+            ]
+          },
+          masterFields: ['ID'],
+          detailFields: ['userID'],
+          cmpInitConfig: {
+            customActions: [
+              {
+                text: UB.i18n('Редагувати'),
+                iconCls: 'u-icon-edit-alt',
+                scale: 'medium',
+                cls: 'fill-action',
+                handler: function (btn) {
+                  const grid = btn.up('grid')
+                  const form = grid.up('form')
+                  if (form.isNewInstance) {
+                    form.saveForm().then(result => {
+                      if (result !== -1) {
+                        form.changeGridValue(form, grid)
+                      }
+                    })
+                  } else {
+                    form.changeGridValue(form, grid)
+                  }
+                }
+              }
+            ],
+            onItemDblClick: function (grid) {
+              const form = grid.up('form')
+              form.changeGridValue(form, grid.ownerCt)
+            }
+          }
+        },
+        {
+          flex: 1,
+          title: UB.i18n('uba_usercertificate'),
+          xtype: 'ubdetailgrid',
+          entity: 'uba_usercertificate',
+          entityConfig: {
+            entity: 'uba_usercertificate',
+            method: 'select',
+            fieldList: ['issuer_serial', 'serial', 'description', 'disabled', 'revoked']
+          },
+          stateId: 'uba_user_cert_grid',
+          stateful: true,
+          masterFields: ['ID'],
+          detailFields: ['userID']
+        },
+        {
+          flex: 1,
+          title: UB.i18n('Організації'),
+          xtype: 'ubdetailgrid',
+          entity: 'ac_userOrganization',
+          name: 'organization',
+          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+          entityConfig: {
+            entity: 'ac_userOrganization',
+            method: 'select',
+            fieldList: [
+              { name: 'organizationID.name', description: UB.i18n('Організація') }
+            ]
+          },
+          masterFields: ['ID'],
+          detailFields: ['userID'],
+          cmpInitConfig: {
+            customActions: [
+              {
+                text: UB.i18n('Редагувати'),
+                iconCls: 'u-icon-edit-alt',
+                scale: 'medium',
+                cls: 'fill-action',
+                handler: function (btn) {
+                  const grid = btn.up('grid')
+                  const form = grid.up('form')
+                  if (form.isNewInstance) {
+                    form.saveForm().then(result => {
+                      if (result !== -1) {
+                        form.changeGridValue(form, grid)
+                      }
+                    })
+                  } else {
+                    form.changeGridValue(form, grid)
+                  }
+                }
+              }
+            ],
+            onItemDblClick: function (grid) {
+              const form = grid.up('form')
+              form.changeGridValue(form, grid.ownerCt)
+            }
+          }
+        },
+        {
+          flex: 1,
+          title: UB.i18n('Параметри VPN'),
+          xtype: 'form',
+          padding: '20 10 0 20',
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              fieldLabel: UB.i18n('Логін'),
+              xtype: 'textfield',
+              name: 'login',
+              itemId: 'vpnLogin',
+              readOnly: true
+            },
+            {
+              fieldLabel: UB.i18n('Пароль'),
+              xtype: 'textfield',
+              name: 'pass',
+              inputType: 'password',
+              itemId: 'vpnPass',
+              allowBlank: true
+            },
+            {
+              fieldLabel: UB.i18n('Пароль ще раз'),
+              name: 'pass1',
+              inputType: 'password',
+              itemId: 'vpnPass1',
+              allowBlank: true
+            },
+            {
+              xtype: 'container',
+              layout: {
+                type: 'hbox',
+                align: 'center'
+              },
+              items: [
+                {
+                  xtype: 'button',
+                  tooltip: UB.i18n('Встановити'),
+                  text: UB.i18n('Встановити'),
+                  itemId: 'setPassword',
+                  // iconCls: 'fas fa-search',
+                  // width: 30,
+                  cls: 'green-action',
+                  margin: '5 5 0 0'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

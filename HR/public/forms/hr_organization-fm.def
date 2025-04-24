@@ -1,0 +1,522 @@
+/* global UB AC HR */
+exports.formDef = {
+  requiredFields: ['state', 'mi_data_id', 'priorID', 'staffOrderID.orderState', 'staffOrderID.entryDate'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'createNewVersion'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 170 },
+          flex: 1,
+          autoScroll: true,
+          items: [
+            AC.viewUtils.getCollapsiblePanel(
+              /* eslint-disable */
+              '<table><tr><td><span style="color:#2196F3;padding-left: 16px">${UB.i18n("Код")}: </span> ${code}</td><td><span style="color:#2196F3;padding-left: 16px">${UB.i18n("Номер за порядком")}:</span> ${idxNum}</td></tr>' +
+              '<tr><td><span style="color:#2196F3;padding-left: 16px">${UB.i18n("Дата початку дії")}:</span> ${get("mi_dateFrom") ? moment(get("mi_dateFrom")).format("DD.MM.YYYY"): " - "}</td><td><span style="color:#2196F3;padding-left: 16px">${UB.i18n("Дата закінчення дії")}:</span> ${get("dateToEmpty") ? moment(get("dateToEmpty")).format("DD.MM.YYYY"): " - "}</td></tr></table> '
+              ,
+              /* eslint-enable */
+              {
+                expandTitle: UB.i18n('Інформація'),
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                margin: '5px 10px 5px 10px',
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        attributeName: 'staffOrderID',
+                        hideEntityItemInContext: true,
+                        readOnly: true,
+                        margin: '10 15 5 15',
+                        fieldList: ['ID', 'description', 'orderState', 'entryDate'],
+                        whereList: {
+                          orderClass: {
+                            expression: '[orderClass.entityName]',
+                            condition: 'in',
+                            values: {
+                              orderClass: ['hr_staffOrder', 'hr_staffTable', 'hr_staffOrderOrgStructure']
+                            }
+                          }
+                        },
+                        labelWidth: 170,
+                        flex: 1
+                      },
+                      {
+                        attributeName: 'entryOrderID',
+                        readOnly: true,
+                        margin: '10 15 5 15',
+                        fieldList: ['ID', 'description'],
+                        labelWidth: 150,
+                        flex: 1
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      { attributeName: 'code', labelWidth: 170, flex: 1 },
+                      { attributeName: 'idxNum', labelWidth: 150, flex: 1, maxValue: 99999999, minValue: 0 }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            attributeName: 'mi_dateFrom',
+                            fieldLabel: UB.i18n('Дата початку дії'),
+                            readOnly: true,
+                            xtype: 'datefield',
+                            labelWidth: 170,
+                            width: 300,
+                            margin: '5 15 10px 15'
+                          },
+                          {
+                            xtype: 'component',
+                            flex: 1
+                          }
+                        ],
+                        flex: 1
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            attributeName: 'dateToEmpty',
+                            fieldLabel: UB.i18n('Дата закінчення дії'),
+                            readOnly: true,
+                            xtype: 'datefield',
+                            labelWidth: 150,
+                            width: 300
+                          },
+                          {
+                            xtype: 'component',
+                            flex: 1
+                          }
+                        ],
+                        flex: 1
+                      }
+                    ]
+                  }
+                ]
+              }),
+            { attributeName: 'name' },
+            { attributeName: 'nameEng', vtype: 'latinSymbolsValidator' },
+            { attributeName: 'fullName', xtype: 'textarea', height: 45 },
+            {
+              attributeName: 'parentUnitID',
+              fieldList: ['mi_data_id', 'description', 'mi_dateFrom', 'state', 'staffOrderID'],
+              orderList: { orderBy: { expression: 'mi_dateFrom', order: 'desc' } },
+              valueField: 'mi_data_id',
+              displayField: 'description',
+              hideEntityItemInContext: true,
+              __mip_recordhistory_all: true
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  attributeName: 'conditionalName',
+                  labelWidth: 170,
+                  margin: '5 15 10px 15',
+                  flex: 1
+                },
+                {
+                  attributeName: 'dictFundSourceID',
+                  labelWidth: 150,
+                  flex: 1
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  attributeName: 'shortName',
+                  labelWidth: 170,
+                  flex: 1
+                },
+                {
+                  attributeName: 'depClassExpID',
+                  labelWidth: 150,
+                  flex: 1
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  attributeName: 'parentUnitTypeID',
+                  labelWidth: 170,
+                  flex: 1
+                },
+                {
+                  attributeName: 'dictAreasActivityID',
+                  fieldList: ['ID', 'section', 'code', 'name'],
+                  orderList: { orderBy: { expression: 'name' } },
+                  valueField: 'ID',
+                  displayField: 'name',
+                  labelWidth: 150,
+                  flex: 1
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'jurisdiction', labelWidth: 170, flex: 1 },
+                { attributeName: 'tarifGroupID', labelWidth: 150, flex: 1 }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'dictGovernmTypeID', fieldLabel: UB.i18n('Тип організації'), labelWidth: 170, flex: 1 },
+                { attributeName: 'powerBranch', labelWidth: 150, flex: 1 }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'EDRPOUCode', labelWidth: 170, flex: 1, vtype: 'charset3' },
+                { attributeName: 'taxCode', labelWidth: 150, flex: 1 }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'webAddress',labelWidth: 170, flex: 1, vtype: 'urlValidator' },
+                { attributeName: 'dictOrgGroupId', labelWidth: 150, flex: 1 }
+              ]
+            },
+            {
+              xtype: 'fieldset',
+              title: UB.i18n('Гранична чисельність'),
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 170 },
+              margin: '0 15 0 15',
+              padding: '0 0 10 10',
+              items: [
+                { attributeName: 'limitEmpDocBasis' },
+                { attributeName: 'limitEmpCivServ' },
+                { attributeName: 'limitEmpNum' },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      xtype: 'label',
+                      text: UB.i18n('Кількість посад') + ':',
+                      cls: 'x-form-item-label',
+                      margin: '10 0 5 15',
+                      width: 180
+                    },
+                    {
+                      xtype: 'label',
+                      name: 'posQuantity',
+                      cls: 'x-form-item-label',
+                      margin: '10 0 5 0',
+                      width: 60
+                    },
+                    {
+                      xtype: 'label',
+                      text: UB.i18n('Кількість призначень (фактична)') + ':',
+                      cls: 'x-form-item-label',
+                      margin: '10 0 5 0',
+                      width: 250
+                    },
+                    {
+                      xtype: 'label',
+                      name: 'empPosQuantity',
+                      cls: 'x-form-item-label',
+                      margin: '10 0 5 0',
+                      width: 100
+                    }
+                  ]
+                }
+              ]
+            },
+            { attributeName: 'showGlobal', labelWidth: 400 },
+            { attributeName: 'doNotTransfer', labelWidth: 400 }
+          ]
+        },
+        {
+          title: UB.i18n('Розрахункові рахунки'),
+          layout: 'fit',
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'orgAccountDetail',
+              flex: 1,
+              autoScroll: true,
+              entityConfig: {
+                entity: 'ac_orgAccount',
+                method: 'select',
+                fieldList: [
+                  { name: 'currencyID.code3', description: UB.i18n('Валюта') },
+                  { name: 'bankID.description', description: UB.i18n('Банк') },
+                  'code',
+                  'acctype',
+                  { name: 'organizationID', visibility: false },
+                  { name: 'description', visibility: false }
+                ]
+              },
+              masterFields: ['mi_data_id'],
+              detailFields: ['organizationID']
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Реєстраційні дані'),
+          layout: {
+            type: 'hbox',
+            flex: 1
+          },
+          defaults: {
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            }
+          },
+          autoScroll: true,
+          items: [
+            {
+              flex: 1,
+              items: [
+                { attributeName: 'hkved' },
+                { attributeName: 'hkoatuu' },
+                { attributeName: 'hkopfg', margin: '9 15 0 15' },
+                { attributeName: 'hkou', margin: '16 15 0 15' },
+                {
+                  attributeName: 'FCCUCode',
+                  vtype: 'docNumberValidator',
+                  margin: '17 15 0 15',
+                  maskRe: AC.validators.maskRe('number')
+                },
+                { attributeName: 'classRisk' },
+                { attributeName: 'kpol', margin: '8 15 0 15' },
+                { attributeName: 'riv', minValue: 0, maxValue: 9, margin: '0 15 0 15' },
+                {
+                  xtype: 'fieldset',
+                  title: UB.i18n('Дані з реєстру неприбуткових установ та організацій'),
+                  margin: '0 15 0 10',
+                  layout: { type: 'vbox', align: 'stretch' },
+                  defaults: { labelWidth: 130 },
+                  items: [
+                    {
+                      attributeName: 'dgoznNpr',
+                      validator: function (value) {
+                        if (value) {
+                          const regMatch = value.match(/(^0{3}[1-9]$)|(^001[0-9]$)|(^003[1-9]$)|(^004[0-8]$)/)
+                          return !!regMatch
+                        } else { return true }
+                      }
+                    },
+                    { attributeName: 'decisionDate' },
+                    { attributeName: 'decisionNumber' }
+                  ]
+                }
+              ]
+            },
+            {
+              flex: 1,
+              defaults: {
+                labelWidth: 200
+              },
+              items: [
+                { attributeName: 'hkvedS' },
+                { attributeName: 'hkoatuuS' },
+                { attributeName: 'hkopfgS' },
+                { attributeName: 'hkouS' },
+                { attributeName: 'FCCUName' },
+                { attributeName: 'dictSprStiID', margin: '5 15 0 15', fieldList: ['ID', 'description'] },
+                { attributeName: 'dictDksuID', margin: '23 15 0 15' },
+                { attributeName: 'ECBCode', margin: '16 15 0 15' },
+                { attributeName: 'FSZIAddress' },
+                { attributeName: 'hkatottg' }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Адреси'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'addressesDetail',
+              autoScroll: true,
+              hideActions: [],
+              flex: 1,
+              entityConfig: {
+                entity: 'ac_address',
+                method: 'select',
+                fieldList: [
+                  { name: 'addressType' },
+                  { name: 'postIndex' },
+                  { name: 'countryID.name', description: UB.i18n('Країна') },
+                  { name: 'regionID.name', description: UB.i18n('Область') },
+                  { name: 'districtID.name', description: UB.i18n('Район') },
+                  { name: 'cityID.name', description: UB.i18n('Населений пункт') },
+                  { name: 'cityDistrictID.name', description: UB.i18n('Район міста') },
+                  { name: 'street' },
+                  { name: 'house' },
+                  { name: 'section' },
+                  { name: 'apartment' },
+                  { name: 'address' }
+                ]
+              },
+              masterFields: ['mi_data_id'],
+              detailFields: ['ownerID']
+            }
+          ]
+        },
+        {
+          title: UB.i18n('cases'),
+          layout: {
+            type: 'border'
+          },
+          items: [
+            {
+              region: 'center',
+              autoScroll: true,
+              split: true,
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              defaults: {
+                labelWidth: 170
+              },
+              flex: 1,
+              items: [
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    {
+                      xtype: 'ubfieldset',
+                      title: UB.i18n('Назва'),
+                      margin: '4 4 4 4',
+                      border: true,
+                      flex: 1,
+                      layout: {
+                        type: 'vbox',
+                        align: 'stretch'
+                      },
+                      items: [
+                        { attributeName: 'nameNom', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Називний (хто, що):') },
+                        { attributeName: 'nameGen', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Родовий (кого, чого):') },
+                        { attributeName: 'nameDat', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Давальний (кому, чому):') },
+                        { attributeName: 'nameAcc', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Знахідний (кого, що):') },
+                        { attributeName: 'nameOr', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Орудний (ким, чим):') },
+                        { attributeName: 'nameLoc', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Місцевий (на кому, на чому):') },
+                        { attributeName: 'nameVoc', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Кличний:') }
+                      ]
+                    },
+                    {
+                      xtype: 'ubfieldset',
+                      title: UB.i18n('Повна назва'),
+                      margin: '4 4 4 4',
+                      border: true,
+                      flex: 1,
+                      layout: {
+                        type: 'vbox',
+                        align: 'stretch'
+                      },
+                      hidden: true, /* UBHR-5568 */
+                      items: [
+                        { attributeName: 'fullNameNom', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Називний (хто, що):') },
+                        { attributeName: 'fullNameGen', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Родовий (кого, чого):') },
+                        { attributeName: 'fullNameDat', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Давальний (кому, чому):') },
+                        { attributeName: 'fullNameAcc', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Знахідний (кого, що):') },
+                        { attributeName: 'fullNameOr', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Орудний (ким, чим):') },
+                        { attributeName: 'fullNameLoc', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Місцевий (на кому, на чому):') },
+                        { attributeName: 'fullNameVoc', xtype: 'textarea', height: 60, fieldLabel: UB.i18n('Кличний:') }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Основні функції'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'basicFunc',
+              autoScroll: true,
+              hideActions: [],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_basicFunctn',
+                method: 'select',
+                fieldList: [
+                  { name: 'basicFunctnID.name', description: UB.i18n('Основні функції') },
+                  { name: 'serviceFunctions' },
+                  { name: 'comment' }
+                ]
+              },
+              masterFields: ['mi_data_id'],
+              detailFields: ['orgPositionID']
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додатки'),
+          autoScroll: true,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          flex: 1,
+          items: [{
+            xtype: 'docAttachment',
+            entity: 'hr_staffUnitAttachment',
+            masterFields: 'ID',
+            detailFields: 'documentID',
+            showOriginal: true,
+            minHeight: 55,
+            maxHeight: 140,
+            height: 95
+          }]
+        }
+      ]
+    }
+  ]
+}

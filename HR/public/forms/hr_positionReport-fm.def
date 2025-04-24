@@ -1,0 +1,1535 @@
+/* global Ext AC UB $App appAC HR Blob */
+
+exports.formDef = 'HR.positionReport'
+
+Ext.define('HR.positionReport', {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.positionReport',
+  layout: 'border',
+
+  initComponent: function () {
+    const me = this
+    const accMainReportsSubOrg = AC.entityUtils.verifyRightsMethod('ac_service', 'subOrg')
+
+    const calcFields = ['quantity', 'accrualSum', 'totalSum', 'fundBasePay', 'fundAddPay', 'fundOtherPay', 'fundTotal']
+
+    const storeParamsAll = Ext.create('Ext.data.ArrayStore', {
+      fields: [
+        { name: 'ID' },
+        { name: 'caption' },
+        { name: 'fieldName' },
+        { name: 'group' },
+        { name: 'isChecked' }
+      ],
+      data: []
+    })
+
+    const storeParamsSel = Ext.create('Ext.data.ArrayStore', {
+      fields: [
+        { name: 'ID' },
+        { name: 'caption' },
+        { name: 'fieldName' },
+        { name: 'group' },
+        { name: 'orderN' }
+      ],
+      data: []
+    })
+
+    const reportControl = Ext.create('Ext.Component', {
+      flex: 1,
+      margin: 0,
+      autoEl: {
+        tag: 'iframe'
+      }
+    })
+    me.reportControl = reportControl
+    me.items = [
+      {
+        xtype: 'tabpanel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        items: [
+          {
+            title: UB.i18n('Параметри пошуку'),
+            ubID: 'tabMain',
+            layout: { type: 'vbox', align: 'stretch' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                collapsible: true,
+                ubID: 'paramPanel',
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'datefield',
+                        name: 'onDate',
+                        labelWidth: 160,
+                        width: 300,
+                        fieldLabel: UB.i18n('Станом на'),
+                        value: appAC.globalApplicationDate()
+                      },
+                      HR.reportUtils.roundToCombo({
+                        labelWidth: 160,
+                        width: 350,
+                        defaultValue: 0
+                      })
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getOrgCombo({
+                        labelWidth: 160,
+                        flex: 1,
+                        readOnly: !accMainReportsSubOrg,
+                        ubRequest: {
+                          entity: 'hr_organization',
+                          fieldList: ['mi_data_id', 'description', 'mi_treePath'],
+                          whereList: {
+                            state: {
+                              expression: '[state]',
+                              condition: '=',
+                              value: 'ACTIVE'
+                            },
+                            path: {
+                              expression: accMainReportsSubOrg ? '[mi_treePath]' : '[mi_data_id]',
+                              condition: accMainReportsSubOrg ? 'like' : '=',
+                              value: accMainReportsSubOrg ? `/${appAC.globalOrganization()}/` : appAC.globalOrganization()
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'description' } },
+                          __mip_ondate: appAC.globalApplicationDate()
+                        },
+                        listeners: {
+                          change: function (ctrl) {
+                            const form = ctrl.up('form')
+                            HR.controlService.onChangeIncludeChildOrgs(form)
+                          }
+                        }
+                      }),
+                      HR.controlService.getIncludeChildOrgs(accMainReportsSubOrg)
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getDepCombo({
+                        labelWidth: 160,
+                        displayField: 'description',
+                        flex: 1,
+                        listeners: {
+                          change: function (ctrl, value) {
+                            const form = ctrl.up('form')
+                            form.down('[name=includeChildDepts]').setReadOnly(!value)
+                            if (!value) {
+                              form.down('[name=includeChildDepts]').setValue()
+                            }
+                          }
+                        }
+                      }),
+                      HR.controlService.getIncludeChildDepts()
+                    ]
+                  },
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'calcFOP',
+                    fieldLabel: UB.i18n('Обчислювати ФОП'),
+                    labelWidth: 160,
+                    width: 270,
+                    value: false
+                  },
+                  {
+                    name: 'attrsControl',
+                    layout: { type: 'vbox', align: 'stretch' },
+                    items: [],
+                    ctrls: [
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'positionType',
+                        ubID: 'positionType',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Тип посади'),
+                        displayField: 'name',
+                        valueField: 'code',
+                        ubRequest: {
+                          entity: 'ubm_enum',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'name', 'code', 'eGroup'],
+                          whereList: {
+                            enumGroupFilter: {
+                              expression: '[eGroup]',
+                              condition: 'equal',
+                              value: 'HR_POSITION_TYPE'
+                            }
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictPositionID',
+                        ubID: 'dictPositionID',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Довідник посад'),
+                        displayField: 'description',
+                        valueField: 'ID',
+                        ubRequest: {
+                          entity: 'hr_dictPosition',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description']
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictProfessionID',
+                        ubID: 'dictProfessionID',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Державний класифікатор професій'),
+                        displayField: 'description',
+                        valueField: 'ID',
+                        ubRequest: {
+                          entity: 'hr_dictProfession',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description']
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictCostTypeID',
+                        ubID: 'dictCostTypeID',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Місце виникнення витрат'),
+                        displayField: 'description',
+                        valueField: 'ID',
+                        ubRequest: {
+                          entity: 'ac_dictCostType',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description']
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictStaffCatID',
+                        ubID: 'dictStaffCatID',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Категорія персоналу'),
+                        displayField: 'description',
+                        valueField: 'ID',
+                        ubRequest: {
+                          entity: 'hr_dictStaffCat',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description']
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictTarifCoeffID',
+                        ubID: 'dictTarifCoeffID',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Тарифний розряд'),
+                        displayField: 'name',
+                        valueField: 'ID',
+                        ubRequest: {
+                          entity: 'hr_dictTarifCoeff',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'name']
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictEmpCategoryID',
+                        ubID: 'dictEmpCategoryID',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Кваліфікаційна категорія'),
+                        displayField: 'description',
+                        valueField: 'ID',
+                        ubRequest: {
+                          entity: 'hr_dictEmpCategory',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description']
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictAcademStatusID',
+                        ubID: 'dictAcademStatusID',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Вчене звання'),
+                        displayField: 'name',
+                        valueField: 'ID',
+                        ubRequest: {
+                          entity: 'hr_dictAcademStatus',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'name']
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictMilitaryRankID',
+                        ubID: 'dictMilitaryRankID',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Військове звання'),
+                        displayField: 'description',
+                        valueField: 'ID',
+                        ubRequest: {
+                          entity: 'hr_dictMilitaryRank',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description']
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictMilitarySpecialityID',
+                        ubID: 'dictMilitarySpecialityID',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Військово-облікова спеціальність'),
+                        displayField: 'description',
+                        valueField: 'ID',
+                        ubRequest: {
+                          entity: 'hr_dictMilitarySpeciality',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description']
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictFundSourceID',
+                        ubID: 'dictFundSourceID',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Джерело фінансування'),
+                        displayField: 'description',
+                        valueField: 'ID',
+                        ubRequest: {
+                          entity: 'ac_fundSource',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description']
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'dictSalarySchemeLevelID',
+                        ubID: 'dictSalarySchemeLevelID',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Група (рівень) за схемою посадових окладів'),
+                        displayField: 'description',
+                        valueField: 'ID',
+                        ubRequest: {
+                          entity: 'hr_dictSalarySchemeLevel',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'description']
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'positionCategory',
+                        ubID: 'positionCategory',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Категорія посади'),
+                        displayField: 'name',
+                        valueField: 'code',
+                        ubRequest: {
+                          entity: 'ubm_enum',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'name', 'code', 'eGroup'],
+                          whereList: {
+                            enumGroupFilter: {
+                              expression: '[eGroup]',
+                              condition: 'equal',
+                              value: 'HR_POSITION_CATEGORY'
+                            }
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubboxselect',
+                        name: 'psCategory',
+                        ubID: 'psCategory',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Категорія посади держслужбовця'),
+                        displayField: 'name',
+                        valueField: 'code',
+                        ubRequest: {
+                          entity: 'ubm_enum',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'name', 'code', 'eGroup'],
+                          whereList: {
+                            enumGroupFilter: {
+                              expression: '[eGroup]',
+                              condition: 'equal',
+                              value: 'HR_POSITION_PSCATEGORY'
+                            }
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'textfield',
+                        name: 'name',
+                        ubID: 'name',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Назва посади')
+                      },
+                      {
+                        xtype: 'textfield',
+                        name: 'orgName',
+                        ubID: 'orgName',
+                        readOnly: true,
+                        value: UB.i18n('Вибір організацій не доступний: групування здійснюється за всіма підпорядкованими організаціями'),
+                        fieldCls: 'x-item-disabled grd-italic',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('Організація')
+                      }
+                    ]
+                  }
+                ],
+                buttons: [
+                  {
+                    xtype: 'button',
+                    name: 'clearParams',
+                    iconCls: 'fas fa-eraser',
+                    cls: 'fill-action',
+                    text: UB.i18n('Очистити параметри'),
+                    tooltip: UB.i18n('Очистити параметри'),
+                    handler: function () {
+                      me.attr.onDate.setValue(appAC.globalApplicationDate())
+                      me.attr.calcFOP.setValue(false)
+                      me.attr.departmentID.setValue()
+                      me.attr.organizationID.setValue(appAC.globalOrganization())
+                      me.attr.includeChildDepts.setValue(false)
+                      me.attr.includeChildOrgs.setValue(false)
+                      me.attr.attrsControl.items.items.forEach(ctrl => {
+                        me.down(`[name=${ctrl.ubID}]`).setValue()
+                        me.down(`[name=checkbox_${ctrl.ubID}]`).setValue(false)
+                      })
+                      const iFrame = me.reportControl.getEl().dom
+                      const iFrameDoc = iFrame.contentDocument
+                      if (me.report && me.report.reportOptions) {
+                        me.report.reportOptions.html = ''
+                      }
+                      iFrameDoc.body.innerHTML = ''
+                      me.down('[ubID=bottomPanel]').hide()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    name: 'selectData',
+                    iconCls: 'u-icon-search',
+                    cls: 'blue-action',
+                    text: UB.i18n('Шукати'),
+                    tooltip: UB.i18n('Шукати'),
+                    handler: function () {
+                      me.makeReport('html')
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    name: 'generateDocument',
+                    iconCls: 'u-icon-file-excel',
+                    cls: 'green-action',
+                    text: UB.i18n('Ієрархічний звіт (Excel)'),
+                    tooltip: UB.i18n('Ієрархічний звіт (Excel)'),
+                    handler: function () {
+                      me.generateReport()
+                    }
+                  }
+                ]
+              },
+              reportControl,
+              {
+                xtype: 'panel',
+                layout: { type: 'hbox', pack: 'end' },
+                ubID: 'bottomPanel',
+                hidden: true,
+                items: [
+                  {
+                    text: UB.i18n('Друкувати'),
+                    name: 'printBtn',
+                    xtype: 'button',
+                    iconCls: 'fas fa-print',
+                    margin: '2 2 2 2',
+                    cls: 'blue-action',
+                    handler: function () {
+                      const iFrame = me.reportControl.getEl().dom
+                      iFrame && iFrame.contentWindow.print()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    name: 'exportData',
+                    margin: '2 2 2 2',
+                    iconCls: 'fas fa-file-excel',
+                    cls: 'green-action',
+                    text: 'Excel',
+                    tooltip: UB.i18n('Вивантаження в Excel'),
+                    handler: function () {
+                      if (me.report && me.report.reportOptions && me.report.reportOptions.html) {
+                        AC.documentService.generateXLSXFromHtml(me.report.reportOptions.html, true).then(data => {
+                          const blobData = new Blob(
+                            [data], {
+                              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                            }
+                          )
+                          const repName = me.reportFileName || UB.i18n('Вибірки за посадами')
+                          const fileName = `${repName}.xlsx`
+                          window.saveAs(blobData, fileName)
+                        })
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            title: UB.i18n('Налаштування параметрів пошуку'),
+            ubID: 'tabGroupParams',
+            layout: 'border',
+            flex: 1,
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'groupParamList',
+                region: 'center',
+                storeType: 'local',
+                flex: 1,
+                disablePaging: true,
+                notWriteChanges: true,
+                showToolBar: true,
+                autoScroll: true,
+                checkColumn: {
+                  showHeaderCheckbox: false
+                },
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                fields: [
+                  { name: 'ID' },
+                  { name: 'fieldName' },
+                  { name: 'caption', columnConfig: { text: 'Назва', flex: 1 } }
+                ],
+                customToolBarActions: [
+                  {
+                    xtype: 'button',
+                    name: 'refreshGroupParamsBtn',
+                    iconCls: 'u-icon-refresh',
+                    scale: 'medium',
+                    tooltip: UB.i18n('Оновити'),
+                    handler: function () {
+                      me.loadGroupParams()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    name: 'saveGroupParamsBtn',
+                    iconCls: 'u-icon-save',
+                    cls: 'save-action',
+                    scale: 'medium',
+                    disabled: true,
+                    tooltip: UB.i18n('Зберегти налаштування'),
+                    handler: function (btn) {
+                      const checkedRows = me.grid.groupParamsGrid.getCheckedRow()
+                      if (checkedRows.length > 5) {
+                        $App.dialogInfo('Кількість параметрів групування не може бути більше п\'яти. Зменшіть кількість параметрів для відбору')
+                      } else {
+                        const data = {
+                          remove: [],
+                          add: []
+                        }
+                        checkedRows.forEach(row => {
+                          if (!me.selectedGroupParams.find(o => o.valuesID === row.get('ID'))) {
+                            data.add.push(row.get('ID'))
+                          }
+                        })
+                        me.selectedGroupParams.forEach(el => {
+                          if (!checkedRows.find(o => o.get('ID') === el.valuesID)) {
+                            data.remove.push(el.ID)
+                          }
+                        })
+                        me.setLoading(true)
+                        $App.connection.run({
+                          entity: 'hr_idParam',
+                          method: 'updateValuesIDs',
+                          listParamID: me.groupParamID,
+                          orgID: appAC.globalOrganization(),
+                          data: JSON.stringify(data)
+                        }).then(() => {
+                          me.setLoading(false)
+                          me.button.saveGroupParamsBtn.setDisabled(true)
+                          me.loadGroupParams()
+                        })
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            layout: 'border',
+            flex: 1,
+            title: UB.i18n('Налаштування результатів пошуку'),
+            ubID: 'tabRepParams',
+            items: [
+              {
+                xtype: 'toolbar',
+                region: 'north',
+                items: [
+                  {
+                    xtype: 'button',
+                    name: 'refreshReportParamsBtn',
+                    iconCls: 'u-icon-refresh',
+                    scale: 'medium',
+                    tooltip: UB.i18n('Оновити'),
+                    handler: function () {
+                      me.loadReportParams()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Відмітити всі'),
+                    iconCls: 'u-icon-check',
+                    cls: 'green-action',
+                    listeners: {
+                      click: function () {
+                        Ext.suspendLayouts()
+                        me.grid.reportAllParamsGrid.updatingRecords = true
+                        me.grid.reportAllParamsGrid.getStore().each(rec => {
+                          if (rec.get('group') !== 'main' && !rec.get('isChecked')) {
+                            rec.set('isChecked', true)
+                          }
+                        })
+                        me.grid.reportAllParamsGrid.updatingRecords = false
+                        Ext.resumeLayouts(true)
+                        me.grid.reportAllParamsGrid.getView().refreshView()
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Виключити всі'),
+                    iconCls: 'u-icon-close',
+                    cls: 'red-action',
+                    listeners: {
+                      click: function () {
+                        Ext.suspendLayouts()
+                        me.grid.reportAllParamsGrid.updatingRecords = true
+                        me.grid.reportAllParamsGrid.getStore().each(rec => {
+                          if (rec.get('group') !== 'main') {
+                            rec.set('isChecked', false)
+                          }
+                        })
+                        Ext.resumeLayouts(true)
+                        me.grid.reportAllParamsGrid.getView().refreshView()
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    name: 'resetReportParamsBtn',
+                    iconCls: 'fas fa-eraser',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    tooltip: UB.i18n('Очистити налаштування'),
+                    handler: function () {
+                      const data = {
+                        remove: [],
+                        add: [],
+                        update: []
+                      }
+                      let orderN = 1
+                      me.fieldFields.filter(o => o.group === 'main').forEach(row => {
+                        data.add.push({ ID: row.ID, orderN })
+                        orderN++
+                      })
+                      me.selectedReportParams.forEach(el => {
+                        data.remove.push(el.ID)
+                      })
+                      me.setLoading(true)
+                      $App.connection.run({
+                        entity: 'hr_idParam',
+                        method: 'updateValuesIDs',
+                        listParamID: me.reportParamID,
+                        orgID: appAC.globalOrganization(),
+                        data: JSON.stringify(data)
+                      }).then(() => {
+                        me.setLoading(false)
+                        me.button.saveReportParamsBtn.setDisabled(true)
+                        me.loadReportParams()
+                      })
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    name: 'saveReportParamsBtn',
+                    iconCls: 'u-icon-save',
+                    cls: 'save-action',
+                    scale: 'medium',
+                    disabled: true,
+                    tooltip: UB.i18n('Зберегти налаштування'),
+                    handler: function () {
+                      const data = {
+                        remove: [],
+                        add: [],
+                        update: []
+                      }
+                      const selectedRows = storeParamsSel.data.items
+                      selectedRows.forEach(row => {
+                        if (!me.selectedReportParams.find(o => o.valuesID === row.get('ID'))) {
+                          data.add.push({ ID: row.get('ID'), orderN: row.get('orderN') })
+                        }
+                      })
+                      me.selectedReportParams.forEach(el => {
+                        const item = selectedRows.find(o => o.get('ID') === el.valuesID)
+                        if (!item) {
+                          data.remove.push(el.ID)
+                        } else {
+                          data.update.push({ ID: el.ID, orderN: item.get('orderN') })
+                        }
+                      })
+                      me.setLoading(true)
+                      $App.connection.run({
+                        entity: 'hr_idParam',
+                        method: 'updateValuesIDs',
+                        listParamID: me.reportParamID,
+                        orgID: appAC.globalOrganization(),
+                        data: JSON.stringify(data)
+                      }).then(() => {
+                        me.setLoading(false)
+                        me.button.saveReportParamsBtn.setDisabled(true)
+                        me.loadReportParams()
+                      })
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'grid',
+                stripeRows: true,
+                store: storeParamsAll,
+                name: 'reportAllParamList',
+                storeType: 'local',
+                title: UB.i18n('Всі елементи'),
+                region: 'west',
+                width: '50%',
+                split: true,
+                flex: 1,
+                columns: [
+                  {
+                    xtype: 'checkcolumn',
+                    dataIndex: 'isChecked',
+                    listeners: {
+                      beforecheckchange: function (checkbox, rowIndex) {
+                        const rec = storeParamsAll.getAt(rowIndex)
+                        return rec.get('group') !== 'main'
+                      }
+                    }
+                  },
+                  {
+                    header: UB.i18n('Назва'),
+                    dataIndex: 'caption',
+                    flex: 1,
+                    renderer: (value, metaData, record) => {
+                      if (record.get('group') === 'main') {
+                        metaData.css += ` grd-italic`
+                      }
+                      return value
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'grid',
+                name: 'reportSelParamList',
+                stripeRows: true,
+                store: storeParamsSel,
+                autoScroll: true,
+                flex: 1,
+                split: true,
+                region: 'center',
+                title: UB.i18n('Вибрані елементи'),
+                viewConfig: {
+                  plugins: {
+                    ptype: 'gridviewdragdrop',
+                    dragText: UB.i18n('Перетягніть для зміни порядку відображення')
+                  },
+                  listeners: {
+                    drop: function () {
+                      const store = me.grid.reportSelParamsGrid.getStore()
+                      Ext.suspendLayouts()
+                      me.grid.reportSelParamsGrid.suspendEvents()
+                      store.suspendEvents()
+                      me.grid.reportSelParamsGrid.updatingRecords = true
+                      store.data.items.forEach((row, idx) => {
+                        row.data.orderN = idx + 1
+                      })
+                      me.grid.reportSelParamsGrid.updatingRecords = false
+                      me.grid.reportSelParamsGrid.resumeEvents()
+                      store.resumeEvents()
+                      Ext.resumeLayouts(true)
+                      me.grid.reportSelParamsGrid.getView().refreshView()
+                      me.button.saveReportParamsBtn.setDisabled(false)
+                    },
+                    beforedrop: function (node, data, overModel, dropPosition, dropHandlers) {
+                      if (data.records.length && calcFields.includes(data.records[0].get('fieldName'))) {
+                        return false
+                      }
+                      if (dropPosition === 'after' && calcFields.includes(overModel.get('fieldName'))) {
+                        return false
+                      }
+                    }
+                  }
+                },
+                columns: [
+                  {
+                    header: UB.i18n('Назва'),
+                    dataIndex: 'caption',
+                    flex: 1,
+                    renderer: (value, metaData, record) => {
+                      if (calcFields.includes(record.get('fieldName'))) {
+                        metaData.css += ` grd-italic`
+                      }
+                      return value
+                    }
+                  },
+                  {
+                    header: UB.i18n('Порядок'),
+                    dataIndex: 'orderN',
+                    align: 'center',
+                    flex: 0.2
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.groupParams = [
+      { ID: 100, caption: UB.i18n('Тип посади'), fieldName: 'positionType' },
+      { ID: 200, caption: UB.i18n('Довідник посад'), fieldName: 'dictPositionID' },
+      { ID: 300, caption: UB.i18n('Назва посади'), fieldName: 'name' },
+      { ID: 400, caption: UB.i18n('Державний класифікатор професій'), fieldName: 'dictProfessionID' },
+      { ID: 500, caption: UB.i18n('Місце виникнення витрат'), fieldName: 'dictCostTypeID' },
+      { ID: 600, caption: UB.i18n('Категорія посади'), fieldName: 'positionCategory' },
+      { ID: 700, caption: UB.i18n('Категорія персоналу'), fieldName: 'dictStaffCatID' },
+      { ID: 800, caption: UB.i18n('Тарифний розряд'), fieldName: 'dictTarifCoeffID' },
+      { ID: 900, caption: UB.i18n('Кваліфікаційна категорія'), fieldName: 'dictEmpCategoryID' },
+      { ID: 1000, caption: UB.i18n('Вчене звання'), fieldName: 'dictAcademStatusID' },
+      { ID: 1100, caption: UB.i18n('Військове звання'), fieldName: 'dictMilitaryRankID' },
+      { ID: 1200, caption: UB.i18n('Військово-облікова спеціальність'), fieldName: 'dictMilitarySpecialityID' },
+      { ID: 1300, caption: UB.i18n('Категорія посади держслужбовця'), fieldName: 'psCategory' },
+      { ID: 1400, caption: UB.i18n('Джерело фінансування'), fieldName: 'dictFundSourceID' },
+      { ID: 1500, caption: UB.i18n('Група (рівень) за схемою посадових окладів'), fieldName: 'dictSalarySchemeLevelID' },
+      { ID: 1600, caption: UB.i18n('Організація'), fieldName: 'orgName' }
+    ]
+
+    me.fieldFields = [
+      { ID: 100, caption: UB.i18n('Назва посади'), fieldName: 'name', group: 'main' },
+      { ID: 200, caption: UB.i18n('Підпорядкування'), fieldName: 'parentUnitID', group: 'main' },
+      { ID: 300, caption: UB.i18n('Організація'), fieldName: 'orgName', group: 'main' },
+      { ID: 400, caption: UB.i18n('Кількість посад'), fieldName: 'quantity', group: 'main' },
+      { ID: 500, caption: UB.i18n('Сума (Посадовий оклад)'), fieldName: 'accrualSum', group: 'main' },
+      { ID: 550, caption: UB.i18n('Фонд ЗП (за окладами)'), fieldName: 'totalSum', group: 'main' },
+      { ID: 600, caption: UB.i18n('Фонд основної заробітної плати'), fieldName: 'fundBasePay', group: 'fop' },
+      { ID: 700, caption: UB.i18n('Сума доплат та надбавок'), fieldName: 'fundTotal', group: 'fop' },
+      { ID: 800, caption: UB.i18n('Фонд додаткової заробітної плати'), fieldName: 'fundAddPay', group: 'fop' },
+      { ID: 900, caption: UB.i18n('Інші заохочувальні та компенсаційні виплати'), fieldName: 'fundOtherPay', group: 'fop' },
+      { ID: 1000, caption: UB.i18n('Тип посади'), fieldName: 'positionType', group: 'extra' },
+      { ID: 1100, caption: UB.i18n('Довідник посад'), fieldName: 'dictPositionID', group: 'extra' },
+      { ID: 1200, caption: UB.i18n('Назва штатної позиції'), fieldName: 'fullName', group: 'extra' },
+      { ID: 1300, caption: UB.i18n('Самостійний структурний підрозділ'), fieldName: 'parentTreeDepName', group: 'extra' },
+      { ID: 1400, caption: UB.i18n('Державний класифікатор професій'), fieldName: 'dictProfessionID', group: 'extra' },
+      { ID: 1450, caption: UB.i18n('Категорія посади держслужбовця'), fieldName: 'psCategory', group: 'extra' },
+      { ID: 1500, caption: UB.i18n('Графік роботи'), fieldName: 'workScheduleID', group: 'extra' },
+      { ID: 1600, caption: UB.i18n('Місце виникнення виробничих витрат'), fieldName: 'dictCostTypeID', group: 'extra' },
+      { ID: 1700, caption: UB.i18n('Рахунок витрат'), fieldName: 'accountID', group: 'extra' },
+      { ID: 1800, caption: UB.i18n('Категорія посади'), fieldName: 'positionCategory', group: 'extra' },
+      { ID: 1900, caption: UB.i18n('Категорія персоналу'), fieldName: 'dictStaffCatID', group: 'extra' },
+      { ID: 2000, caption: UB.i18n('Підкатегорія персоналу'), fieldName: 'dictStaffSubCatID', group: 'extra' },
+      { ID: 2100, caption: UB.i18n('Вид посади'), fieldName: 'dictPositionKindID', group: 'extra' },
+      { ID: 2200, caption: UB.i18n('Група посади'), fieldName: 'dictPositionGroupID', group: 'extra' },
+      { ID: 2300, caption: UB.i18n('Примітка'), fieldName: 'comment', group: 'extra' },
+      { ID: 2400, caption: UB.i18n('Додаткова інформація'), fieldName: 'addDescrPosition', group: 'extra' },
+      { ID: 2500, caption: UB.i18n('Кваліфікаційна категорія'), fieldName: 'dictEmpCategoryID', group: 'extra' },
+      { ID: 2600, caption: UB.i18n('Тарифний розряд'), fieldName: 'dictTarifCoeffID', group: 'extra' },
+      { ID: 2700, caption: UB.i18n('Військові звання'), fieldName: 'dictMilitaryRankID', group: 'extra' },
+      { ID: 2800, caption: UB.i18n('Військово-облікова спеціальність'), fieldName: 'dictMilitarySpecialityID', group: 'extra' },
+      { ID: 2900, caption: UB.i18n('Вчене звання'), fieldName: 'dictAcademStatusID', group: 'extra' },
+      { ID: 3000, caption: UB.i18n('Спеціальність'), fieldName: 'dictSpecialtyID', group: 'extra' },
+      { ID: 3100, caption: UB.i18n('Група (рівень) за схемою посадових окладів'), fieldName: 'dictSalarySchemeLevelID', group: 'extra' },
+      { ID: 3200, caption: UB.i18n('Тип оплати'), fieldName: 'paymentType', group: 'extra' },
+      { ID: 3300, caption: UB.i18n('Вид оплати'), fieldName: 'payElID', group: 'extra' }
+    ]
+
+    me.selectedGroupParams = []
+    me.selectedReportParams = []
+
+    me.checkGroupParamsCount = function (grid) {
+      if (grid.getCheckedRow().length > 5) {
+        $App.dialogInfo('Кількість параметрів групування не може бути більше п\'яти. Зменшіть кількість параметрів для відбору')
+        me.button.saveGroupParamsBtn.setDisabled(true)
+      } else {
+        me.button.saveGroupParamsBtn.setDisabled(false)
+      }
+    }
+
+    me.updateReportParams = function (store, record) {
+      const me = this
+      const storeSel = me.grid.reportSelParamsGrid.getStore()
+      if (record.get('isChecked')) {
+        Ext.suspendLayouts()
+        store.suspendEvents()
+        const maxOrderN = storeSel.getMax(storeSel.data.items, 'orderN')
+        record.set('orderN', maxOrderN ? maxOrderN + 1 : 1)
+        store.resumeEvents()
+        Ext.resumeLayouts()
+        storeSel.add(record)
+      } else {
+        const rec = storeSel.findRecord('ID', record.get('ID'))
+        if (rec) {
+          storeSel.remove(rec)
+          storeSel.data.items.forEach((row, idx) => {
+            row.data.orderN = idx + 1
+          })
+          me.grid.reportSelParamsGrid.getView().refreshView()
+        }
+      }
+      me.button.saveReportParamsBtn.setDisabled(false)
+    }
+
+    me.loadGroupParams = async function () {
+      me.setLoading(true)
+      me.attr.attrsControl.removeAll()
+      me.selectedGroupParams = []
+      me.grid.groupParamsGrid.un('checkChange', me.checkGroupParamsCount)
+      me.groupParams.forEach(el => {
+        el.isChecked = false
+      })
+      me.groupParamID = await UB.Repository('hr_listParam')
+        .attrs('ID')
+        .where('code', '=', 'positionReportParam1')
+        .selectScalar()
+      if (me.groupParamID) {
+        const groupParams = await UB.Repository('hr_idParam')
+          .attrs(['ID', 'valuesID'])
+          .where('orgID', '=', appAC.globalOrganization())
+          .where('listParamID', '=', me.groupParamID)
+          .orderBy('valuesID')
+          .selectAsObject()
+        groupParams.forEach(row => {
+          me.selectedGroupParams.push(row)
+          const el = me.groupParams.find(o => o.ID === row.valuesID)
+          if (el) {
+            el.isChecked = true
+            me.addGroupControl(el.fieldName)
+          }
+        })
+      }
+      me.grid.groupParamsGrid.setLocalStoreData(me.groupParams)
+      me.grid.groupParamsGrid.on('checkChange', me.checkGroupParamsCount)
+      me.setLoading(false)
+    }
+
+    me.loadReportParams = async function () {
+      me.selectedReportParams = []
+      me.fieldFields.forEach(el => {
+        el.isChecked = false
+      })
+      me.reportParamID = await UB.Repository('hr_listParam')
+        .attrs('ID')
+        .where('code', '=', 'positionReportParam2')
+        .selectScalar()
+      const reportSelParams = []
+      if (me.reportParamID) {
+        const reportParams = await UB.Repository('hr_idParam')
+          .attrs(['ID', 'valuesID', 'orderN'])
+          .where('orgID', '=', appAC.globalOrganization())
+          .where('listParamID', '=', me.reportParamID)
+          .orderBy('orderN')
+          .selectAsObject()
+        let maxOrderN = 0
+        reportParams.forEach(row => {
+          me.selectedReportParams.push(row)
+          const el = me.fieldFields.find(o => o.ID === row.valuesID)
+          if (el) {
+            el.isChecked = true
+            const idx = calcFields.indexOf(el.fieldName)
+            reportSelParams.push(Object.assign({ orderN: idx < 0 ? row.orderN : 900 + idx }, el))
+            if (row.orderN > maxOrderN && row.orderN < 900) maxOrderN = row.orderN
+          }
+        })
+        me.fieldFields.filter(o => o.group === 'main').forEach(row => {
+          const el = reportSelParams.find(o => o.ID === row.ID)
+          if (!el) {
+            row.isChecked = true
+            const idx = calcFields.indexOf(row.fieldName)
+            reportSelParams.push(Object.assign({ orderN: idx < 0 ? maxOrderN + 1 : 900 + idx }, row))
+            maxOrderN++
+          }
+        })
+        reportSelParams.sort((a, b) => a.orderN - b.orderN)
+        reportSelParams.forEach((el, idx) => {
+          el.orderN = idx + 1
+        })
+      }
+      storeParamsAll.un('update', me.updateReportParams)
+      storeParamsAll.loadData(me.fieldFields)
+      storeParamsAll.on('update', me.updateReportParams, me)
+      storeParamsSel.loadData(reportSelParams)
+      me.button.saveReportParamsBtn.setDisabled(true)
+    }
+
+    me.upHandler = function (btn) {
+      const hBox = btn.up()
+      const idx = this.items.indexOf(hBox)
+      if (idx >= 1) {
+        this.remove(hBox, false)
+        this.insert(idx - 1, hBox)
+      }
+    }
+
+    me.downHandler = function (btn) {
+      const hBox = btn.up()
+      const idx = this.items.indexOf(hBox)
+      if (idx <= this.items.length) {
+        this.remove(hBox, false)
+        this.insert(idx + 1, hBox)
+      }
+    }
+
+    me.addGroupControl = function (ctrlName) {
+      const ctrlDefaultParams = {
+        flex: 1,
+        labelWidth: 120
+      }
+      const ctrl = me.attr.attrsControl.ctrls.find(o => o.name === ctrlName)
+      if (ctrl) {
+        const ctrlParam = Object.assign({}, ctrl)
+        const row = {
+          dimensionPanel: true,
+          layout: 'hbox',
+          flex: 1,
+          items: []
+        }
+
+        if (ctrlParam.ubID) {
+          row.ubID = ctrlParam.ubID
+          delete ctrlParam.ubID
+        }
+
+        const choice = Ext.create('Ext.form.field.Checkbox', {
+          xtype: 'checkbox',
+          name: `checkbox_${ctrlParam.name}`,
+          tooltip: UB.i18n('Вибір'),
+          margin: '5 0 2 15'
+        })
+
+        row.items.push(choice)
+
+        let newControl
+
+        switch (ctrlParam.xtype) {
+          case 'ubcombobox':
+            newControl = Ext.create('UB.ux.form.field.UBComboBox', Object.assign({}, ctrlDefaultParams, ctrlParam))
+            break
+          case 'ubboxselect':
+            newControl = Ext.create('UB.ux.form.field.UBBoxSelect', Object.assign({}, ctrlDefaultParams, ctrlParam))
+            break
+          case 'textfield':
+            newControl = Ext.create('Ext.form.field.Text', Object.assign({}, ctrlDefaultParams, ctrlParam))
+            break
+          default:
+            newControl = Ext.create('UB.ux.form.field.UBComboBox', Object.assign({}, ctrlDefaultParams, ctrlParam))
+        }
+
+        row.items.push(newControl)
+        row.items.push(
+          {
+            xtype: 'button',
+            border: '0 0 0 0',
+            margin: '0 5 0 5',
+            iconCls: 'fa fa-arrow-up',
+            cls: 'green-action',
+            style: 'background-color:white',
+            handler: me.upHandler.bind(me.attr.attrsControl)
+          }
+        )
+        row.items.push(
+          {
+            xtype: 'button',
+            border: '0 0 0 0',
+            margin: '0 10 0 0',
+            style: 'background-color:white',
+            cls: 'fill-action',
+            iconCls: 'fa fa-arrow-down',
+            handler: me.downHandler.bind(me.attr.attrsControl)
+          }
+        )
+        me.attr.attrsControl.add(row)
+      }
+    }
+
+    me.getAttrsCheckedValues = function () {
+      return me.attr.attrsControl.items.items
+        .filter(ctrl => me.down(`[name=checkbox_${ctrl.ubID}]`).getValue())
+        .map(ctrl => {
+          const control = me.down(`[name=${ctrl.ubID}]`)
+          const controlValue = control.getValue()
+          const param = me.groupParams.find(o => o.fieldName === ctrl.ubID)
+          return ctrl.ubID === 'orgName'
+            ? {
+              fieldName: ctrl.ubID,
+              caption: param ? param.caption : '',
+              valueID: '',
+              valueName: ''
+            }
+            : {
+              fieldName: ctrl.ubID,
+              caption: param ? param.caption : '',
+              valueID: controlValue ? control.getValue().split(',').map(q => q.trim().replace(/"/g, '')).join(',') : controlValue,
+              valueName: (control.getFieldValue && control.getFieldValue(control.displayField)) || control.rawValue
+            }
+        })
+    }
+
+    me.getReportParams = function () {
+      const params = {
+        onDate: me.attr.onDate.getValue(),
+        departmentID: me.attr.departmentID.getValue(),
+        organizationID: me.attr.organizationID.getValue(),
+        includeChildOrgs: me.attr.includeChildOrgs.getValue(),
+        includeChildDepts: me.attr.includeChildDepts.getValue(),
+        calcFOP: me.attr.calcFOP.getValue(),
+        roundTo: me.attr.roundToCombo.getValue()
+      }
+      params.reportFields = storeParamsSel.data.items.map(o => { return { fieldName: o.get('fieldName'), caption: o.get('caption'), orderN: o.get('orderN') } })
+      if (params.calcFOP) {
+        const fopFields = ['fundBasePay', 'fundAddPay', 'fundOtherPay', 'fundTotal']
+        const maxOrder = params.reportFields.length + 1
+        fopFields.forEach((field, idx) => {
+          if (!params.reportFields.find(o => o.fieldName === field)) {
+            const el = me.fieldFields.find(o => o.fieldName === field)
+            if (el) {
+              params.reportFields.push({
+                fieldName: el.fieldName,
+                caption: el.caption,
+                orderN: maxOrder + idx
+              })
+            }
+          }
+        })
+      }
+      params.reportFields.sort((a, b) => {
+        let idxA = calcFields.indexOf(a.fieldName)
+        let idxB = calcFields.indexOf(b.fieldName)
+        idxA = idxA >= 0 ? idxA + 900 : a.orderN
+        idxB = idxB >= 0 ? idxB + 900 : b.orderN
+        return idxA - idxB
+      })
+      params.groupFields = me.getAttrsCheckedValues()
+      return params
+    }
+
+    me.generateReport = function () {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_positionReport',
+        method: 'buildReport',
+        params: JSON.stringify(me.getReportParams())
+      }).then(({ response }) => {
+        const data = JSON.parse(response)
+        AC.filesService.saveAsByBase64Buffer(data, `${UB.i18n('Вибірки за посадами')}.xlsx`, { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+        me.setLoading(false)
+      }, (err) => {
+        me.setLoading(false)
+        throw err
+      })
+    }
+
+    me.showReport = function (data) {
+      const me = this
+      const HTML_PAGEBREAK_RE = new RegExp('<!-- pagebreak -->', 'gi')
+      const HTML_PAGEBREAK_EL = '<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="mce-pagebreak"/>'
+      const iFrame = me.reportControl.getEl().dom
+      const iFrameDoc = iFrame.contentDocument
+      const style = [getStyle()]
+      const orientation = me.report.reportOptions.pageOrientation
+      if (orientation === 'landscape') {
+        style.push('@page{size: landscape;}')
+      } else if (orientation === 'portrait') {
+        style.push('@page{size: portrait;}')
+      }
+      const styleText = `<style type="text/css"> ${style.join('\n')} </style>`
+      me.report.reportOptions.html = data
+      iFrameDoc.body.innerHTML = data.replace(HTML_PAGEBREAK_RE, HTML_PAGEBREAK_EL)
+      iFrameDoc.head.innerHTML = styleText
+      const refs = iFrameDoc.getElementsByTagName('a')
+      for (let i = 0, L = refs.length; i < L; i++) {
+        refs[i].addEventListener('click', me.onReportClick, true)
+      }
+      me.setLoading(false)
+    }
+
+    me.onReportClick = function (e) {
+      // prevent default action
+      e.preventDefault()
+      const el = e.target
+      me.drillDown(el.dataset.group, el.dataset.level)
+    }
+
+    me.drillDown = function (cellGroup, cellLevel) {
+      // const nextLevel = (Number(cellLevel) || 0) + 1
+      let reportData = Object.assign({}, me.reportParams)
+      const posList = []
+      if (me.reportData.groupTotals[cellGroup]) {
+        posList.push(...me.reportData.groupTotals[cellGroup].items)
+      }
+      me.createReport('html', posList, reportData, -1, /* me.reportParams.groupFields.length === nextLevel ? -1 : nextLevel, */ cellGroup, true)
+    }
+
+    me.createReport = function (type, posList, reportData, level, cellGroup, inWindow) {
+      reportData.organizationName = me.reportData.organizationName
+      reportData.departmentName = me.reportData.departmentName
+      reportData.onDateStr = AC.dateService.formatDate(reportData.onDate)
+      reportData.roundTo = reportData.roundTo <= 0 ? 'numberGroup' : (reportData.roundTo === 1 ? 'decimal1' : 'decimal2')
+      let reportCode = inWindow ? 'hr_positionReportGroup' : 'hr_positionReportTotal'
+      if (level === -1) {
+        reportCode = 'hr_positionReport'
+        const totalFields = me.getTotalFields(reportData)
+        reportData.colCount = reportData.reportFields.length
+        reportData.colSpan = reportData.reportFields.length - 1
+        reportData.colSpan1 = reportData.reportFields.length - 2
+        reportData.infoColCount = reportData.reportFields.length - totalFields.length
+        reportData.sumColCount = totalFields.length
+        reportData.sheetSize = reportData.reportFields.length * 200
+        reportData.withGroups = false
+        const totals = me.calcTotals(posList, reportData)
+        reportData.totals = []
+        reportData.reportFields.forEach(f => {
+          if (calcFields.includes(f.fieldName)) {
+            if (f.fieldName !== 'quantity') {
+              reportData.totals.push({
+                value: f.fieldName === 'accrualSum' ? null : totals[f.fieldName],
+                isNumber: f.fieldName !== 'accrualSum'
+              })
+            } else {
+              reportData.totalQuantity = totals['quantity']
+            }
+          }
+        })
+        if (inWindow) {
+          reportData.groups = []
+          const groupValues = cellGroup ? cellGroup.split(me.divider) : []
+          groupValues.forEach((grp, idx) => {
+            reportData.groups.push({
+              caption: reportData.groupFields[idx].caption,
+              value: grp === 'null' ? '-' : grp
+            })
+          })
+        }
+        reportData.data = []
+        posList.forEach(row => {
+          const info = []
+          const sum = []
+          reportData.reportFields.forEach(f => {
+            if (calcFields.includes(f.fieldName)) {
+              if (f.fieldName !== 'quantity') {
+                sum.push({
+                  name: f.fieldName,
+                  value: row[f.fieldName]
+                })
+              }
+            } else {
+              info.push({
+                name: f.fieldName,
+                value: row[f.fieldName]
+              })
+            }
+          })
+          reportData.data.push({
+            info,
+            quantity: row['quantity'],
+            sum
+          })
+        })
+      } else {
+        reportData.colCount = reportData.calcFOP ? 7 : 3
+        reportData.sheetSize = reportData.calcFOP ? 1220 : 740
+        if (inWindow) {
+          reportData.data = me.prepareData(posList, level, reportData, cellGroup)
+          reportData.groupName = reportData.groupFields[level].caption
+          reportData.groups = []
+          const groupValues = cellGroup ? cellGroup.split(me.divider) : []
+          groupValues.forEach((grp, idx) => {
+            reportData.groups.push({
+              caption: reportData.groupFields[idx].caption,
+              value: grp === 'null' ? '-' : grp
+            })
+          })
+        } else {
+          const totalFields = me.getTotalFields(reportData)
+          reportData.groupName = reportData.groupFields.map((item, idx) => '&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(idx) + item.caption).join('<br/>')
+          reportData.colSpan = reportData.reportFields.length - 1
+          reportData.colSpan1 = reportData.reportFields.length - 2
+          reportData.infoColCount = reportData.reportFields.length - totalFields.length
+          reportData.sumColCount = totalFields.length
+          reportData.data = []
+          reportData.withGroups = true
+
+          const maxLevel = reportData.groupFields.length
+          const outGroupTotal = function (value, level) {
+            if (level === maxLevel) return
+            Object.keys(me.reportData.groupTotals).forEach(item => {
+              if (me.reportData.groupTotals[item].level === level && (!value || item.startsWith(value))) {
+                const groupName = '' // '&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(level) + me.reportData.groupTotals[item].groupName
+                const caption = me.reportData.groupTotals[item].caption || '-'
+                const row = {
+                  fontWeight: level === 0 && reportData.groupFields.length > 1 ? 'bold' : 'normal',
+                  groupName,
+                  caption,
+                  margin: 15 * level,
+                  group: item,
+                  prefix: '&nbsp;&nbsp;&nbsp;&nbsp;'.repeat(level),
+                  level,
+                  calcFOP: reportData.calcFOP
+                }
+                calcFields.forEach(fieldName => {
+                  row[fieldName] = fieldName === 'accrualSum' ? null : me.reportData.groupTotals[item][fieldName]
+                })
+                reportData.data.push(row)
+                if (level !== maxLevel - 1) {
+                  outGroupTotal(item + me.divider, level + 1)
+                }
+              }
+            })
+          }
+          outGroupTotal(null, 0)
+          const totals = me.calcTotals(posList, reportData)
+          reportData.totals = [{
+            calcFOP: reportData.calcFOP
+          }]
+          calcFields.forEach(fieldName => {
+            reportData.totals[0][fieldName] = fieldName === 'accrualSum' ? null : totals[fieldName]
+          })
+          reportData.groups = reportData.groupFields.filter(o => o.valueName).map(o => {
+            return {
+              caption: o.caption,
+              value: o.valueName
+            }
+          })
+        }
+      }
+      me.report = Ext.create('UBS.UBReport', {
+        code: reportCode,
+        type,
+        params: reportData,
+        language: $App.connection.userLang()
+      })
+
+      if (type === 'xlsx') {
+        me.report.makeReport().then(function (data) {
+          const blobData = new Blob(
+            [data.reportData], {
+              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            }
+          )
+          const repName = reportCode.split('-').slice(-1)
+          const fileName = `${repName}.xlsx`
+          window.saveAs(blobData, fileName)
+          me.setLoading(false)
+          me.reportType = 'html'
+        })
+      } else {
+        me.report
+          .init()
+          .then(function () {
+            return me.report.makeReport()
+          })
+          .then(function (data) {
+            if (data && data.reportData) {
+              if (inWindow) {
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: 'hr_positionReportPopup',
+                  isModal: true,
+                  cmpInitConfig: {
+                    reportData: data.reportData,
+                    reportOptions: me.report.reportOptions,
+                    reportGroup: cellGroup,
+                    level,
+                    onReportClick: me.onReportClick
+                  }
+                })
+              } else {
+                me.showReport(data.reportData)
+              }
+              me.setLoading(false)
+            } else {
+              me.setLoading(false)
+              me.reportDone = true
+            }
+          })
+      }
+    }
+
+    me.makeReport = function (type) {
+      me.reportParams = me.getReportParams()
+      $App.connection.run({
+        entity: 'hr_positionReport',
+        method: 'getPositionReportData',
+        params: JSON.stringify(me.reportParams)
+      }).then(({ resultData }) => {
+        me.down('[ubID=paramPanel]').collapse(true)
+        me.down('[ubID=bottomPanel]').show()
+        let reportData = Object.assign({}, me.reportParams)
+        me.reportData = JSON.parse(resultData)
+        me.createReport(type, me.reportData.posList, reportData, me.reportParams.groupFields.length ? 0 : -1)
+      }, e => {
+        me.setLoading(false)
+        throw e
+      })
+    }
+
+    me.getTotalFields = function (params) {
+      const totalFields = []
+      if (params.calcFOP) {
+        totalFields.push(...calcFields)
+      } else {
+        params.reportFields.forEach(item => {
+          if (calcFields.includes(item.fieldName)) totalFields.push(item.fieldName)
+        })
+      }
+      return totalFields
+    }
+
+    me.calcTotals = function (data, params) {
+      const totalFields = me.getTotalFields(params)
+      const reportTotals = {}
+      totalFields.forEach(f => {
+        reportTotals[f] = 0
+      })
+      data.forEach(row => {
+        totalFields.forEach(f => {
+          reportTotals[f] += row[f] || 0
+        })
+      })
+      return reportTotals
+    }
+
+    me.prepareData = function (data, level, params, parentGroup) {
+      const groupTotals = {}
+      const totalFields = me.getTotalFields(params)
+      let prevValue
+      let curValue
+      let grp = params.groupFields[level]
+      data.forEach(row => {
+        curValue = row[grp.fieldName] || 'null'
+        if (prevValue !== curValue) {
+          groupTotals[curValue] = {
+            caption: row[grp.fieldName] || '-',
+            calcFOP: params.calcFOP,
+            fontWeight: level === 0 && params.groupFields.length > 1 ? 'bold' : 'normal',
+            items: [Object.assign({}, row)]
+          }
+          totalFields.forEach(f => {
+            groupTotals[curValue][f] = row[f] || 0
+          })
+          prevValue = curValue
+        } else {
+          if (prevValue) {
+            totalFields.forEach(f => {
+              groupTotals[prevValue][f] += row[f] || 0
+            })
+            groupTotals[prevValue].items.push(Object.assign({}, row))
+          }
+        }
+      })
+      const result = []
+      Object.keys(groupTotals).forEach((key, idx) => {
+        groupTotals[key].group = parentGroup ? parentGroup + me.divider + key : key
+        groupTotals[key].level = level
+        result.push(groupTotals[key])
+      })
+      return result
+    }
+
+    me.reportData = []
+    me.divider = '#!#!#!'
+
+    me.on('afterrender', function () {
+      me.grid = {
+        groupParamsGrid: me.down('[name=groupParamList]'),
+        reportAllParamsGrid: me.down('[name=reportAllParamList]'),
+        reportSelParamsGrid: me.down('[name=reportSelParamList]')
+      }
+      me.attr = {
+        attrsControl: me.down('[name=attrsControl]'),
+        onDate: me.down('[name=onDate]'),
+        departmentID: me.down('[name=departmentID]'),
+        organizationID: me.down('[name=organizationID]'),
+        includeChildOrgs: me.down('[name=includeChildOrgs]'),
+        includeChildDepts: me.down('[name=includeChildDepts]'),
+        calcFOP: me.down('[name=calcFOP]'),
+        roundToCombo: me.down('[name=roundToCombo]')
+      }
+      me.button = {
+        saveGroupParamsBtn: me.down('[name=saveGroupParamsBtn]'),
+        saveReportParamsBtn: me.down('[name=saveReportParamsBtn]')
+      }
+      me.loadGroupParams().then(() => {
+        return me.loadReportParams()
+      })
+    }, me)
+
+    me.callParent(arguments)
+  }
+})
+
+function getStyle () {
+  return `
+    body {
+      background-color: #FFFFFF;
+      color: #000000;
+      font-family: Times New Roman, Verdana, Arial, Helvetica, sans-serif;
+      font-size: 12pt;
+      line-height: 1.3;
+    }
+    a:visited { color: blue; }
+    .word-wrap {
+      word-wrap: break-word;
+      hyphens: auto
+    }
+    td {
+      padding: 0 2px 0 2px;
+    }
+    .mce-pagebreak {
+      cursor: default;
+      display: block;
+      border: 0;
+      width: 100%;
+      height: 5px;
+      border: 1px dashed #666;
+      margin-top: 15px;
+      page-break-before: always
+    }
+    table.layout-portrait {
+      width:750px;
+    }
+    table.layout-landscape {
+      width:1100px !important;
+    }
+    @media print {
+      .mce-pagebreak {
+        border: 0
+      }
+      a {
+        text-decoration: none
+      }
+      table.layout-landscape {
+        width:1300px;
+      }
+    }
+  `
+}

@@ -1,0 +1,341 @@
+// @isModal true
+
+/* global Ext appAC $App AC UB */
+exports.formDef = 'HR.empPosLiquidate'
+
+Ext.define(exports.formDef, {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empPosLiquidate',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+
+    me.items = [
+      {
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        layout: 'fit',
+        items: [{
+          name: 'empPosLiquidate',
+          xtype: 'ubdetailgrid',
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          hideActions: ['addNew', 'addNewByCurrent', 'del', 'audit', 'newVersion', 'history', 'showPreview', 'itemLink',
+            'commandLink', 'showDetail'],
+          cmdType: 'showList',
+          description: UB.i18n('Особи на ліквідованих посадах'),
+          entity: 'hr_employeePositionS',
+          cmdData: {
+            params: [{
+              entity: 'hr_employeePositionS',
+              method: 'select',
+              fieldList: [
+                { name: 'ID', visibility: false },
+                { name: 'employeeNumberID', visibility: false },
+                { name: 'employeeID', visibility: false },
+                { name: 'departmentID', visibility: false },
+                { name: 'positionID', visibility: false },
+                { name: 'dictCategoryECBID', visibility: false },
+                { name: 'employeeID.fullFIO', description: UB.i18n('ПIБ'), simpleFilter: true },
+                { name: 'employeeNumberID.addDescrPerson', description: UB.i18n('Додаткова інформація') },
+                { name: 'depName', description: UB.i18n('Підрозділ') },
+                { name: 'posName', description: UB.i18n('Посада') },
+                { name: 'factPosition', description: UB.i18n('Фактична посада') },
+                { name: 'dateFrom', description: UB.i18n('Дата початку дії'), format: 'd.m.Y', config: { align: 'center', width: 100 } },
+                { name: 'posDateTo', description: UB.i18n('Закінчення дії посади'), format: 'd.m.Y', config: { align: 'center', width: 100 } },
+                { name: 'posOrder', description: UB.i18n('Наказ про закриття') },
+                { name: 'workScheduleID.name', description: UB.i18n('Графік роботи') },
+                { name: 'workPlace', description: UB.i18n('Місце роботи') },
+                { name: 'workerType', description: UB.i18n('Форма зайнятості') },
+                { name: 'contractType', description: UB.i18n('Тип договору') },
+                { name: 'mtCount', description: UB.i18n('Кількість ставок'), config: { align: 'center', width: 100 }, format: '0.00' },
+                { name: 'dictContractKindID.name', description: UB.i18n('Вид договору') }
+              ],
+              whereList: {
+                orgID: {
+                  expression: '[organizationID]',
+                  condition: 'equal',
+                  value: appAC.globalOrganization()
+                },
+                empPosDateFrom: {
+                  expression: '[dateFrom]',
+                  condition: '<=',
+                  value: appAC.globalApplicationDate()
+                },
+                empPosDateTo: {
+                  expression: '[dateTo]',
+                  condition: '>=',
+                  value: appAC.globalApplicationDate()
+                },
+                posDateTo: {
+                  expression: '[posDateTo]',
+                  condition: '<',
+                  value: appAC.globalApplicationDate()
+                }
+              }
+            }]
+          },
+          cmpInitConfig: {
+            listeners: {
+              render: (grid) => {
+                const showAddDescrPerson = !!AC.settings.get('hrShowAddDescrPerson', appAC.globalOrganization())
+                const colPersonDescr = AC.gridUtils.getColumnByIndex(grid, 'employeeNumberID.addDescrPerson')
+                colPersonDescr.setVisible(showAddDescrPerson)
+                const useActualPositionName = AC.settings.get('hrOrderActualPositionName', appAC.globalOrganization()) === true
+                const colActualPositionName = AC.gridUtils.getColumnByIndex(grid, 'factPosition')
+                colActualPositionName.setVisible(useActualPositionName)
+              }
+            },
+            onItemDblClick: function (grid, record) {
+              if (record.get('employeeNumberID')) {
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: 'hr_employee',
+                  entity: 'hr_employee',
+                  instanceID: record.get('employeeID'),
+                  cmpInitConfig: {
+                    employeeNumberID: record.get('employeeNumberID')
+                  }
+                })
+              }
+            },
+            afterInit: function () {
+              let grid = this
+              this.menu.add([
+                {
+                  text: UB.i18n('Відкрити картку працівника'),
+                  disabled: !AC.entityUtils.verifyRightsMethod('hr_employee', 'view'),
+                  scale: 'medium',
+                  iconCls: 'fa fa-table',
+                  handler: () => {
+                    let reco = AC.gridUtils.getCurrentRecord(grid)
+                    if (reco.get('employeeNumberID')) {
+                      $App.doCommand({
+                        cmdType: 'showForm',
+                        formCode: 'hr_employee',
+                        entity: 'hr_employee',
+                        instanceID: reco.get('employeeID'),
+                        cmpInitConfig: {
+                          employeeNumberID: reco.get('employeeNumberID')
+                        }
+                      })
+                    }
+                  }
+                }
+              ])
+              this.getExportTitle = () => UB.i18n('Список осіб на ліквідованих посадах')
+            },
+            customActions: [
+              {
+                // xtype: 'button',
+                text: UB.i18n('Друкувати'),
+                itemId: 'printDocumentAction',
+                iconCls: 'fas fa-print',
+                cls: 'blue-action',
+                margin: '5 0 0 0',
+                handler: function (btn) {
+                  me.doReport()
+                }
+              },
+              {
+                iconCls: 'fas fa-edit',
+                cls: 'fill-action',
+                scale: 'medium',
+                tooltip: UB.i18n('Наказ про переведення'),
+                text: UB.i18n('Наказ про переведення'),
+                actionId: 'createOrder',
+                handler: async function () {
+                  let grid = this.up('grid')
+                  let record = AC.gridUtils.getCurrentRecord(grid)
+                  if (!record) {
+                    $App.dialogInfo(UB.i18n('Оберіть із списку працівника для переведення'))
+                  } else {
+                    let recordData = record.getData()
+
+                    let empOrderMoveDet = await UB.Repository('hr_empOrderMoveDet')
+                      .attrs(['ID', 'orderID'])
+                      .where('orderID.organizationID', '=', appAC.globalOrganization())
+                      .where('employeePositionID', '=', recordData.ID)
+                      .orderBy('mi_createDate', 'DESC')
+                      .selectSingle()
+
+                    if (empOrderMoveDet) {
+                      $App.doCommand({
+                        formCode: 'hr_empOrder',
+                        entity: 'hr_empOrder',
+                        cmdType: 'showForm',
+                        instanceID: empOrderMoveDet.orderID,
+                        sender: me,
+                        isModal: false,
+                        empOrderMoveDetID: empOrderMoveDet.ID,
+                        cmpInitConfig: {
+                          initComponentStart () {
+                            const formOrder = this
+                            formOrder.on('recordloaded', me.showOrderDetail)
+                          }
+                        }
+                      })
+                    } else {
+                      $App.connection.run({
+                        entity: 'hr_employeePosition',
+                        method: 'createOrderMove',
+                        empOrderType: 'MOVE',
+                        organizationID: appAC.globalOrganization(),
+                        onDate: appAC.globalApplicationDate(),
+                        employeeID: recordData.employeeID,
+                        employeePositionID: recordData.ID,
+                        dateFrom: appAC.globalApplicationDate(),
+                        departmentID: recordData.departmentID,
+                        instanceID: me.instanceID
+                      }).then(mParams => {
+                        if (mParams.orderID) {
+                          const commandConfig = {
+                            formCode: 'hr_empOrder',
+                            entity: 'hr_empOrder',
+                            cmdType: 'showForm',
+                            instanceID: mParams.orderID,
+                            sender: me,
+                            isModal: false,
+                            employeeID: mParams.employeeID,
+                            positionID: mParams.positionID,
+                            dateFrom: mParams.dateFrom,
+                            departmentID: mParams.departmentID,
+                            employeePositionID: recordData.ID,
+                            dictCategoryECBID: mParams.dictCategoryECBID,
+                            empOrderMoveDetID: mParams.empOrderMoveDetID || null,
+                            cmpInitConfig: {
+                              initComponentStart () {
+                                const formOrder = this
+                                formOrder.on('recordloaded', me.createOrderDetail)
+                              }
+                            }
+                          }
+                          $App.doCommand(commandConfig)
+                        }
+                      })
+                    }
+                  }
+                }
+              }
+            ]
+          }
+
+        }]
+      }
+    ]
+
+    me.createOrderDetail = function () {
+      const formOrder = this
+      const empOrderType = 'APPOINT'
+      formOrder.un('recordloaded', me.createOrderDetail)
+      $App.doCommand({
+        cmdType: 'showForm',
+        entity: 'hr_empOrderMoveDet',
+        sender: formOrder.query('[paraGrid=true]')[0],
+        isModal: true,
+        instanceID: formOrder.commandConfig.empOrderMoveDetID,
+        customParams: {
+          isGroup: false,
+          empOrderType
+        },
+        cmpInitConfig: {
+          beforeRender: function () {
+            const form = this
+            form.on('formDataReadyFinished', function () {
+              if (this.isNewInstance) {
+                const depCtrl = this.down('[name=departmentID]')
+                if (depCtrl) depCtrl.setValue(this.commandConfig.initialFieldValues.departmentID)
+                const empPosCtrl = this.down('[name=employeePositionID]')
+                if (empPosCtrl) empPosCtrl.setValue(this.commandConfig.initialFieldValues.employeePositionID)
+              }
+            })
+          }
+        },
+        initialFieldValues: {
+          employeePositionID: formOrder.commandConfig.employeePositionID,
+          dateFrom: AC.dateService.shiftDate(formOrder.commandConfig.dateFrom),
+          departmentID: formOrder.commandConfig.departmentID,
+          dictCategoryECBID: formOrder.commandConfig.dictCategoryECBID
+        }
+      })
+    }
+
+    me.showOrderDetail = function () {
+      const formOrder = this
+      formOrder.un('recordloaded', me.showOrderDetail)
+      $App.doCommand({
+        cmdType: 'showForm',
+        entity: 'hr_empOrderMoveDet',
+        sender: formOrder.query('[paraGrid=true]')[0],
+        isModal: true,
+        instanceID: formOrder.commandConfig.empOrderMoveDetID
+      })
+    }
+
+    me.globalDateChange = function () {
+      const store = me.down('ubdetailgrid').getStore()
+      store.ubRequest.onDate = appAC.globalApplicationDate()
+      store.ubRequest.whereList.posDateTo = {
+        expression: '[posDateTo]',
+        condition: '<',
+        value: appAC.globalApplicationDate()
+      }
+      store.ubRequest.whereList.empPosDateFrom = {
+        expression: '[dateFrom]',
+        condition: '<=',
+        value: appAC.globalApplicationDate()
+      }
+      store.ubRequest.whereList.empPosDateTo = {
+        expression: '[dateTo]',
+        condition: '>=',
+        value: appAC.globalApplicationDate()
+      }
+      store.load()
+    }
+    me.globalOrganizationChange = () => {
+      const store = me.down('ubdetailgrid').getStore()
+      store.ubRequest.whereList.orgID = {
+        expression: '[organizationID]',
+        condition: 'equal',
+        value: appAC.globalOrganization()
+      }
+      store.ubRequest.orgID = appAC.globalOrganization()
+      store.load()
+    }
+
+    me.report_code = 'hr_empPosLiquidate'
+    me.doReport = () => {
+      let reportParams = {
+        orgID: appAC.globalOrganization(),
+        onDate: appAC.globalApplicationDate()
+      }
+
+      $App.doCommand({
+        cmdType: 'showReport',
+        caption: UB.i18n('Друкована форма'),
+        tabId: 'printDocument' + me.report_code + Date.now(),
+        target: $App.getViewport().centralPanel,
+        cmdData: {
+          reportCode: me.report_code,
+          reportParams: reportParams,
+          reportOptions: {
+            allowExportToExcel: true,
+            isModal: false
+          }
+        }
+      })
+    }
+
+    me.callParent(arguments)
+  }
+})

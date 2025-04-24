@@ -1,0 +1,124 @@
+/* global HR UB */
+exports.formDef = {
+  requiredFields: ['employeeID', 'office'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' },
+    defaults: { labelWidth: 140 }
+  },
+  size: {
+    width: 1100,
+    height: 700
+  },
+  autoScroll: true,
+  items: [
+    {
+      layout: 'hbox',
+      items: [
+        { attributeName: 'startDate', labelWidth: 140 },
+        { attributeName: 'dismissDate', labelWidth: 140 }
+      ]
+    },
+    {
+      xtype: 'ubcombobox',
+      gridFieldList: ['name'],
+      name: 'office',
+      valueField: 'name',
+      displayField: 'name',
+      allowCustomText: true,
+      disableModifyEntity: true,
+      triggerCls: 'hr-list-trigger',
+      fieldLabel: UB.i18n('Військкомат'),
+      ubRequest: {
+        entity: 'ac_contractor',
+        fieldList: ['name'],
+        whereList: {
+          orgBusinessType: {
+            expression: '[orgBusinessTypeID.code]',
+            condition: 'equal',
+            value: 'mlt'
+          }
+        },
+        orderList: { orderBy: { 'expression': 'name', 'order': 'asc' } }
+      },
+      maxLength: 600,
+      listeners: {
+        render: function (ctrl) {
+          const me = ctrl.up('form')
+          const onCtrlChange = () => {
+            let oldValue = me.record.get('office')
+            if (oldValue !== ctrl.rawValue) {
+              me.record.set('office', ctrl.rawValue ? ctrl.rawValue : null)
+              HR.orderManager.setIsDirty(me, true)
+            }
+          }
+          me.on('recordloaded', () => {
+            ctrl.un('change', onCtrlChange)
+            ctrl.setValue(me.record.get('office'))
+            ctrl.on('change', onCtrlChange)
+          })
+        },
+        select: ctrl => {
+          const form = ctrl.up('form')
+          ctrl.setValue(ctrl.rawValue)
+          form.record.set('office', ctrl.rawValue)
+        },
+        blur: ctrl => {
+          const form = ctrl.up('form')
+          ctrl.setValue(ctrl.rawValue)
+          form.record.set('office', ctrl.rawValue)
+        },
+        focus: ctrl => {
+          ctrl.inputEl.dom.setAttribute('maxlength', 600)
+        }
+      }
+    },
+    { attributeName: 'comment' },
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Наказ'),
+      layout: { type: 'vbox', align: 'stretch' },
+      margin: '0 15 5 10',
+      items: [
+        {
+          attributeName: 'employeeDocID',
+          fieldList: ['ID', 'dictDocKindID', 'docSeries', 'docNumber', 'docIssued', 'docIssuedDate', 'employeeID', 'description'],
+          gridFieldList: ['description', 'docIssued'],
+          displayField: 'description',
+          labelWidth: 130
+        },
+        {
+          attributeName: 'dictDocKindID',
+          description: UB.i18n('Вид документа'),
+          labelWidth: 130,
+          recordField: 'dictDocKindID'
+        },
+        {
+          layout: 'hbox',
+          items: [
+            {
+              attributeName: 'docSeries',
+              labelWidth: 130,
+              recordField: 'docSeries'
+            },
+            {
+              attributeName: 'docNumber',
+              labelWidth: 100,
+              recordField: 'docNumber'
+            },
+            {
+              attributeName: 'dateIssue',
+              labelWidth: 100,
+              recordField: 'docIssuedDate'
+            }
+          ]
+        },
+        {
+          attributeName: 'docIssuer',
+          labelWidth: 130,
+          recordField: 'docIssued'
+        }
+      ]
+    }
+  ]
+}

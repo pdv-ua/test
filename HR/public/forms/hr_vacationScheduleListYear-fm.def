@@ -1,0 +1,559 @@
+/* global Ext UB _ $App AC HR appAC */
+exports.formDef = 'HR.vacationScheduleListYear'
+
+Ext.define('HR.vacationScheduleListYear', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.vacationschedulelistyear',
+  layout: { type: 'border' },
+  width: 1100,
+  height: 600,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        name: 'paramPanel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'hbox' },
+            collapsed: false,
+            items: [
+              {
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    xtype: 'numberfield',
+                    name: 'year',
+                    fieldLabel: UB.i18n('Рік'),
+                    allowBlank: false,
+                    minValue: 2000,
+                    maxValue: 9999,
+                    vtype: 'numberValidator',
+                    value: appAC.globalApplicationDate().getFullYear(),
+                    labelWidth: 150,
+                    width: 250
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getDepCombo({ labelWidth: 150, width: 500, filterByGlobalOrg: true, displayField: 'description' }),
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'subDepartment',
+                        labelWidth: 200,
+                        fieldLabel: UB.i18n('з підлеглими підрозділами'),
+                        checked: false,
+                        readOnly: true
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'vacKindID',
+                        fieldLabel: UB.i18n('Вид відпустки'),
+                        labelWidth: 150,
+                        width: 500,
+                        ubRequest: {
+                          entity: 'hr_dictVacationKind',
+                          fieldList: ['ID', 'name', 'code']
+                        },
+                        listeners: {
+                          render: function (ctrl) {
+                            ctrl.store.on('load', () => {
+                              if (!ctrl.store.isLoaded) {
+                                let storeItems = ctrl.store.data.items
+                                let selItem = _.find(storeItems, { data: { code: 'dYear' } })
+                                if (selItem) {
+                                  ctrl.setValue(selItem.data.ID)
+                                }
+                                ctrl.store.isLoaded = true
+                              }
+                            })
+                            ctrl.store.load()
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'catChiefs',
+                        fieldLabel: UB.i18n(`Категорія 'Керівники'`),
+                        labelWidth: 200,
+                        checked: true
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'catOthers',
+                        fieldLabel: UB.i18n(`'Інші'`),
+                        labelWidth: 70,
+                        checked: true
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'orderState',
+                        fieldLabel: UB.i18n('Стан планових періодів'),
+                        labelWidth: 150,
+                        width: 500,
+                        valueField: 'code',
+                        displayField: 'name',
+                        ubRequest: {
+                          entity: 'ubm_enum',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['ID', 'code', 'name', 'eGroup'],
+                          whereList: {
+                            enumGroupFilter: {
+                              expression: '[eGroup]',
+                              condition: 'equal',
+                              values: {
+                                val: 'HR_VAC_SCHEDULE_STATE'
+                              }
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'name' } }
+                        },
+                        listeners: {
+                          render: function (ctrl) {
+                            ctrl.store.on('load', () => {
+                              if (!ctrl.store.isLoaded) {
+                                ctrl.setValue('APPROVED')
+                                ctrl.store.isLoaded = true
+                                // me.refreshData()
+                              }
+                            })
+                            ctrl.store.load()
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                xtype: 'button',
+                tooltip: UB.i18n('Шукати'),
+                iconCls: 'fas fa-search',
+                width: 30,
+                cls: 'green-action',
+                margin: '50 0 5 15',
+                handler: function (btn) {
+                  me.refreshData()
+                }
+              },
+              {
+                xtype: 'button',
+                tooltip: UB.i18n('Експорт у Excel'),
+                iconCls: 'fas fa-file-excel',
+                cls: 'green-action',
+                margin: '50 0 5 15',
+                handler: function () {
+                  me.exportXLSX()
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'acGrid',
+        name: 'vacationScheduleListYearGrid',
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_vacationScheduleListYear_vacationScheduleListYearGrid'),
+        entity: 'hr_vacationScheduleListYear',
+        flex: 1,
+        region: 'center',
+        autoScroll: true,
+        storeType: 'ub',
+        storeAutoLoad: false,
+        showToolBar: true,
+        enableColumnHide: false,
+        disablePaging: false,
+        pagerConfig: { pageSize: 30 },
+        enableMultifilter: true,
+        readOnly: true,
+        isReadOnly: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+        fields: [
+          { name: 'ID' },
+          { name: 'employeeNumberID' },
+          { name: 'emp', columnConfig: { text: UB.i18n('ПІБ'), width: 200, filterBy: 'string' } },
+          { name: 'dept', columnConfig: { text: UB.i18n('Підрозділ'), width: 200, filterBy: 'string' } },
+          { name: 'pos', columnConfig: { text: UB.i18n('Посада'), width: 200, filterBy: 'string' } },
+          { name: 'days', columnConfig: { text: UB.i18n('Днів на рік'), width: 100, align: 'center', renderer: (value, meta, record) => { return me.renderTotals(value, meta, record) } } },
+          { name: 'month01', columnConfig: { text: UB.i18n('Січень'), dataType: 'Int', width: 80, align: 'center', renderer: (value, meta, record) => { return me.renderMonthValue(value, meta, record, '01') } } },
+          { name: 'month02', columnConfig: { text: UB.i18n('Лютий'), dataType: 'Int', width: 80, align: 'center', renderer: (value, meta, record) => { return me.renderMonthValue(value, meta, record, '02') } } },
+          { name: 'month03', columnConfig: { text: UB.i18n('Березень'), dataType: 'Int', width: 80, align: 'center', renderer: (value, meta, record) => { return me.renderMonthValue(value, meta, record, '03') } } },
+          { name: 'month04', columnConfig: { text: UB.i18n('Квітень'), dataType: 'Int', width: 80, align: 'center', renderer: (value, meta, record) => { return me.renderMonthValue(value, meta, record, '04') } } },
+          { name: 'month05', columnConfig: { text: UB.i18n('Травень'), dataType: 'Int', width: 80, align: 'center', renderer: (value, meta, record) => { return me.renderMonthValue(value, meta, record, '05') } } },
+          { name: 'month06', columnConfig: { text: UB.i18n('Червень'), dataType: 'Int', width: 80, align: 'center', renderer: (value, meta, record) => { return me.renderMonthValue(value, meta, record, '06') } } },
+          { name: 'month07', columnConfig: { text: UB.i18n('Липень'), dataType: 'Int', width: 80, align: 'center', renderer: (value, meta, record) => { return me.renderMonthValue(value, meta, record, '07') } } },
+          { name: 'month08', columnConfig: { text: UB.i18n('Серпень'), dataType: 'Int', width: 80, align: 'center', renderer: (value, meta, record) => { return me.renderMonthValue(value, meta, record, '08') } } },
+          { name: 'month09', columnConfig: { text: UB.i18n('Вересень'), dataType: 'Int', width: 80, align: 'center', renderer: (value, meta, record) => { return me.renderMonthValue(value, meta, record, '09') } } },
+          { name: 'month10', columnConfig: { text: UB.i18n('Жовтень'), dataType: 'Int', width: 80, align: 'center', renderer: (value, meta, record) => { return me.renderMonthValue(value, meta, record, '10') } } },
+          { name: 'month11', columnConfig: { text: UB.i18n('Листопад'), dataType: 'Int', width: 80, align: 'center', renderer: (value, meta, record) => { return me.renderMonthValue(value, meta, record, '11') } } },
+          { name: 'month12', columnConfig: { text: UB.i18n('Грудень'), dataType: 'Int', width: 80, align: 'center', renderer: (value, meta, record) => { return me.renderMonthValue(value, meta, record, '12') } } },
+          { name: 'stateApproved01' },
+          { name: 'stateApproved02' },
+          { name: 'stateApproved03' },
+          { name: 'stateApproved04' },
+          { name: 'stateApproved05' },
+          { name: 'stateApproved06' },
+          { name: 'stateApproved07' },
+          { name: 'stateApproved08' },
+          { name: 'stateApproved09' },
+          { name: 'stateApproved10' },
+          { name: 'stateApproved11' },
+          { name: 'stateApproved12' }
+        ],
+        ubStoreConfig: {
+          entity: 'hr_vacationScheduleListYear',
+          method: 'search',
+          fieldList: ['ID', 'emp', 'dept', 'pos', 'days', 'month01', 'month02', 'month03', 'month04', 'month05', 'month06',
+            'month07', 'month08', 'month09', 'month10', 'month11', 'month12',
+            'stateApproved01', 'stateApproved02', 'stateApproved03', 'stateApproved04', 'stateApproved05', 'stateApproved06',
+            'stateApproved07', 'stateApproved08', 'stateApproved09', 'stateApproved10', 'stateApproved11', 'stateApproved12'
+          ],
+          totalRequired: true
+        },
+        onItemDoubleClick: function (row, record) {
+          const year = me.attr.year.getValue()
+          const empPosID = record.get('ID')
+          const employeeNumberID = record.get('employeeNumberID')
+          $App.doCommand({
+            cmdType: 'showList',
+            isModal: true,
+            hideActions: ['addNewByCurrent', 'itemSelect'],
+            cmpInitConfig: {
+              dfm: {
+                size: {
+                  width: 950,
+                  height: 400
+                }
+              },
+              autoScroll: true,
+              onClose: function () {
+                me.refreshData()
+              },
+              optimizeColumnWidth: function () {
+
+              },
+              onItemDblClick: function (row, record, item, index, e, eOpts) {
+                this.doOnEdit(eOpts)
+              },
+              onDeterminateForm: function (grid) {
+                const currReco = AC.gridUtils.getCurrentRecord(grid)
+                const state = currReco && currReco.get('state')
+                return {
+                  entityName: 'hr_vacationSchedule',
+                  formCode: 'hr_vacationSchedule',
+                  cmpInitConfig: {
+                    defaultValues: {
+                      employeeNumberID: employeeNumberID,
+                      employeePositionID: empPosID,
+                      organizationID: appAC.globalOrganization(),
+                      year: me.attr.year.getValue(),
+                      dictVacationKindID: me.attr.vacKindID.getValue()
+                    },
+                    orderCall: state && state !== 'NEW'
+                  }
+                }
+              }
+            },
+            cmdData: {
+              params: [
+                {
+                  entity: 'hr_vacationSchedule',
+                  method: 'select',
+                  fieldList: [
+                    { name: 'ID', visibility: false },
+                    { name: 'employeeNumberID.description', description: UB.i18n('ПІБ'), config: { width: 250 } },
+                    { name: 'dictVacationKindID.name', description: UB.i18n('Вид відпустки'), config: { width: 200 } },
+                    { name: 'dateFrom', description: UB.i18n('Дата початку'), format: 'd.m.Y', config: { align: 'center', width: 120 } },
+                    { name: 'dateTo', description: UB.i18n('Дата закінчення'), format: 'd.m.Y', config: { align: 'center', width: 120 } },
+                    { name: 'dayCount', description: UB.i18n('Кількість днів'), config: { align: 'center', width: 140 } },
+                    { name: 'state', description: UB.i18n('Стан'), config: { align: 'center', width: 120 } }
+                  ],
+                  whereList: Object.assign({
+                    employeePositionID: {
+                      expression: '[employeePositionID]',
+                      condition: '=',
+                      value: empPosID
+                    },
+                    dateFrom: {
+                      expression: '[year]',
+                      condition: '=',
+                      value: year
+                    }
+                  }, me.attr.orderState.getValue() ? {
+                    state: {
+                      expression: '[state]',
+                      condition: '=',
+                      value: me.attr.orderState.getValue()
+                    }
+                  } : {})
+                }
+              ]
+            }
+          })
+        }
+      }
+    ]
+
+    me.refreshData = () => {
+      const store = me.attr.grid.getStore()
+      const req = store.ubRequest
+      req.orgID = appAC.globalOrganization()
+      req.onDate = appAC.globalApplicationDate()
+      req.year = me.attr.year.getValue()
+      req.departmentID = me.attr.departmentID.getValue()
+      req.subDepartment = me.attr.subDepartment.getValue()
+      req.vacKindID = me.attr.vacKindID.getValue()
+      req.catChiefs = me.attr.catChiefs.getValue()
+      req.catOthers = me.attr.catOthers.getValue()
+      req.orderState = me.attr.orderState.getValue()
+
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=vacationScheduleListYearGrid]'),
+        year: me.down('[name=year]'),
+        departmentID: me.down('[name=departmentID]'),
+        subDepartment: me.down('[name=subDepartment]'),
+        vacKindID: me.down('[name=vacKindID]'),
+        catChiefs: me.down('[name=catChiefs]'),
+        catOthers: me.down('[name=catOthers]'),
+        orderState: me.down('[name=orderState]')
+      }
+
+      me.attr.departmentID.on('change', (ctrl, value) => {
+        me.attr.subDepartment.setReadOnly(!value)
+        if (!value) {
+          me.attr.subDepartment.setValue(false)
+        }
+      })
+    }, me)
+
+    me.validateParams = () => {
+      let res
+      let params = []
+      if (!appAC.globalOrganization()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Організація"')))
+      }
+      let year = me.attr.year
+      if (!year.getValue()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Рік"')))
+      }
+      let orderState = me.attr.orderState
+      if (!orderState.getValue()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Стан планових періодів"')))
+      }
+      if (params.length) {
+        res = {
+          msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+        }
+      }
+      return res
+    }
+
+    me.globalOrganizationChange = () => {
+      const departmentCombo = me.down('[name=departmentID]')
+      AC.viewUtils.setWhereListProperty(departmentCombo, [
+        ['orgID', '=', appAC.globalOrganization()]
+      ], undefined, ['clearStore', 'clearValue'])
+      me.refreshData()
+    }
+
+    me.renderMonthValue = (value, meta, record, month) => {
+      if (value > 0) {
+        const isStateApproved = record.get(`stateApproved${month}`) === 1
+        meta.tdCls = isStateApproved ? 'grd-color-blue' : 'grd-color-red'
+      }
+      return value
+    }
+
+    me.renderTotals = (value, meta, record) => {
+      if (value > 0) {
+        meta.tdCls = 'grd-bold'
+      }
+      return value
+    }
+
+    me.callParent(arguments)
+
+  	me.exportXLSX = () => {
+      function setStyles() {
+        defFont = stl.fonts.add({
+          code: 'def',
+          name: 'Calibri',
+          fontSize: 11,
+          scheme: 'minor'
+        })
+        stl.fonts.add({
+          code: 'defBold',
+          name: 'Calibri',
+          fontSize: 11,
+          scheme: 'minor',
+          bold: true
+        })
+
+        borderFull = stl.borders.add({
+          left: {
+            style: 'thin'
+          },
+          right: {
+            style: 'thin'
+          },
+          top: {
+            style: 'thin'
+          },
+          bottom: {
+            style: 'thin'
+          }
+        })
+        stl.alignments.add({
+          code: 'Hright',
+          horizontal: 'right'
+        })
+        stl.alignments.add({
+          code: 'Hcenter',
+          horizontal: 'center',
+          wrapText: '1'
+        })
+        stl.alignments.add({
+          code: 'HVcenter',
+          horizontal: 'center',
+          vertical: 'center',
+          wrapText: '1'
+        })
+        stl.alignments.add({
+          code: 'HVLeft',
+          horizontal: 'left',
+          vertical: 'center',
+          wrapText: '1'
+        })
+        stl.alignments.add({
+          code: 'wrapText',
+          wrapText: '1'
+        })
+        styleCol = stl.getStyle({
+          font: defFont
+        })
+        headerStyle = stl.getStyle({
+          font: stl.fonts.named.defBold,
+          alignment: stl.alignments.named.HVLeft
+        })
+        rowHeaderStyle = stl.getStyle({
+          font: stl.fonts.named.defBold,
+          fill: 'EBEDED',
+          border: borderFull,
+          alignment: stl.alignments.named.HVcenter
+        })
+      }
+
+      function getColValue(col) {
+        if (typeof col === 'boolean') {
+          return col ? UB.i18n('Так') : ''
+        } else {
+          return col
+        }
+      }
+
+      let wb, defFont, ws, borderFull, rowHeaderStyle, stl, styleCol
+      wb = new window.XLSX.XLSXWorkbook()
+      wb.useSharedString = true
+      stl = wb.style
+      setStyles()
+
+      const orgName = appAC.globalOrganizationName()
+      const vacations = me.attr.vacKindID.getRawValue()
+      const departmentName = me.attr.departmentID.getValue() ? me.attr.departmentID.getRawValue() + (me.attr.subDepartment.getValue() ? ' ' + UB.i18n('з підлеглими') : '') : ''
+      const nameWS = UB.i18n('Графік відпусток на {0}', me.attr.year.getValue())
+
+      const grid = me.down('grid')
+      const data = grid ? grid.getData() : []
+      if (!grid || !data.length) {
+        $App.dialogInfo(UB.i18n('Відсутні дані для вивантаження'))
+        return
+      }
+
+      const gridColumns = (grid.gridDataColumns || grid.columnManager.columns).filter(o => !o.hidden).map(o => {
+        return {attrName: o.dataIndex, name: o.text}
+      })
+
+      ws = wb.addWorkSheet({caption: nameWS, name: nameWS})
+      const headStyle = stl.getStyle({
+        font: stl.fonts.named.defBold,
+        alignment: stl.alignments.named.HVLeft
+      })
+      ws.addMerge({ colFrom: 0, colTo: gridColumns.length -1 })
+      ws.addRow({value: nameWS, column: 0, style: headStyle}, {}, { height: 15 })
+
+      ws.addMerge({ colFrom: 0, colTo: gridColumns.length -1 })
+      ws.addRow({value: `${UB.i18n('Організація')}: ${orgName}`, column: 0, style: headStyle}, {}, { height: 15 })
+
+      if (departmentName) {
+        ws.addMerge({ colFrom: 0, colTo: gridColumns.length -1 })
+        ws.addRow({
+          value: `${UB.i18n('Підрозділ')}: ${departmentName}`,
+          column: 0,
+          style: headStyle
+        }, {}, {height: 15})
+      }
+      if (vacations) {
+        ws.addMerge({ colFrom: 0, colTo: gridColumns.length -1 })
+        ws.addRow({
+          value: `${UB.i18n('Вид відпустки')}: ${vacations}`,
+          column: 0,
+          style: headStyle
+        }, {}, {height: 15})
+      }
+
+      let colProperties = []
+      let longRowList = ['emp', 'dept', 'pos']
+      let rowList = []
+      gridColumns.forEach((el, index) => {
+        colProperties.push({column: index, width: longRowList.includes(el.attrName) ? 35 : 10})
+        rowList.push({column: index, value: UB.i18n(el.name), style: rowHeaderStyle})
+      })
+      ws.setColsProperties(colProperties)
+      ws.addRow(rowList, null, { height: 30 })
+
+      data.forEach(fix => {
+        let rowList = []
+        gridColumns.forEach((el, index) => {
+          rowList.push({
+            column: index,
+            value: (fix[el.attrName] !== null) ? getColValue(fix[el.attrName]) : '',
+            style: styleCol
+          })
+        })
+        ws.addRow(rowList, null, { height: 20 })
+      })
+
+      const rData = wb.render()
+      const dBlob = new Blob([rData], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})
+      saveAs(dBlob, `${nameWS}.xlsx`)
+    }
+
+  }
+})

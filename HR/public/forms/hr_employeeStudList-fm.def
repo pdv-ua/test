@@ -1,0 +1,192 @@
+// @isModal true
+/* global Ext AC UB $App appAC appHR */
+
+exports.formDef = 'HR.employeeStudList'
+
+Ext.define('HR.employeeStudList', {
+  extend: 'Ext.form.Panel',
+  name: 'form',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.employeeStudList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        name: 'panel',
+        flex: 1,
+        layout: 'fit',
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            name: 'employeeStudListGrid',
+            stateful: true,
+            stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_employeeStudList_employeeStudListGrid'),
+            autoScroll: true,
+            layout: 'fit',
+            flex: 1,
+            forceDataLoad: true,
+            disableAutoLoadStore: true,
+            hideActions: ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+            cmdData: {
+              params: [{
+                entity: 'hr_employeeStud',
+                method: 'select',
+                fieldList: [
+                  { name: 'ID', visibility: false },
+                  { name: 'tabNumSort', visibility: false },
+                  { name: 'tabNum', description: UB.i18n('Номер залікової книжки') },
+                  { name: 'employeeID', visibility: false },
+                  { name: 'employeeID.lastName', description: UB.i18n('Прізвище'), simpleFilter: true },
+                  { name: 'employeeID.firstName', description: UB.i18n('Ім\'я'), simpleFilter: true },
+                  { name: 'employeeID.middleName', description: UB.i18n('По батькові'), simpleFilter: true },
+                  { name: 'employeeID.sexType', description: UB.i18n('Стать'), simpleFilter: true },
+                  { name: 'employeeID.taxCode', description: UB.i18n('РНОКПП'), simpleFilter: true },
+                  { name: 'employeeID.birthDate', description: UB.i18n('Дата народження'), format: 'd.m.Y', simpleFilter: true },
+                  { name: 'dateFrom', description: UB.i18n('Дата початку навчання'), format: 'd.m.Y' },
+                  { name: 'dateToEmpty', description: UB.i18n('Дата закінчення навчання'), format: 'd.m.Y' },
+                  { name: 'facultyCaption', description: UB.i18n('Факультет'), simpleFilter: true },
+                  { name: 'studyYear', description: UB.i18n('Курс'), simpleFilter: true },
+                  { name: 'semester', description: UB.i18n('Семестр'), simpleFilter: true },
+                  { name: 'groupName', description: UB.i18n('Група'), simpleFilter: true },
+                  { name: 'dictStaffCatName', description: UB.i18n('Категорія персоналу') },
+                  { name: 'dictPositionName', description: UB.i18n('Посада') },
+                  { name: 'positionName', description: UB.i18n('Штатна посада') },
+                  { name: 'mtCount', description: UB.i18n('Ставок'), format: '0.00' },
+                  { name: 'payElName', description: UB.i18n('Система оплати') },
+                  { name: 'accrualSum', description: UB.i18n('Оклад') },
+                  { name: 'dictCategoryECBName', description: UB.i18n('Категорія застрахованої особи') },
+                  { name: 'accountID', description: UB.i18n('Рахунок витрат') },
+                  { name: 'raiseSalary', description: UB.i18n('Місяць підвищення доходу для індексації') },
+                  { name: 'workSchedule', description: UB.i18n('Графік роботи') },
+                  { name: 'workerType', description: UB.i18n('Форма зайнятості') },
+                  { name: 'workPlace', description: UB.i18n('Місце роботи') },
+                  { name: 'dictTarifCoeffName' },
+                  { name: 'limitedAccess' },
+                  { name: 'orderID.orderClass.entityName', visibility: false },
+                  { name: 'selfStructDepName', description: UB.i18n('Самостійний структурний підрозділ') },
+                  { name: 'parentUnitDepName', description: UB.i18n('Підпорядкування підрозділу') },
+                  { name: 'payOutID.name', description: UB.i18n('Шаблон виплати') },
+                  { name: 'factPosition', description: UB.i18n('Фактична посада') }
+                ],
+                whereList: {
+                  orgID: {
+                    condition: 'equal',
+                    expression: '[organizationID]',
+                    value: appAC.globalOrganization()
+                  },
+                  kind: {
+                    expression: '[kind]',
+                    condition: 'equal',
+                    value: 'STUD'
+                  }
+                },
+                orderList: { tabNum: { expression: 'tabNumSort' } }
+              }]
+            },
+            onItemDblClick: function (grid) {
+              let record = AC.gridUtils.getCurrentRecord(grid)
+              $App.doCommand({
+                cmdType: 'showForm',
+                formCode: 'hr_employeeStud',
+                entity: 'hr_employee',
+                tabId: 'hr_employeeStud' + record.get('ID'),
+                target: $App.getViewport().centralPanel,
+                sender: grid,
+                instanceID: record.get('employeeID'),
+                cmpInitConfig: {
+                  employeeNumberID: record.get('ID')
+                }
+              })
+            },
+            onDeterminateForm: function (grid) {
+              let record = AC.gridUtils.getCurrentRecord(grid)
+              return {
+                formCode: 'hr_employeeStud',
+                entityName: 'hr_employee',
+                entity: 'hr_employee',
+                instanceID: record.get('employeeID'),
+                cmpInitConfig: {
+                  employeeNumberID: record && record.get('ID')
+                }
+              }
+            },
+            cmpInitConfig: {
+              afterInit: function () {
+                AC.gridUtils.setGlobalOrganization(this, 'orgID')
+                AC.gridUtils.setCustomSorter(this, 'tabNum')
+              },
+              onAddNew: function () {
+                const grid = me.down('[name=employeeStudListGrid]')
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: 'hr_employeeStud',
+                  entity: 'hr_employee',
+                  tabId: $App.generateTabId({
+                    entity: 'hr_employee',
+                    formCode: 'hr_employeeStud'
+                  }),
+                  target: $App.getViewport().centralPanel,
+                  sender: grid
+                })
+              }
+            }
+          }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      const grid = me.down('[name=employeeStudListGrid]')
+      grid.getStore().load()
+      let tb = me.down('toolbar')
+      let allActions = tb && tb.query('[menuId=AllActions]')[0]
+      if (!allActions) {
+        return
+      }
+      allActions.menu.add({
+        text: UB.i18n('Масова зміна стипендій'),
+        handler: async () => {
+          const params = await $App.showModal({
+            formCode: 'hr_massStipendChangeDate',
+            isClosable: true,
+            description: UB.i18n('Параметри для зміни стипендії'),
+            customParams: {
+              dateFrom: AC.dateService.firstDayOfMonth(AC.dateService.addMonths(appAC.globalApplicationDate(), 1))
+            }
+          })
+          if (params && params.dateFrom) {
+            me.setLoading(true)
+            $App.connection.run({
+              entity: 'hr_studStipend',
+              method: 'massStipendChange',
+              dateFrom: params.dateFrom,
+              orgID: appAC.globalOrganization()
+            }).then(() => {
+              grid.onRefresh()
+              me.setLoading(false)
+            }, err => {
+              me.setLoading(false)
+              if (err.config && err.config.timeout) {
+                $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+              } else {
+                throw err
+              }
+            })
+          }
+        }
+      })
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

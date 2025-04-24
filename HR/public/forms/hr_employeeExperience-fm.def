@@ -1,0 +1,296 @@
+/* global UB $App AC */
+exports.formDef = {
+  requiredFields: ['employeeID', 'employeeNumberID', 'dictExperienceID', 'impSourceID', 'isFromWorkbook',
+    'modifyUserID.employeeNumberID.employeeID.fullFIO', 'modifyDate', 'orderID', 'orderID.description'],
+  parentConfig: {
+    layout: { type: 'vbox', align: 'stretch' },
+    defaults: { labelWidth: 140 }
+  },
+  size: {
+    width: 800,
+    height: 600
+  },
+  items: [
+    {
+      attributeName: 'dictExperienceID',
+      fieldList: ['name', 'methodExpID', 'methodExpID.code'],
+      readOnly: true
+    },
+    {
+      layout: { type: 'hbox' },
+      items: [
+        {
+          xtype: 'label',
+          text: UB.i18n('Станом на дату (включно):'),
+          cls: 'x-form-item-label',
+          margin: '10 0 10 15',
+          width: 130
+        },
+        {
+          xtype: 'ubdatefield',
+          name: 'onDate',
+          readOnly: true,
+          width: 115,
+          listeners: {
+            change: (ctrl, value) => {
+              if (!value) {
+                ctrl.setValue(AC.dateService.todayDate())
+              }
+              const me = ctrl.up('form')
+              if (AC.dateService.isValid(value)) {
+                me.recalcCalcDate(me)
+              }
+            }
+          }
+        },
+        {
+          xtype: 'label',
+          name: 'labelOnDateAlert',
+          text: UB.i18n('Увага! при редагуванні поля "Станом на дату" буде виконаний перерахунок приведеної дати (поле "Дата початку, приведена")'),
+          cls: 'field-label-red',
+          margin: '10 0 10 10',
+          hidden: true,
+          flex: 1
+        }
+      ]
+    },
+    {
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'left' },
+          flex: 1,
+          defaults: { labelWidth: 140 },
+          items: [
+            {
+              xtype: 'label',
+              name: 'labelSize',
+              text: UB.i18n('Розмір стажу'),
+              cls: 'x-form-item-label',
+              margin: '10 0 10 15',
+              width: 260
+            },
+            {
+              xtype: 'numberfield',
+              name: 'years',
+              fieldLabel: UB.i18n('Років'),
+              allowBlank: false,
+              vtype: 'numberValidator',
+              width: 260,
+              maxValue: 99,
+              minValue: 0,
+              listeners: {
+                change: ctrl => {
+                  const me = ctrl.up('form')
+                  if (ctrl.isValid()) {
+                    me.recalcCalcDate(me)
+                  }
+                }
+              }
+            },
+            {
+              xtype: 'numberfield',
+              name: 'months',
+              fieldLabel: UB.i18n('Місяців'),
+              allowBlank: false,
+              vtype: 'numberValidator',
+              width: 260,
+              maxValue: 1200,
+              minValue: 0,
+              listeners: {
+                change: ctrl => {
+                  const me = ctrl.up('form')
+                  if (ctrl.isValid()) {
+                    me.recalcCalcDate(me)
+                  }
+                }
+              }
+            },
+            {
+              xtype: 'numberfield',
+              name: 'days',
+              fieldLabel: UB.i18n('Днів'),
+              allowBlank: false,
+              vtype: 'numberValidator',
+              width: 260,
+              maxValue: 36000,
+              minValue: 0,
+              listeners: {
+                change: ctrl => {
+                  const me = ctrl.up('form')
+                  if (ctrl.isValid()) {
+                    me.recalcCalcDate(me)
+                  }
+                }
+              }
+            },
+            {
+              xtype: 'label',
+              name: 'labelPeriod',
+              text: UB.i18n('Період дії'),
+              cls: 'x-form-item-label',
+              margin: '10 0 10 15',
+              width: 260
+            },
+            {
+              attributeName: 'calcDate',
+              fieldLabel: UB.i18n('Дата початку, приведена'),
+              listeners: {
+                change: (ctrl, value) => {
+                  const me = ctrl.up('form')
+                  if (AC.dateService.isValid(value)) {
+                    me.recalcYmd(me)
+                  }
+                }
+              }
+            },
+            {
+              attributeName: 'startCalcDate',
+              fieldLabel: UB.i18n('Дата закінчення'),
+              listeners: {
+                change: ctrl => {
+                  const me = ctrl.up('form')
+                  me.recalcYmd(me)
+                }
+              }
+            }
+          ]
+        },
+        {
+          xtype: 'panel',
+          name: 'expGuidePanel',
+          layout: { type: 'vbox', align: 'stretch' },
+          collapsible: false,
+          collapsed: false,
+          autoscroll: true,
+          padding: '5 10 5 5',
+          flex: 2
+        }
+      ]
+    },
+    {
+      attributeName: 'comment',
+      xtype: 'ubtextareafield',
+      rows: 4,
+      maxRows: 4,
+      flex: 1
+    },
+    {
+      xtype: 'acGrid',
+      name: 'employeeExperienceDt',
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_employeeExperienceDt'),
+      title: UB.i18n('Інтервали стажу'),
+      height: 250,
+      autoScroll: true,
+      rowEditing: true,
+      notWriteChanges: true,
+      storeType: 'local',
+      showToolBar: true,
+      hidden: true,
+      readOnly: !$App.domainInfo.isEntityMethodsAccessible('employeeExperienceDt', 'update'),
+      disablePaging: true,
+      loadMaskMessage: UB.i18n('Завантаження даних...'),
+      ignoreAttr: ['years', 'months', 'days', 'totalDays'],
+      onBeforeEdit: function (ctrl, context) {
+        const me = context.grid.up('form')
+        me.beforeGridEdit(context)
+        me.setIsDirty(true)
+      },
+      onValidateEdit: function (editor, context) {
+        const me = context.grid.up('form')
+        me.onValidateEdit(editor, context)
+      },
+      edit: function (editor, context) {
+        const me = context.grid.up('form')
+        me.afterGridEdit(editor, context)
+      },
+      fields: [
+        {
+          name: 'ID'
+        },
+        {
+          name: 'mi_modifyDate'
+        },
+        {
+          name: 'dateFrom',
+          columnConfig: {
+            text: UB.i18n('Дата з'),
+            dateFormat: 'd.m.Y',
+            dataType: 'Date',
+            width: 120,
+            editor: {
+              dataType: 'Date',
+              allowBlank: false
+            }
+          }
+        },
+        {
+          name: 'dateTo',
+          columnConfig: {
+            text: UB.i18n('Дата по'),
+            dateFormat: 'd.m.Y',
+            dataType: 'Date',
+            width: 120,
+            editor: {
+              dataType: 'Date'
+            }
+          }
+        },
+        {
+          name: 'years',
+          columnConfig: {
+            text: UB.i18n('Років')
+          }
+        },
+        {
+          name: 'months',
+          columnConfig: {
+            text: UB.i18n('Місяців')
+          }
+        },
+        {
+          name: 'days',
+          columnConfig: {
+            text: UB.i18n('Днів')
+          }
+        },
+        {
+          name: 'koef',
+          columnConfig: {
+            text: UB.i18n('Коефіцієнт'),
+            editor: {
+              dataType: 'Float',
+              decimalPrecision: 2,
+              minValue: 1
+            }
+          }
+        },
+        {
+          name: 'orderNumber',
+          columnConfig: {
+            text: UB.i18n('Номер наказу'),
+            editor: {
+              dataType: 'String',
+              maxLength: 30
+            }
+          }
+        },
+        {
+          name: 'orderDate',
+          columnConfig: {
+            text: UB.i18n('Дата наказу'),
+            dateFormat: 'd.m.Y',
+            dataType: 'Date',
+            width: 120,
+            editor: {
+              dataType: 'Date'
+            }
+          }
+        },
+        {
+          name: 'totalDays'
+        }
+      ]
+    }
+  ]
+}

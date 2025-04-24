@@ -1,0 +1,149 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['orderState', 'description', 'employeeFuneralID.employeeID', 'employeeFuneralID.workPlace'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [
+      {
+        orderId: 4,
+        actionId: 'postingAction'
+      },
+      {
+        orderId: 5,
+        actionId: 'cancelPostingAction'
+      }
+    ]
+  }],
+  items: [
+    {
+      region: 'center',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 140 },
+      items: [
+        { attributeName: 'employeeID', hidden: true },
+        { attributeName: 'employeeNumberID', hidden: true },
+        { attributeName: 'organizationID', hidden: true },
+        { attributeName: 'orderDate', fieldLabel: UB.i18n('Дата нарахування') },
+        {
+          attributeName: 'employeeFuneralID',
+          fieldList: ['ID', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'employeeID.fullFIO', 'workPlace', 'dateFrom', 'dateTo'],
+          orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+          xtype: 'empPositionCombobox'
+        },
+        {
+          attributeName: 'employeePositionID',
+          fieldList: ['ID', 'description', 'organizationID', 'employeeID', 'employeeID.fullFIO', 'workPlace', 'dateFrom', 'dateTo', 'vacancyDateFrom', 'vacancyDateTo'],
+          xtype: 'empPositionCombobox',
+          addWorkPlace: true,
+          whereList: {
+            isWorcker: {
+              expression: '[workPlace]',
+              condition: 'notIn',
+              values: { value: ['4'] }
+            }
+          },
+          hidden: true
+        },
+        {
+          attributeName: 'employeeFamilyID',
+          fieldList: ['ID', 'description', 'dictKinshipKindID.name', 'peopleID.fullFIO', 'employeeID'],
+          hidden: true
+        },
+        { attributeName: 'description', hidden: true },
+        { attributeName: 'dead', hidden: true },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 140, width: 300 },
+              items: [
+                { attributeName: 'dateDeath' },
+                { attributeName: 'dateFuneral' },
+                {
+                  attributeName: 'paySum',
+                  flagsFix: 1 << 1
+                }
+              ]
+            },
+            {
+              xtype: 'fieldset',
+              title: UB.i18n('Довідково:'),
+              layout: { type: 'vbox' },
+              margin: '0 10 0 10',
+              padding: '0 0 10 10',
+              defaults: { labelWidth: 210, width: 400 },
+              items: [
+                {
+                  xtype: 'numberfield',
+                  name: 'sumOnDateDeath',
+                  flagsFix: 2,
+                  fieldLabel: UB.i18n('Допомога на дату смерті'),
+                  valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                  decimalPrecision: 2,
+                  allowExponential: false,
+                  hideTrigger: true,
+                  readOnly: true
+                },
+                {
+                  xtype: 'numberfield',
+                  name: 'sumOnDateFuneral',
+                  flagsFix: 2,
+                  fieldLabel: UB.i18n('Допомога на дату поховання'),
+                  valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                  decimalPrecision: 2,
+                  allowExponential: false,
+                  hideTrigger: true,
+                  readOnly: true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          xtype: 'fieldset',
+          title: UB.i18n('Свідоцтво про смерть'),
+          layout: { type: 'hbox' },
+          margin: '0 15 0 10',
+          padding: '0 0 10 10',
+          items: [
+            {
+              attributeName: 'seriaDoc',
+              fieldLabel: UB.i18n('Серія'),
+              labelWidth: 120,
+              width: 200
+            },
+            {
+              attributeName: 'numberDoc',
+              fieldLabel: '№',
+              labelWidth: 30,
+              width: 200
+            },
+            {
+              attributeName: 'dateDoc',
+              fieldLabel: UB.i18n('Дата видачи'),
+              labelWidth: 110
+            }
+          ]
+        },
+        {
+          attributeName: 'addDoc'
+        }
+      ]
+    }
+  ]
+}

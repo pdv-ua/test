@@ -1,0 +1,183 @@
+{
+  "caption": "Заява-розрахунок СС",
+  "description": "Заява-розрахунок СС",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата документу",
+      "description": "Дата документу",
+      "documentation": "Дата документу",
+      "allowNull": false
+    },
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер документу",
+      "description": "документу",
+      "documentation": "документу",
+      "allowNull": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Статус",
+      "description": "Статус",
+      "documentation": "Статус",
+      "defaultValue": "PROJECT",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "periodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "За період",
+      "description": "За період",
+      "documentation": "За період",
+      "allowNull": false
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "dictFssReqID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictFssReq",
+      "caption": "Тип заявки СС",
+      "description": "Тип заявки СС",
+      "documentation": "Тип заявки СС"
+    },
+    {
+      "name": "lineCount",
+      "dataType": "Int",
+      "caption": "Рядків у документі",
+      "description": "Рядків у документі",
+      "documentation": "Рядків у документі",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select count(*) from hr_sicknessRequisDt dt where dt.sicknessRequisID = {self}.ID and dt.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "totalPaySum",
+      "dataType": "Currency",
+      "caption": "Підсумкова сума по документу",
+      "description": "Підсумкова сума по документу",
+      "documentation": "Підсумкова сума по документу",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select sum(dt.paySum) from hr_sicknessRequisDt dt where dt.sicknessRequisID = {self}.ID and dt.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "payRollName",
+      "dataType": "String",
+      "size":256,
+      "caption": "Відомість на виплату",
+      "description": "Відомість на виплату",
+      "documentation": "Відомість на виплату",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "case when (select count(*) from hr_RollRequis rr join hr_payRoll pr on rr.payRollID = pr.ID where rr.sicknessRequisID = {self}.ID and pr.mi_deleteDate >= '9999-12-31' ) < 2 then (select CONCAT('№ ', coalesce(pr.orderNumber, ''), ' ', coalesce(pr.description, '')) from hr_payRoll pr JOIN hr_RollRequis rr ON rr.payRollID = pr.ID where rr.sicknessRequisID = {self}.ID and pr.mi_deleteDate >= '9999-12-31') else '*' end"
+        }
+      ]
+    },
+    {
+      "name": "paymentPeriod",
+      "dataType": "String",
+      "size":256,
+      "caption": "Період виплати",
+      "description": "Період виплати",
+      "documentation": "Період виплати",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select TOP 1 dp.name from hr_payRoll pr JOIN hr_RollRequis rr ON rr.payRollID = pr.ID JOIN hr_dictPeriod dp ON pr.periodCalcID = dp.ID where rr.sicknessRequisID = {self}.ID and pr.orderState = 'POSTED' and pr.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dp.name from hr_payRoll pr JOIN hr_RollRequis rr ON rr.payRollID = pr.ID JOIN hr_dictPeriod dp ON pr.periodCalcID = dp.ID where rr.sicknessRequisID = {self}.ID and pr.orderState = 'POSTED' and pr.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "includeSubOrg",
+      "dataType": "Boolean",
+      "caption": "Включати нарахування підпорядкованих організацій",
+      "description": "Включати нарахування підпорядкованих організацій",
+      "documentation": "Включати нарахування підпорядкованих організацій",
+      "defaultValue": "0"
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ"
+    },
+    {
+      "name": "includeSubDep",
+      "dataType": "Boolean",
+      "caption": "з підлеглими",
+      "description": "з підлеглими",
+      "documentation": "з підлеглими",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dictMultiGroupID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictMultiGroup",
+      "caption": "Група підрозділів",
+      "description": "Група підрозділів"
+    },
+    {
+      "name": "includeSubDepGroup",
+      "dataType": "Boolean",
+      "caption": "з підлеглими",
+      "description": "з підлеглими",
+      "defaultValue": "0"
+    },
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "rls": {
+      "func": "RLS.byOrg"
+    }
+  }
+}

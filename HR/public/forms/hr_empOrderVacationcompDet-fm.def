@@ -1,0 +1,222 @@
+/* global $App HR UB */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'empOrderType', 'organizationID', 'isGroup', 'organizationID.mi_data_id',
+    'employeeNumberID', 'employeePositionID.employeeNumberID', 'errorText'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  defaults: {
+    layout: 'fit'
+  },
+  size: {
+    width: 1100,
+    height: 700
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          ubID: 'tabMain',
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              layout: {
+                type: 'hbox',
+                align: 'stretch'
+              },
+              items: [
+                {
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  padding: '10 0 0 0',
+                  flex: 1,
+                  defaults: { labelWidth: 180 },
+                  items: [
+                    {
+                      attributeName: 'employeePositionID',
+                      fieldLabel: UB.i18n('Компенсувати відпустку працівнику'),
+                      fieldList: ['ID', 'description', 'employeeNumberID', 'workPlace', 'dictStaffCatID', 'positionType', 'organizationID', 'vacancyDateFrom', 'vacancyDateTo'],
+                      orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                      addWorkPlace: true,
+                      xtype: 'empPositionCombobox'
+                    },
+                    {
+                      attributeName: 'dateFrom',
+                      fieldLabel: UB.i18n('Станом на'),
+                      labelWidth: 180,
+                      width: 300
+                    },
+                    {
+                      layout: { type: 'hbox', align: 'top' },
+                      flex: 1,
+                      items: [
+                        {
+                          attributeName: 'reasonDoc',
+                          labelWidth: 180,
+                          flex: 1,
+                          margin: '5 15 5 15'
+                        },
+                        {
+                          xtype: 'button',
+                          cls: 'list-icon',
+                          name: 'reasonDocButton',
+                          tooltip: UB.i18n('Вибрати'),
+                          width: 35,
+                          height: 35,
+                          margin: '0 10 0 -45',
+                          handler: btn => btn.up('form').getField('reasonDoc').selectHandler(btn)
+                        }
+                      ]
+                    },
+                    {
+                      attributeName: 'payElID',
+                      fieldList: ['ID', 'description', 'methodID.code'],
+                      whereList: {
+                        method: {
+                          expression: '[methodID.code]',
+                          condition: 'in',
+                          value: ['16', '71']
+                        }
+                      },
+                      orderList: { orderBy: { expression: 'codeSort' } }
+                    },
+                    {
+                      attributeName: 'isDetailVacation',
+                      labelWidth: 230
+                    },
+                    {
+                      name: 'errorText',
+                      xtype: 'label',
+                      cls: 'x-form-item-label field-label-red',
+                      margin: '10 10 5 15'
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              xtype: 'tabpanel',
+              region: 'center',
+              layout: 'fit',
+              ubID: 'tpDetail',
+              flex: 1,
+              items: [
+                {
+                  title: UB.i18n('Компенсація відпусток'),
+                  name: 'empOrderVacationcompListDet',
+                  xtype: 'ubdetailgrid',
+                  rowEditing: true,
+                  sortableColumns: false,
+                  disableSearchBar: true,
+                  hidePagingBar: true,
+                  paraGrid: true,
+                  autoScroll: true,
+                  flex: 1,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                  entityConfig: {
+                    entity: 'hr_empOrderVacationcompListDet',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'empVacationPeriodID.empVacationPlanID.dictVacationKindID.name',
+                        description: UB.i18n('Вид відпустки'),
+                        config: { width: 400 },
+                        editor: { readOnly: true }
+                      },
+                      {
+                        name: 'empVacationPeriodID.description',
+                        description: UB.i18n('За період'),
+                        config: { width: 200 },
+                        editor: { readOnly: true }
+                      },
+                      {
+                        name: 'dayDiff',
+                        description: UB.i18n('Залишок днів'),
+                        config: { width: 140, align: 'center' },
+                        editor: { readOnly: true }
+                      },
+                      {
+                        name: 'dayComp',
+                        description: UB.i18n('Компенсувати днів'),
+                        config: { width: 160, align: 'center' },
+                        editor: {
+                          caption: UB.i18n('Компенсувати днів'),
+                          dataType: 'Int'
+                        }
+                      },
+                      { name: 'empVacationPeriodID', visibility: false },
+                      { name: 'empVacationPeriodID.empVacationPlanID.dictVacationKindID', visibility: false },
+                      { name: 'ID', visibility: false }
+                    ]
+                  },
+                  masterFields: ['ID', 'orderID'],
+                  detailFields: ['paraID', 'orderID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Додати залишки'),
+                        iconCls: 'fas fa-angle-double-down',
+                        cls: 'fill-action',
+                        actionId: 'addVacations',
+                        handler: function (btn) {
+                          const me = btn.up('form')
+                          const grid = btn.up('[name=empOrderVacationcompListDet]')
+                          if (grid.store.getCount() > 0) {
+                            $App.dialogYesNo('Попередження', UB.i18n('Видалити існуючі записи?'))
+                              .then(res => {
+                                if (res) {
+                                  me.addVacations()
+                                }
+                              })
+                          } else {
+                            me.addVacations()
+                          }
+                        }
+                      }
+                    ],
+                    customInit: function () {
+                      const grid = this
+                      HR.controlService.setValidateEditPromise(grid, (rowEditor, context) => {
+                        const form = context.grid.up('form')
+                        return Promise.resolve(form.validateVacList(rowEditor.editor, context, true))
+                      })
+                      HR.controlService.setCancelEditPromise(grid, (rowEditor, context) => {
+                        const form = context.grid.up('form')
+                        if (context.record.get('ID')) {
+                          return Promise.resolve(form.validateVacList(rowEditor.editor, context))
+                        } else {
+                          form.validate(2)
+                          return Promise.resolve(true)
+                        }
+                      })
+                      grid.on('changeData', (grd, event) => {
+                        const form = grd.up('form')
+                        if (event === 'delete') {
+                          form.validate(2)
+                        }
+                      })
+                    }
+                  },
+                  optimizeColumnWidth: function () {
+                    /* do nothing for manual column width tunning */
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

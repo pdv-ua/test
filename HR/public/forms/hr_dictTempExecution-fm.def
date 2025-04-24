@@ -1,0 +1,128 @@
+/* global HR */
+exports.formDef = {
+  requiredFields: ['employeePositionID', 'employeePositionTempID'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [{
+    layout: {
+      type: 'vbox',
+      autoScroll: true,
+      align: 'stretch'
+    },
+    defaults: {
+      labelWidth: 150
+    },
+    items: [{
+      attributeName: 'organizationID',
+      hidden: true
+    },
+    {
+      attributeName: 'employeePositionID',
+      gridFieldList: ['description'],
+      fieldList: ['ID', 'description', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+      xtype: 'empPositionCombobox',
+      addWorkPlace: true
+    },
+    {
+      xtype: 'ubfieldset',
+      title: 'Виконує обов`язки за',
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [{
+        layout: {
+          type: 'hbox'
+        },
+        flex: 1,
+        items: [{
+          attributeName: 'departmentTempID',
+          fieldList: ['mi_data_id', 'description', 'ID'],
+          displayField: 'description',
+          valueField: 'mi_data_id',
+          flex: 1,
+          listeners: {
+            select: ctrl => {
+              ctrl.up('form').filterTempPosition({
+                isClear: true
+              })
+            },
+            change: ctrl => {
+              if (!ctrl.getFieldValue('ID')) {
+                ctrl.up('form').filterTempPosition({
+                  isClear: true
+
+                })
+              }
+            }
+
+          }
+        },
+        {
+          xtype: 'button',
+          cls: 'treeIconNotFocus',
+          ubID: 'btnSelectByTree',
+          width: 35,
+          height: 35,
+          margin: '0 2 0 -12',
+          listeners: {
+            click: function (ctrl) {
+              const me = ctrl.up('form')
+              HR.controlService.showStaffTree(me, 'mi_data_id', {
+                onSelectNodeHandler: record => {
+                  me.setTreeData(record)
+                }
+              })
+            },
+            render: ctrl => {
+              ctrl.setTooltip(UB.i18n('Вибір посади з дерева орг. структури'))
+            }
+          }
+        }
+        ]
+      },
+      {
+        attributeName: 'positionTempID',
+        fieldList: ['mi_data_id', 'description', 'ID'],
+        displayField: 'description',
+        valueField: 'mi_data_id',
+        flex: 1,
+        listeners: {
+          select: ctrl => {
+            ctrl.up('form').filterTempEmployeePosition({
+              isClear: true
+            })
+          },
+          change: ctrl => {
+            if (!ctrl.getFieldValue('ID')) {
+              ctrl.up('form').filterTempEmployeePosition({
+                isClear: true
+
+              })
+            }
+          }
+        }
+      },
+      {
+        attributeName: 'employeePositionTempID',
+        gridFieldList: ['description'],
+        flex: 1
+      }
+      ]
+    },
+    {
+      attributeName: 'dateFromEmpty',
+      format: 'd.m.Y'
+    },
+    {
+      attributeName: 'dateToEmpty',
+      format: 'd.m.Y'
+    },
+    {
+      attributeName: 'numQueue'
+    }
+    ]
+  }]
+}

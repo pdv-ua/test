@@ -1,0 +1,197 @@
+{
+  "caption": "Інвалідність",
+  "description": "Інвалідність",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "disabilityID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictDisabilityType",
+      "caption": "Вид інвалідності",
+      "description": "Вид інвалідності",
+      "documentation": "Вид інвалідності",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "disabilityGroup",
+      "dataType": "String",
+      "size": 5,
+      "caption": "Група інвалідності",
+      "description": "Група інвалідності",
+      "documentation": "Група інвалідності",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "documentation": "Діє з",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "employeeDocID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeDocs",
+      "caption": "Документ",
+      "description": "Документ",
+      "documentation": "Документ",
+      "allowNull": true
+    },
+    {
+      "name": "docNumber",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Номер довідки",
+      "description": "Номер довідки",
+      "documentation": "Номер довідки",
+      "allowNull": true
+    },
+
+    {
+      "name": "docSeries",
+      "dataType": "String",
+      "size": 10,
+      "caption": "Серія довідки",
+      "description": "Серія довідки",
+      "documentation": "Серія довідки",
+      "allowNull": true
+    },
+    {
+      "name": "docIssuer",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Ким видана",
+      "description": "Ким видана",
+      "documentation": "Ким видана",
+      "allowNull": true
+    },
+    {
+      "name": "dateIssue",
+      "dataType": "Date",
+      "caption": "Дата видачі довідки",
+      "description": "Дата видачі довідки",
+      "documentation": "Дата видачі довідки"
+    },
+    {
+      "name": "workReference",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Трудові рекомендації",
+      "description": "Трудові рекомендації",
+      "documentation": "Трудові рекомендації",
+      "allowNull": true
+    },
+    {
+      "name": "programDescription",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Індивідуальна программа реабілітації",
+      "description": "Індивідуальна программа реабілітації",
+      "documentation": "Індивідуальна программа реабілітації",
+      "allowNull": true
+    },
+    {
+      "name": "programNumber",
+      "dataType": "String",
+      "size": 10,
+      "caption": "Номер ІПР",
+      "description": "Номер ІПР",
+      "documentation": "Номер ІПР",
+      "allowNull": true
+    },
+    {
+      "name": "programDate",
+      "dataType": "Date",
+      "caption": "Дата видачі ІПР",
+      "description": "Дата видачі ІПР",
+      "documentation": "Дата видачі ІПР",
+      "allowNull": true
+    },
+    {
+      "name": "programIssuer",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Ким видана ІПР",
+      "description": "Ким видана ІПР",
+      "documentation": "Ким видана ІПР",
+      "allowNull": true
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 290,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

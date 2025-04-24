@@ -1,0 +1,258 @@
+/* global Ext $App appAC AC UB */
+exports.formDef = 'HR.integrateMap'
+
+Ext.define('HR.integrateMap', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_integrateMap',
+  height: 700,
+  width: 1200,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        layout: 'hbox',
+        items: [
+          {
+            layout: 'vbox',
+            items: [
+              {
+                xtype: 'combobox',
+                fieldLabel: UB.i18n('Зовнішня система'),
+                labelWidth: 200,
+                width: 600,
+                name: 'externalSystem',
+                editable: false,
+                allowBlank: false,
+                displayField: 'name',
+                valueField: 'value',
+                listeners: {
+                  change: (ctrl, value) => {
+                    AC.viewUtils.setWhereListProperty(me.attr.entity, [
+                      ['extrnlSystmCode', '=', value || '']
+                    ], null, ['clearValue', 'clearStore'])
+                    if (value) me.loadMapData()
+                  }
+                }
+              },
+              {
+                xtype: 'ubcombobox',
+                fieldLabel: UB.i18n('Сутність'),
+                name: 'entity',
+                labelWidth: 200,
+                width: 600,
+                allowBlank: false,
+                displayField: 'name',
+                ubRequest: {
+                  entity: 'ac_integrateEntity',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['ID', 'name', 'extrnlSystmCode', 'entityName', 'descriptionField', 'idField', 'orgField', 'filterByOrg']
+                },
+                listeners: {
+                  change: (ctrl, value) => {
+                    if (value) me.loadMapData()
+                  }
+                }
+              }
+            ]
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Шукати'),
+            iconCls: 'fas fa-search',
+            width: 30,
+            cls: 'green-action',
+            margin: '5 5 0 15',
+            handler: function () {
+              me.loadMapData()
+            }
+          }
+        ]
+      },
+      {
+        xtype: 'acGrid',
+        title: UB.i18n('Таблиця відповідності записів'),
+        name: 'mapGrid',
+        margin: '5 5 5 10',
+        flex: 1,
+        split: true,
+        autoScroll: true,
+        region: 'center',
+        storeType: 'local',
+        enableMultifilter: true,
+        // pagerConfig: { pageSize: 100 },
+        disablePaging: true,
+        notWriteChanges: true,
+        cellEditing: true,
+        showToolBar: true,
+        hideActions: ['edit', 'addNewByCurrent', 'addNew'],
+        fields: [
+          { name: 'ID' },
+          {
+            name: 'internalID',
+            columnConfig: {
+              text: UB.i18n('Внутрішній ID'),
+              flex: 1,
+              filterBy: 'int',
+            }
+          },
+          { name: 'outputDescription',
+            columnConfig: {
+              text: UB.i18n('Значення'),
+              flex: 1,
+              filterBy: 'string',
+            }
+          },
+          {
+            name: 'externalID',
+            columnConfig: {
+              text: UB.i18n('Зовнішній ID'),
+              flex: 1,
+              sortBy: 'Number',
+              filterBy: 'int',
+              editor: {
+                dataType: 'Int'
+              }
+            }
+          },
+          {
+            name: 'externalCode',
+            columnConfig: {
+              text: UB.i18n('Зовнішній код'),
+              flex: 1,
+              sortBy: 'String',
+              filterBy: 'string',
+              editor: {
+                dataType: 'String'
+              }
+            }
+          }
+        ],
+        edit: (control, context) => {
+          const ctrl = context.column.field
+          if (context.record.get('ID')) {
+            $App.connection.run({
+              entity: 'ac_integrateMap',
+              method: 'updateMapData',
+              externalID: context.record.get('externalID'),
+              externalCode: context.record.get('externalCode'),
+              instanceID: context.record.get('ID')
+            })
+          }
+        },
+        customToolBarActions: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Оновити'),
+            scale: 'medium',
+            iconCls: 'u-icon-refresh',
+            handler: () => {
+              me.loadMapData()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Додати'),
+            scale: 'medium',
+            cls: 'add-new-action',
+            iconCls: 'u-icon-add',
+            handler: () => {
+              if (!me.attr.entity.getValue() || !me.attr.externalSystem.getValue()) return
+              const reco = AC.gridUtils.getCurrentRecord(me.attr.entity)
+              $App.showModal({
+                formCode: 'hr_integrateMapEdit',
+                isClosable: true,
+                isResizable: true,
+                description: UB.i18n('Додавання елемента'),
+                customParams: {
+                  entityName: reco.get('entityName'),
+                  filterByOrg: reco.get('filterByOrg'),
+                  descriptionField: reco.get('descriptionField'),
+                  externalSystem: me.attr.externalSystem.getValue()
+                }
+              }).then(result => {
+                if (result) {
+                  $App.connection.run({
+                    entity: 'ac_integrateMap',
+                    method: 'addMapData',
+                    entityName: reco.get('entityName'),
+                    externalSystem: me.attr.externalSystem.getValue(),
+                    externalID: result.externalID || 0,
+                    externalCode: result.externalCode,
+                    internalID: result.internalID
+                  }).then((mParams) => {
+                    me.attr.mapGrid.addNewRecord(
+                      {
+                        ID: mParams.instanceID,
+                        internalID: result.internalID,
+                        outputDescription: result.descriptionField,
+                        externalID: result.externalID || 0,
+                        externalCode: result.externalCode
+                      }
+                    )
+                  })
+                }
+              })
+            }
+          }
+        ]
+      }
+    ]
+
+    me.loadMapData = function () {
+      if (!me.attr.entity.getValue() || !me.attr.externalSystem.getValue()) return
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'ac_integrateMap',
+        method: 'loadMapData',
+        orgID: appAC.globalOrganization(),
+        externalSystem: me.attr.externalSystem.getValue(),
+        entityID: me.attr.entity.getValue()
+      }).then(response => {
+        const resultData = response.resultData ? JSON.parse(response.resultData) : []
+        me.attr.mapGrid.setLocalStoreData(resultData)
+        me.setLoading(false)
+      })
+    }
+
+    me.on('afterrender', async () => {
+      const me = this
+      me.attr = {
+        externalSystem: me.down('[name=externalSystem]'),
+        entity: me.down('[name=entity]'),
+        mapGrid: me.down('[name=mapGrid]')
+      }
+
+      me.attr.mapGrid.getStore().on('remove', function (store, record) {
+        $App.connection.run({
+          entity: 'ac_integrateMap',
+          method: 'deleteMapData',
+          instanceID: record.get('ID')
+        })
+      })
+
+      const storeSystemData = []
+      if ($App.domainInfo.models['INTEGRATOR']) {
+        storeSystemData.push({ value: 'EXPRESS', name: UB.i18n('EXPRESS') })
+      }
+      if ($App.domainInfo.models['KPI'] && $App.domainInfo.entities['kpi_externalSystem']) {
+        const externalSystem = await UB.Repository('kpi_externalSystem')
+          .attrs('code', 'name')
+          .selectAsObject()
+        externalSystem.forEach(row => {
+          storeSystemData.push({ value: row.code, name: row.name })
+        })
+      }
+
+      me.attr.externalSystem.store = Ext.create('Ext.data.Store', {
+        fields: ['value', 'name'],
+        data: storeSystemData
+      })
+
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

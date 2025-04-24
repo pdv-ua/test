@@ -1,0 +1,162 @@
+// @isModal true
+/* global UB Ext $App */
+
+exports.formDef = 'HR.workScheduleAddAs'
+
+Ext.define('HR.workScheduleAddAs', {
+  extend: 'Ext.form.Panel',
+  height: 120,
+  width: 400,
+  layout: 'border',
+  alias: 'widget.workScheduleAddAs',
+  autoScroll: true,
+  isModal: true,
+
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        region: 'north',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'checkboxfield',
+                name: 'addCopy',
+                width: 20,
+                margin: '0 5 0 5',
+                listeners: {
+                  change: function (ctrl, value) {
+                    const me = ctrl.up('form')
+                    me.attr.addChanges.setValue(!value)
+                    if (value) {
+                      me.attr.changesCount.setValue()
+                      me.attr.changesCount.setReadOnly(true)
+                    } else {
+                      me.attr.changesCount.setValue(1)
+                      me.attr.changesCount.setReadOnly(false)
+                    }
+                  }
+                }
+              },
+              {
+                xtype: 'label',
+                text: UB.i18n('Додати копію'),
+                cls: 'x-form-item-label',
+                margin: '7 5 0 0'
+              }
+            ]
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'checkboxfield',
+                name: 'addChanges',
+                width: 20,
+                margin: '5 5 0 5',
+                listeners: {
+                  change: function (ctrl, value) {
+                    const me = ctrl.up('form')
+                    me.attr.addCopy.setValue(!value)
+                    if (!value) {
+                      me.attr.changesCount.setValue()
+                      me.attr.changesCount.setReadOnly(true)
+                    } else {
+                      me.attr.changesCount.setValue(1)
+                      me.attr.changesCount.setReadOnly(false)
+                    }
+                  }
+                }
+              },
+              {
+                xtype: 'label',
+                text: UB.i18n('Додати'),
+                cls: 'x-form-item-label',
+                margin: '12 5 0 0'
+              },
+              {
+                xtype: 'numberfield',
+                decimalPrecision: 0,
+                minValue: 1,
+                name: 'changesCount',
+                width: 80,
+                listeners: {
+                  change: function (ctrl, value) {
+                    const me = ctrl.up('form')
+                    if (me.attr.addChanges.getValue() && !value) {
+                      me.attr.changesCount.setValue(1)
+                    }
+                  }
+                }
+              },
+              {
+                xtype: 'label',
+                text: UB.i18n('зміни'),
+                cls: 'x-form-item-label',
+                margin: '12 5 0 0'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        region: 'south',
+        layout: { type: 'hbox' },
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Скасувати'),
+            width: 200,
+            border: 1,
+            margin: '7 15 3 0',
+            handler: function (btn) {
+              let me = btn.up('form')
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Додати'),
+            width: 200,
+            border: 1,
+            margin: '7 15 3 0',
+            handler: function (btn) {
+              let me = btn.up('form')
+              me.setLoading(true)
+              $App.connection.run({
+                entity: 'hr_workSchedule',
+                method: 'addWorkScheduleCopy',
+                params: {
+                  workScheduleID: me.workScheduleID,
+                  orgID: me.orgID,
+                  isAddCopy: me.attr.addCopy.getValue(),
+                  isAddChanges: me.attr.addChanges.getValue(),
+                  changesCount: me.attr.changesCount.getValue()
+                }
+              }).then(() => {
+                $App.dialogInfo('Графіки додано')
+                me.setLoading(false)
+                me.up('window').close()
+              })
+            }
+          }
+        ]
+      }
+    ]
+
+    me.on('afterrender', function () {
+      me.attr = {
+        grid: me.down('[name=blockTimeSheetGrid]'),
+        addCopy: me.down('[name=addCopy]'),
+        addChanges: me.down('[name=addChanges]'),
+        changesCount: me.down('[name=changesCount]')
+      }
+      me.attr.addCopy.setValue(true)
+    })
+
+    me.callParent(arguments)
+  }
+})

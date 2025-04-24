@@ -1,0 +1,210 @@
+// @isModal true
+/* global Ext $App UB */
+
+exports.formDef = 'HR.empOrderStafftablemoveSearch'
+
+Ext.define('HR.empOrderStafftablemoveSearch', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empOrderStafftablemoveSearch',
+  initComponent: function () {
+    let me = this
+    let grid
+    let store = Ext.create('Ext.data.ArrayStore', {
+      fields: [
+        { name: 'posName' },
+        { name: 'prevPosName' },
+        { name: 'posFullName' },
+        { name: 'prevPosFullName' },
+        { name: 'employeeNumberID' },
+        { name: 'employeeID' },
+        { name: 'employeePositionID' },
+        { name: 'employeeID.fullFIO' },
+        { name: 'positionID' },
+        { name: 'accrualSum' },
+        { name: 'prevAccrualSum' },
+        { name: 'empPosAccrualSum' },
+        { name: 'prevPosFullNameNom' },
+        { name: 'posFullNameNom' }
+      ],
+      data: []
+    })
+    me.items = [
+      grid = Ext.widget('grid', {
+        xtype: 'grid',
+        stripeRows: true,
+        store: store,
+        autoScroll: true,
+        flex: 1,
+        split: true,
+        region: 'center',
+        selModel: Ext.create('Ext.selection.CheckboxModel', {
+          selectionMode: 'MULTI',
+          showHeaderCheckbox: true,
+          checkOnly: true,
+          selType: 'checkboxmodel'
+        }),
+        tbar: Ext.create('Ext.toolbar.Toolbar', {
+          height: 40,
+          items: [
+            Ext.create('Ext.form.ComboBox', {
+              xtype: 'combobox',
+              name: 'selectMode',
+              fieldLabel: UB.i18n('Відібрати'),
+              editable: false,
+              labelWidth: 80,
+              width: 400,
+              store: Ext.create('Ext.data.Store', {
+                fields: ['id', 'value'],
+                data: [
+                  {
+                    id: 'name',
+                    value: UB.i18n('змінена назва Штатної посади')
+                  },
+                  {
+                    id: 'fullname',
+                    value: UB.i18n('змінена повна назва Штатної посади')
+                  },
+                  {
+                    id: 'accrual',
+                    value: UB.i18n('змінено тільки оклад')
+                  },
+                  {
+                    id: 'all',
+                    value: UB.i18n('всі зміни')
+                  }
+                ]
+              }),
+              displayField: 'value',
+              valueField: 'id',
+              defaultValue: 'all'
+            }),
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Заповнити'),
+              iconCls: 'fas fa-angle-double-down',
+              cls: 'fill-action',
+              handler: function (btn) {
+                me.setEmployeeNumbers()
+              }
+            }
+          ]
+        }),
+        columns: [
+          {
+            header: UB.i18n('ПІБ'),
+            tooltip: UB.i18n('ПІБ'),
+            dataIndex: 'employeeID.fullFIO',
+            flex: 1
+          },
+          {
+            header: UB.i18n('Назва посади'),
+            tooltip: UB.i18n('Посада'),
+            dataIndex: 'prevPosFullName',
+            flex: 1
+          },
+          {
+            header: UB.i18n('Змінена назва посади'),
+            tooltip: UB.i18n('Посада'),
+            dataIndex: 'posFullName',
+            flex: 1,
+            renderer: function (value, meta, record) {
+              return value !== record.get('prevPosFullName') ? `<span style="color: #141b9b;font-weight: bold;">${value}</span>` : value
+            }
+          },
+          {
+            header: UB.i18n('Оклад'),
+            tooltip: UB.i18n('Оклад'),
+            dataIndex: 'prevAccrualSum',
+            width: 150
+          },
+          {
+            header: UB.i18n('Новий Оклад'),
+            tooltip: UB.i18n('Новий Оклад'),
+            dataIndex: 'accrualSum',
+            width: 150,
+            renderer: function (value, meta, record) {
+              return value !== record.get('prevAccrualSum') ? `<span style="color: #141b9b;font-weight: bold;">${value}</span>` : value
+            }
+          },
+          {
+            header: UB.i18n('Оклад Призначення'),
+            tooltip: UB.i18n('Оклад Призначення'),
+            dataIndex: 'empPosAccrualSum',
+            width: 150
+          }
+        ]
+      }),
+      Ext.widget('panel', {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 100,
+            height: 30,
+            margin: '10 10 20 0',
+            handler: function () {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Вибрати'),
+            width: 100,
+            height: 30,
+            margin: '10 10 20 0',
+            handler: function () {
+              grid.setLoading(true)
+              Ext.defer(() => {
+                if (me.onSelect) {
+                  const data = []
+                  const selModel = grid.getSelectionModel()
+                  selModel.selected.each(record => {
+                    data.push(record.getData())
+                  })
+                  me.onSelect(data)
+                }
+                me.up('window').close()
+              }, 500)
+            }
+          }
+        ]
+      })
+    ]
+
+    me.setEmployeeNumbers = () => {
+      me.setLoading(true)
+      store.removeAll()
+      $App.connection.run({
+        entity: 'hr_staffTable',
+        method: 'getStaffTableMoveEmployees',
+        selectMode: me.attr.selectMode.getValue(),
+        staffTableID: me.staffTableID
+      }).then((data) => {
+        const result = JSON.parse(data.result)
+        const resultData = []
+        result.forEach(row => {
+          resultData.push(row)
+        })
+        store.loadData(resultData)
+        grid.getSelectionModel().selectAll(true)
+      }).finally(() => {
+        me.setLoading(false)
+      })
+    }
+
+    me.callParent(arguments)
+    me.attr = {
+      selectMode: me.down('[name=selectMode]')
+    }
+    me.favorites = []
+    me.on('afterrender', function () {
+      me.attr.selectMode.setValue('all')
+    })
+  }
+})

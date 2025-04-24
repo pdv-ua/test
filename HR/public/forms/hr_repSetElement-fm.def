@@ -1,0 +1,214 @@
+exports.formDef = (function () {
+  return {
+    requiredFields: ['elementInfo'],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      defaults: {
+        labelWidth: 150
+      }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [
+      { attributeName: 'repSetParamID', hidden: true }, // Параметр налаштування (Параметр налаштування),
+      { attributeName: 'elementSetTypeID', fieldList: [ 'ID', 'name', 'code' ] }, // Вид елемента налаштування (Вид елемента налаштування),
+      { attributeName: 'elementID', hidden: true }, // Значення елемента налаштування (Значення елемента налаштування),
+      {
+        // Вид оплати
+        attributeName: 'payElID',
+        hidden: true,
+        isElement: true,
+        fieldList: [ 'ID', 'description', 'codeSort' ],
+        orderList: { orderBy: { expression: 'codeSort' } },
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_payEl',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_payEl'
+      },
+      {
+        // Елемент обліку робочого часу
+        attributeName: 'dictTimeCostID',
+        fieldList: [ 'ID', 'name' ],
+        isElement: true,
+        hidden: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictTimeCost',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictTimeCost'
+      },
+      {
+        // Причина звільнення
+        attributeName: 'dictReasonDismID',
+        fieldList: [ 'ID', 'name' ],
+        isElement: true,
+        hidden: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictReasonDism',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictReasonDism'
+      },
+      {
+        // Причина призначення
+        attributeName: 'dictOrderDetReasonID',
+        fieldList: [ 'ID', 'name' ],
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictOrderDetReason',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictOrderDetReason'
+      },
+      {
+        // Тип призначення
+        attributeName: 'dictAppointKindID',
+        fieldList: [ 'ID', 'name' ],
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictAppointKind',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictAppointKind'
+      },
+      {
+        // Тип місця виникнення витрат
+        attributeName: 'dictCostPlaceTypeID',
+        fieldList: [ 'ID', 'name' ],
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictCostPlaceType',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictCostPlaceType'
+      },
+      {
+        // Вид відпустки
+        attributeName: 'dictVacationKindID',
+        fieldList: [ 'ID', 'name' ],
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictVacationKind',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictVacationKind'
+      },
+      {
+        // Вид фонду
+        attributeName: 'dictFundTypeID',
+        fieldList: [ 'ID', 'name' ],
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'ac_dictFundType',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'ac_dictFundType'
+      },
+      {
+        // Вид бюджету
+        attributeName: 'dictBudgetID',
+        fieldList: [ 'ID', 'name' ],
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'ac_dictBudget',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'ac_dictBudget'
+      },
+      {
+        // Підрозділ
+        attributeName: 'dictDepID',
+        valueField: 'mi_data_id',
+        displayField: 'name',
+        fieldList: [ 'mi_data_id', 'name' ],
+        gridFieldList: [ 'name', 'parentName', { name: 'mi_data_id', visibility: false } ],
+        whereList: {
+          state: {
+            expression: '[state]',
+            condition: '=',
+            values: {
+              state: 'ACTIVE'
+            }
+          }
+        },
+        orderList: {
+          orderBy: {
+            expression: 'name',
+            order: 'asc'
+          }
+        },
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictDep',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictDep'
+      },
+      {
+        // Посада
+        attributeName: 'dictPosID',
+        valueField: 'mi_data_id',
+        displayField: 'posDepName',
+        fieldList: [ 'mi_data_id', 'posDepName' ],
+        gridFieldList: [ 'posDepName', { name: 'mi_data_id', visibility: false } ],
+        whereList: {
+          state: {
+            expression: '[state]',
+            condition: '=',
+            values: {
+              state: 'ACTIVE'
+            }
+          }
+        },
+        orderList: {
+          orderBy: {
+            expression: 'posDepName',
+            order: 'asc'
+          }
+        },
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictPos',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictPos'
+      },
+      {
+        // Довідник посад
+        attributeName: 'dictPositionID',
+        displayField: 'description',
+        fieldList: [ 'ID', 'description' ],
+        gridFieldList: [ { name: 'description', description: UB.i18n('Назва') }, { name: 'ID', visibility: false } ],
+        orderList: {
+          orderBy: {
+            expression: 'description',
+            order: 'asc'
+          }
+        },
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictPosition',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictPosition'
+      },
+      {
+        // Категорія персоналу
+        attributeName: 'dictStaffCatID',
+        fieldList: [ 'ID', 'name' ],
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictStaffCat',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictStaffCat'
+      },
+      {
+        // Підкатегорія персоналу
+        attributeName: 'dictStaffSubCatID',
+        fieldList: [ 'ID', 'name' ],
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictStaffSubCat',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictStaffSubCat'
+      },
+      {
+        // Рахунок витрат
+        attributeName: 'accountID',
+        fieldList: [ 'ID', 'name' ],
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'gl_account',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'gl_account'
+      },
+      {
+        // Група посади
+        attributeName: 'dictPositionGroupID',
+        fieldList: [ 'ID', 'name' ],
+        hidden: true,
+        isElement: true,
+        showIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictPositionGroup',
+        requiredIf: (ctrl, me) => me.getField('elementSetTypeID').getFieldValue('code') === 'hr_dictPositionGroup'
+      },
+      { attributeName: 'dateFrom' },
+      { attributeName: 'dateToEmpty' }
+    ]
+  }
+})()

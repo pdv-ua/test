@@ -1,0 +1,135 @@
+/* global UB */
+
+exports.formDef = {
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          autoScroll: true,
+          defaults: {
+            labelWidth: 250,
+            width: 200
+          },
+          items: [
+            { attributeName: 'code', allowBlank: false, width: 100 },
+            { attributeName: 'name' },
+            { attributeName: 'shortName' },
+            { attributeName: 'orderN', allowBlank: false, width: 100 },
+            {
+              attributeName: 'dictTimeCostID',
+              fieldLabel: UB.i18n('Позначення в табелі'),
+              fieldList: ['ID', 'code', 'name', 'nameSmall'],
+              displayField: 'nameSmall',
+              valueField: 'ID',
+              allowBlank: true,
+              requiredIf: (ctrl, form) => form.attr.isDate.getValue()
+            },
+            {
+              attributeName: 'payElID',
+              xtype: 'ubcombobox',
+              fieldList: ['ID', 'description', 'methodID.code', 'methodID.methodGroupID.code', 'codeSort'],
+              whereList: {
+                groupVac: {
+                  expression: '[methodID.methodGroupID.code]',
+                  condition: 'equal',
+                  value: 4
+                },
+                donor: {
+                  expression: '[methodID.code]',
+                  condition: 'equal',
+                  value: '73'
+                }
+              },
+              logicalPredicates: ['([groupVac] OR [donor])'],
+              orderList: { orderBy: { expression: 'codeSort' } }
+            },
+            {
+              attributeName: 'payElTempExecutionID',
+              fieldList: ['ID', 'description', 'methodID.code', 'codeSort'],
+              whereList: {
+                code: {
+                  expression: '[methodID.code]',
+                  condition: 'in',
+                  value: ['4', '33']
+                }
+              },
+              orderList: { orderBy: { expression: 'codeSort' } }
+            },
+            {
+              attributeName: 'payElPrevWorkID',
+              fieldList: ['ID', 'description', 'methodID.code', 'codeSort'],
+              whereList: {
+                code: {
+                  expression: '[methodID.methodGroupID.code]',
+                  condition: 'in',
+                  value: ['4']
+                }
+              },
+              orderList: { orderBy: { expression: 'codeSort' } }
+            },
+            { attributeName: 'vactAccum' },
+            { attributeName: 'dayAccumCondition' },
+            { attributeName: 'nameGen' },
+            { attributeName: 'nameAcc' },
+            { attributeName: 'nameLoc' },
+            { attributeName: 'byArticle' }
+          ]
+        },
+        {
+          title: UB.i18n('Налаштування'),
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: {
+            labelWidth: 300,
+            width: 450
+          },
+          autoScroll: true,
+          flex: 1,
+          items: [
+            { attributeName: 'isDate' },
+            { attributeName: 'isRst' },
+            { attributeName: 'isDay' },
+            { attributeName: 'isProportional' },
+            { attributeName: 'isTempVacancy' },
+            { attributeName: 'isForYear' },
+            { attributeName: 'isVactComp' },
+            { attributeName: 'isDismComp' },
+            { attributeName: 'isBreackVacancy' },
+            { attributeName: 'isDisableNewPeriods' },
+            { attributeName: 'isMoneyHelp' },
+            {
+              attributeName: 'isProportionalCompensate',
+              readOnlyIf: (ctrl, form) => !form.attr.isDay.getValue()
+            },
+            {
+              attributeName: 'isYearBeginStart',
+              readOnlyIf: (ctrl, form) => !form.attr.isDay.getValue()
+            },
+            { attributeName: 'isRankAssignment' },
+            { attributeName: 'isFormReserve' },
+            { attributeName: 'isProportionalCalc' },
+            {
+              layout: { type: 'hbox' },
+              flex: 1,
+              items: [
+                { attributeName: 'reason', labelWidth: 300 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+    "caption": "Транспортні засоби працівника",
+    "description": "Транспортні засоби працівника",
+    "descriptionAttribute": "",
+    "cacheType": "None",
+    "attributes": [
+      {
+        "name": "employeeID",
+        "dataType": "Entity",
+        "associatedEntity": "hr_employee",
+        "caption": "Особа",
+        "description": "Особа",
+        "documentation": "Особа",
+        "defaultView": false,
+        "allowNull": false
+      },
+      {
+        "name": "vehicleID",
+        "dataType": "Entity",
+        "associatedEntity": "trans_vehicle",
+        "caption": "Транспортний засіб",
+        "description": "Транспортний засіб",
+        "documentation": "Транспортний засіб",
+        "defaultView": false,
+        "allowNull": true
+      },
+      {
+        "name": "ownershipVehicle",
+        "dataType": "Enum",
+        "enumGroup": "TRANS_OWNERSHIP_TYPE",
+        "caption": "Власність",
+        "description": "Власність",
+        "defaultValue": "official",
+        "defaultView": false,
+        "allowNull": false
+      },
+      {
+        "name": "strVehicle",
+        "dataType": "String",
+        "size": 100,
+        "caption": "Найменування",
+        "description": "Найменування",
+        "allowNull": false,
+        "defaultValue": " "
+      },
+      {
+        "name": "dateFrom",
+        "dataType": "Date",
+        "caption": "Дата початку дії",
+        "description": "Дата початку дії",
+        "allowNull": false
+      },
+      {
+        "name": "dateTo",
+        "dataType": "Date",
+        "caption": "Дата закінчення дії",
+        "description": "Дата закінчення дії",
+        "allowNull": true
+      },
+      {
+        "name": "dateToEmpty",
+        "dataType": "Date",
+        "caption": "Дата закінчення дії",
+        "description": "Дата закінчення дії",
+        "documentation": "Дата закінчення дії",
+        "mapping": [
+          {
+            "name": "MSSQL2012",
+            "expressionType": "Expression",
+            "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null when 2099 then null ELSE {self}.dateTo END)"
+          },
+          {
+            "name": "PostgreSQL",
+            "expressionType": "Expression",
+            "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null when 2099 then null ELSE {self}.dateTo END)"
+          }
+        ]
+      },
+      {
+        "name": "vehicleName",
+        "dataType": "String",
+        "size": 255,
+        "caption": "Модель, державний номер",
+        "description": "Модель, державний номер",
+        "documentation": "Модель, державний номер",
+        "mapping": [
+          {
+            "name": "MSSQL2012",
+            "expressionType": "Expression",
+            "expression": "(CONCAT((select top 1 name from trans_model m where m.ID = (select top 1 modelID from trans_vehicle v WHERE v.ID = {self}.vehicleID)),' ',(select top 1 govNum from trans_vehicle v1 WHERE v1.ID = {self}.vehicleID)))"
+          },
+          {
+            "name": "PostgreSQL",
+            "expressionType": "Expression",
+            "expression": "(CONCAT((select name from trans_model m where m.ID = (select modelID from trans_vehicle v WHERE v.ID = {self}.vehicleID limit 1) limit 1),' ',(select govNum from trans_vehicle v1 WHERE v1.ID = {self}.vehicleID limit 1)))"
+          }
+        ]
+      },
+      {
+        "name": "orderID",
+        "dataType": "Entity",
+        "associatedEntity": "hr_order",
+        "caption": "Наказ - підстава призначення",
+        "description": "Наказ - підстава призначення"
+      },
+      {
+        "name": "paraID",
+        "dataType": "Entity",
+        "associatedEntity": "hr_empOrderDet",
+        "caption": "Деталь - підстава призначення",
+        "description": "Деталь - підстава призначення"
+      }
+    ],
+    "mixins": {
+      "mStorage": {
+        "simpleAudit": true,
+        "safeDelete": true
+      }
+    }
+  }

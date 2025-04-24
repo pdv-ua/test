@@ -1,0 +1,278 @@
+/* global _ Ext AC UB HR */
+
+exports.formDef = {
+  requiredFields: ['description', 'dateFrom', 'dateTo', 'orgID', 'hasPosted', 'hasProject'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'calcDocumentAction'
+        },
+        {
+          orderId: 7,
+          actionId: 'cleanDocument'
+        },
+        {
+          orderId: 8,
+          actionId: 'printAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: false,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          defaults: { labelWidth: 80 },
+          items: [
+            {
+              layout: { type: 'hbox' },
+              flex: 1,
+              defaults: { labelWidth: 80 },
+              items: [
+                {
+                  attributeName: 'docNumber',
+                  fieldLabel: UB.i18n('Номер'),
+                  selectOnFocus: true,
+                  allowBlank: true,
+                  flex: 0
+                },
+                {
+                  attributeName: 'docDate',
+                  selectOnFocus: true,
+                  fieldLabel: UB.i18n('Дата'),
+                  hidden: true
+                },
+                {
+                  attributeName: 'dateFrom',
+                  selectOnFocus: true,
+                  fieldLabel: UB.i18n('Дата'),
+                  flex: 1
+                },
+                {
+                  attributeName: 'type',
+                  selectOnFocus: true,
+                  fieldLabel: UB.i18n('Тип'),
+                  flex: 1
+                }
+              ]
+            },
+            {
+              attributeName: 'name',
+              selectOnFocus: true,
+              fieldLabel: UB.i18n('Назва'),
+              emptyText: UB.i18n('Текстовий опис особливостей документу у довільній формі, примітка')
+            }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          defaults: { labelWidth: 80 },
+          hidden: true,
+          items: [
+            {
+              layout: { type: 'hbox' },
+              flex: 1,
+              defaults: { labelWidth: 80 },
+              items: [
+                {
+                  attributeName: 'dateToEmpty',
+                  fieldLabel: UB.i18n('Кінець'),
+                  hidden: true
+                }
+              ]
+            },
+            {
+              attributeName: 'docState',
+              fieldLabel: UB.i18n('Стан'),
+              readOnly: true
+            },
+            {
+              layout: { type: 'hbox' },
+              flex: 1,
+              defaults: { labelWidth: 80 },
+              items: [
+                {
+                  attributeName: 'orderNumber',
+                  selectOnFocus: true,
+                  fieldLabel: UB.i18n('Наказ №'),
+                  width: 200
+                },
+                {
+                  attributeName: 'orderDate',
+                  selectOnFocus: true,
+                  fieldLabel: UB.i18n('Дата')
+                }
+              ]
+            },
+            {
+              attributeName: 'dateTo',
+              fieldLabel: UB.i18n('Кінець'),
+              readOnly: true,
+              hidden: true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      title: '',
+      name: 'workPlaceDt',
+      region: 'center',
+      hideToolbar: false,
+      toolbarActionList: [],
+      autoScroll: true,
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('trf_document_workPlaceDt'),
+      stateful: true,
+      entityConfig: {
+        entity: 'trf_workPlace',
+        method: 'select',
+        fieldList: [
+          { name: 'checked', description: '', config: HR.orderManager.checkBoxColumnConfig(), align: 'left' },
+          { name: 'ID', visibility: false },
+          { name: 'documentID', visibility: false },
+          // { name: 'state', visibility: false },
+          { name: 'description', visibility: false },
+          { name: 'employeeNumberID', visibility: false },
+          { name: 'employeeNumberID.dateFrom', visibility: false },
+          { name: 'employeeNumberID.dateTo', visibility: false },
+          { name: 'employeeNumberID.tabNumSort', visibility: false },
+          { name: 'employeeNumberID.tabNum', description: UB.i18n('Таб. №') },
+          { name: 'empName', description: UB.i18n('Робоче місце'), visibility: false },
+          { name: 'empFullFIO', description: UB.i18n('Робоче місце') },
+          { name: 'dateFrom', description: UB.i18n('Початок'), config: { align: 'center' } },
+          { name: 'accrualSum', description: UB.i18n('Cума'), format: '0.00', config: { align: 'right' } },
+          { name: 'sumTrfPosition', description: UB.i18n('Кількість ставок'), config: { align: 'center' } },
+          { name: 'dateTo', description: UB.i18n('Кінець'), config: { hidden: true } },
+          { name: 'depName', description: UB.i18n('Підрозділ') },
+          { name: 'dictPositionID.caption', description: UB.i18n('Посада') },
+          { name: 'dictPositionID.positionType', visibility: false },
+          { name: 'dictPositionID.dictStaffCatID.accCategory', visibility: false },
+          { name: 'orderNumber', description: UB.i18n('Номер наказу'), config: { hidden: true } },
+          { name: 'orderDate', description: UB.i18n('Дата наказу'), config: { hidden: true, align: 'center' } },
+          { name: 'state', description: UB.i18n('Стан'), config: { hidden: true } }
+        ],
+        orderList: { state: { expression: 'state' }, tabNum: { expression: '[employeeNumberID.tabNumSort]' } }
+      },
+      cmpInitConfig: {
+        afterInit: function () {
+          AC.gridUtils.setCustomSorter(this, 'employeeNumberID.tabNum')
+        },
+        hideActions: ['add', 'showPreview', 'showDetail', 'audit', 'itemLink', 'edit', 'addNewByCurrent', 'refresh'],
+        customActions: [
+          {
+            text: UB.i18n('Додати'),
+            iconCls: 'fas fa-plus',
+            scale: 'medium',
+            cls: 'fill-action',
+            actionId: 'addBtn',
+            disabled: false,
+            handler: function (btn) {
+              const grid = btn.up('grid')
+              const form = grid.up('form')
+              if (form.isNewInstance) {
+                form.saveForm().then(result => {
+                  if (result !== -1) {
+                    form.loadFormWorkPlace(form, grid)
+                  }
+                })
+              } else {
+                form.loadFormWorkPlace(form, grid)
+              }
+            }
+          },
+          {
+            iconCls: 'fas fa-angle-double-down',
+            cls: 'fill-action',
+            text: UB.i18n('Заповнити'),
+            actionId: 'fillBtn',
+            disabled: false,
+            handler: function (btn) {
+              const grid = btn.up('grid')
+              const form = grid.up('form')
+              if (form.isNewInstance) {
+                form.saveForm().then(result => {
+                  if (result !== -1) {
+                    form.openFillWorkPlace(form, grid)
+                  }
+                })
+              } else {
+                form.openFillWorkPlace(form, grid)
+              }
+            }
+          }
+        ],
+        onItemDblClick: function (grid, record) {
+          const form = grid.up('form')
+          form.loadFormWorkPlace(form, grid, record)
+        },
+        getRowClass: function (row) {
+          if (row.get('state') === 'POSTED') {
+            return 'ub-row-green'
+          }
+          if (row.data.employeeNumberID) {
+            const dateTo = this.up('form').attr.dateTo.value.getDate()
+            const empDateFrom = row.data['employeeNumberID.dateFrom'].getDate()
+            const empDateTo = row.data['employeeNumberID.dateTo'].getDate()
+            if (empDateTo < dateTo || empDateFrom > dateTo) {
+              return 'grd-color-blue'
+            }
+          }
+          return null
+        },
+
+        onSelectionChange: function (selectionModel, selected) {
+          const grid = this
+          if (selected[0]) {
+            grid.actions['del'].setDisabled(selected[0].get('state') === 'POSTED')
+          }
+        },
+        customInit: function () {
+          AC.gridUtils.tuneGridColumns(this, {
+            accrualSum: {
+              renderer: function (value) {
+                return _.isNumber(value) && value !== 0 ? Ext.util.Format.currency(value, '', 2) : ''
+              }
+            }
+          })
+          AC.gridUtils.tuneGridColumns(this, {
+            sumTrfPosition: {
+              renderer: function (value) {
+                return _.isNumber(value) && value !== 0 ? Ext.util.Format.currency(value, '', 4) : ''
+              }
+            }
+          })
+        }
+      },
+      masterFields: ['ID'],
+      detailFields: ['documentID']
+    }
+  ]
+
+}

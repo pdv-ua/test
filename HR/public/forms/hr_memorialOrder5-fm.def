@@ -1,0 +1,700 @@
+/* global UB Ext AC _ appAC appHR Blob $App */
+exports.formDef = 'HR.memorialOrder5'
+Ext.define('HR.memorialOrder5', {
+  extend: 'Ext.form.Panel',
+  requires: [
+    'UBS.UBReport',
+    'UB.ux.PDFComponent'
+  ],
+  layout: { type: 'vbox', align: 'stretch' },
+  width: 1100,
+  height: 600,
+  items: [],
+
+  actionId: {
+    refresh: 'refresh'
+  },
+  eventId: {
+    refresh: 'refresh'
+  },
+  hotKeys: {
+    refresh: {
+      key: Ext.EventObject.R,
+      ctrl: true,
+      shift: false,
+      text: ' (Ctrl+R)'
+    }
+  },
+
+  initComponent: function () {
+    const me = this
+    me.record = {}
+    me.attr = {}
+    me.requiredAttr = []
+    me.reportType = 'html'
+
+    let control
+
+    me.validateFields = function () {
+      let isValid = true
+
+      me.requiredAttr.forEach(field => {
+        isValid = isValid && field.validate()
+      })
+      return isValid
+    }
+
+    control = Ext.create('Ext.Component', {
+      flex: 1,
+      margin: 0,
+      autoEl: {
+        tag: 'iframe'
+      }
+    })
+
+    me.items = [
+      {
+        xtype: 'panel',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        flex: 1,
+        items: [
+          {
+            xtype: 'toolbar',
+            items: [
+              {
+                xtype: 'button',
+                scale: 'medium',
+                tooltip: UB.i18n('Сформувати звіт'),
+                iconCls: 'fas fa-calculator',
+                cls: 'green-action',
+                handler: function () {
+                  me.onButtonRefresh(me)
+                }
+              },
+              {
+                tooltip: UB.i18n('Друкувати'),
+                iconCls: 'fas fa-print',
+                cls: 'blue-action',
+                handler: function () {
+                  const iFrame = me.reportControl.getEl()
+                  if (!iFrame) {
+                    $App.dialogInfo(UB.i18n('Необхідно спочатку сформувати звіт.'))
+                    return
+                  }
+                  iFrame.dom.contentWindow.print()
+                }
+              },
+              {
+                tooltip: 'XLSX',
+                iconCls: 'fas fa-file-excel',
+                cls: 'green-action',
+                handler: item => {
+                  me.validateFields() && me.makeHtmlReport('xlsx')
+                }
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'panel',
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  {
+                    xtype: 'panel',
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        allowBlank: false,
+                        name: 'periodID',
+                        fieldLabel: UB.i18n('Період звіту'),
+                        labelWidth: 180,
+                        width: 400,
+                        // hideEntityItemInContext: true,
+                        selectOnFocus: true,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                        },
+                        pageSize: 50,
+                        listeners: {
+                          afterrender: function (ctrl) {
+                            appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+                              ctrl.setValueById(response.ID)
+                            })
+                          },
+                          beforeQuerySend: function () {
+                            this.store.ubRequest.whereList = {
+                              orgID: {
+                                expression: '[orgID]',
+                                condition: 'equal',
+                                value: appAC.globalOrganization()
+                              }
+                            }
+                            if (!this.whereListIsSet) this.whereListIsSet = true
+                            else this.store.reload()
+                          },
+                          expand: appHR.periodExpand
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'perfomerID',
+                    fieldLabel: UB.i18n('Виконавець'),
+                    labelWidth: 180,
+                    flex: 1,
+                    valueField: 'ID',
+                    displayField: 'description',
+                    ubRequest: {
+                      entity: 'hr_employeePositionS',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'description']
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'checkingID',
+                    fieldLabel: UB.i18n('Перевірив'),
+                    labelWidth: 180,
+                    flex: 1,
+                    valueField: 'ID',
+                    displayField: 'description',
+                    ubRequest: {
+                      entity: 'hr_employeePositionS',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'description']
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'accountantID',
+                    fieldLabel: UB.i18n('Головний бухгалтер'),
+                    labelWidth: 180,
+                    flex: 1,
+                    valueField: 'ID',
+                    displayField: 'description',
+                    ubRequest: {
+                      entity: 'hr_employeePositionS',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'description', 'positionID']
+                    },
+                    listeners: {
+                      render: function (ctrl) {
+                        ctrl.store.on('load', () => {
+                          if (!ctrl.store.isChange) {
+                            ctrl.store.isChange = true
+
+                            const form = ctrl.up('form')
+                            let dateReport = form.down('[name=dateReport]')
+                            dateReport = AC.dateService.shiftDate(dateReport.getValue())
+                            appHR.getAccountantChiefPosition(appAC.globalOrganization(), dateReport).then(response => {
+                              if (response.ID && ctrl.store && ctrl.store.data && ctrl.store.data.items && ctrl.store.data.items.length > 0) {
+                                let filterEmpOfPos = ctrl.store.data.items.filter(emp => emp.data.positionID === response.ID)
+                                if (filterEmpOfPos && filterEmpOfPos.length > 0) ctrl.setValueById(filterEmpOfPos[0].data.ID)
+                              }
+                            })
+                          }
+                        })
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'checkbox',
+                    fieldLabel: UB.i18n('Консолідований звіт'),
+                    labelWidth: 180,
+                    name: 'joinReport',
+                    value: 0,
+                    listeners: {
+                      change: function (crtl, fld) {
+                        const tabSettings = me.down('[itemId=tabSettings]')
+                        const subOrgList = me.down('[name=subOrgList]')
+                        fld && subOrgList.show()
+                        !fld && subOrgList.hide()
+                        fld && tabSettings.tab.show()
+                        !fld && tabSettings.tab.hide()
+                        const tabReport = me.queryById('tabReport')
+                        const cmpTabPanel = me.queryById('cmpTabPanel')
+                        cmpTabPanel.setActiveTab(tabReport)
+                        me.attr.comment.setValue()
+                        me.attr.comment[fld ? 'show' : 'hide']()
+                        me.clearPrintForm()
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'panel',
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  {
+                    xtype: 'panel',
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'datefield',
+                        name: 'dateReport',
+                        labelWidth: 180,
+                        width: 320,
+                        allowBlank: false,
+                        fieldLabel: UB.i18n('Дата звіту'),
+                        listeners: {
+                          afterrender: function (crtl) {
+                            crtl.setValue(appAC.globalApplicationDate())
+                          },
+                          change: function (ctrl) {
+                            if (ctrl.getValue() && ctrl.isValid()) {
+                              const form = ctrl.up('form')
+                              const perfomerID = form.down('[name=perfomerID]')
+                              const checkingID = form.down('[name=checkingID]')
+                              const accountantID = form.down('[name=accountantID]')
+                              const reportDate = AC.dateService.shiftDate(ctrl.getValue())
+                              let whereList = [
+                                ['dateFrom', '<=', reportDate || appAC.globalApplicationDate()],
+                                ['dateTo', '>=', reportDate || appAC.globalApplicationDate()],
+                                ['organizationID', '=', appAC.globalOrganization()]
+                              ]
+                              AC.viewUtils.setWhereListProperty(perfomerID, whereList, null, ['clearStore', 'clearWhereList', 'clearValue'])
+                              AC.viewUtils.setWhereListProperty(checkingID, whereList, null, ['clearStore', 'clearWhereList', 'clearValue'])
+                              AC.viewUtils.setWhereListProperty(accountantID, whereList, null, ['clearStore', 'clearWhereList', 'clearValue'])
+                              accountantID.store.isChange = false
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'ubboxselect',
+                    name: 'dictFundSourceID',
+                    fieldLabel: UB.i18n('Джерело фінансування'),
+                    labelWidth: 180,
+                    flex: 1,
+                    displayField: 'description',
+                    valueField: 'ID',
+                    multiSelect: true,
+                    allowBlank: true,
+                    ubRequest: {
+                      entity: 'ac_fundSource',
+                      method: 'selectByOrg',
+                      fieldList: ['ID', 'description']
+                    },
+                    listeners: {
+                      afterrender: function (ctrl) {
+                        ctrl.store.ubRequest.orgID = appAC.globalOrganization()
+                        ctrl.store.ubRequest.emptyValue = true
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubboxselect',
+                    name: 'dictProgClassID',
+                    fieldLabel: UB.i18n('КПК'),
+                    labelWidth: 180,
+                    flex: 1,
+                    valueField: 'ID',
+                    displayField: 'description',
+                    ubRequest: {
+                      entity: 'ac_dictProgClass',
+                      method: 'selectByOrg',
+                      fieldList: ['ID', 'description']
+                    },
+                    listeners: {
+                      change: () => {
+                        me.clearPrintForm()
+                      },
+                      afterrender: function (ctrl) {
+                        ctrl.store.ubRequest.emptyValue = true
+                        ctrl.store.ubRequest.organizationID = appAC.globalOrganization()
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'textfield',
+                    name: 'comment',
+                    fieldLabel: UB.i18n('Коментар'),
+                    hidden: true,
+                    labelWidth: 180,
+                    flex: 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'tabpanel',
+            itemId: 'cmpTabPanel',
+            flex: 1,
+            minWidth: 250,
+            margin: '10 10 10 10',
+            plain: true,
+            items: [
+              {
+                itemId: 'tabReport',
+                title: UB.i18n('Звіт'),
+                autoScroll: true,
+                margin: '5, 0, 0, 0',
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                items: [
+                  {
+                    flex: 1,
+                    autoScroll: true,
+                    layout: {
+                      type: 'vbox',
+                      pack: 'center',
+                      align: 'stretch'
+                    },
+                    bodyCls: 'ub-panel-gray',
+                    items: [control]
+                  }
+                ]
+              },
+              {
+                itemId: 'tabSettings',
+                title: UB.i18n('Організації'),
+                autoScroll: true,
+                hidden: true,
+                margin: '5,0,0,0',
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                items: [
+                  {
+                    xtype: 'acGrid',
+                    name: 'subOrgList',
+                    region: 'center',
+                    flex: 1,
+                    loadMaskMessage: UB.i18n('Завантаження даних...'),
+                    autoScroll: true,
+                    notWriteChanges: true,
+                    storeType: 'local',
+                    showToolBar: true,
+                    disablePaging: true,
+                    stripeRows: true,
+                    hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                    checkColumn: {},
+                    pagerConfig: {
+                      pageSize: 20
+                    },
+                    viewConfig: {
+                      markDirty: false
+                    },
+                    customToolBarActions: [
+                      {
+                        xtype: 'textfield',
+                        name: 'searchBox',
+                        skipSetReadOnly: true,
+                        labelWidth: 60,
+                        fieldLabel: UB.i18n('filter'),
+                        listeners: {
+                          change: function (ctrl, value) {
+                            const store = ctrl.up('acGrid').getStore()
+                            store.clearFilter()
+                            if (value === '') {
+                              return
+                            }
+                            if (store.sorters.items.length) {
+                              store.sorters.removeAll()
+                            }
+                            store.filter(row => {
+                              return (row.get('name') && row.get('name').toUpperCase().includes(value.toUpperCase())) ||
+                                (row.get('EDRPOUCode') && row.get('EDRPOUCode').toUpperCase().includes(value.toUpperCase())) ||
+                                (row.get('staffOrderID.description') && row.get('staffOrderID.description').toUpperCase().includes(value.toUpperCase())) ||
+                                (row.get('code') && row.get('code').toUpperCase().includes(value.toUpperCase()))
+                            })
+                          }
+                        }
+                      }
+                    ],
+                    fields: [
+                      { name: 'mi_data_id' },
+                      {
+                        name: 'code',
+                        columnConfig: {
+                          text: UB.i18n('Код організації'),
+                          align: 'center',
+                          width: 120
+                        }
+                      },
+                      {
+                        name: 'name',
+                        columnConfig: {
+                          text: UB.i18n('Назва організації'),
+                          align: 'center',
+                          flex: 2
+                        }
+                      },
+                      {
+                        name: 'EDRPOUCode',
+                        columnConfig: {
+                          text: UB.i18n('ЄДРПОУ'),
+                          align: 'center',
+                          width: 120
+                        }
+                      },
+                      {
+                        name: 'mi_dateFrom',
+                        columnConfig: {
+                          text: UB.i18n('Дата початку дії'),
+                          align: 'center',
+                          width: 150,
+                          sortBy: 'Date',
+                          renderer: (value) => {
+                            return AC.dateService.formatDate(value)
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+    me.reportControl = control
+
+    function makeReport (type, grid = false) {
+      function createReport (type, reportCode, params) {
+        me.report = Ext.create('UBS.UBReport', {
+          code: reportCode,
+          type,
+          params,
+          language: $App.connection.userLang()
+        })
+        if (type === 'xlsx') {
+          me.report.makeReport().then(function (data) {
+            const blobData = new Blob(
+              [data.reportData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            const repName = reportCode.split('-').slice(-1)
+            const fileName = `${repName}.xlsx`
+            window.saveAs(blobData, fileName)
+            me.setLoading(false)
+
+            me.reportType = 'html'
+          })
+        } else {
+          me.report
+            .init()
+            .then(function () {
+              return me.report.makeReport()
+            })
+            .then(function (data) {
+              if (data && data.reportData) {
+                if (data.reportData.length > 10000000) {
+                  data = null
+                  me.report = Ext.create('UBS.UBReport', {
+                    code: reportCode,
+                    type: 'xlsx',
+                    params,
+                    language: $App.connection.userLang()
+                  })
+                  me.report.makeReport().then(function (xlsxData) {
+                    const blobData = new Blob(
+                      [xlsxData.reportData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+                    const repName = reportCode.split('-').slice(-1)
+                    const fileName = `${repName}.xlsx`
+                    window.saveAs(blobData, fileName)
+                    me.setLoading(false)
+                  })
+                } else {
+                  me.showReport(data.reportData)
+                  me.setLoading(false)
+                }
+              }
+              me.setLoading(false)
+              me.reportDone = true
+            })
+        }
+      }
+
+      let dictFundSourceID = me.attr.dictFundSourceID.getValue()
+      let includeEmptyFoundSource = false
+      if (dictFundSourceID === '') {
+        dictFundSourceID = []
+      } else {
+        dictFundSourceID = dictFundSourceID.split(',').map(id => parseInt(id))
+        includeEmptyFoundSource = dictFundSourceID.includes(0)
+      }
+      let dictProgClassID = me.attr.dictProgClassID.getValue()
+      let includeEmptyProgClass = false
+      if (dictProgClassID === '') {
+        dictProgClassID = []
+      } else {
+        dictProgClassID = dictProgClassID.split(',').map(id => parseInt(id))
+        includeEmptyProgClass = dictProgClassID.includes(0)
+      }
+
+      const joinReport = me.attr.joinReport.getValue()
+
+      const reportCode = 'hr_memorialOrder5'
+      $App.connection.run({
+        entity: 'hr_memorialOrder5',
+        method: 'getMemOrder5Data',
+        orgID: appAC.globalOrganization(),
+        periodID: me.attr.periodID.getValue(),
+        dateReport: AC.dateService.truncTimeToUtcNull(me.attr.dateReport.getValue()),
+        onDate: appAC.globalApplicationDate(),
+        dictFundSourceID: dictFundSourceID.filter(ID => ID !== 0),
+        dictProgClassID: dictProgClassID.filter(ID => ID !== 0),
+        perfomerID: me.attr.perfomerID.getValue(),
+        checkingID: me.attr.checkingID.getValue(),
+        accountantID: me.attr.accountantID.getValue(),
+        includeEmptyFoundSource,
+        includeEmptyProgClass,
+        joinReport,
+        comment: me.attr.comment.getValue(),
+        orgSubListID: joinReport ? me.down('[name=subOrgList]').getCheckedRow().map(o => o.data.mi_data_id) : null
+      }).then(mParams => {
+        let resultData = JSON.parse(mParams.resultData)
+        resultData.totalSumText = resultData.totalSum ? AC.currencyService.currencyToWordsUkr(AC.currencyService.round(resultData.totalSum > 0 ? resultData.totalSum : -resultData.totalSum, 2)) : ''
+        type = me.reportType
+        createReport(type, reportCode, resultData)
+      }, e => {
+        me.setLoading(false)
+        throw e
+      })
+    }
+
+    me.makeHtmlReport = function (type = 'html') {
+      me.reportType = type
+      me.setLoading(true)
+      const tabReport = me.queryById('tabReport')
+      const cmpTabPanel = me.queryById('cmpTabPanel')
+      cmpTabPanel.setActiveTab(tabReport)
+      makeReport(type)
+    }
+
+    me.clearPrintForm = function () {
+      if (me.report && me.reportControl) {
+        const iFrame = me.reportControl.getEl().dom
+        const iFrameDoc = iFrame.contentDocument
+        iFrameDoc.body.innerHTML = ''
+      }
+    }
+
+    me.callParent(arguments)
+  },
+
+  onButtonRefresh: function (me) {
+    me.validateFields() && me.makeHtmlReport()
+  },
+
+  showReport: function (data) {
+    const me = this
+    const HTML_PAGEBREAK_RE = new RegExp('<!-- pagebreak -->', 'gi')
+    const HTML_PAGEBREAK_EL = '<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="mce-pagebreak"/>'
+    const iFrame = me.reportControl.getEl().dom
+    const iFrameDoc = iFrame.contentDocument
+    const style = [getStyle()]
+    const orientation = me.report.reportOptions.pageOrientation
+    if (orientation === 'landscape') {
+      style.push('@page{size: landscape;}')
+    } else if (orientation === 'portrait') {
+      style.push('@page{size: portrait;}')
+    }
+    const styleText = `<style type="text/css"> ${style.join('\n')} </style>`
+    me.report.reportOptions.html = data
+    iFrameDoc.body.innerHTML = data.replace(HTML_PAGEBREAK_RE, HTML_PAGEBREAK_EL)
+    iFrameDoc.head.innerHTML = styleText
+    me.setLoading(false)
+  },
+
+  afterRender: function () {
+    const me = this
+    me.callParent(arguments)
+
+    me.attr = {
+      dateReport: me.down('[name=dateReport]'),
+      periodID: me.down('[name=periodID]'),
+      perfomerID: me.down('[name=perfomerID]'),
+      checkingID: me.down('[name=checkingID]'),
+      accountantID: me.down('[name=accountantID]'),
+      dictFundSourceID: me.down('[name=dictFundSourceID]'),
+      dictProgClassID: me.down('[name=dictProgClassID]'),
+      joinReport: me.down('[name=joinReport]'),
+      comment: me.down('[name=comment]')
+    }
+
+    const isProgClassAcc = AC.settings.get('hrProgClassAcc', appAC.globalOrganization())
+    if (!isProgClassAcc) {
+      me.attr.dictProgClassID.hide()
+    }
+
+    me.setLoading(true)
+    const orgID = appAC.globalOrganization()
+    UB.Repository('hr_organization')
+      .attrs(['name', 'mi_data_id', 'EDRPOUCode', 'code', 'mi_dateFrom'])
+      .where('state', '=', 'ACTIVE')
+      .where('mi_treePath', 'like', `%${orgID}%`)
+      .where('mi_data_id', 'notEqual', orgID)
+      .selectAsObject().then(data => {
+        me.down('[name=subOrgList]').getStore().loadData(data)
+        me.setLoading(false)
+      }, err => {
+        grid.setLoading(false)
+        throw err
+      })
+  }
+})
+
+function getStyle () {
+  return `
+    body {
+      background-color: #FFFFFF;
+      color: #000000;
+      font-family: Times New Roman, Verdana, Arial, Helvetica, sans-serif;
+      font-size: 11pt;
+      line-height: 1.3;
+    }
+    .word-wrap {
+      word-wrap: break-word;
+      hyphens: auto
+    }
+    td {
+      padding: 0 2px 0 2px;
+    }
+    .mce-pagebreak {
+      cursor: default;
+      display: block;
+      border: 0;
+      width: 100%;
+      height: 5px;
+      margin-top: 15px;
+      page-break-before: always
+    }
+    table.layout-portrait {
+      width:750px;
+    }
+    table.layout-landscape {
+      width:1100px !important;
+    }
+    @media print {
+      .mce-pagebreak {
+        border: 0
+      }
+      a {
+        text-decoration: none
+      }
+      table.layout-landscape {
+        width:1300px;
+      }
+    }
+  `
+}

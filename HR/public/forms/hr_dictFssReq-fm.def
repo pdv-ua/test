@@ -1,0 +1,99 @@
+exports.formDef = {
+  requiredFields: ['dateFrom', 'dateTo', 'description'],
+  parentConfig: {
+    layout: {
+      type: 'border'
+    },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: {
+        type: 'hbox'
+      },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          items: [
+            { attributeName: 'code', width: 350 },
+            { attributeName: 'name', width: 350 }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 150 },
+          items: [
+            { attributeName: 'dateFromEmpty', fieldLabel: UB.i18n('Дата початку') },
+            { attributeName: 'dateToEmpty', fieldLabel: UB.i18n('Дата закінчення') }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      layout: { type: 'hbox' },
+      split: true,
+      items: [
+        {
+          name: 'payElList',
+          xtype: 'ubdetailgrid',
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          hideActions: [ 'refresh', 'addNew', 'addNewByCurrent', 'del', 'audit', 'showDetail', 'edit' ],
+          cmdType: 'showList',
+          description: UB.i18n('Види оплат'),
+          entity: 'hr_dictFssReqDt',
+          cmdData: {
+            params: [{
+              entity: 'hr_dictFssReqDt',
+              method: 'select',
+              fieldList: [
+                { name: 'dictFssReqID', visibility: false },
+                { name: 'payElID.description', description: UB.i18n('Види оплати') }
+              ]
+            }]
+          },
+          masterFields: ['ID'],
+          detailFields: ['dictFssReqID'],
+          cmpInitConfig: {
+            customActions: [
+              {
+                tooltip: UB.i18n('Редагувати'),
+                iconCls: 'u-icon-edit-alt',
+                cls: 'fill-action',
+                handler: function (btn) {
+                  const grid = btn.up('grid')
+                  const form = grid.up('form')
+                  if (form.isNewInstance) {
+                    form.saveForm().then(result => {
+                      if (result !== -1) {
+                        form.setPayElEntry(form, grid)
+                      }
+                    })
+                  } else {
+                    form.setPayElEntry(form, grid)
+                  }
+                }
+              }
+            ],
+            onItemDblClick: function (grid) {
+              const form = grid.up('form')
+              form.setPayElEntry(form, grid)
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

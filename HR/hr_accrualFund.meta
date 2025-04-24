@@ -1,0 +1,208 @@
+{
+  "caption": "Розрахунок нарахувань",
+  "description": "Розрахунок нарахувань",
+  "descriptionAttribute": "employeeNumberID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "periodCalcID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Розрахунковий період",
+      "description": "Розрахунковий період",
+      "documentation": "Розрахунковий період",
+      "allowNull": false
+    },
+    {
+      "name": "periodSalaryID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Обліковий період",
+      "description": "Обліковий період",
+      "documentation": "Обліковий період",
+      "allowNull": false
+    },
+    {
+      "name": "periodCalc",
+      "dataType": "Date",
+      "caption": "Дата розрахункового періоду",
+      "description": "Дата розрахункового періоду",
+      "documentation": "Дата розрахункового періоду",
+      "allowNull": false
+    },
+    {
+      "name": "periodSalary",
+      "dataType": "Date",
+      "caption": "Дата облікового періоду",
+      "description": "Дата облікового періоду",
+      "documentation": "Дата облікового періоду",
+      "allowNull": false
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "documentation": "Організаційна одиниця",
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "allowNull": false
+    },
+    {
+      "name": "payFundID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payFund",
+      "caption": "Нарахування на зарплату",
+      "description": "Нарахування на зарплату",
+      "documentation": "Нарахування на зарплату",
+      "allowNull": false
+    },
+    {
+      "name": "sourceSum",
+      "dataType": "Float",
+      "caption": "Сума для розрахунку",
+      "description": "Сума для розрахунку",
+      "documentation": "Сума для розрахунку",
+      "defaultValue": "0"
+    },
+    {
+      "name": "baseSum",
+      "dataType": "Float",
+      "caption": "Базова сума",
+      "description": "Базова сума",
+      "documentation": "Базова сума"
+    },
+    {
+      "name": "addMinSum",
+      "dataType": "Float",
+      "caption": "Додаткова база нарахування",
+      "description": "Додаткова база нарахування",
+      "documentation": "Додаткова база нарахування",
+      "defaultValue": "0"
+    },
+    {
+      "name": "rate",
+      "dataType": "Float",
+      "caption": "Відсоток нарахування",
+      "description": "Відсоток нарахування",
+      "documentation": "Відсоток нарахування"
+    },
+    {
+      "name": "paySum",
+      "dataType": "Float",
+      "caption": "Фактична (розрахована) сума",
+      "description": "Фактична (розрахована) сума",
+      "documentation": "Фактична (розрахована) сума",
+      "defaultValue": "0",
+      "allowNull": false
+    },
+    {
+      "name": "paySumRound",
+      "dataType": "Float",
+      "caption": "Фактична (розрахована) сума округлена",
+      "description": "Фактична (розрахована) сума  округлена",
+      "documentation": "Фактична (розрахована) сума  округлена",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "round({self}.paySum,2)"
+        }
+      ]
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ підстава",
+      "description": "Наказ підстава"
+    },
+    {
+      "name": "orderDtID",
+      "dataType": "BigInt",
+      "caption": "Наказ деталь",
+      "description": "Наказ деталь"
+    },
+    {
+      "name": "calculateDate",
+      "dataType": "DateTime",
+      "caption": "Дата створення запису",
+      "description": "Дата створення запису",
+      "documentation": "Дата створення запису"
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_ACCRUALFUND_ORGEMP": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeeNumberID": {
+            "sort": "ASC"
+          },
+          "orgID": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_ACCRUALFUND_PERIOD": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeeNumberID": {
+            "sort": "ASC"
+          },
+          "periodCalcID": {
+            "sort": "ASC"
+          },
+          "periodSalaryID": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_ACCRUALFUND_DATE": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeeNumberID": {
+            "sort": "ASC"
+          },
+          "periodCalc": {
+            "sort": "ASC"
+          },
+          "periodSalary": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mapping":[{
+    "name": "AnsiSQL",
+    "selectName": "hr_accrualFund",
+    "execName": "hr_accrualFund",
+    "pkGenerator": "S_HR_ACCRUALFUND"
+  }],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": false,
+      "safeDelete": false
+    },
+    "audit": {
+      "enabled": false
+    }
+  }
+}

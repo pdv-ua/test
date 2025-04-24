@@ -1,0 +1,135 @@
+{
+  "caption": "Операційно-трудові нормативи",
+  "description": "Операційно-трудові нормативи",
+  "descriptionAttribute": "name",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 32,
+      "caption": "Код",
+      "description": "Код",
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 150,
+      "caption": "Назва",
+      "description": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "dictWorkGroupID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictWorkGroup",
+      "caption": "Група операцій",
+      "description": "Група операцій"
+    },
+    {
+      "name": "payment",
+      "dataType": "Enum",
+      "enumGroup": "PIECEWORK_PAYMENT",
+      "caption": "Форма оплати",
+      "description": "Форма оплати",
+      "defaultValue": "1"
+    },
+    {
+      "name": "dictMeasureID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictMeasure",
+      "caption": "Одиниця виміру",
+      "description": "Одиниця виміру"
+    },
+    {
+      "name": "norm",
+      "dataType": "Float",
+      "caption": "Норма",
+      "description": "Норма виробітку"
+    },
+    {
+      "name": "rate",
+      "dataType": "Currency",
+      "caption": "Тариф/Розцінка",
+      "description": "Тариф/Розцінка"
+    },
+    {
+      "name": "isCalcProportion",
+      "dataType": "Boolean",
+      "caption": "Розрахунок пропорційно виробітку",
+      "description": "Розрахунок пропорційно виробітку"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "allowNull": false,
+      "defaultView": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Опис",
+      "description": "Опис",
+      "defaultView": false,
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["code","name"],
+        "compositeSeparator": " "
+      }
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

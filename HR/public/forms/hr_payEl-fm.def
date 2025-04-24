@@ -1,0 +1,1481 @@
+/* global  UB */
+exports.formDef = {
+  requiredFields: [ 'methodID.payElEntryType', 'methodID.code', 'methodID.methodGroupID.groupType', 'description' ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 3,
+          actionId: 'entryCalcAction'
+        },
+        {
+          orderId: 4,
+          actionId: 'printPayAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'north',
+      split: true,
+      autoScroll: true,
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 2,
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    { attributeName: 'code', flex: 1 },
+                    { attributeName: 'name', flex: 3 }
+                  ]
+                },
+                {
+                  attributeName: 'methodID',
+                  fieldList: ['ID', 'name', 'payElEntryType', 'code', 'payElEntrySum', 'payElEntryMinSum', 'payElEntryTime', 'payElEntryPlanSum'],
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                  disableModifyEntity: true
+                }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              items: [
+                { attributeName: 'dateFromEmpty' },
+                { attributeName: 'dateToEmpty' }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      width: '100%',
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [
+        {
+          xtype: 'tabpanel',
+          flex: 5,
+          plain: true,
+          tabPosition: 'top',
+          items: [
+            {
+              title: UB.i18n('Властивості'),
+              hidden: true,
+              itemId: 'property',
+              layout: { type: 'vbox', align: 'stretch' },
+              autoScroll: true,
+              defaults: {
+                labelWidth: 350
+              },
+              items: [
+                { attributeName: 'calcProportion', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'useTimeSheetBy', hidden: true },
+                { attributeName: 'normTimeBy', hidden: true },
+                { attributeName: 'isMtCount', hidden: true },
+                { attributeName: 'isTimeSheet', hidden: true },
+                { attributeName: 'isLimitTimeSheet', hidden: true },
+                { attributeName: 'calcSumType', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'calcAvgType', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'periodType', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'calcPlanType', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'calcMounth', hidden: true },
+                { attributeName: 'roundAverage', hidden: true },
+                { attributeName: 'dictTimeCostID', hidden: true },
+                { attributeName: 'dictTimeCostWorkID', hidden: true },
+                { attributeName: 'dictTimeCostAvgID', hidden: true },
+                { attributeName: 'estimated', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'alimonyLessPayment', hidden: true },
+                { attributeName: 'typePrepayment', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'percPrepayment', hidden: true },
+                { attributeName: 'prepaymentDay', hidden: true },
+                { attributeName: 'includeSecondJobs', hidden: true },
+                { attributeName: 'ignoreInCalcPay', hidden: true },
+                { attributeName: 'calcAlgorithm', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'repaymentOnly', hidden: true },
+                { attributeName: 'shortDay', hidden: true },
+                { attributeName: 'shortWeek', hidden: true },
+                { attributeName: 'onlyPlanTrip', hidden: true },
+                { attributeName: 'surchargeExperience', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'calcIndAvgType', hidden: true },
+                { attributeName: 'accrueFuturePeriod', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'calcEarnings', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'excludePartTimeEmp', hidden: true },
+                { attributeName: 'hiredThisMonth', hidden: true },
+                { attributeName: 'dictTarifCoeffID', hidden: true },
+                { attributeName: 'paymentIfNotLess', hidden: true },
+                { attributeName: 'isParentEmployeeNumber', hidden: true },
+                { attributeName: 'isLastEmployeeNumber', hidden: true },
+                { attributeName: 'isIndividualRate', hidden: true },
+                { attributeName: 'notLimitPayments', hidden: true },
+                { attributeName: 'includeInCalcAvg', hidden: true },
+                { attributeName: 'calcTimeProportion', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'isPayInHolidays', hidden: true },
+                { attributeName: 'isCalcReservePart', hidden: true },
+                { attributeName: 'notUseBenefits', hidden: true },
+                { attributeName: 'typeCalcTime', hidden: true },
+                { attributeName: 'useDictTech', hidden: true },
+                { attributeName: 'useKPI', hidden: true },
+                { attributeName: 'sumPayMore', hidden: true },
+                { attributeName: 'dayAccumCondition', hidden: true },
+                { attributeName: 'isCorrectPlan', hidden: true },
+                { attributeName: 'periodSummarized', hidden: true },
+                {
+                  attributeName: 'payElID',
+                  hidden: true,
+                  disableContextMenu: false,
+                  hideEntityItemInContext: true,
+                  whereList: {
+                    isActive: {
+                      expression: '[methodID.methodGroupID.code]',
+                      condition: 'equal',
+                      value: 3
+                    }
+                  }
+                },
+                { attributeName: 'rightRate', hidden: true, disableContextMenu: false, hideEntityItemInContext: true },
+                { attributeName: 'calcMounthRate', hidden: true },
+                { attributeName: 'maxMtCount', hidden: true },
+                { attributeName: 'isPayDismAll', hidden: true },
+                { attributeName: 'isPayDismSalPeriod', hidden: true },
+                { attributeName: 'isPayDismCalcPeriod', hidden: true },
+                { attributeName: 'isPayDismOnlyPeriod', hidden: true },
+                {
+                  attributeName: 'paymentIfNotLess',
+                  xtype: 'numberfield',
+                  vtype: 'floatValidator',
+                  decimalPrecision: 2,
+                  hidden: true
+                },
+                {
+                  xtype: 'label',
+                  name: 'dictTarifCoeffLabel',
+                  text: UB.i18n('Якщо тарифний розряд не визначено, розрахунок виконується від тарифного розряду посадового місця тарифікації'),
+                  cls: 'x-form-item-label grd-italic',
+                  margin: '5 15 5 220',
+                  width: 500,
+                  hidden: true
+                },
+                { attributeName: 'accrualRate', hidden: true },
+                { attributeName: 'isNormMinSum', hidden: true },
+                { attributeName: 'notReqReport', hidden: true },
+                { attributeName: 'excludeMonthFreeDays', hidden: true },
+                { attributeName: 'baseSumIsAverage', hidden: true },
+                { attributeName: 'payDownTime', hidden: true },
+                { attributeName: 'usePartialFirstMonth', hidden: true },
+                { attributeName: 'payOverNorm', hidden: true },
+                { attributeName: 'calcByDayEarnPermAcc', hidden: true },
+                { attributeName: 'dayEarningType', hidden: true },
+                { attributeName: 'calcEachPeriod', hidden: true }
+              ]
+            },
+            {
+              title: UB.i18n('Місце роботи'),
+              hidden: true,
+              itemId: 'workPlaces',
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: {
+                labelWidth: 200
+              },
+              items: [
+                {
+                  name: 'workPlaces',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElWorkPlace',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'workPlace',
+                        description: UB.i18n('Місце роботи')
+                      }
+                    ]
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        scale: 'medium',
+                        cls: 'fill-action',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setWorkPlace(form, grid)
+                              }
+                            })
+                          } else {
+                            form.setWorkPlace(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.setWorkPlace(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Відсоток оплати'),
+              hidden: true,
+              itemId: 'payElRate',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElRate',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: [],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElRate',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'rate',
+                        format: '0.00'
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID']
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Нараховується на суму'),
+              hidden: true,
+              itemId: 'payElEntrySum',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElEntrySum',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElEntry',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'payElBaseID.code',
+                        description: UB.i18n('Код')
+                      },
+                      {
+                        name: 'payElBaseID.name',
+                        description: UB.i18n('Назва')
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    whereList: {
+                      entryType: {
+                        expression: '[entryType]',
+                        condition: '=',
+                        value: 'SUM'
+                      },
+                      mi_deleteDate: {
+                        condition: 'moreEqual',
+                        expression: '[payElBaseID.mi_deleteDate]',
+                        value: '#maxdate'
+                      }
+                    },
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        cls: 'fill-action',
+                        scale: 'medium',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setPayElEntry(form, grid)
+                              }
+                            })
+                          } else {
+                            form.setPayElEntry(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.setPayElEntry(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Не менше суми'),
+              hidden: true,
+              itemId: 'payElEntryMinSum',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElEntryMinSum',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElEntry',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'payElBaseID.code',
+                        description: UB.i18n('Код')
+                      },
+                      {
+                        name: 'payElBaseID.name',
+                        description: UB.i18n('Назва')
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    whereList: {
+                      entryType: {
+                        expression: '[entryType]',
+                        condition: '=',
+                        value: 'MINSUM'
+                      },
+                      mi_deleteDate: {
+                        condition: 'moreEqual',
+                        expression: '[payElBaseID.mi_deleteDate]',
+                        value: '#maxdate'
+                      }
+                    },
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        cls: 'fill-action',
+                        scale: 'medium',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setPayElEntry(form, grid)
+                              }
+                            })
+                          } else {
+                            form.setPayElEntry(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.setPayElEntry(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Нараховується на час'),
+              hidden: true,
+              itemId: 'payElEntryTime',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElEntryTime',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElEntry',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'payElBaseID.code',
+                        description: UB.i18n('Код')
+                      },
+                      {
+                        name: 'payElBaseID.name',
+                        description: UB.i18n('Назва')
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    whereList: {
+                      entryType: {
+                        expression: '[entryType]',
+                        condition: '=',
+                        value: 'TIME'
+                      },
+                      mi_deleteDate: {
+                        condition: 'moreEqual',
+                        expression: '[payElBaseID.mi_deleteDate]',
+                        value: '#maxdate'
+                      }
+                    },
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        scale: 'medium',
+                        cls: 'fill-action',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setPayElEntry(form, grid)
+                              }
+                            })
+                          } else {
+                            form.setPayElEntry(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.setPayElEntry(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Плановий заробіток'),
+              hidden: true,
+              itemId: 'payElEntryPlanSum',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElEntryPlanSum',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElEntry',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'payElBaseID.code',
+                        description: UB.i18n('Код')
+                      },
+                      {
+                        name: 'payElBaseID.name',
+                        description: UB.i18n('Назва')
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    whereList: {
+                      entryType: {
+                        expression: '[entryType]',
+                        condition: '=',
+                        value: 'PLANSUM'
+                      },
+                      mi_deleteDate: {
+                        condition: 'moreEqual',
+                        expression: '[payElBaseID.mi_deleteDate]',
+                        value: '#maxdate'
+                      }
+                    },
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        cls: 'fill-action',
+                        scale: 'medium',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setPayElEntry(form, grid)
+                              }
+                            })
+                          } else {
+                            form.setPayElEntry(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.setPayElEntry(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Граничний розмір'),
+              hidden: true,
+              itemId: 'payElAlimonyLimit',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElAlimonyLimit',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: [],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElAlimonyLimit',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'dateFrom'
+                      },
+                      {
+                        name: 'coefficientMin'
+                      },
+                      {
+                        name: 'coefficientMax'
+                      }
+                    ],
+                    orderList: {
+                      dateFrom: {
+                        expression: '[dateFrom]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID']
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Види доходів'),
+              hidden: true,
+              itemId: 'payElTaxIndivid',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElTaxIndivid',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: [],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElTaxIndividEntry',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'taxIndividID.name',
+                        description: UB.i18n('Назва')
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID']
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Нараховується на час'),
+              hidden: true,
+              itemId: 'payElTimeCost',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElTimeCost',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElTimeCost',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'dictTimeCostID.code',
+                        description: UB.i18n('Код')
+                      },
+                      {
+                        name: 'dictTimeCostID.nameSmall',
+                        description: UB.i18n('Назва')
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    whereList: {
+                      entryType: {
+                        expression: '[entryType]',
+                        condition: '=',
+                        value: 'INTIME'
+                      }
+                    },
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        scale: 'medium',
+                        cls: 'fill-action',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setTimeCost(form, grid)
+                              }
+                            })
+                          } else {
+                            form.setTimeCost(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.setTimeCost(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Виключення робочого часу'),
+              hidden: true,
+              itemId: 'payElTimeCostOut',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElTimeCostOut',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElTimeCost',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'dictTimeCostID.code',
+                        description: UB.i18n('Код')
+                      },
+                      {
+                        name: 'dictTimeCostID.nameSmall',
+                        description: UB.i18n('Назва')
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    whereList: {
+                      entryType: {
+                        expression: '[entryType]',
+                        condition: '=',
+                        value: 'INTIME'
+                      }
+                    },
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        scale: 'medium',
+                        cls: 'fill-action',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setTimeCost(form, grid)
+                              }
+                            })
+                          } else {
+                            form.setTimeCost(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.setTimeCost(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Не нараховувати на час'),
+              hidden: true,
+              itemId: 'payElTimeCostNot',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElTimeCostNot',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElTimeCost',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'dictTimeCostID.code',
+                        description: UB.i18n('Код')
+                      },
+                      {
+                        name: 'dictTimeCostID.nameSmall',
+                        description: UB.i18n('Назва')
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    whereList: {
+                      entryType: {
+                        expression: '[entryType]',
+                        condition: '=',
+                        value: 'NOTTIME'
+                      }
+                    },
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        scale: 'medium',
+                        cls: 'fill-action',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setTimeCost(form, grid)
+                              }
+                            })
+                          } else {
+                            form.setTimeCost(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.setTimeCost(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Виключення робочого часу при нормуванні премії'),
+              hidden: true,
+              itemId: 'payElTimeExcludePremium',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElTimeExcludePremium',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElTimeCost',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'dictTimeCostID.code',
+                        description: UB.i18n('Код')
+                      },
+                      {
+                        name: 'dictTimeCostID.nameSmall',
+                        description: UB.i18n('Назва')
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    whereList: {
+                      entryType: {
+                        expression: '[entryType]',
+                        condition: '=',
+                        value: 'EXCLUDE_TIME_PREMIUM'
+                      }
+                    },
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        scale: 'medium',
+                        cls: 'fill-action',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setTimeCost(form, grid)
+                              }
+                            })
+                          } else {
+                            form.setTimeCost(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.setTimeCost(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Стаж'),
+              hidden: true,
+              itemId: 'payElExperience',
+              layout: { type: 'border' },
+              items: [
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  region: 'north',
+                  items: [
+                    { attributeName: 'dictExperienceID' }
+                  ]
+                },
+                {
+                  name: 'payElExperience',
+                  xtype: 'ubdetailgrid',
+                  region: 'center',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: [],
+                  flex: 1,
+                  layout: 'fit',
+                  entityConfig: {
+                    entity: 'hr_payElExperience',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'years'
+                      },
+                      {
+                        name: 'months'
+                      },
+                      {
+                        name: 'rate',
+                        format: '0.00'
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    orderList: {
+                      years: {
+                        expression: '[years]',
+                        order: 'asc'
+                      },
+                      months: {
+                        expression: '[months]',
+                        order: 'asc'
+                      },
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID']
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Додаткові утримання при виплаті'),
+              hidden: true,
+              itemId: 'payElAddRetention',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElAddRetention',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElEntry',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'payElBaseID.code',
+                        description: UB.i18n('Код')
+                      },
+                      {
+                        name: 'payElBaseID.name',
+                        description: UB.i18n('Назва')
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    whereList: {
+                      entryType: {
+                        expression: '[entryType]',
+                        condition: '=',
+                        value: 'ADDRETENTION'
+                      },
+                      mi_deleteDate: {
+                        condition: 'moreEqual',
+                        expression: '[payElBaseID.mi_deleteDate]',
+                        value: '#maxdate'
+                      }
+                    },
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        cls: 'fill-action',
+                        scale: 'medium',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setPayElEntry(form, grid)
+                              }
+                            })
+                          } else {
+                            form.setPayElEntry(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.setPayElEntry(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Нарахування резерву'),
+              hidden: true,
+              itemId: 'payElAccrualReserve',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElAccrualReserve',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElEntry',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'payElBaseID.code',
+                        description: UB.i18n('Код')
+                      },
+                      {
+                        name: 'payElBaseID.name',
+                        description: UB.i18n('Назва')
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    whereList: {
+                      entryType: {
+                        expression: '[entryType]',
+                        condition: '=',
+                        value: 'ACCRUALRESERVE'
+                      },
+                      mi_deleteDate: {
+                        condition: 'moreEqual',
+                        expression: '[payElBaseID.mi_deleteDate]',
+                        value: '#maxdate'
+                      }
+                    },
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        cls: 'fill-action',
+                        scale: 'medium',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setPayElEntry(form, grid)
+                              }
+                            })
+                          } else {
+                            form.setPayElEntry(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.setPayElEntry(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Використання резерву'),
+              hidden: true,
+              itemId: 'payElUseReserve',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                {
+                  name: 'payElUseReserve',
+                  xtype: 'ubdetailgrid',
+                  autoScroll: true,
+                  pageSize: 10000,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_payElEntry',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'payElBaseID.code',
+                        description: UB.i18n('Код')
+                      },
+                      {
+                        name: 'payElBaseID.name',
+                        description: UB.i18n('Назва')
+                      },
+                      {
+                        name: 'dateFromEmpty'
+                      },
+                      {
+                        name: 'dateToEmpty'
+                      }
+                    ],
+                    whereList: {
+                      entryType: {
+                        expression: '[entryType]',
+                        condition: '=',
+                        value: 'USERESERVE'
+                      },
+                      mi_deleteDate: {
+                        condition: 'moreEqual',
+                        expression: '[payElBaseID.mi_deleteDate]',
+                        value: '#maxdate'
+                      }
+                    },
+                    orderList: {
+                      dateTo: {
+                        expression: '[dateTo]',
+                        order: 'desc'
+                      }
+                    }
+                  },
+                  masterFields: ['ID'],
+                  detailFields: ['payElID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        cls: 'fill-action',
+                        scale: 'medium',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setPayElEntry(form, grid)
+                              }
+                            })
+                          } else {
+                            form.setPayElEntry(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.setPayElEntry(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Джерела фінансування для розподілу'),
+              hidden: true,
+              itemId: 'payElFundSource',
+              layout: { type: 'border' },
+              items: [
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  region: 'north',
+                  items: [
+                    {
+                      attributeName: 'excludeFundSource'
+                    },
+                    {
+                      name: 'payElFundSource',
+                      xtype: 'ubdetailgrid',
+                      autoScroll: true,
+                      pageSize: 10000,
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                      region: 'center',
+                      flex: 1,
+                      entityConfig: {
+                        entity: 'hr_payElFundSource',
+                        method: 'select',
+                        fieldList: [
+                          {
+                            name: 'dictFundSourceID.name',
+                            description: UB.i18n('Назва')
+                          },
+                          {
+                            name: 'dateFromEmpty'
+                          },
+                          {
+                            name: 'dateToEmpty'
+                          }
+                        ],
+                        orderList: {
+                          dateTo: {
+                            expression: '[dateTo]',
+                            order: 'desc'
+                          }
+                        }
+                      },
+                      masterFields: ['ID'],
+                      detailFields: ['payElID'],
+                      cmpInitConfig: {
+                        customActions: [
+                          {
+                            text: UB.i18n('Редагувати'),
+                            iconCls: 'u-icon-edit-alt',
+                            scale: 'medium',
+                            cls: 'fill-action',
+                            handler: function (btn) {
+                              const grid = btn.up('grid')
+                              const form = grid.up('form')
+                              if (form.isNewInstance) {
+                                form.saveForm().then(result => {
+                                  if (result !== -1) {
+                                    form.setFundSource(form, grid)
+                                  }
+                                })
+                              } else {
+                                form.setFundSource(form, grid)
+                              }
+                            }
+                          }
+                        ],
+                        onItemDblClick: function (grid) {
+                          const form = grid.up('form')
+                          form.setFundSource(form, grid.ownerCt)
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Загальні налаштування'),
+              hidden: true,
+              itemId: 'additionalParams',
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: {
+                labelWidth: 200
+              },
+              items: [
+                {
+                  attributeName: 'roundUpTo',
+                  disableContextMenu: false,
+                  hideEntityItemInContext: true
+                },
+                {
+                  attributeName: 'roundAvgUpTo',
+                  disableContextMenu: false,
+                  hideEntityItemInContext: true
+                },
+                {
+                  attributeName: 'roundDays',
+                  minValue: 0,
+                  maxValue: 2
+                },
+                {
+                  attributeName: 'roundAverage',
+                  disableContextMenu: false,
+                  hideEntityItemInContext: true
+                },
+                { attributeName: 'isAutoCalc',
+                  defaultValue: true
+                },
+                { attributeName: 'isRecalculate',
+                  defaultValue: true
+                },
+                {
+                  attributeName: 'dictFundSourceID',
+                  fieldList: ['ID', 'name']
+                },
+                {
+                  attributeName: 'dictProgClassID',
+                  fieldList: ['ID', 'description']
+                },
+                {
+                  attributeName: 'dictProjectID',
+                  fieldList: ['ID', 'description']
+                },
+                {
+                  attributeName: 'entryOperationID'
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Коментар'),
+              hidden: true,
+              itemId: 'commentArea',
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: {
+                labelWidth: 200
+              },
+              items: [
+                { attributeName: 'comment', xtype: 'textarea', height: 90 },
+                { attributeName: 'genName' },
+                { attributeName: 'printName' },
+                { attributeName: 'orName' },
+                { attributeName: 'shortPrintName' },
+                { attributeName: 'notCloseOnChangeEmpPos' }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

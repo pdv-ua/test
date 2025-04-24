@@ -1,0 +1,480 @@
+/* global AC UB moment Ext $App */
+exports.formDef = {
+  requiredFields: ['orderID', 'empOrderType', 'organizationID', 'isGroup', 'dateFrom', 'dateTo', 'isPaymentProp', 'isSaveHoursWork'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  defaults: {
+    layout: 'fit'
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      attributeName: 'workScheduleID',
+      fieldLabel: UB.i18n('Шаблон нового графіку для зміни'),
+      tooltip: UB.i18n('Буде змінено графік робочогу часу для обраних працівників'),
+      displayField: 'caption',
+      fieldList: ['ID', 'caption'],
+      orderList: { name: { expression: 'caption', order: 'ASC' } }
+    },
+    {
+      attributeName: 'dateFrom'
+    },
+    {
+      attributeName: 'dateTo'
+    },
+    {
+      layout: {
+        type: 'hbox',
+        align: 'stretch'
+      },
+      items: [
+        {
+          attributeName: 'isPaymentProp',
+          labelWidth: 250
+        },
+        {
+          attributeName: 'isSaveHoursWork',
+          labelWidth: 350,
+          fieldLabel: UB.i18n('Зміни не враховувати у табелі (збереження денної норми робочого часу)')
+        }
+      ]
+    },
+    {
+      xtype: 'fieldset',
+      title: '',
+      margin: '0 10 0 10',
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          xtype: 'label',
+          name: 'warningLabel',
+          text: 'Увага! Цей наказ використовується для встановлення неповного робочого дня працівникам або скороченого робочого часу за існуючим графіком для певних категорій працівників: неповнолітнім, годувальницям, інше. Для зміни графіку роботи працівнику на інший потрібно використовувати наказ "Зміна графіку роботи".',
+          cls: 'x-form-item-label field-label-red',
+          margin: '10 10 10 10'
+        }
+      ]
+    },
+    {
+      flex: 1,
+      name: 'detailpanel',
+      xtype: 'tabpanel',
+      items: [
+        {
+          title: UB.i18n('Працівники'),
+          layout: 'fit',
+          items: [
+            {
+              name: 'empOrderEmployeeDet',
+              xtype: 'ubdetailgrid',
+              paraGrid: true,
+              autoScroll: true,
+              rowEditing: true,
+              sortableColumns: false,
+              disableSearchBar: false,
+              hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+              enableColumnHide: false,
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_empOrderEmployeeDet',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'employeePositionID.description',
+                    description: UB.i18n('Працівник'),
+                    config: { width: 400 },
+                    simpleFilter: true,
+                    editor: {
+                      fieldList: ['ID', 'description', 'posName', 'depName', 'workScheduleID', 'workScheduleID.name', 'employeeID', 'employeeNumberID'],
+                      gridFieldList: ['description'],
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                    }
+                  },
+                  {
+                    name: 'depName',
+                    description: UB.i18n('Підрозділ'),
+                    simpleFilter: true,
+                    config: { width: 300 },
+                    editor: { readOnly: true }
+                  },
+                  {
+                    name: 'workScheduleName',
+                    simpleFilter: true,
+                    description: UB.i18n('Графік робочого часу (поточний)'),
+                    editor: { readOnly: true }
+                  },
+                  {
+                    name: 'itemIdx',
+                    description: '№',
+                    visibility: false
+                  },
+                  {
+                    name: 'empOrderType',
+                    visibility: false
+                  }
+                ]
+              },
+              masterFields: ['ID', 'orderID'],
+              detailFields: ['paraID', 'orderID'],
+              cmpInitConfig: {
+                customInit: function () {
+                  const grid = this
+                  const newOnDel = function () {
+                    const me = grid.up('form')
+                    const onDel = grid.onDel
+                    if (me.record.get('orderState') === 'POSTED') {
+                      AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Неможливо видалити запис з проведеного наказу'))
+                      return
+                    }
+                    onDel.call(grid)
+                  }
+                  AC.gridUtils.replaceListener(grid, 'del', grid.onDel, newOnDel)
+                }
+              },
+              onBeforeEdit: function (rowEditor, context) {
+                const editor = rowEditor.editor
+                const me = editor.up('form')
+                if (me.orderState !== 'PROJECT') {
+                  return false
+                }
+                const reco = context.record
+                reco.set('empOrderType', 'CWSWORKHOUR')
+                let employeePositionCtrl = editor.query(`[name=employeePositionID.description]`)[0]
+                me.orderForm.filterEmployeePosition(me, {
+                  ctrlToFilter: employeePositionCtrl,
+                  onDate: appAC.globalApplicationDate()
+                })
+                employeePositionCtrl.on('change', ctrl => {
+                  editor.form.findField('depName').setValue(ctrl.getFieldValue('depName'))
+                  editor.form.findField('workScheduleName').setValue(ctrl.getFieldValue('workScheduleID.name'))
+                })
+              },
+              customActions: [
+                {
+                  iconCls: 'fas fa-angle-double-down',
+                  cls: 'fill-action',
+                  text: UB.i18n('Вибрати працівників'),
+                  actionId: 'fillData',
+                  name: 'fillData',
+                  handler: async function (btn) {
+                    const me = btn.up('form')
+                    const gridEmp = me.down('[name=empOrderEmployeeDet]')
+                    const store = gridEmp.getStore()
+                    me.saveForm().then(result => {
+                      if (result !== -1) {
+                        HR.orderManager.empOrderEmployeeSearch({
+                          selected: store.data.items.map(o => o.get('employeePositionID')),
+                          orgID: me.record.get('organizationID'),
+                          onDate: AC.dateService.truncTimeToUtcNull(me.orderForm.record.get('orderDate') || me.orderForm.record.get('entryDate')) || appAC.globalApplicationDate,
+                          onSelectData: function (data, isDelete) {
+                            me.loadEmployeers(data, isDelete)
+                          }
+                        })
+                      }
+                    })
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          layout: 'fit',
+          title: UB.i18n('Режим роботи'),
+          items: [
+            {
+              name: 'empOrderCwsWorkHourDayDetGrid',
+              xtype: 'ubdetailgrid',
+              rowEditing: true,
+              paraGrid: true,
+              autoScroll: true,
+              hideActions: ['addNewByCurrent'],
+              flex: 1,
+              masterFields: ['ID', 'orderID'],
+              detailFields: ['paraID', 'orderID'],
+              entityConfig: {
+                entity: 'hr_empOrderCwsWorkHourDayDet',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'numDay',
+                    visibility: true,
+                    editor: {
+                      readOnly: false
+                    }
+                  },
+                  {
+                    name: 'dictTimeCostID.name',
+                    description: UB.i18n('Витрата робочого часу'),
+                    visibility: true,
+                    editor: {
+                      selectOnFocus: true
+                    }
+                  },
+                  {
+                    name: 'hoursWork',
+                    visibility: true,
+                    description: UB.i18n('Годин роботи'),
+                    editor: {
+                      readOnly: false,
+                      decimalPrecision: 2
+                    }
+                  },
+                  {
+                    name: 'hoursWorkNew',
+                    visibility: true,
+                    editor: {
+                      decimalPrecision: 2
+                    }
+                  },
+                  {
+                    name: 'timeFrom',
+                    visibility: true,
+                    editor: {
+                      xtype: 'timefield',
+                      displayFormat: 'H:i',
+                      format: 'H:i',
+                      altFormats: 'H:i',
+                      increment: 1,
+                      regex: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+                      invalidText: UB.i18n('Невірний формат'),
+                      allowBlank: true,
+                      maxLength: 5
+                    }
+                  },
+                  {
+                    name: 'timeTo',
+                    visibility: true,
+                    editor: {
+                      xtype: 'timefield',
+                      displayFormat: 'H:i',
+                      format: 'H:i',
+                      altFormats: 'H:i',
+                      increment: 1,
+                      regex: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+                      invalidText: UB.i18n('Невірний формат'),
+                      allowBlank: true,
+                      maxLength: 5
+                    }
+                  },
+                  {
+                    name: 'recreationFrom',
+                    visibility: true,
+                    editor: {
+                      xtype: 'timefield',
+                      displayFormat: 'H:i',
+                      format: 'H:i',
+                      altFormats: 'H:i',
+                      increment: 1,
+                      regex: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+                      invalidText: UB.i18n('Невірний формат'),
+                      allowBlank: true,
+                      maxLength: 5
+                    }
+                  },
+                  {
+                    name: 'recreationTo',
+                    visibility: true,
+                    editor: {
+                      xtype: 'timefield',
+                      displayFormat: 'H:i',
+                      format: 'H:i',
+                      altFormats: 'H:i',
+                      increment: 1,
+                      regex: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+                      invalidText: UB.i18n('Невірний формат'),
+                      allowBlank: true,
+                      maxLength: 5
+                    }
+                  },
+                  {
+                    name: 'hoursWorkNight',
+                    visibility: false
+                  },
+                  {
+                    name: 'hoursWorkEvening',
+                    visibility: false
+                  }
+                ],
+                orderList: { orderBy: { expression: 'numDay' } }
+              },
+              onBeforeEdit: function (rowEditor, context) {
+                const editor = rowEditor.editor
+                const me = editor.up('form')
+                if (me.orderState !== 'PROJECT') {
+                  return false
+                }
+
+                let dictTimeCtrl = editor.query(`[name=dictTimeCostID.name]`)[0]
+                dictTimeCtrl.on('change', ctrl => {
+                })
+
+                let reco = context.record
+                reco.set('hoursWorkNight', 0)
+                reco.set('hoursWorkEvening', 0)
+                if (!reco.get('hoursWork')) {
+                  reco.set('hoursWork', 8)
+                }
+
+                if (!reco.get('empOrderType')) {
+                  reco.set('empOrderType', me.record.get('empOrderType'))
+                }
+              },
+              onValidateEdit: function (editor, context) {
+                const timeTo = editor.editor.form.findField('timeTo').getValue()
+                const timeFrom = editor.editor.form.findField('timeFrom').getValue()
+                const recreationFrom = editor.editor.form.findField('recreationFrom').getValue()
+                const recreationTo = editor.editor.form.findField('recreationTo').getValue()
+                if (!recreationFrom && recreationTo) {
+                  AC.viewUtils.showToast('Не заповнено поле "Перерва з"')
+                  return false
+                }
+                if (recreationFrom && !recreationTo) {
+                  AC.viewUtils.showToast('Не заповнено поле "Перерва по"')
+                  return false
+                }
+                if (timeFrom < timeTo) {
+                  if (recreationTo < recreationFrom || recreationFrom < timeFrom || timeTo < recreationTo) {
+                    AC.viewUtils.showToast('Не вірно заповнено значення')
+                  }
+                }
+              },
+              listeners: {
+                changeData: function (grid, method) {
+                  const me = grid.up('form')
+                  const store = grid.getStore()
+                  const allRecords = store.snapshot || store.data
+                  let hoursWork = 0
+                  let newHoursWork = 0
+                  allRecords.each(function (record) {
+                    hoursWork += record.get('hoursWork') || 0
+                    newHoursWork += record.get('hoursWorkNew') || 0
+                  })
+                  const isEqual = Math.abs(hoursWork - newHoursWork) < 0.001
+                  me.getField('isSaveHoursWork').setValue(isEqual)
+                  me.getField('isSaveHoursWork').setDisabled(isEqual)
+                },
+                render: grid => {
+                  grid.menu.add([
+                    {
+                      text: UB.i18n('Розрахувати кількість годин'),
+                      iconCls: 'el-icon-time',
+                      ubID: 'ubdetailgrid',
+                      handler: function () {
+                        const record = AC.gridUtils.getCurrentRecord(grid)
+                        let timeFrom = typeof record.get('timeFrom') === 'string' ? Ext.Date.parse(record.get('timeFrom'), 'H:i') : record.get('timeFrom')
+                        timeFrom = timeFrom ? (timeFrom.getHours() * 60) + timeFrom.getMinutes() : 0
+                        let timeTo = typeof record.get('timeTo') === 'string' ? Ext.Date.parse(record.get('timeTo'), 'H:i') : record.get('timeTo')
+                        if (timeTo) {
+                          timeTo = (timeTo.getHours() * 60) + timeTo.getMinutes()
+                          if (timeTo === 0) {
+                            timeTo = 24 * 60
+                          }
+                        } else {
+                          timeTo = 0
+                        }
+                        let recreationFrom = typeof record.get('recreationFrom') === 'string' ? Ext.Date.parse(record.get('recreationFrom'), 'H:i') : record.get('recreationFrom')
+                        recreationFrom = recreationFrom ? (recreationFrom.getHours() * 60) + recreationFrom.getMinutes() : 0
+                        let recreationTo = typeof record.get('recreationTo') === 'string' ? Ext.Date.parse(record.get('recreationTo'), 'H:i') : record.get('recreationTo')
+                        if (recreationTo) {
+                          recreationTo = (recreationTo.getHours() * 60) + recreationTo.getMinutes()
+                          if (recreationTo === 0) {
+                            recreationTo = 24 * 60
+                          }
+                        } else {
+                          recreationTo = 0
+                        }
+                        const different = ((timeTo - timeFrom) - (recreationTo - recreationFrom))
+                        const hours = Math.floor(different / 60)
+                        const minutes = Math.round(different - (hours * 60))
+                        const result = Number(hours + '.' + minutes) || 0
+                        if (record.get('hoursWorkNew') !== result) {
+                          if (record.get('ID')) {
+                            $App.connection.update({
+                              entity: 'hr_empOrderCwsWorkHourDayDet',
+                              execParams: {
+                                ID: record.get('ID'),
+                                hoursWorkNew: result,
+                                mi_modifyDate: record.get('mi_modifyDate')
+                              }
+                            }).then(() => {
+                              grid.onRefresh()
+                            })
+                          }
+                        }
+                      }
+                    }
+                  ])
+                }
+              },
+              cmpInitConfig: {
+                customInit: function () {
+                  // let grid = this
+                  // let _doOnEdit = grid.doOnEdit
+                  // AC.gridUtils.tuneGridColumns(grid, {})
+                  // grid.doOnEdit = function () {
+                  // grid.isEditMode = true
+                  // _doOnEdit.call(grid)
+                  // }
+                  AC.gridUtils.tuneGridColumns(this, {
+                    'hoursWork': {
+                      renderer: function (value) {
+                        return !value ? '' : value.toFixed(2)
+                      }
+                    },
+                    'hoursWorkNew': {
+                      renderer: function (value) {
+                        return !value ? '' : value.toFixed(2)
+                      }
+                    },
+                    'timeTo': {
+                      renderer: function (value) {
+                        if (!value || value.length === 5) {
+                          return value
+                        }
+                        let date = moment(value)
+                        return date.isValid() ? date.format('HH:mm') : value
+                      }
+                    },
+                    'recreationFrom': {
+                      renderer: function (value) {
+                        if (!value || value.length === 5) {
+                          return value
+                        }
+                        let date = moment(value)
+                        return date.isValid() ? date.format('HH:mm') : value
+                      }
+                    },
+                    'recreationTo': {
+                      renderer: function (value) {
+                        if (!value || value.length === 5) {
+                          return value
+                        }
+                        let date = moment(value)
+                        return date.isValid() ? date.format('HH:mm') : value
+                      }
+                    },
+                    'timeFrom': {
+                      renderer: function (value) {
+                        if (!value || value.length === 5) {
+                          return value
+                        }
+                        let date = moment(value)
+                        return date.isValid() ? date.format('HH:mm') : value
+                      }
+                    }
+                  })
+                }
+              }
+            }]
+        }]
+    }
+  ]
+}

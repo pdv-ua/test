@@ -1,0 +1,56 @@
+exports.formDef = {
+  requiredFields: ['orgID', 'listParamID', 'valuesID'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      // attributeName: 'valuesID',
+      xtype: 'ubcombobox',
+      fieldLabel: UB.i18n('Вид оплати'),
+      displayField: 'name',
+      valueField: 'ID',
+      allowBlank: false,
+      itemId: 'payElID',
+      ubRequest: {
+        entity: 'hr_payEl',
+        method: UB.core.UBCommand.methodName.SELECT,
+        fieldList: ['ID', 'name', 'methodID.methodGroupID.groupType.name', 'methodID.methodGroupID.name']
+      },
+      listeners: {
+        change: function (fld) {
+          const form = fld.up('form')
+          const val = fld.getValue()
+          const rec = val ? AC.gridUtils.getCurrentRecord(fld).data : {}
+
+          form.record.set('valuesID', val)
+          form.queryById('groupType').setValue(rec['methodID.methodGroupID.groupType.name'])
+          form.queryById('groupName').setValue(rec['methodID.methodGroupID.name'])
+        }
+      },
+      width: 500
+    },
+    {
+      xtype: 'textfield',
+      fieldLabel: UB.i18n('Тип'),
+      itemId: 'groupType',
+      readOnly: true,
+      width: 500
+    },
+    {
+      xtype: 'textfield',
+      fieldLabel: UB.i18n('Група'),
+      itemId: 'groupName',
+      readOnly: true,
+      width: 500
+    },
+    {
+      attributeName: 'orderN',
+      allowBlank: false
+    },
+    {
+      attributeName: 'dopName'
+    }
+  ]
+}

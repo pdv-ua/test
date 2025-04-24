@@ -1,0 +1,98 @@
+{
+  "caption": "Графік відпусток. Виконуючий обов'язки",
+  "description": "Графік відпусток. Виконуючий обов'язки",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "itemIdx",
+      "dataType": "Int",
+      "caption": "№",
+      "description": "№ за порядком",
+      "documentation": "№ за порядком"
+    },
+    {
+      "name": "vacationScheduleID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_vacationSchedule",
+      "caption": "Графік відпусток",
+      "description": "Графік відпусток",
+      "documentation": "Графік відпусток",
+      "allowNull": false
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "З дати",
+      "description": "З дати",
+      "documentation": "По дату"
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "По дату",
+      "description": "По дату",
+      "documentation": "По дату"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Інформація",
+      "documentation": "Інформація",
+      "description": "Інформація",
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["employeePositionID.description", "dateFrom", "dateTo"],
+        "compositeSeparator": ["", " з ", " по "]
+      }
+    },
+    {
+      "name": "note",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис"
+    },
+    {
+      "name": "condition",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Причина заміщення",
+      "description": "Причина заміщення",
+      "documentation": "Причина заміщення"
+    },
+    {
+      "name": "employeeFullName",
+      "dataType": "String",
+      "size": 120,
+      "caption": "ПІБ",
+      "documentation": "ПІБ",
+      "description": "ПІБ",
+      "allowNull": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select CONCAT(coalesce(e.lastName, ''), ' ', coalesce(e.firstName, ''), ' ', coalesce(e.middleName, '')) from hr_employee e where e.ID = {self}.employeePositionID)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

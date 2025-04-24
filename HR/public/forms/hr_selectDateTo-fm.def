@@ -1,0 +1,78 @@
+/* global Ext $App UB appAC */
+
+exports.formDef = 'HR.selectDateTo'
+
+Ext.define('HR.selectDateTo', {
+  extend: 'Ext.form.Panel',
+  width: 400,
+  height: 100,
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        defaults: {
+          labelWidth: 140
+        },
+        items: [
+          {
+            xtype: 'ubdatefield',
+            name: 'dateTo',
+            fieldLabel: UB.i18n('Дата по')
+          }
+        ]
+      },
+      {
+        layout: { type: 'hbox', pack: 'center' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Зберегти'),
+            width: 110,
+            height: 30,
+            margin: '20 10 10 0',
+            handler: function (btn) {
+              if (me.onSelect) {
+                if (me.attr.dateTo.getValue()) {
+                  if (me.attr.dateTo.getValue() >= me.defaultValues.dateFrom) {
+                    me.onSelect(me.attr.dateTo.getValue())
+                    me.up('window').close()
+                  } else {
+                    $App.dialogInfo(UB.i18n('Неможливо виконати дію! Дата закінчення не може бути меншою за дату початку.'))
+                  }
+                } else {
+                  $App.dialogInfo(UB.i18n('Неможливо виконати дію! Не заповнено поле "Дата по".'))
+                }
+              }
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 110,
+            height: 30,
+            margin: '20 10 10 0',
+            handler: function (btn) {
+              me.up('window').close()
+            }
+          }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        dateTo: me.down('[name=dateTo]')
+      }
+      me.attr.dateTo.setValue(appAC.globalApplicationDate())
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

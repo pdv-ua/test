@@ -1,0 +1,32 @@
+exports.formDef = {
+  requiredFields: ['sicknessMeetingID', 'sicknessMeetingID.orderState'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          attributeName: 'empOrderSicknessID',
+          fieldList: ['ID', 'description'],
+          gridFieldList: ['description']
+        },
+        {
+          attributeName: 'decitionStatus',
+          fieldList: ['code', 'name'],
+          gridFieldList: ['code', 'name'],
+          whereList: {
+            decisionStatuses: {
+              expression: '[code]',
+              condition: 'in',
+              values: { value: ['FORCALC', 'NOPAYMENT'] }
+            }
+          }
+        },
+        { attributeName: 'refusal' }
+      ]
+    }
+  ]
+}

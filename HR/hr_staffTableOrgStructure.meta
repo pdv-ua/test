@@ -1,0 +1,214 @@
+{
+  "caption": "Планування Структури",
+  "description": "Планування Структури",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер",
+      "description": "Номер",
+      "documentation": "Номер",
+      "allowNull": false
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "На дату",
+      "description": "На дату",
+      "documentation": "На дату",
+      "allowNull": false
+    },
+    {
+      "name": "entryDate",
+      "dataType": "Date",
+      "caption": "Дата вступу в дію",
+      "description": "Дата вступу в дію",
+      "documentation": "Дата вступу в дію",
+      "allowNull": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultValue": "PROJECT",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва"
+    },
+    {
+      "name": "textOrder",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис"
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Коментар",
+      "description": "Коментар",
+      "documentation": "Коментар"
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "orgName",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Організація",
+      "description": "Організація",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 org.name from  hr_organization org where org.mi_data_id = {self}.orgID and org.state = 'ACTIVE' and org.mi_dateFrom <= {self}.orderDate and org.mi_dateTo >= {self}.orderDate and org.mi_deleteDate >= '9999-12-31' order by org.mi_dateFrom desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select org.name from  hr_organization org where org.mi_data_id = {self}.orgID and org.state = 'ACTIVE' and org.mi_dateFrom <= {self}.orderDate and org.mi_dateTo >= {self}.orderDate and org.mi_deleteDate >= '9999-12-31' order by org.mi_dateFrom desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "entryOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ вступу в дію",
+      "description": "Наказ вступу в дію",
+      "documentation": "Наказ вступу в дію"
+    },
+    {
+      "name": "withChild",
+      "dataType": "Boolean",
+      "caption": "Із підлеглими",
+      "documentation": "Із підлеглими",
+      "description": "Із підлеглими",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "docType",
+      "dataType": "Enum",
+      "enumGroup": "HR_PLAN_STRU_DOC_TYPE",
+      "caption": "Вид документа",
+      "description": "Вид документа",
+      "documentation": "Вид документа",
+      "defaultValue": "CHG",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "changeListNumber",
+      "dataType": "Int",
+      "caption": "Номер Переліку змін",
+      "description": "Номер Переліку змін",
+      "documentation": "Номер Переліку змін",
+      "allowNull": true
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Опис",
+      "description": "Опис наказу",
+      "documentation": "Опис наказу",
+      "customSettings": {
+        "compositeFields": ["docType", "changeListNumber", "name", "orderNumber"],
+        "compositeSeparator": ["", " № ", " ", " "]
+      }
+    },
+    {
+      "name": "docText",
+      "dataType": "Text",
+      "caption": "Збережений текст",
+      "documentation": "Збережений текст",
+      "description": "Збережений текст",
+      "allowNull": true
+    },
+    {
+      "name": "document",
+      "dataType": "Document",
+      "caption": "PDF образ",
+      "documentation": "PDF образ",
+      "description": "PDF образ",
+      "allowNull": true
+    },
+    {
+      "name": "reportSettings",
+      "dataType": "Text",
+      "caption": "Налаштування звіту",
+      "documentation": "Налаштування звіту",
+      "description": "Налаштування звіту",
+      "allowNull": true
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false,
+      "defaultValue": "STAFFTABLEORGSTRUCTURE"
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація"
+    },
+    {
+      "name": "printLead",
+      "dataType": "Boolean",
+      "caption": "Виводити записи по керівництву (друк.)",
+      "description": "Виводити записи по керівництву (друк.)",
+      "documentation": "Виводити записи по керівництву (друк.)",
+      "defaultValue": "0"
+    },
+    {
+      "name": "staffTableOrgStructureID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_staffTableOrgStructure",
+      "caption": "Структура",
+      "description": "Структура",
+      "documentation": "Структура"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "rls": {
+      "func": "RLS.byOrg"
+    }
+  }
+}

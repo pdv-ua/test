@@ -1,0 +1,134 @@
+/* global AC $App UB _ HR */
+exports.formDef = {
+  parentConfig: {
+    hideActions: ['docActiondocument'],
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      listeners: {
+        tabchange: function (tabPanel, activeTab) {
+          const me = tabPanel.up('form')
+          if (activeTab.ubID === 'report') {
+            if (!me.isPdfCreated) {
+              if (!me.record.get('docText')) {
+                HR.reportTab.editHtml(me)
+              } else {
+                HR.reportTab.setReportMode(me, 'view')
+              }
+            }
+            me.isPdfCreated = true
+          }
+        }
+      },
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: {
+            type: 'vbox'
+          },
+          items: [
+            {
+              xtype: 'panel',
+              layout: { type: 'vbox', align: 'stretch' },
+              width: '100%',
+              items: [
+                { attributeName: 'name' },
+                { attributeName: 'code' },
+                {
+                  attributeName: 'organizationID',
+                  fieldList: ['ID', 'name']
+                },
+                { attributeName: 'description' },
+                {
+                  xtype: 'panel',
+                  name: 'textInfoPanel',
+                  layout: { type: 'vbox', align: 'stretch' },
+                  title: 'Пояснення до тексту',
+                  collapsible: true,
+                  collapsed: true,
+                  cls: 'panel-bordered',
+                  header: {
+                    style: 'background-color: #e7e7e7;'
+                  },
+                  margin: '0 15 10 15',
+                  items: [
+                    {
+                      xtype: 'label',
+                      name: 'textInfoLabel',
+                      html: 'Складаємо довільний текст довідки, використовуючи наступні «плейсхолдери» (поля, які будуть заповнюватись автоматично з бази):<br>' +
+                          'Прізвище {{lastName}}<br>' +
+                          'Ім’я {{firstName}}<br>' +
+                          'По батькові {{middleName}}<br>' +
+                          'Повне прізвище та ініціали {{shortFIO}}<br>' +
+                          'Повне ПІБ {{fullFIO}}<br>' +
+                          'Родовий (кого?) {{genName}}<br>' +
+                          'Давальний (кому?) {{datName}}<br>' +
+                          'Знахідний (про кого?) {{accusativeName}}<br>' +
+                          'Орудний (ким?) {{insName}}<br>' +
+                          'Місцевий (на кому?) {{locName}}<br>' +
+                          'Кличний {{vocName}}<br>' +
+                          'Повне ПІБ (англ.) {{fullNameEng}}<br>' +
+                          'Дата формування довідки {{onDate}}<br>' +
+                          'Серія паспорту {{docSeries}}<br>' +
+                          'Номер паспорту {{docNumber}}<br>' +
+                          'нерозривний пробіл &<br>' +
+                          'Увага! Зображення мають бути завантажені у форматі .jpg та лише через меню "Вставити". Інакше їх відображення може бути не корректним.',
+                      cls: 'field-label-blue',
+                      padding: '5 5 5 5'
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Текст довідки'),
+          ubID: 'docTextPanel',
+          layout: {
+            type: 'border'
+          },
+          items: [
+            {
+              region: 'center',
+              flex: 4,
+              xtype: 'container',
+              layout: 'fit',
+              items: [
+                {
+                  xtype: 'ubreporteditor',
+                  enableTemplateEditor: false,
+                  attributeName: 'docText',
+                  labelWidth: 0,
+                  fieldLabel: '',
+                  isMainEditor: true,
+                  height: '100%',
+                  flex: 1,
+                  style: {
+                    background: 'white'
+                  },
+                  tinyMCEConfig: {
+                    object_resizing: false,
+                    entity_encoding: 'named',
+                    entities: '160,nbsp',
+                    toolbar1: 'undo redo | bold italic underline | alignleft aligncenter alignright alignjustify | formatselect fontsizeselect | pageOrientation | Colontitle | borderL borderR borderT borderB borderE borderA | forecolor | bullist numlist outdent indent | pagebreak nonbreaking'
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

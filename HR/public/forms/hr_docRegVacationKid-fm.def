@@ -1,0 +1,278 @@
+/* global appAC UB AC */
+exports.formDef = {
+  requiredFields: ['description', 'orderRegistryID', 'orderRegistryID.organizationID', 'orderRegistryID.periodID',
+    'orderRegistryID.periodID.dateFrom', 'flagsRec', 'flagsFix', 'orderState', 'empOrderID', 'empOrderID.description'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'calcVacation'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 130 },
+          flex: 1,
+          items: [
+            { attributeName: 'employeeID', hidden: true },
+            { attributeName: 'employeeNumberID', hidden: true },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'employeePositionID',
+                  fieldList: ['ID', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'dateFrom', 'dateTo',
+                    'employeeNumberID.dateFrom', 'employeeNumberID.dateTo', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+                  orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                  addWorkPlace: true,
+                  addDateTo: true,
+                  xtype: 'empPositionCombobox',
+                  readOnly: true,
+                  listeners: {
+                    beforeQuerySend: function (a, b) {
+                      Object.assign(this.store.ubRequest.whereList, {
+                        bySysDateFrom: {
+                          expression: '[dateFrom]',
+                          condition: '<=',
+                          values: { dateFrom: appAC.globalApplicationDate() }
+                        },
+                        bySysDateTo: {
+                          expression: '[dateTo]',
+                          condition: '>=',
+                          values: { dateTo: appAC.globalApplicationDate() }
+                        }
+                      })
+                    }
+                  },
+                  flex: 1
+                },
+                {
+                  attributeName: 'workPlaceOnly',
+                  labelWidth: 150,
+                  width: 170
+                }
+              ]
+            },
+            {
+              attributeName: 'payElID',
+              fieldList: ['ID', 'description', 'methodID.code', 'methodID.dayAccumCondition'],
+              orderList: { orderBy: { expression: 'codeSort' } }
+            },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  attributeName: 'orderNumber',
+                  readOnly: false,
+                  allowBlank: true,
+                  labelWidth: 130,
+                  width: 250
+                },
+                {
+                  attributeName: 'orderDate',
+                  labelWidth: 130,
+                  width: 250
+                }
+              ]
+            },
+            {
+              fieldLabel: UB.i18n('Документ-підстава'),
+              xtype: 'textfield',
+              name: 'orderDescription',
+              fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+              flex: 1,
+              hidden: true,
+              readOnly: true
+            }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 140 },
+          items: [
+            {
+              attributeName: 'dateFrom',
+              enableKeyEvents: true,
+              width: 260
+            },
+            {
+              attributeName: 'calendarDayCount',
+              minValue: 1,
+              maxValue: 2000,
+              width: 260
+            },
+            {
+              attributeName: 'dateTo',
+              enableKeyEvents: true,
+              width: 260
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          xtype: 'acGrid',
+          name: 'orderRegistryDt',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_docRegVacationKid_orderRegistryDt'),
+          title: UB.i18n('Розрахунок по місяцям'),
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          cellEditing: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: false,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          summary: { paySum: 'sum', days: 'sum', calendarDays: 'sum' },
+          summaryDataOnClient: true,
+          ignoreAttr: ['posName', 'depName'],
+          ignoreAttrNewByCurrent: ['posName', 'depName', 'employeeNumberID.description', 'employeeNumberID'],
+          includeContextMenuReadOnly: [],
+          hideActions: ['addNew', 'del', 'addNewByCurrent'],
+          onBeforeEdit: (control, context) => {
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null
+            }
+          },
+          edit: (control, context) => {
+            const me = context.grid.up('form')
+            me.onGridEdit(me, 'orderRegistryDt', context, control)
+            me.setIsDirty(true)
+          },
+          customPopupMenuItems: [
+            {
+              text: UB.i18n('Аналітика'),
+              iconCls: 'el-icon-notebook-2',
+              name: 'dimension',
+              cls: 'blue-action',
+              handler: (context) => {
+                const me = context.up('').grid.up('form')
+                let record = context.up('').record || AC.gridUtils.getCurrentRecord(me.attr.orderRegistryDt)
+                me.getDimension(me, record)
+              }
+            }
+          ],
+          fields: [
+            { name: 'ID' },
+            { name: 'mi_modifyDate' },
+            { name: 'orderRegistryID' },
+            { name: 'orderID' },
+            { name: 'orderNumber' },
+            { name: 'employeeNumberID' },
+            { name: 'payElID' },
+            { name: 'periodCalcID' },
+            { name: 'periodSalaryID' },
+            { name: 'periodCalc' },
+            { name: 'periodSalary' },
+            { name: 'mask' },
+            { name: 'maskAdd' },
+            { name: 'flagsFix' },
+            { name: 'flagsRec' },
+            { name: 'baseSum' },
+            { name: 'avgCalcType' },
+            { name: 'dateFromAvg' },
+            { name: 'dateToAvg' },
+            { name: 'koef' },
+            { name: 'days' },
+            { name: 'paySum' },
+            { name: 'accrualDt' },
+            {
+              name: 'periodSalaryID.name',
+              columnConfig: {
+                text: UB.i18n('Обліковий період'),
+                sortable: false,
+                flex: 1
+              }
+            },
+            {
+              name: 'dateFrom',
+              columnConfig: {
+                text: UB.i18n('З'),
+                flex: 1,
+                sortable: false,
+                dateFormat: 'd',
+                dataType: 'Date'
+              }
+            },
+            {
+              name: 'dateTo',
+              columnConfig: {
+                text: UB.i18n('По'),
+                flex: 1,
+                sortable: false,
+                dateFormat: 'd',
+                dataType: 'Date'
+              }
+            },
+
+            {
+              name: 'calendarDays',
+              columnConfig: {
+                text: UB.i18n('Календарних днів'),
+                sortable: false,
+                flex: 1,
+                dataType: 'Int'
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додатки'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'docAttachment',
+              entity: 'hr_orderAttachment',
+              detailFields: 'documentID',
+              masterFields: 'ID',
+              showOriginal: true,
+              minHeight: 55,
+              maxHeight: 140,
+              height: 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

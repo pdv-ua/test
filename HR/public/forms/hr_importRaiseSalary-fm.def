@@ -1,0 +1,331 @@
+/* global Ext $App appAC UB AC */
+exports.formDef = 'HR.importRaiseSalary'
+
+Ext.define('HR.importRaiseSalary', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_importRaiseSalary',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        ubID: 'mainToolbar',
+        enableOverflow: true,
+        items: [
+          {
+            xtype: 'combo',
+            labelWidth: 180,
+            editable: false,
+            name: 'encoding',
+            fieldLabel: UB.i18n('Тип кодування файлів'),
+            allowBlank: false,
+            width: 300,
+            store: Ext.create('Ext.data.Store', { fields: ['text', 'value'],
+              data: [
+                { text: 'win1251', value: 'win1251' },
+                { text: 'utf8', value: 'utf8' }
+              ]
+            })
+          }
+        ]
+      }
+    ]
+
+    me.items = [
+      {
+        xtype: 'tabpanel',
+        region: 'center',
+        items: [
+          {
+            xtype: 'acGrid',
+            name: 'raiseSalaryGrid',
+            title: UB.i18n('Підвищення доходу для індексації'),
+            flex: 1,
+            autoScroll: true,
+            region: 'center',
+            storeType: 'local',
+            disablePaging: false,
+            pagerConfig: {
+              pageSize: 100
+            },
+            notWriteChanges: true,
+            showToolBar: true,
+            getRowClass: () => {
+            },
+            hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+            customToolBarActions: [
+              {
+                scale: 'medium',
+                icon: $App.getImagePath('download.png'),
+                tooltip: UB.i18n('Завантажити csv'),
+                text: UB.i18n('Завантажити csv'),
+                handler: function (btn) {
+                  me.fileLoadDateIndex()
+                }
+              },
+              {
+                scale: 'medium',
+                tooltip: UB.i18n('Імпортувати'),
+                text: UB.i18n('Імпортувати'),
+                iconCls: 'fas fa-cloud-download-alt',
+                cls: 'fill-action',
+                handler: function (btn) {
+                  me.importDateIndex()
+                }
+              }
+            ],
+            fields: [
+              {
+                name: 'dateFrom',
+                columnConfig: { text: UB.i18n('Дата початку'), width: 320, sortable: false, dateFormat: 'd.m.Y' }
+              },
+              { name: 'employeeNumberID', columnConfig: { text: UB.i18n('Працівник'), width: 320, sortable: false } },
+              {
+                name: 'raiseSalary',
+                columnConfig: { text: UB.i18n('Дата'), width: 320, sortable: false, dateFormat: 'd.m.Y' }
+              }
+            ]
+          },
+          {
+            xtype: 'acGrid',
+            name: 'workPlaceGrid',
+            title: UB.i18n('Місце роботи'),
+            flex: 1,
+            autoScroll: true,
+            region: 'center',
+            storeType: 'local',
+            disablePaging: false,
+            pagerConfig: {
+              pageSize: 100
+            },
+            notWriteChanges: true,
+            showToolBar: true,
+            getRowClass: () => {
+            },
+            hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+            customToolBarActions: [
+              {
+                scale: 'medium',
+                icon: $App.getImagePath('download.png'),
+                tooltip: UB.i18n('Завантажити csv'),
+                text: UB.i18n('Завантажити csv'),
+                handler: function (btn) {
+                  me.fileLoadWorkPlace()
+                }
+              },
+              {
+                scale: 'medium',
+                tooltip: UB.i18n('Імпортувати'),
+                text: UB.i18n('Імпортувати'),
+                iconCls: 'fas fa-cloud-download-alt',
+                cls: 'fill-action',
+                handler: function (btn) {
+                  me.importWorkPlace()
+                }
+              }
+            ],
+            fields: [
+              { name: 'employeePositionID', columnConfig: { text: UB.i18n('Призначення'), width: 320, sortable: false } },
+              { name: 'employeeNumberID', columnConfig: { text: UB.i18n('Працівник'), width: 320, sortable: false } },
+              { name: 'workPlace', columnConfig: { text: UB.i18n('Місце роботи'), width: 320, sortable: false } }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.importDateIndex = () => {
+      me.setLoading(true)
+      const data = me.attr.raiseSalaryGrid.parsedData
+      $App.connection.run({
+        entity: 'hr_importPlan',
+        method: 'doImportRaiseSalary',
+        data: JSON.stringify(data),
+        orgID: appAC.globalOrganization()
+      }).then(response => {
+        me.setLoading(false)
+        $App.dialogInfo(UB.i18n('Операція успішно виконана'))
+      }, (err) => {
+        me.setLoading(false)
+        if (err.config && err.config.timeout) {
+          $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+        } else {
+          throw err
+        }
+      })
+    }
+
+    me.fileLoadDateIndex = () => {
+      if (!me.attr.encoding.getValue()) {
+        $App.dialogInfo(UB.i18n('Оберіть кодування файлу для завантаження'))
+        return
+      }
+      Ext.create('UB.view.UploadFileAjax', {
+        scope: this,
+        listeners: {
+          afterrender: function (cmp) {
+            this.fieldFile.fileInputEl.set({
+              accept: '.csv'
+            })
+          }
+        },
+        upLoad: function (btn) {
+          me.setLoading(true)
+          const dialogWindow = btn.up('window')
+          const inputDom = this.fieldFile.fileInputEl.dom
+          if (inputDom.files.length === 0) {
+            return
+          }
+          const file = inputDom.files[0]
+          if (file.name.indexOf('.csv', file.name.length - 4) === -1) {
+            $App.dialogInfo(UB.i18n('Невірний формат файлу, для завантаження використовується формат csv'))
+            me.setLoading(false)
+            return
+          }
+          btn.disable()
+
+          UB.connection.post('loadImportDataEx', file, {
+            params: {
+              entityName: '',
+              encoding: me.attr.encoding.getValue(),
+              fileName: file.name
+            },
+            headers: { 'Content-Type': 'application/octet-stream' }
+          }).then(response => {
+            me.setLoading(false)
+            const data = response.data
+            const attrs = [ 'dateFrom', 'employeeNumberID', 'raiseSalary' ]
+            const parsedData = []
+            data && data.forEach((item, key) => {
+              if (key === 0) {
+                return
+              }
+              let row = {}
+              attrs.forEach((attr, idx) => {
+                row[attr] = item[idx] || ''
+              })
+              row.dateFrom = AC.dateService.shiftDate(row.dateFrom)
+              row.raiseSalary = AC.dateService.shiftDate(row.raiseSalary)
+              parsedData.push(row)
+            })
+            me.attr.raiseSalaryGrid.parsedData = parsedData
+            me.attr.raiseSalaryGrid.setLocalStoreData(me.attr.raiseSalaryGrid.parsedData)
+          }, (err) => {
+            me.setLoading(false)
+            if (err.config && err.config.timeout) {
+              $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+            } else {
+              throw err
+            }
+          }).finally(() => {
+            me.setLoading(false)
+          })
+          dialogWindow.close()
+        }
+      })
+    }
+    me.importWorkPlace = () => {
+      me.setLoading(true)
+      const data = me.attr.workPlaceGrid.parsedData
+      $App.connection.run({
+        entity: 'hr_importPlan',
+        method: 'doImportWorkPlace',
+        data: JSON.stringify(data),
+        orgID: appAC.globalOrganization()
+      }).then(response => {
+        me.setLoading(false)
+        $App.dialogInfo(UB.i18n('Операція успішно виконана'))
+      }, (err) => {
+        me.setLoading(false)
+        if (err.config && err.config.timeout) {
+          $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+        } else {
+          throw err
+        }
+      })
+    }
+
+    me.fileLoadWorkPlace = () => {
+      if (!me.attr.encoding.getValue()) {
+        $App.dialogInfo(UB.i18n('Оберіть кодування файлу для завантаження'))
+        return
+      }
+      Ext.create('UB.view.UploadFileAjax', {
+        scope: this,
+        listeners: {
+          afterrender: function (cmp) {
+            this.fieldFile.fileInputEl.set({
+              accept: '.csv'
+            })
+          }
+        },
+        upLoad: function (btn) {
+          me.setLoading(true)
+          const dialogWindow = btn.up('window')
+          const inputDom = this.fieldFile.fileInputEl.dom
+          if (inputDom.files.length === 0) {
+            return
+          }
+          const file = inputDom.files[0]
+          if (file.name.indexOf('.csv', file.name.length - 4) === -1) {
+            $App.dialogInfo(UB.i18n('Невірний формат файлу, для завантаження використовується формат csv'))
+            me.setLoading(false)
+            return
+          }
+          btn.disable()
+
+          UB.connection.post('loadImportDataEx', file, {
+            params: {
+              entityName: '',
+              encoding: me.attr.encoding.getValue(),
+              fileName: file.name
+            },
+            headers: { 'Content-Type': 'application/octet-stream' }
+          }).then(response => {
+            me.setLoading(false)
+            const data = response.data
+            const attrs = [ 'employeePositionID', 'employeeNumberID', 'workPlace' ]
+            const parsedData = []
+            data && data.forEach((item, key) => {
+              if (key === 0) {
+                return
+              }
+              let row = {}
+              attrs.forEach((attr, idx) => {
+                row[attr] = item[idx] || ''
+              })
+              parsedData.push(row)
+            })
+            me.attr.workPlaceGrid.parsedData = parsedData
+            me.attr.workPlaceGrid.setLocalStoreData(me.attr.workPlaceGrid.parsedData)
+          }, (err) => {
+            me.setLoading(false)
+            if (err.config && err.config.timeout) {
+              $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+            } else {
+              throw err
+            }
+          }).finally(() => {
+            me.setLoading(false)
+          })
+          dialogWindow.close()
+        }
+      })
+    }
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        raiseSalaryGrid: me.down('[name=raiseSalaryGrid]'),
+        workPlaceGrid: me.down('[name=workPlaceGrid]'),
+        encoding: me.down('[name=encoding]')
+      }
+      me.attr.encoding.setValue('utf8')
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

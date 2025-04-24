@@ -1,0 +1,216 @@
+/* global UB $App AC HR */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.organizationID', 'orderID.orderDate', 'orderID.orderState', 'empOrderType',
+    'dateFrom', 'dateTo', 'positionCategory'],
+  parentConfig: {
+    layout: { type: 'border' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'north',
+      split: true,
+      defaults: { labelWidth: 150 },
+      items: [
+        HR.controlService.getAttrOrgCombo({
+          labelWidth: 150,
+          listeners: {
+            change: function (ctrl) {
+              const form = ctrl.up('form')
+              form.onChangeOrg()
+            }
+          }
+        }),
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'departmentID',
+              fieldList: ['ID', 'mi_data_id', 'description', 'mi_treePath'],
+              gridFieldList: ['description'],
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink'],
+              hideEntityItemInContext: true,
+              disableModifyEntity: true,
+              valueField: 'mi_data_id',
+              displayField: 'description',
+              labelWidth: 150,
+              flex: 1,
+              whereList: {
+                state: {
+                  expression: '[state]',
+                  condition: '=',
+                  values: {
+                    state: 'ACTIVE'
+                  }
+                }
+              },
+              listeners: {
+                change: function (ctrl, value) {
+                  const me = ctrl.up('form')
+                  me.attr.withChild.setReadOnly(!value)
+                  if (!value) {
+                    me.attr.withChild.setValue()
+                  }
+                }
+              }
+            },
+            { attributeName: 'withChild', readOnly: true }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'year',
+              xtype: 'numberfield',
+              minValue: 2000,
+              maxValue: 9999,
+              vtype: 'numberValidator',
+              labelWidth: 150,
+              width: 250
+            },
+            { attributeName: 'isCorr', labelWidth: 100, margin: '5 0 5 20' }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { xtype: 'label', text: UB.i18n('Категорія:'), cls: 'x-form-item-label', margin: '5 0 0 17', width: 150 },
+            {
+              xtype: 'checkboxfield',
+              name: 'isBosses',
+              fieldLabel: UB.i18n('Керівники'),
+              labelWidth: 90,
+              width: 110,
+              margin: '5 0 5 5',
+              listeners: {
+                change: function (ctrl) {
+                  const me = ctrl.up('form')
+                  me.setCategoryChecks(me, ctrl)
+                }
+              }
+            },
+            {
+              xtype: 'checkboxfield',
+              name: 'isOthers',
+              fieldLabel: UB.i18n('Інші'),
+              labelWidth: 100,
+              width: 110,
+              margin: '5 0 5 20',
+              listeners: {
+                change: function (ctrl) {
+                  const me = ctrl.up('form')
+                  me.setCategoryChecks(me, ctrl)
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'center',
+      items: [
+        {
+          xtype: 'ubdetailgrid',
+          name: 'vacationSchedule',
+          title: UB.i18n('Відпустки працівників'),
+          autoScroll: true,
+          flex: 1,
+          entityConfig: {
+            entity: 'hr_empOrderVacSchedListDet',
+            method: 'select',
+            fieldList: [
+              { name: 'vacationScheduleID.employeePositionID.depName', description: UB.i18n('Підрозділ'), simpleFilter: true },
+              { name: 'vacationScheduleID.employeePositionID.posName', description: UB.i18n('Посада'), simpleFilter: true },
+              { name: 'vacationScheduleID.employeePositionID.posCatName', description: UB.i18n('Категорія посади'), simpleFilter: true },
+              { name: 'vacationScheduleID.employeeNumberID.tabNum', description: UB.i18n('Таб. №'), simpleFilter: true },
+              { name: 'vacationScheduleID.employeeNumberID.description', description: UB.i18n('ПІБ'), simpleFilter: true },
+              { name: 'vacationScheduleID.dictVacationKindID.name', description: UB.i18n('Вид відпустки'), simpleFilter: true },
+              { name: 'vacationScheduleID.dateFrom', format: 'd.m.Y', description: UB.i18n('Початок відпуски'), config: { align: 'center', width: 100 }, simpleFilter: true },
+              { name: 'vacationScheduleID.dateTo', format: 'd.m.Y', description: UB.i18n('Закінчення відпуски'), config: { align: 'center', width: 100 }, simpleFilter: true },
+              { name: 'vacationScheduleID.orderID.description', description: UB.i18n('Наказ'), simpleFilter: true },
+              { name: 'vacationScheduleID.state', description: UB.i18n('Стан'), simpleFilter: true },
+              { name: 'orderDetID', visibility: false },
+              { name: 'vacationScheduleID', visibility: false }
+            ]
+          },
+          masterFields: ['ID'],
+          detailFields: ['orderDetID'],
+          cmpInitConfig: {
+            hideActions: ['addNew', 'addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink',
+              'commandLink', 'showDetail'],
+            hideMenuAllActions: true,
+            toolbarActionList: ['refresh'],
+            afterInit: function () {
+              const grid = this
+              grid.hideAction('addNewByCurrent')
+            },
+            onDeterminateForm: function (grid) {
+              const reco = AC.gridUtils.getCurrentRecord(grid)
+              const form = grid.up('form')
+              return {
+                entityName: 'hr_vacationSchedule',
+                formCode: 'hr_vacationSchedule',
+                instanceID: reco.get('vacationScheduleID'),
+                cmpInitConfig: {
+                  orderCall: true,
+                  orderState: form.record.get('orderID.orderState')
+                }
+              }
+            },
+            customActions: [
+              {
+                text: UB.i18n('Додати записи'),
+                actionId: 'addByList',
+                itemId: 'addByList',
+                iconCls: 'fas fa-angle-double-down',
+                cls: 'fill-action',
+                scale: 'medium',
+                handler: function (btn) {
+                  const me = btn.up('form')
+                  const grid = btn.up('ubdetailgrid')
+                  HR.controlService.checkAndSaveForm(me, function () {
+                    function addList (me, grid) {
+                      me.setLoading(true)
+                      $App.connection.run({
+                        entity: 'hr_empOrderVacationapschedDet',
+                        method: 'addList',
+                        paraID: me.instanceID,
+                        positionCategory: me.record.get('positionCategory'),
+                        isCorr: me.record.get('isCorr'),
+                        organizationID: me.record.get('organizationID'),
+                        departmentID: me.record.get('departmentID'),
+                        withChild: me.record.get('withChild'),
+                        depTreePath: me.attr.departmentID.getFieldValue('mi_treePath'),
+                        onDate: me.orderForm.record.get('orderDate') || appAC.globalApplicationDate(),
+                        dateFrom: me.record.get('dateFrom'),
+                        dateTo: me.record.get('dateTo')
+                      }).then((result) => {
+                        result && grid.onRefresh()
+                        me.setLoading(false)
+                      })
+                    }
+                    if (grid.store.getCount()) {
+                      $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Раніше внесені дані будуть видалені. Продовжити?'))
+                        .then(choice => {
+                          choice && addList(me, grid)
+                        })
+                    } else {
+                      addList(me, grid)
+                    }
+                  })
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

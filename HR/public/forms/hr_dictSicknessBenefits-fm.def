@@ -1,0 +1,170 @@
+exports.formDef = {
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 200 },
+          items: [
+            { attributeName: 'dictIllnessReasonID' },
+            { attributeName: 'typeBenefitsKind' },
+            { attributeName: 'dictBenefitsKindID' },
+            { attributeName: 'typeExperience' }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'priority', labelWidth: 200 }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'dateFrom', labelWidth: 200, fieldLabel: UB.i18n('Діє з') },
+            { attributeName: 'dateTo', labelWidth: 60, fieldLabel: UB.i18n('по') }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          margin: '10 0 0 0',
+          items: [
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'isPercent', labelWidth: 0, fieldLabel: '' },
+                { xtype: 'label', text: UB.i18n('Відсоток сплати'), cls: 'x-form-item-label', margin: '10 0 5 0', width: 350 },
+                { xtype: 'label', text: '>=', cls: 'x-form-item-label', margin: '5 0 5 0' },
+                {
+                  attributeName: 'minPercent',
+                  labelWidth: 0,
+                  fieldLabel: '',
+                  width: 200,
+                  format: '0.0',
+                  requiredIf: (ctrl, form) => form.attr.isPercent.getValue(),
+                  readOnlyIf: (ctrl, form) => !form.attr.isPercent.getValue()
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'isMinAvgSumPeriod', labelWidth: 0, fieldLabel: '' },
+                { xtype: 'label', text: UB.i18n('Середній за період без урахування відсотка сплати'), cls: 'x-form-item-label', margin: '10 0 5 0', width: 350 },
+                { xtype: 'label', text: '>=', cls: 'x-form-item-label', margin: '5 0 5 0' },
+                {
+                  attributeName: 'typeMinAvgSumPeriod',
+                  labelWidth: 0,
+                  fieldLabel: '',
+                  width: 200,
+                  requiredIf: (ctrl, form) => form.attr.isMinAvgSumPeriod.getValue(),
+                  readOnlyIf: (ctrl, form) => !form.attr.isMinAvgSumPeriod.getValue()
+                },
+                { xtype: 'label', text: UB.i18n('коеф./сума'), cls: 'x-form-item-label', margin: '5 0 5 0' },
+                {
+                  attributeName: 'minAvgSumPeriod',
+                  labelWidth: 0,
+                  fieldLabel: '',
+                  width: 100,
+                  format: '0.00',
+                  requiredIf: (ctrl, form) => form.attr.isMinAvgSumPeriod.getValue(),
+                  readOnlyIf: (ctrl, form) => !form.attr.isMinAvgSumPeriod.getValue()
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'isMaxAvgSumPeriod', labelWidth: 0, fieldLabel: '' },
+                { xtype: 'label', text: UB.i18n('Середній за період без урахування відсотка сплати'), cls: 'x-form-item-label', margin: '10 0 5 0', width: 350 },
+                { xtype: 'label', text: '<=', cls: 'x-form-item-label', margin: '5 0 5 0' },
+                {
+                  attributeName: 'typeMaxAvgSumPeriod',
+                  labelWidth: 0,
+                  fieldLabel: '',
+                  width: 200,
+                  requiredIf: (ctrl, form) => form.attr.isMaxAvgSumPeriod.getValue(),
+                  readOnlyIf: (ctrl, form) => !form.attr.isMaxAvgSumPeriod.getValue()
+                },
+                { xtype: 'label', text: UB.i18n('коеф./сума'), cls: 'x-form-item-label', margin: '5 0 5 0' },
+                {
+                  attributeName: 'maxAvgSumPeriod',
+                  labelWidth: 0,
+                  fieldLabel: '',
+                  width: 100,
+                  format: '0.00',
+                  requiredIf: (ctrl, form) => form.attr.isMaxAvgSumPeriod.getValue(),
+                  readOnlyIf: (ctrl, form) => !form.attr.isMaxAvgSumPeriod.getValue()
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'isMinAvgSumRst', labelWidth: 0, fieldLabel: '' },
+                { xtype: 'label', text: UB.i18n('Середній за період з урахуванням відсотка сплати'), cls: 'x-form-item-label', margin: '10 0 5 0', width: 350 },
+                { xtype: 'label', text: '>=', cls: 'x-form-item-label', margin: '5 0 5 0' },
+                {
+                  attributeName: 'typeMinAvgSumRst',
+                  labelWidth: 0,
+                  fieldLabel: '',
+                  width: 200,
+                  requiredIf: (ctrl, form) => form.attr.isMinAvgSumRst.getValue(),
+                  readOnlyIf: (ctrl, form) => !form.attr.isMinAvgSumRst.getValue()
+                },
+                { xtype: 'label', text: UB.i18n('коеф./сума'), cls: 'x-form-item-label', margin: '5 0 5 0' },
+                {
+                  attributeName: 'minAvgSumRst',
+                  labelWidth: 0,
+                  fieldLabel: '',
+                  width: 100,
+                  format: '0.00',
+                  requiredIf: (ctrl, form) => form.attr.isMinAvgSumRst.getValue(),
+                  readOnlyIf: (ctrl, form) => !form.attr.isMinAvgSumRst.getValue()
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'isMaxAvgSumRst', labelWidth: 0, fieldLabel: '' },
+                { xtype: 'label', text: UB.i18n('Середній за період з урахуванням відсотка сплати'), cls: 'x-form-item-label', margin: '10 0 5 0', width: 350 },
+                { xtype: 'label', text: '<=', cls: 'x-form-item-label', margin: '5 0 5 0' },
+                {
+                  attributeName: 'typeMaxAvgSumRst',
+                  labelWidth: 0,
+                  fieldLabel: '',
+                  width: 200,
+                  requiredIf: (ctrl, form) => form.attr.isMaxAvgSumRst.getValue(),
+                  readOnlyIf: (ctrl, form) => !form.attr.isMaxAvgSumRst.getValue()
+                },
+                { xtype: 'label', text: UB.i18n('коеф./сума'), cls: 'x-form-item-label', margin: '5 0 5 0' },
+                {
+                  attributeName: 'maxAvgSumRst',
+                  labelWidth: 0,
+                  fieldLabel: '',
+                  width: 100,
+                  format: '0.00',
+                  requiredIf: (ctrl, form) => form.attr.isMaxAvgSumRst.getValue(),
+                  readOnlyIf: (ctrl, form) => !form.attr.isMaxAvgSumRst.getValue()
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                { attributeName: 'isAdd', labelWidth: 0, fieldLabel: '' },
+                { xtype: 'label', text: UB.i18n('Додаткові суми показувати окремо'), cls: 'x-form-item-label', margin: '10 0 5 0', width: 350 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

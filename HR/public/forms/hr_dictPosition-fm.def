@@ -1,0 +1,563 @@
+/* global UB appAC AC */
+
+exports.formDef = {
+  requiredFields: [
+  ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'north',
+      // split: true,
+      autoScroll: true,
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 2,
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    { attributeName: 'code', flex: 0, width: 240 },
+                    { attributeName: 'name', flex: 3, labelWidth: 60 }
+                  ]
+                },
+                { attributeName: 'fullName' },
+                { attributeName: 'workScheduleID' },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    { attributeName: 'workNormID', flex: 0, width: 240 }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              items: [
+                { attributeName: 'paymentType' },
+                { attributeName: 'idxNum', maxValue: 99999999, minValue: 0 },
+                { attributeName: 'isActive' }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      width: '100%',
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [
+        {
+          xtype: 'tabpanel',
+          name: 'tabs',
+          flex: 1,
+          region: 'center',
+          items: [
+            {
+              title: UB.i18n('Класифікатор'),
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 220 },
+              items: [
+                {
+                  attributeName: 'dictProfessionID',
+                  fieldList: ['ID', 'description', 'name', 'nameGen', 'nameDat', 'nameAcc', 'nameOr', 'nameLoc', 'nameVoc',
+                    'dictWagePayID', 'positionCategory', 'psCategory', 'code'
+                  ]
+                },
+                {
+                  attributeName: 'positionType',
+                  disableContextMenu: false,
+                  hideEntityItemInContext: true
+                },
+                {
+                  attributeName: 'positionCategory',
+                  disableContextMenu: false,
+                  hideEntityItemInContext: true
+                },
+                {
+                  attributeName: 'dictStaffCatID'
+                },
+                {
+                  attributeName: 'dictStaffSubCatID'
+                },
+                {
+                  attributeName: 'dictWagePayID'
+                },
+                {
+                  attributeName: 'dictStatePayID'
+                },
+                {
+                  attributeName: 'psCategory',
+                  disableContextMenu: false,
+                  hideEntityItemInContext: true
+                },
+                {
+                  attributeName: 'dictSpecialtyID',
+                  hidden: true
+                },
+                {
+                  attributeName: 'dictEmpCategoryID',
+                  hidden: true
+                },
+                {
+                  attributeName: 'dictTarifCoeffID',
+                  hidden: true
+                },
+                { attributeName: 'dictCostTypeID' },
+                {
+                  attributeName: 'dictSalarySchemeLevelID',
+                  hideEntityItemInContext: true,
+                  whereList: {
+                    exists: {
+                      expression: '',
+                      condition: 'subquery',
+                      subQueryType: 'Exists',
+                      value: {
+                        entity: 'hr_dictSalarySchemeOrg',
+                        fieldList: [],
+                        method: 'select',
+                        whereList: {
+                          cond: {
+                            expression: '[dictSalarySchemeID]=[{master}.dictSalarySchemeID]',
+                            condition: 'custom'
+                          },
+                          orgID: {
+                            condition: 'equal',
+                            expression: '[orgID]',
+                            value: appAC.globalOrganization()
+                          }
+                        }
+                      }
+                    },
+                    active: {
+                      expression: '[isActive]',
+                      condition: '=',
+                      value: 1
+                    }
+                  }
+                },
+                {
+                  attributeName: 'dictAcademStatusID'
+                },
+                {
+                  attributeName: 'dictDegreeID'
+                },
+                { attributeName: 'isVehicle' }
+              ]
+            },
+            {
+              title: UB.i18n('Посадовий оклад'),
+              name: 'tabAccrualSum',
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 220 },
+              items: [
+                {
+                  xtype: 'panel',
+                  header: false,
+                  region: 'center',
+                  name: 'panel',
+                  flex: 1,
+                  layout: 'fit',
+                  items: [
+                    {
+                      name: 'dictPositionDt',
+                      xtype: 'ubdetailgrid',
+                      autoScroll: true,
+                      pageSize: 10000,
+                      hideActions: ['addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                      flex: 0,
+                      entityConfig: {
+                        entity: 'hr_dictPositionDt',
+                        method: 'select',
+                        fieldList: [
+                          {
+                            name: 'dateFrom',
+                            description: UB.i18n('Дата'),
+                            config: { width: 200 }
+                          },
+                          {
+                            name: 'accrualSum',
+                            description: UB.i18n('Сума'),
+                            config: { width: 200 }
+                          }
+                        ]
+                      },
+                      masterFields: ['ID'],
+                      detailFields: ['dictPositionID']
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Види оплати'),
+              name: 'tabPayEl',
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 220 },
+              items: [
+                {
+                  xtype: 'panel',
+                  header: false,
+                  region: 'center',
+                  name: 'panel',
+                  flex: 1,
+                  layout: 'fit',
+                  items: [
+                    {
+                      name: 'gridPayEl',
+                      xtype: 'ubdetailgrid',
+                      autoScroll: true,
+                      pageSize: 10000,
+                      rowEditing: true,
+                      hideActions: ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                      flex: 1,
+                      entityConfig: {
+                        entity: 'hr_dictPositionPayEl',
+                        method: 'select',
+                        fieldList: [
+                          {
+                            name: 'payElID.description',
+                            description: UB.i18n('Назва'),
+                            flex: 1
+                          },
+                          {
+                            name: 'valuation'
+                          },
+                          {
+                            name: 'value'
+                          },
+                          {
+                            name: 'dateFromEmpty'
+                          },
+                          {
+                            name: 'dateToEmpty'
+                          }
+                        ]
+                      },
+                      masterFields: ['ID'],
+                      detailFields: ['dictPositionID'],
+                      cmpInitConfig: {
+                        customActions: [
+                          {
+                            actionId: 'editPayEl',
+                            text: UB.i18n('Редагувати'),
+                            iconCls: 'u-icon-edit-alt',
+                            cls: 'fill-action',
+                            scale: 'medium',
+                            handler: function (btn) {
+                              const grid = btn.up('grid')
+                              const form = grid.up('form')
+                              if (form.isNewInstance) {
+                                form.saveForm().then(result => {
+                                  if (result !== -1) {
+                                    form.setPayEl(grid)
+                                  }
+                                })
+                              } else {
+                                form.setPayEl(grid)
+                              }
+                            }
+                          },
+                          {
+                            actionId: 'loadByCategory',
+                            text: UB.i18n('Заповнити з довідника'),
+                            iconCls: 'fas fa-angle-double-down',
+                            cls: 'fill-action',
+                            scale: 'medium',
+                            handler: function (btn) {
+                              const grid = btn.up('grid')
+                              const form = grid.up('form')
+                              if (form.isNewInstance) {
+                                form.saveForm().then(result => {
+                                  if (result !== -1) {
+                                    form.loadByCategory(grid)
+                                  }
+                                })
+                              } else {
+                                form.loadByCategory(grid)
+                              }
+                            }
+                          }
+                        ],
+                        onItemDblClick: function (grid) {
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.setPayEl(grid)
+                              }
+                            })
+                          } else {
+                            form.setPayEl(grid)
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              title: UB.i18n('cases'),
+              layout: { type: 'border' },
+              items: [
+                {
+                  region: 'center',
+                  autoScroll: true,
+                  split: true,
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+
+                  flex: 1,
+                  items: [
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        { xtype: 'label', text: UB.i18n('Для статі:'), margin: '10 0 0 15', cls: 'x-form-item-label' },
+                        {
+                          xtype: 'radiogroup',
+                          name: 'sexTypeCases',
+                          items: [
+                            { boxLabel: UB.i18n('Чоловічої'), name: 'sexType', inputValue: 'M', checked: true },
+                            { boxLabel: UB.i18n('Жіночої'), name: 'sexType', inputValue: 'F' }
+                          ],
+                          listeners: {
+                            change: (ctrl, value) => {
+                              const me = ctrl.up('form')
+                              if (value && value.sexType === 'M') {
+                                me.down('[name=namesMale]').show()
+                                me.down('[name=namesFemale]').hide()
+                              } else {
+                                me.down('[name=namesFemale]').show()
+                                me.down('[name=namesMale]').hide()
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        {
+                          xtype: 'ubfieldset',
+                          name: 'namesMale',
+                          // UBHR-5568 title: UB.i18n('Назва'),
+                          // UBHR-5568 margin: '4 4 4 4',
+                          // UBHR-5568 border: true,
+                          flex: 1,
+                          layout: { type: 'vbox', align: 'stretch' },
+                          defaults: { labelWidth: 220 },
+                          items: [
+                            { attributeName: 'nameNom', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Називний (хто, що):') },
+                            { attributeName: 'nameGen', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Родовий (кого, чого):') },
+                            { attributeName: 'nameDat', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Давальний (кому, чому):') },
+                            { attributeName: 'nameAcc', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Знахідний (кого, що):') },
+                            { attributeName: 'nameOr', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Орудний (ким, чим):') },
+                            { attributeName: 'nameLoc', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Місцевий (на кому, на чому):') },
+                            { attributeName: 'nameVoc', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Кличний:') },
+                            { attributeName: 'nameEng', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Назва (англ.):') }
+                          ]
+                        },
+                        /* {
+                          xtype: 'ubfieldset',
+                          naem: 'fullNamesMale',
+                          title: UB.i18n('Повна назва'),
+                          margin: '4 4 4 4',
+                          border: true,
+                          flex: 1,
+                          layout: {
+                            type: 'vbox',
+                            align: 'stretch'
+                          },
+                          defaults: { labelWidth: 220 },
+                          hidden: true, /!* UBHR-5568 *!/
+                          items: [
+                            { attributeName: 'fullNameNom', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Називний (хто, що):') },
+                            { attributeName: 'fullNameGen', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Родовий (кого, чого):') },
+                            { attributeName: 'fullNameDat', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Давальний (кому, чому):') },
+                            { attributeName: 'fullNameAcc', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Знахідний (кого, що):') },
+                            { attributeName: 'fullNameOr', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Орудний (ким, чим):') },
+                            { attributeName: 'fullNameLoc', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Місцевий (на кому, на чому):') },
+                            { attributeName: 'fullNameVoc', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Кличний:') },
+                            { attributeName: 'fullNameEng', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Назва (англ.):') }
+                          ]
+                        }, */
+                        {
+                          xtype: 'ubfieldset',
+                          name: 'namesFemale',
+                          hidden: true,
+                          // UBHR-5568 title: UB.i18n('Назва'),
+                          // UBHR-5568 margin: '4 4 4 4',
+                          // UBHR-5568 border: true,
+                          flex: 1,
+                          layout: { type: 'vbox', align: 'stretch' },
+                          defaults: { labelWidth: 220 },
+                          items: [
+                            { attributeName: 'nameNomF', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Називний (хто, що):') },
+                            { attributeName: 'nameGenF', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Родовий (кого, чого):') },
+                            { attributeName: 'nameDatF', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Давальний (кому, чому):') },
+                            { attributeName: 'nameAccF', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Знахідний (кого, що):') },
+                            { attributeName: 'nameOrF', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Орудний (ким, чим):') },
+                            { attributeName: 'nameLocF', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Місцевий (на кому, на чому):') },
+                            { attributeName: 'nameVocF', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Кличний:') },
+                            { attributeName: 'nameEngF', xtype: 'textarea', height: 90, fieldLabel: UB.i18n('Назва (англ.):') }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Категорії та тарифні розряди'),
+              name: 'tabPayEl',
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 220 },
+              items: [
+                {
+                  xtype: 'panel',
+                  header: false,
+                  region: 'center',
+                  name: 'panel',
+                  flex: 1,
+                  layout: 'fit',
+                  items: [
+                    {
+                      name: 'gridEmpCatTarif',
+                      xtype: 'ubdetailgrid',
+                      autoScroll: true,
+                      pageSize: 10000,
+                      hideActions: ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                      flex: 1,
+                      entityConfig: {
+                        entity: 'hr_dictEmpCatTarifPos',
+                        method: 'select',
+                        fieldList: [
+                          { name: 'organizationID.description', description: UB.i18n('Організація'), simpleFilter: true },
+                          { name: 'dictEmpCategoryID.description', description: UB.i18n('Кваліфікаційна категорія'), simpleFilter: true },
+                          { name: 'dictTarifCoeffID.description', description: UB.i18n('Тарифний розряд'), simpleFilter: true },
+                          { name: 'dateFromEmpty' },
+                          { name: 'dateToEmpty' }
+                        ],
+                        whereList: {
+                          state: {
+                            expression: '[organizationID.state]',
+                            condition: 'equal',
+                            value: 'ACTIVE'
+                          }
+                        }
+                      },
+                      onDeterminateForm: function (grid) {
+                        const me = grid.up('form')
+                        return {
+                          cmpInitConfig: {
+                            defaultValues: {
+                              dictPositionID: me.instanceID
+                            }
+                          }
+                        }
+                      },
+                      masterFields: ['ID'],
+                      detailFields: ['dictPositionID']
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Право на відпустку'),
+              name: 'tabVacationPlan',
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 220 },
+              items: [
+                {
+                  xtype: 'panel',
+                  header: false,
+                  region: 'center',
+                  name: 'panel',
+                  flex: 1,
+                  layout: 'fit',
+                  items: [
+                    {
+                      name: 'gridVacationPlan',
+                      xtype: 'ubdetailgrid',
+                      autoScroll: true,
+                      pageSize: 10000,
+                      rowEditing: true,
+                      hideActions: ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                      flex: 1,
+                      entityConfig: {
+                        entity: 'hr_dictPosVacationPlan',
+                        method: 'select',
+                        fieldList: [
+                          {
+                            name: 'dictVacationKindID.description',
+                            description: UB.i18n('Вид відпустки'),
+                            simpleFilter: true,
+                            config: {
+                              width: 700
+                            }
+                          },
+                          {
+                            name: 'dayCount',
+                            config: {
+                              width: 200,
+                              align: 'center'
+                            }
+                          }
+                        ]
+                      },
+                      onBeforeEdit: function (editor, context) {
+                        // context.grid.optimizeColumnWidth(true)
+                        AC.viewUtils.setWhereListProperty(editor.editor.query('[name=dictVacationKindID.description]')[0], [
+                          ['isDay', '=', 1]
+                        ])
+                      },
+                      onValidateEdit: function (editor, context) {
+                        const me = context.grid.up('form')
+                        const reco = context.record
+                        const ctrl = editor.editor.form.findField('dictVacationKindID.description')
+                        const dictVacationKindID = ctrl.getFieldValue('ID')
+                        const item = context.grid.getStore().data.items.find(o => o.get('ID') !== reco.get('ID') && o.get('dictVacationKindID') === dictVacationKindID)
+                        if (item) {
+                          AC.viewUtils.showToast('Помилка', UB.i18n(`Вид відпустки "{0}" вже додано!`, item.get('dictVacationKindID.description')))
+                          ctrl.markInvalid(UB.i18n('Вже додано!'))
+                          return false
+                        }
+                      },
+                      masterFields: ['ID'],
+                      detailFields: ['dictPositionID']
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

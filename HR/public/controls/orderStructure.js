@@ -1,0 +1,400 @@
+/* global Ext $App DevUtils UB */
+
+Ext.define('HR.controls.orderStructure', {
+  extend: 'Ext.panel.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  flex: 1,
+  alias: 'widget.orderstructure',
+  isModal: true,
+  listeners: {
+    render: function () {
+      let me = this
+      me.orderForm = me.up('form')
+      me.orderID = me.orderForm.instanceID
+    }
+  },
+
+  initComponent: function () {
+    let me = this
+    let store
+    let tree
+
+    Ext.define('HR.orderTreeModel', {
+      extend: 'Ext.data.Model',
+      fields: [{
+        name: 'ID',
+        type: 'number'
+      },
+      {
+        name: 'text',
+        type: 'string'
+      },
+      {
+        name: 'description',
+        type: 'string'
+      },
+      {
+        name: 'nodeType',
+        type: 'string'
+      },
+      {
+        name: 'nodeTypeName',
+        type: 'string'
+      },
+      {
+        name: 'isGroup',
+        type: 'boolean'
+      }
+      ]
+    })
+
+    me.store = store = Ext.create('Ext.data.TreeStore', {
+      model: 'HR.orderTreeModel',
+      proxy: {
+        type: 'ubproxy'
+      },
+      lazyLoad: true,
+      root: {
+        text: 'root',
+        id: null,
+        expanded: true,
+        children: []
+      }
+    })
+
+    me.tree = tree = Ext.create('Ext.tree.Panel', {
+      flex: 0.35,
+      header: false,
+      loadMask: true,
+      autoScroll: true,
+      folderSort: false,
+      animate: false,
+      singleExpand: false,
+      store: store,
+      rootVisible: false,
+      layout: 'fit',
+      viewConfig: {
+        toggleOnDblClick: false
+      },
+      defaults: {
+        autoScroll: true
+      },
+      columns: [{
+        xtype: 'treecolumn',
+        text: UB.i18n('Опис'),
+        flex: 4,
+        sortable: false,
+        dataIndex: 'text',
+        renderer: function (value, metadata, record) {
+          metadata.tdAttr = 'data-qtip="' + record.data.text + '"'
+          switch (record.get('nodeType')) {
+            case 'ORDER':
+              return '<span style="color:darkblue; font-weight: bold;">' + value + '</span>'
+            case 'TASK':
+              return '<span style="color:green;">' + value + '</span>'
+            case 'ACTING':
+              return '<span style="color:brown;">' + value + '</span>'
+          }
+          if (record.get('isGroup')) {
+            return '<span style="color:darkgray;font-weight: bold;">' + value + '</span>'
+          } else {
+            return '<span style="color:darkgray;">' + value + '</span>'
+          }
+        }
+      },
+      {
+        text: UB.i18n('Пункт'),
+        width: 100,
+        flex: 1,
+        dataIndex: 'nodeTypeName'
+      }
+      ]
+    })
+
+    tree.on('beforeitemdblclick', function (item) {
+      me.editNode(me.getCurrentRecord())
+    }, me)
+
+    tree.on('beforeitemexpand', function (node, opt) {
+      const me = this
+      if (!node.firstChild) {
+        me.appendItems(node)
+      }
+      if (node.raw.nodeType === 'MORE') {
+        node.parentNode.eachChild(function (n) {
+          if (n !== node && n.raw.nodeType === 'MORE') {
+            n.collapse()
+          }
+        })
+      }
+    }, me)
+    tree.on('afteritemexpand', function (node, opt) {
+
+    }, me)
+    tree.on('afteritemcollapse', me.nodeCollapse, me)
+    tree.on('select', function (node) {}, me)
+    tree.on('itemcontextmenu', function (view, node, htmlItem, index, e, eOpts) {
+      if (this.contextMenu) {
+        this.contextMenu.contextNode = node
+        this.contextMenu.showAt(e.getXY())
+        e.stopEvent()
+      }
+    }, tree)
+
+    me.tree = tree
+    me.total = 100
+    me.items = [tree]
+    me.callParent(arguments)
+    me.tree.region = 'center'
+
+    let menuItems = [{
+      text: UB.i18n('Редагувати'),
+      hidden: me.readOnly,
+      handler: function (item) {
+        me.editNode(item.parentMenu.contextNode)
+      }
+    },
+    {
+      text: UB.i18n('Перечитати дочірні'),
+      handler: function (item) {
+        let
+          n = item.parentMenu.contextNode
+        n.collapse()
+        me.freeChild(n)
+        n.set('leaf', false)
+        n.expand()
+      }
+    },
+    {
+      text: UB.i18n('Перечитати все'),
+      handler: function (item) {
+        me.clearTree()
+        me.appendItems(me.tree.getRootNode())
+      }
+    }
+    ]
+    if ($App.domainInfo.models.DEV) {
+      menuItems.push({
+        xtype: 'menuseparator'
+      })
+      menuItems.push({
+        text: UB.i18n('Властивості вузла'),
+        handler: function (menuItem) {
+          DevUtils.inspect(tree.contextMenu.contextNode)
+        }
+      })
+    }
+    tree.contextMenu = new Ext.menu.Menu({
+      items: menuItems
+    })
+
+    me.tree.listeners = {
+      contextmenu: function (node, e) {
+        node.select()
+        const c = node.getOwnerTree().contextMenu
+        c.contextNode = node
+        c.showAt(e.getXY())
+      }
+    }
+  },
+  getCurrentRecord: function () {
+    let selectedNode
+    const me = this
+    if (me.tree.getSelectionModel().hasSelection()) {
+      selectedNode = me.tree.getSelectionModel().getSelection()
+      if (selectedNode) {
+        return selectedNode[0]
+      }
+    }
+    return null
+  },
+
+  nodeCollapse: function (node, opt) {
+
+  },
+
+  freeChild: function (node) {
+    node.removeAll()
+  },
+
+  editNode: function (node) {
+    let me = this
+    let entity = node && node.raw.mi_unityEntity
+    if (!entity) {
+      return
+    }
+    $App.doCommand({
+      cmdType: 'showForm',
+      entity: node.raw.mi_unityEntity,
+      instanceID: node.raw.ID,
+      customParams: {
+        orderForm: me.orderForm
+      }
+    })
+  },
+  appendItems: function (node) {
+    const me = this
+    if (!node) {
+      node = me.store.getRootNode()
+    }
+    try {
+      me.loadItems(node).then(function (data) {
+        let hasChild = data.hasChild || []
+        node.set('leaf', true)
+        if (!data.length) {
+          return
+        }
+        Ext.suspendLayouts()
+        me.store.suspendEvents()
+        me.tree.suspendEvents()
+        node.appendChild(data)
+        node.set('leaf', false)
+        node.eachChild(function (n) {
+          if (!n.raw.ID) {
+            n.set('leaf', false)
+          } else {
+            n.set('leaf', !hasChild.includes(n.raw.ID))
+          }
+          if (n.raw.tooltip) {
+            n.set('qtip', n.raw.tooltip)
+          }
+          if (n.raw.nodeType === 'DEP_ROOT') {
+            n.set('cls', 'group-node')
+          }
+          if (n.raw.stateCode === 'NEW') {
+            n.set('cls', 'org-nodenew')
+          }
+        })
+        node.set('leaf', !node.firstChild)
+        node.set('style', 'background-color: #F1C500;')
+
+        me.store.resumeEvents()
+        Ext.resumeLayouts(true)
+        me.tree.resumeEvents()
+        if (data[0].nodeType === 'ORDER') {
+          node.firstChild.expand()
+        }
+      })
+    } catch (e) {
+      Ext.resumeLayouts(true)
+      me.store.resumeEvents()
+      me.tree.resumeEvents()
+    }
+  },
+
+  clearTree: function (node) {
+    if (!node) {
+      node = this.tree.getRootNode()
+    }
+    while (node.childNodes.length) {
+      node.removeChild(node.firstChild)
+    }
+  },
+
+  loadFilter: function (masterID, parentNode) {
+    return this.loadItems(masterID, parentNode, {
+      form: this
+    })
+  },
+  determineChild: async nodeData => {
+    if (!nodeData.hasChild) {
+      nodeData.hasChild = []
+    }
+    let IDs = nodeData.map(item => item.ID)
+
+    return UB.Repository('hr_empOrderDet').attrs(['ID', 'paraID']).where('paraID', 'in', IDs)
+      .where('[paraID] <> [ID]', 'custom')
+      .selectAsObject().then(data => {
+        data.forEach(item => {
+          if (IDs.indexOf(item.paraID) !== -1) {
+            nodeData.hasChild.push(item.paraID)
+          }
+        })
+        return data
+      })
+  },
+
+  loadItems: async function (parentNode) {
+    let me = this
+    let data
+    let nodeTypeName
+    let result = []
+    let text
+    result.hasChild = []
+    if (!parentNode || parentNode === me.store.getRootNode()) {
+      let order = await UB.Repository('hr_empOrder').attrs(['ID', 'orderDate', 'orderNumber', 'empOrderType', 'description']).selectById(me.orderID)
+      result.push({
+        nodeType: 'ORDER',
+        ID: order.ID,
+        text: order.description,
+        isGroup: false
+      })
+      let cData = await UB.Repository('hr_empOrderDet').attrs(['ID']).where('orderID', '=', order.ID).selectAsObject()
+      if (cData[0]) {
+        result.hasChild.push(order.ID)
+      }
+      return result
+    }
+    switch (parentNode.raw.nodeType) {
+      case 'ORDER':
+        data = await UB.Repository('hr_empOrderDet').attrs(['ID', 'empOrderType', 'description', 'paraID', 'title', 'isGroup', 'lastName', 'firstName', 'middleName', 'mi_unityEntity'])
+          .where('orderID', '=', parentNode.raw.ID)
+          .where('[paraID] = [ID]', 'custom')
+          .selectAsObject()
+        data.forEach(item => {
+          if (item.isGroup) {
+            text = item.description
+          } else {
+            if (item.title === item.description) {
+              text = `${item.lastName || ''} ${item.firstName || ''} ${item.middleName || ''} ${item.description}`
+            } else {
+              text = `${item.lastName || ''} ${item.firstName || ''} ${item.middleName || ''} ${item.title || ''} ${item.description}`
+            }
+          }
+          nodeTypeName = UB.core.UBEnumManager.getStore('HR_EMPORDRETYPE').getById(item.empOrderType).get('name')
+          result.push({
+            isGroup: item.isGroup,
+            nodeType: item.empOrderType,
+            nodeTypeName: nodeTypeName,
+            ID: item.ID,
+            text: text,
+            description: item.description,
+            mi_unityEntity: item.mi_unityEntity
+          })
+        })
+        await me.determineChild(result)
+        break
+      default:
+        data = await UB.Repository('hr_empOrderDet').attrs(['ID', 'empOrderType', 'description', 'paraID', 'title', 'isGroup', 'lastName', 'firstName', 'middleName', 'mi_unityEntity'])
+          .where('paraID', '=', parentNode.raw.ID)
+          .where('[paraID] <> [ID]', 'custom')
+          .selectAsObject()
+        data.forEach(item => {
+          nodeTypeName = UB.core.UBEnumManager.getStore('HR_EMPORDRETYPE').getById(item.empOrderType).get('name')
+          if (item.isGroup || item.empOrderType === 'CHGSALARYPOS') {
+            text = item.description
+          } else {
+            text = `${item.lastName || ''} ${item.firstName || ''} ${item.middleName || ''} ${item.title || ''}`
+          }
+
+          //
+          result.push({
+            isGroup: item.isGroup,
+            nodeType: item.empOrderType,
+            nodeTypeName: nodeTypeName + ((item.isGroup && UB.i18n(' (Груповий)')) || ''),
+            mi_unityEntity: item.mi_unityEntity,
+            ID: item.ID,
+            description: item.description,
+            text: text
+          })
+        })
+        await me.determineChild(result)
+        break
+    }
+    return result
+  }
+
+})

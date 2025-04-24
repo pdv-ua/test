@@ -1,0 +1,442 @@
+/* global $App AC UB */
+exports.formDef = {
+  requiredFields: ['orderState', 'description', 'organizationID', 'employeeID', 'employeeNumberID', 'employeeNumberID.dateFrom',
+    'firstID', 'parentID', 'parentID.dateTo', 'flagsFix', 'employeePositionID.workPlace', 'illnessReasonID.payElFSSUID.includeSecondJobs',
+    'parentID.illnessKind'],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [
+      {
+        orderId: 4,
+        actionId: 'postingAction'
+      },
+      {
+        orderId: 5,
+        actionId: 'cancelPostingAction'
+      },
+      {
+        orderId: 6,
+        actionId: 'remarkAction'
+      },
+      {
+        orderId: 7,
+        actionId: 'subEmpAction'
+      }
+    ]
+  }],
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: { type: 'border' },
+          items: [
+            {
+              layout: { type: 'hbox' },
+              region: 'north',
+              split: true,
+              items: [
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  flex: 1,
+                  defaults: { labelWidth: 150 },
+                  items: [
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        { attributeName: 'periodID', hidden: true },
+                        { attributeName: 'illnessKind', flex: 1, labelWidth: 150 },
+                        { attributeName: 'serie', labelWidth: 50, width: 150, maxLength: 11, maskRe: AC.validators.maskRe('charset11'), vType: 'charset11' },
+                        { attributeName: 'number', fieldLabel: '№', width: 200, labelWidth: 35 }
+                      ]
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        {
+                          attributeName: 'employeePositionID',
+                          description: UB.i18n('Працівник'),
+                          fieldList: ['description', 'employeeID', 'employeeNumberID', 'organizationID', 'dateFrom', 'dateTo', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+                          orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                          addWorkPlace: true,
+                          flex: 1,
+                          labelWidth: 150,
+                          xtype: 'empPositionCombobox'
+                        },
+                        {
+                          name: 'dismissed',
+                          xtype: 'checkbox',
+                          fieldLabel: UB.i18n('звільнені'),
+                          labelWidth: 100,
+                          listeners: {
+                            change: (ctrl, value) => {
+                              const me = ctrl.up('form')
+                              me.record.set('employeePositionID')
+                              me.attr.employeePositionID.setValue()
+                              me.record.set('employeeID')
+                              me.record.set('employeeNumberID')
+                              me.record.set('employeeFamilyID')
+                              me.record.set('parentID', null)
+                              me.record.set('firstID', null)
+                              me.record.set('standingYearMonth')
+                              me.record.set('standingAllYear')
+                              me.record.set('standingAllInYear')
+                              me.record.set('percentWork')
+                              me.attr.parentID.setValue()
+                              me.attr.dateFrom.setValue()
+                              me.attr.dateTo.setValue()
+                              me.attr.dateFirst.setValue()
+                              me.attr.dateFrom.setMaxValue()
+                              me.attr.dateTo.setMinValue()
+                              me.attr.empOrderSicknessDt.store.removeAll()
+                              me.setEmployeeFilter(value)
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      attributeName: 'parentID',
+                      fieldList: ['description', 'illnessReasonID', 'employeeFamilyID', 'firstID', 'nextNumber', 'dateTo',
+                        'standingAllInYear', 'standingYearMonth', 'standingAllYear', 'percentWork', 'dateFirst', 'dateFrom',
+                        'parentID', 'parentID.firstID', 'firstID.dateFrom', 'isOnlyFOP', 'illnessKind'
+                      ],
+                      gridFieldList: ['description', 'dateFrom', 'dateTo', 'illnessReasonID', 'employeeFamilyID', 'firstID', 'nextNumber'],
+                      displayField: 'description',
+                      whereList: {
+                        employeeID: {
+                          expression: '[employeeID]',
+                          condition: 'equal',
+                          value: 0
+                        }
+                      },
+                      orderList: {
+                        orderBy: {
+                          expression: 'dateTo',
+                          order: 'desc'
+                        }
+                      }
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        { attributeName: 'dateFrom',
+                          labelWidth: 150,
+                          enableKeyEvents: true,
+                          margin: '8 15 5 15'
+                        },
+                        {
+                          attributeName: 'dateTo',
+                          labelWidth: 120,
+                          enableKeyEvents: true,
+                          margin: '8 15 5 15'
+                        },
+                        {
+                          attributeName: 'dateFirst',
+                          labelWidth: 180
+                        }
+                      ]
+                    },
+                    {
+                      attributeName: 'isOnlyFOP',
+                      labelWidth: 250
+                    },
+                    {
+                      attributeName: 'illnessReasonID',
+                      fieldList: ['ID', 'name', 'code', 'orderN', 'payElFSSUID.methodID.code', 'illnessKind', 'dateFrom', 'dateTo', 'maxDayFOP'],
+                      gridFieldList: ['code', 'name', 'orderN'],
+                      orderList: {
+                        orderBy: {
+                          expression: 'orderN',
+                          order: 'asc'
+                        }
+                      }
+                    },
+                    { attributeName: 'employeeFamilyID' },
+                    {
+                      xtype: 'label',
+                      name: 'addedToProtocolLabel',
+                      cls: 'x-form-item-label',
+                      margin: '10 0 0 0'
+                    }
+                  ]
+                },
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  defaults: { labelWidth: 130, width: 300 },
+                  items: [
+                    { attributeName: 'orderDate' },
+                    {
+                      attributeName: 'days',
+                      readOnly: true
+                    },
+                    {
+                      layout: { type: 'hbox', align: 'middle' },
+                      items: [
+                        {
+                          attributeName: 'standingYearMonth',
+                          fieldLabel: UB.i18n('Стаж страховий за попередній рік'),
+                          flagsFix: 1 << 20,
+                          enableKeyEvents: true,
+                          labelWidth: 130,
+                          flex: 1
+                        },
+                        {
+                          xtype: 'label',
+                          name: 'workLess6monthsLabel',
+                          flex: 0.7,
+                          style: {
+                            color: 'red'
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      layout: { type: 'hbox', align: 'middle' },
+                      items: [
+                        {
+                          attributeName: 'standingAllYear',
+                          fieldLabel: UB.i18n('Стаж страховий загальний'),
+                          flagsFix: 1 << 21,
+                          enableKeyEvents: true,
+                          labelWidth: 130,
+                          flex: 1
+                        },
+                        { attributeName: 'standingAllInYear', hidden: true },
+                        {
+                          xtype: 'label',
+                          name: 'standingAllInYearLabel',
+                          cls: 'x-form-item-label',
+                          flex: 0.7
+                        }
+                      ]
+                    },
+                    {
+                      attributeName: 'percentWork',
+                      flagsFix: 1 << 9,
+                      enableKeyEvents: true
+                    },
+                    { attributeName: 'employeeSickLimitID', hidden: true }
+                  ]
+                }
+              ]
+            },
+            {
+              xtype: 'tabpanel',
+              region: 'center',
+              items: [
+                {
+                  title: UB.i18n('Звільнення від роботи'),
+                  layout: 'fit',
+                  items: [
+                    {
+                      name: 'empOrderSicknessDt',
+                      xtype: 'ubdetailgrid',
+                      rowEditing: true,
+                      notWriteChanges: true,
+                      autoScroll: true,
+                      forceDataLoad: true,
+                      disableSearchBar: true,
+                      hidePagingBar: true,
+                      sortableColumns: false,
+                      enableColumnHide: false,
+                      pageSize: 10000,
+                      flex: 1,
+                      onValidateEdit: (editor, context) => {
+                        const sicknessFrom = AC.dateService.truncTimeToUtcNull(editor.editor.up('form').attr.dateFrom.getValue())
+                        const sicknessTo = AC.dateService.truncTimeToUtcNull(editor.editor.up('form').attr.dateTo.getValue())
+                        const newPeriodFrom = AC.dateService.truncTimeToUtcNull(editor.editor.form.findField('dateFrom').getValue())
+                        const newPeriodTo = AC.dateService.truncTimeToUtcNull(editor.editor.form.findField('dateTo').getValue())
+                        if (newPeriodFrom < sicknessFrom) {
+                          const errorMessage = UB.i18n('Не може бути менше ніж "дата початку"')
+                          editor.editor.form.findField('dateFrom').markInvalid(errorMessage)
+                          $App.dialogInfo(errorMessage)
+                          editor.editor.form.findField('dateFrom').setValue(sicknessFrom)
+                          return false
+                        }
+                        if (newPeriodTo > sicknessTo) {
+                          const errorMessage = UB.i18n('Не може бути більше ніж "дата закінчення"')
+                          editor.editor.form.findField('dateTo').markInvalid(errorMessage)
+                          $App.dialogInfo(errorMessage)
+                          editor.editor.form.findField('dateTo').setValue(sicknessTo)
+                        }
+
+                        const store = context.grid.getStore()
+
+                        if (store.getCount() > 0) {
+                          let hasError = false
+                          store.each(record => {
+                            if (context.record.data.ID === record.get('ID')) return
+                            const recordDateFrom = AC.dateService.truncTimeToUtcNull(record.get('dateFrom'))
+                            const recordDateTo = AC.dateService.truncTimeToUtcNull(record.get('dateTo'))
+                            if (!(newPeriodTo < recordDateFrom || newPeriodFrom > recordDateTo)) {
+                              hasError = true
+                            }
+                          })
+                          if (hasError) {
+                            const errorMessage = UB.i18n(`Періоди перетинаються. Виправіть перед збереженням`)
+                            $App.dialogInfo(errorMessage)
+                            return false
+                          }
+                        }
+                        return true
+                      },
+                      onBeforeEdit: (control, context) => {
+                        const me = context.grid.up('form')
+                        me.attr['empOrderSicknessDt.dateFrom'].field.setMinValue(me.attr.dateFrom.getValue())
+                        me.attr['empOrderSicknessDt.dateFrom'].field.setMaxValue(me.attr.dateTo.getValue())
+                        me.attr['empOrderSicknessDt.dateTo'].field.setMinValue(me.attr.dateFrom.getValue())
+                        me.attr['empOrderSicknessDt.dateTo'].field.setMaxValue(me.attr.dateTo.getValue())
+                        me.setIsDirty(true)
+                      },
+
+                      onAddNewByCurrent: function () {
+                        const me = this
+                        const selection = me.getSelectionModel().getSelection()
+                        if (selection.length < 1) {
+                          $App.dialogInfo('selectRowFirst')
+                          return
+                        }
+                        if (!me.rowEditing) {
+                          const eOpt = {
+                            addByCurrent: true,
+                            instanceID: selection[0].get('ID')
+                          }
+                          me.openForm(eOpt)
+                        } else {
+                          if (!me.editingPlugin.editing) {
+                            const selectedData = { ...selection[0].getData() }
+                            selectedData.dateFrom = AC.dateService.addDays(selectedData.dateTo, 1)
+                            selectedData.dateTo = AC.dateService.addDays(selectedData.dateTo, 4)
+                            const parentForm = me.up('basepanel')
+                            if (parentForm && (parentForm.isDirty() || parentForm.isNewInstance) && !me.notWriteChanges) {
+                              parentForm.saveForm().then(function (result) {
+                                if (result !== -1) {
+                                  me.addNewRecord(selectedData, true)
+                                }
+                              })
+                            } else {
+                              me.addNewRecord(selectedData, true)
+                            }
+                          } else {
+                            $App.dialogInfo('rowEditing')
+                          }
+                        }
+                      },
+                      entityConfig: {
+                        entity: 'hr_empOrderSicknessDt',
+                        method: 'select',
+                        fieldList: [
+                          {
+                            name: 'dateFrom',
+                            description: UB.i18n('з'),
+                            config: {
+                              align: 'center',
+                              width: 120
+                            }
+                          },
+                          {
+                            name: 'dateTo',
+                            description: UB.i18n('по'),
+                            config: {
+                              align: 'center',
+                              width: 120
+                            }
+                          },
+                          {
+                            name: 'illnessRegime',
+                            columnConfig: { flex: 1 }
+                          }
+                        ],
+                        orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+                      },
+                      masterFields: ['ID'],
+                      detailFields: ['empOrderSicknessID']
+                    }
+                  ]
+                },
+                {
+                  title: UB.i18n('Додаткова інформація'),
+                  autoScroll: true,
+                  layout: { type: 'vbox', align: 'stretch' },
+                  defaults: {
+                    labelWidth: 300
+                  },
+                  items: [
+                    {
+                      attributeName: 'isReg'
+                    },
+                    {
+                      attributeName: 'sickNotes'
+                    },
+                    { layout: { type: 'hbox' }, style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px' },
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        { xtype: 'label', text: UB.i18n('Перевод тимчасово на легшу роботу'), width: 260, cls: 'x-form-item-label', margin: '8 0 5 15' },
+                        {
+                          attributeName: 'easyDateFrom',
+                          labelWidth: 30
+                        },
+                        {
+                          attributeName: 'easyDateTo',
+                          labelWidth: 30
+                        }
+                      ]
+                    },
+                    { layout: { type: 'hbox' }, style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px' },
+                    {
+                      attributeName: 'msekDateFrom'
+                    },
+                    {
+                      attributeName: 'msekDateTo'
+                    },
+                    {
+                      attributeName: 'msekResult'
+                    },
+                    { layout: { type: 'hbox' }, style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px' },
+                    {
+                      xtype: 'label',
+                      text: UB.i18n('Акт про нещасний випадок на виробництві, акт розслідування нещасного випадку на виробництві або професійного захворювання'),
+                      cls: 'x-form-item-label',
+                      margin: '5 0 5 15'
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        { xtype: 'label', text: '', width: 270 },
+                        {
+                          attributeName: 'actDate',
+                          fieldLabel: UB.i18n('від'),
+                          labelWidth: 30
+                        },
+                        {
+                          attributeName: 'actNumber',
+                          fieldLabel: '№',
+                          labelWidth: 30
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

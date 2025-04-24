@@ -1,0 +1,153 @@
+{
+  "caption": "Перевірки (довідки)",
+  "description": "Перевірки (довідки)",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "allowNull": false
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": true
+    },
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада",
+      "allowNull": true
+    },
+    {
+      "name": "auditType",
+      "dataType": "Enum",
+      "enumGroup": "HR_SPECIALTEST_TYPE",
+      "caption": "Тип перевірки",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "docDate",
+      "dataType": "Date",
+      "caption": "Дата",
+      "description": "Дата",
+      "documentation": "Дата"
+    },
+    {
+      "name": "docNumber",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Номер довідки",
+      "description": "Номер довідки",
+      "documentation": "Номер довідки",
+      "allowNull": true
+    },
+    {
+      "name": "endDate",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення"
+    },
+    {
+      "name": "preventInfoResult",
+      "dataType": "Enum",
+      "enumGroup": "HR_PREVENTINFO_RESULT",
+      "caption": "Інформація, що перешкоджає призначенню",
+      "allowNull": true
+    },
+    {
+      "name": "auditResult",
+      "dataType": "Enum",
+      "enumGroup": "HR_SPECIALTEST_RESULT",
+      "caption": "Результат перевірки",
+      "allowNull": true
+    },
+    {
+      "name": "resultDocNumber",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Номер листа",
+      "description": "Номер листа",
+      "documentation": "Номер листа",
+      "allowNull": true
+    },
+    {
+      "name": "resultDocDate",
+      "dataType": "Date",
+      "caption": "Дата припинення",
+      "description": "Дата припинення",
+      "documentation": "Дата припинення",
+      "allowNull": true
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Коментар",
+      "description": "Коментар",
+      "documentation": "Коментар"
+    },
+    {
+      "name": "posName",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Посада",
+      "description": "Посада",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 pos.name from hr_position pos where pos.mi_data_id = {self}.positionID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc) "
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select pos.name from hr_position pos where pos.mi_data_id = {self}.positionID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc LIMIT 1) "
+        }
+      ]
+    },
+    {
+      "name": "orgName",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Організація",
+      "description": "Організація",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 org.name from hr_organization org where org.mi_data_id = {self}.orgID and org.state = 'ACTIVE' AND org.mi_deleteDate >= '9999-12-31' order by org.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select org.name from hr_organization org where org.mi_data_id = {self}.orgID and org.state = 'ACTIVE' AND org.mi_deleteDate >= '9999-12-31' order by org.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

@@ -1,0 +1,167 @@
+// @isModal true
+/* global Ext AC UB $App */
+
+exports.formDef = 'HR.employeePositionList'
+
+Ext.define('HR.employeePositionList', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.employeePositionList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: [
+    {
+      xtype: 'panel',
+      header: false,
+      region: 'center',
+      name: 'panel',
+      flex: 1,
+      layout: 'fit',
+      items: [
+        {
+          xtype: 'ubdetailgrid',
+          stateful: true,
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_employeePosition_grid'),
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+          cmdData: {
+            params: [{
+              entity: 'hr_employeePositionS',
+              method: 'select',
+              fieldList: [
+                { name: 'ID', visibility: false },
+                { name: 'employeeNumberID', visibility: false },
+                { name: 'employeeNumberID.limitedAccess', visibility: false },
+                { name: 'employeeNumberID.tabNum', description: UB.i18n('Таб. №'), simpleFilter: true },
+                { name: 'employeeID', visibility: false },
+                { name: 'employeeID.fullFIO', description: UB.i18n('ПІБ'), simpleFilter: true },
+                { name: 'employeeID.lastName', description: UB.i18n('Прізвище'), simpleFilter: true, visibility: false },
+                { name: 'employeeID.firstName', description: UB.i18n('Ім\'я'), simpleFilter: true, visibility: false },
+                { name: 'employeeID.middleName', description: UB.i18n('По батькові'), simpleFilter: true, visibility: false },
+                { name: 'employeeID.sexType', description: UB.i18n('Стать'), simpleFilter: true },
+                { name: 'employeeID.taxCode', description: UB.i18n('РНОКПП'), simpleFilter: true },
+                { name: 'depName' },
+                { name: 'dictPositionID.name', description: UB.i18n('Посада') },
+                { name: 'posNameAddition', description: UB.i18n('Доповнення до назви посади') },
+                { name: 'posStaffName', description: UB.i18n('Штатна посада') },
+                { name: 'dictWagePayID.name', description: UB.i18n('Тип посади держслужбовця') },
+                { name: 'dictEmpCategoryID.description', description: UB.i18n('Кваліфікаційна категорія') },
+                { name: 'dateFrom' },
+                { name: 'dateToEmpty' },
+                { name: 'dateNew' },
+                { name: 'workScheduleID.name', description: UB.i18n('Графік роботи') },
+                { name: 'mtCount', format: '0.00' },
+                { name: 'dictStaffCatID.name', description: UB.i18n('Категорія персоналу') },
+                { name: 'workerType' },
+                { name: 'workPlace' },
+                { name: 'dictTrialPeriodID.name', description: UB.i18n('Випробувальний строк') },
+                { name: 'dateTrialEnd' },
+                // { name: 'dictFundSourceID.name', description: UB.i18n('Джерело фінансування') },
+                // { name: 'posFundSourceName', description: UB.i18n('Посада. Джерело фінансування') },
+                { name: 'dictCategoryECBID.name', description: UB.i18n('Категорія застрахованої особи') },
+                { name: 'accountID.description', description: UB.i18n('Рахунок витрат') },
+                { name: 'dictCostTypeDescription', description: UB.i18n('Місце виникнення витрат') },
+                { name: 'contractType' },
+                { name: 'dictContractKindID.name', description: UB.i18n('Вид договору') },
+                { name: 'dictTarifCoeffID.name', description: UB.i18n('Тарифний розряд') },
+                { name: 'orderID.description', description: UB.i18n('Наказ') },
+                { name: 'changeOrderID.description', description: UB.i18n('Документ-підстава скасування') },
+                { name: 'payElID.name', description: UB.i18n('Вид оплати') },
+                { name: 'accrualSum' },
+                { name: 'raiseSalary' },
+                { name: 'isIndex' },
+                { name: 'vacancyDateFrom' },
+                { name: 'vacancyDateToEmpty' },
+                { name: 'dictRankID.name', description: UB.i18n('Ранг') },
+                { name: 'isResponsible' },
+                { name: 'planDateTo' },
+                { name: 'isFactWorkSchedule' },
+                { name: 'positionCategory', description: UB.i18n('Категорія посади (за посадою)') },
+                { name: 'positionDictStaffCatIDName', description: UB.i18n('Категорія персоналу (за посадою)') },
+                { name: 'positionDictStaffSubCatIDName', description: UB.i18n('Підкатегорія персоналу (за посадою)') },
+                { name: 'psCategory', description: UB.i18n('Категорія посади держслужбовця (за посадою)') },
+                { name: 'positionDictStatePayIDName', description: UB.i18n('Група оплати праці держслужбовця (за посадою)') },
+                { name: 'reformer', description: UB.i18n('Фахівці з питань реформ (за посадою)') },
+                { name: 'workScheduleIDName', description: UB.i18n('Графік роботи (за посадою)') },
+                { name: 'planHours', format: '0.00' },
+                { name: 'selfStructDepName', description: UB.i18n('Самостійний структурний підрозділ') },
+                { name: 'parentUnitDepName', description: UB.i18n('Підпорядкування підрозділу') },
+                { name: 'factPosition', description: UB.i18n('Фактична посада') }
+              ]
+            }]
+          },
+          onDeterminateForm: function () {
+            return {
+              entityName: 'hr_employeePosition',
+              formCode: 'hr_employeePosition'
+            }
+          },
+          cmpInitConfig: {
+            afterInit: function () {
+              AC.gridUtils.setGlobalOrganization(this, 'organizationID')
+              AC.gridUtils.setGlobalDate(this)
+              const limitedAccess = !AC.entityUtils.verifyRightsMethod('hr_employeeNumber', 'employeeLimitedAccess')
+              const notShowSalary = AC.entityUtils.verifyRightsMethod('hr_service', 'notShowSalary') && !AC.entityUtils.isAdmin()
+              if (limitedAccess || notShowSalary) {
+                AC.gridUtils.tuneGridColumns(this, {
+                  accrualSum: {
+                    renderer: function (value, meta, record) {
+                      return notShowSalary ? 0 : (record.get ? record.get('employeeNumberID.limitedAccess') : record[2]) ? 0 : value
+                    }
+                  }
+                })
+              }
+            },
+            listeners: {
+              render: grid => {
+                grid.menu.add([
+                  {
+                    text: UB.i18n('Відкрити картку працівника'),
+                    ubID: 'itemShowEmployee',
+                    disabled: !AC.entityUtils.verifyRightsMethod('hr_employee', 'view'),
+                    handler: function () {
+                      let reco = AC.gridUtils.getCurrentRecord(grid)
+                      let message
+                      if (!reco) {
+                        message = UB.i18n('Не вибрано запис')
+                      }
+                      if (!reco.get('employeeNumberID')) {
+                        message = UB.i18n(`{0} не є працівником`, reco.get('employeeDesc'))
+                      }
+                      if (message) {
+                        AC.viewUtils.showToast(UB.i18n('Помилка'), message)
+                        return
+                      }
+                      $App.doCommand({
+                        cmdType: 'showForm',
+                        formCode: 'hr_employee',
+                        entity: 'hr_employee',
+                        instanceID: reco.get('employeeID'),
+                        sender: grid,
+                        cmpInitConfig: {
+                          employeeNumberID: reco.get('employeeNumberID')
+                        }
+                      })
+                    }
+                  }
+                ])
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  initComponent: function () {
+    let me = this
+    me.items = me.mainPanel
+    me.callParent(arguments)
+  }
+})

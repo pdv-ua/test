@@ -1,0 +1,311 @@
+{
+  "caption": "Відпустка працівника",
+  "description": "Відпустка працівника",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ про відпустку",
+      "description": "Наказ про відпустку",
+      "documentation": "Наказ про відпустку",
+      "allowNull": true
+    },
+    {
+      "name": "paraID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Пункт наказу про відпустку",
+      "description": "Пункт наказу про відпустку",
+      "documentation": "Пункт наказу про відпустку",
+      "allowNull": true
+    },
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер наказу",
+      "description": "Номер наказу",
+      "documentation": "Номер наказу",
+      "allowNull": false
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу",
+      "description": "Дата наказу",
+      "documentation": "Дата наказу",
+      "allowNull": false
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Статус",
+      "description": "Статус",
+      "documentation": "Статус",
+      "defaultValue": "PROJECT",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "vacationStatus",
+      "dataType": "Enum",
+      "enumGroup": "HR_VACATION_STATUS",
+      "caption": "Статус",
+      "description": "Статус",
+      "documentation": "Статус",
+      "defaultValue": "GRANT",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "dictPeriodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Період розрахунку",
+      "description": "Період розрахунку",
+      "documentation": "Період розрахунку",
+      "allowNull": true
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "allowNull": false
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "allowNull": true
+    },
+    {
+      "name": "dictVacationKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictVacationKind",
+      "caption": "Вид відпустки",
+      "description": "Вид відпустки",
+      "documentation": "Вид відпустки",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": true
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "allowNull": true
+    },
+    {
+      "name": "dayCount",
+      "dataType": "Int",
+      "caption": "Кількість днів",
+      "description": "Кількість днів",
+      "documentation": "Кількість днів",
+      "allowNull": true
+    },
+    {
+      "name": "avgSum",
+      "dataType": "Float",
+      "caption": "Середня ЗП",
+      "description": "Середня ЗП для розрахунку",
+      "documentation": "Середня ЗП для розрахунку",
+      "allowNull": true
+    },
+    {
+      "name": "empVacationPeriodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empVacationPeriod",
+      "caption": "Період відпустки",
+      "description": "Період відпустки",
+      "documentation": "Період відпустки"
+    },
+    {
+      "name": "cntDay",
+      "dataType": "Int",
+      "caption": "Оплачувана/Неоплачувана кількість днів",
+      "description": "Оплачувана/Неоплачувана кількість днів",
+      "documentation": "Оплачувана/Неоплачувана кількість днів"
+    },
+    {
+      "name": "isMoneyHelp",
+      "dataType": "Boolean",
+      "caption": "Матеріальна допомога",
+      "description": "Матеріальна допомога",
+      "documentation": "Матеріальна допомога",
+      "defaultValue": "0",
+      "allowNull": false
+    },
+    {
+      "name": "cntDayRst",
+      "dataType": "Int",
+      "caption": "Оплачувана кількість днів",
+      "description": "Оплачувана кількість днів",
+      "documentation": "Оплачувана кількість днів",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(case when (select p.isRst from hr_dictVacationKind p where p.ID = {self}.dictVacationKindID) = 1 then {self}.cntDay else null end)"
+        }
+      ]
+    },
+    {
+      "name": "yearDateFrom",
+      "dataType": "Int",
+      "caption": "Рік дати початку",
+      "description": "Рік дати початку",
+      "documentation": "Рік дати початку",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select year({self}.dateFrom))"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(Extract(YEAR from {self}.dateFrom))"
+        }
+      ]
+    },
+    {
+      "name": "yearDateTo",
+      "dataType": "Int",
+      "caption": "Рік дати закінчення",
+      "description": "Рік дати закінчення",
+      "documentation": "Рік дати закінчення",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select year({self}.dateTo))"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(Extract(YEAR from {self}.dateTo))"
+        }
+      ]
+    },
+    {
+      "name": "cntDayNoRst",
+      "dataType": "Int",
+      "caption": "Неоплачувана кількість днів",
+      "description": "Неоплачувана кількість днів",
+      "documentation": "Неоплачувана кількість днів",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(case when (select p.isRst from hr_dictVacationKind p where p.ID = {self}.dictVacationKindID) = 0 then {self}.cntDay else null end)"
+        }
+      ]
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Опис",
+      "description": "Опис наказу",
+      "documentation": "Опис наказу",
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["orderNumber", "orderDate"],
+        "compositeSeparator": " від "
+      }
+    },
+    {
+      "name": "dateFromTo",
+      "dataType": "Date",
+      "caption": "Дата початку або закінчення",
+      "description": "Дата початку або закінчення",
+      "documentation": "Дата початку або закінчення",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "COALESCE({self}.dateFrom, {self}.dateTo)"
+        }
+      ]
+    },
+    {
+      "name": "isParent",
+      "dataType": "Boolean",
+      "caption": "З попереднього ОР",
+      "description": "З попереднього ОР",
+      "documentation": "З попереднього ОР",
+      "defaultValue": "0",
+      "allowNull": false
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_EMPORDERVAC_DATA": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeeID": { "sort": "ASC" },
+          "orderState": { "sort": "ASC" },
+          "dateFrom": { "sort": "ASC" },
+          "dateTo": { "sort": "ASC" },
+          "dictVacationKindID": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    },
+    "IDX_HR_EMPORDERVAC_DATES": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "dateFrom": { "sort": "ASC" },
+          "dateTo": { "sort": "ASC" },
+          "employeeNumberID": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

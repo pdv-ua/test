@@ -1,0 +1,111 @@
+/* global UB */
+exports.formDef = {
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  requiredFields: ['linkEmployeeID'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  defaults: { labelWidth: 170 },
+                  flex: 2,
+                  items: [
+                    { attributeName: 'employeeID', hidden: true, allowBlank: false },
+                    { attributeName: 'shortFIO', hidden: true },
+                    { attributeName: 'fullFIO', hidden: true },
+                    { attributeName: 'taxCode' },
+                    { attributeName: 'lastName' },
+                    { attributeName: 'firstName' },
+                    { attributeName: 'middleName' },
+                    { attributeName: 'dictDocKindID' },
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        { attributeName: 'docSeries', labelWidth: 170, flex: 1 },
+                        { attributeName: 'docNumber', flex: 2 }
+                      ]
+                    },
+                    { attributeName: 'docIssued' },
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        { attributeName: 'docIssuedDate', labelWidth: 170, flex: 1 },
+                        { attributeName: 'docValidUntil', flex: 2 }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  defaults: { labelWidth: 170 },
+                  flex: 1,
+                  items: [
+                    { attributeName: 'birthDate' },
+                    { attributeName: 'sexType' },
+                    { attributeName: 'citizenshipID', flex: 1 },
+                    { attributeName: 'phoneMobile', flex: 1 },
+                    { attributeName: 'phoneWorking', flex: 1 },
+                    { attributeName: 'phoneHome', flex: 1 },
+                    { attributeName: 'email', flex: 1 }
+                  ]
+                }
+              ]
+            },
+            { attributeName: 'other', xtype: 'textarea', labelWidth: 170, height: 45 }
+          ]
+        },
+        {
+          title: UB.i18n('Адреси'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'addressesDetail',
+              autoScroll: true,
+              hideActions: [],
+              flex: 1,
+              entityConfig: {
+                entity: 'ac_address',
+                method: 'select',
+                fieldList: [
+                  { name: 'addressType' },
+                  { name: 'postIndex' },
+                  { name: 'countryID.name', description: UB.i18n('Країна') },
+                  { name: 'regionID.name', description: UB.i18n('Область') },
+                  { name: 'districtID.name', description: UB.i18n('Район') },
+                  { name: 'cityID.name', description: UB.i18n('Населений пункт') },
+                  { name: 'cityDistrictID.name', description: UB.i18n('Район міста') },
+                  { name: 'street' },
+                  { name: 'house' },
+                  { name: 'section' },
+                  { name: 'apartment' },
+                  { name: 'address' }
+                ]
+              },
+              masterFields: ['ID'],
+              detailFields: ['ownerID']
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,263 @@
+/* global Ext $App UB appAC AC */
+exports.formDef = 'HR.importStudentAPI'
+
+Ext.define('HR.importStudentAPI', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.importStudentAPI',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    me.dockedItems = []
+
+    me.items = [
+      {
+        region: 'center',
+        autoScroll: true,
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            name: 'importStudLog',
+            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion'],
+            flex: 1,
+            disableSearchBar: true,
+            sortableColumns: false,
+            disableAutoLoadStore: true,
+            stateful: true,
+            stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_importStudentAPI_importStudLog'),
+            autoScroll: true,
+            layout: 'fit',
+            entityConfig: {
+              entity: 'hr_importStudentLog',
+              method: 'select',
+              fieldList: [
+                { name: 'importDate', config: { width: 150, align: 'center' } },
+                {
+                  name: 'resultMessage',
+                  config: { flex: 1 }
+                }
+              ],
+              orderList: {
+                orderBy: { expression: 'importDate', order: 'desc' }
+              },
+              whereList: {
+                type: { expression: '[type]', condition: 'notEqual', value: 'csv' }
+              }
+            },
+            cmpInitConfig: {
+              onItemDblClick: function (grid, record) {
+                $App.showModal({
+                  formCode: 'hr_importStudentLog',
+                  isClosable: true,
+                  isResizable: true,
+                  description: UB.i18n('Результат завантаження з АСУ ВНЗ'),
+                  customParams: {
+                    instanceID: record.get('ID')
+                  }
+                })
+              },
+              afterInit: function () {
+                const grid = this
+                AC.gridUtils.setGlobalOrganization(this, 'orgID')
+                grid.store.load()
+                grid.down('toolbar').insert(2,
+                  Ext.create('Ext.Button', {
+                    tooltip: UB.i18n('Завантажити інформацію з АСУ ВНЗ (студенти)'),
+                    text: UB.i18n('Завантажити інформацію з АСУ ВНЗ (студенти)'),
+                    iconCls: 'u-icon-download',
+                    cls: 'fill-action',
+                    handler: function () {
+                      me.import('active')
+                    }
+                  })
+                )
+                grid.down('toolbar').insert(3,
+                  Ext.create('Ext.Button', {
+                    tooltip: UB.i18n('Завантажити інформацію з АСУ ВНЗ (студенти що вибули)'),
+                    text: UB.i18n('Завантажити інформацію з АСУ ВНЗ (студенти що вибули)'),
+                    iconCls: 'u-icon-download',
+                    cls: 'fill-action',
+                    handler: function () {
+                      me.import('dismiss')
+                    }
+                  })
+                )
+                grid.down('toolbar').insert(4,
+                  Ext.create('Ext.Button', {
+                    tooltip: UB.i18n('Заповнити факультет в групах'),
+                    text: UB.i18n('Заповнити факультет в групах'),
+                    iconCls: 'u-icon-download',
+                    cls: 'fill-action',
+                    handler: function () {
+                      $App.dialogYesNo('Увага', 'Заповнити факультет в групах?').then(choice => {
+                        if (choice) {
+                          me.setLoading(true)
+                          $App.connection.run({
+                            entity: 'hr_importCustom',
+                            method: 'fillFacultyStudGroup',
+                            orgID: appAC.globalOrganization()
+                          }).then((mParams) => {
+                            me.setLoading(false)
+                            if (mParams.errors) {
+                              const errors = JSON.parse(mParams.errors)
+                              $App.dialogInfo(UB.i18n(`Помилки:`) + ' <br /> ' + errors.join('<br />'))
+                            }
+                          }, err => {
+                            me.setLoading(false)
+                            if (err.config && err.config.timeout) {
+                              $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                            } else {
+                              throw err
+                            }
+                          })
+                        }
+                      })
+                    }
+                  })
+                )
+              }
+            }
+          }
+        ]
+      }
+    ]
+
+    me.import = async function (mode) {
+      const me = this
+      const mParams = await $App.connection.run({
+        entity: 'hr_importStudentApi',
+        method: 'checkConfig',
+        orgID: appAC.globalOrganization()
+      })
+      if (!mParams.config) {
+        const choice = await $App.dialogYesNo('Увага', 'Відсутній файл конфігурації. Створити новий?')
+        if (!choice) {
+          return
+        } else {
+          const result = await $App.showModal({
+            formCode: 'hr_importStudentAPIConfig',
+            isClosable: true,
+            description: UB.i18n('Параметри доступу до АСУ ВНЗ')
+          })
+          if (!result) return
+        }
+      }
+      const params = await $App.showModal({
+        formCode: 'hr_importStudentAPIParams',
+        isClosable: true,
+        description: UB.i18n('Параметри завантаження з АСУ ВНЗ'),
+        customParams: {
+          mode
+        }
+      })
+      if (params) {
+        const grid = me.down('[name=importStudLog]')
+        if (params.loadFromFile) {
+          Ext.create('UB.view.UploadFileAjax', {
+            scope: this,
+            listeners: {
+              afterrender: function (cmp) {
+                this.fieldFile.fileInputEl.set({
+                  accept: '.json'
+                })
+              }
+            },
+            upLoad: function (btn) {
+              const dialogWindow = btn.up('window')
+              const inputDom = this.fieldFile.fileInputEl.dom
+              if (inputDom.files.length === 0) {
+                return
+              }
+              me.setLoading(UB.i18n('Виконується завантаження даних'))
+              const file = inputDom.files[0]
+              btn.disable()
+
+              UB.connection.post('loadImportStudentJson', file, {
+                params: {
+                  fileName: file.name,
+                  orgID: appAC.globalOrganization(),
+                  mode,
+                  dateFromStipend: params.dateFromStipend ? params.dateFromStipend.getTime() : undefined,
+                  typeStudy: params.typeStudy,
+                  formStudy: params.formStudy,
+                  semester: params.semester ? params.semester.join(',') : undefined
+                },
+                headers: { 'Content-Type': 'application/octet-stream' }
+              }).then((response) => {
+                if (response.data && typeof response.data === 'object' && response.data.error) {
+                  $App.dialogError(response.data.error)
+                }
+                grid.onRefresh()
+                me.setLoading(false)
+              }, (err) => {
+                me.setLoading(false)
+                if (err.config && err.config.timeout) {
+                  $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+                } else {
+                  throw err
+                }
+              }).finally(() => {
+                me.setLoading(false)
+              })
+              dialogWindow.close()
+            }
+          })
+        } else {
+          me.setLoading(true)
+          $App.connection.run({
+            entity: 'hr_importStudentApi',
+            method: 'doImport',
+            orgID: appAC.globalOrganization(),
+            mode,
+            execParams: params
+          }).then((mParams) => {
+            grid.onRefresh()
+            me.setLoading(false)
+          }, err => {
+            me.setLoading(false)
+            if (err.config && err.config.timeout) {
+              $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+            } else {
+              throw err
+            }
+          })
+        }
+      }
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      const tb = me.down('toolbar')
+      const allActions = tb && tb.query('[menuId=AllActions]')[0]
+      if (allActions) {
+        allActions.menu.add({
+          xtype: 'menuseparator'
+        })
+
+        allActions.menu.add({
+          text: UB.i18n('Параметри доступу'),
+          handler: async function () {
+            const mParams = await $App.connection.run({
+              entity: 'hr_importStudentApi',
+              method: 'checkConfig',
+              orgID: appAC.globalOrganization()
+            })
+            const config = mParams.config ? JSON.parse(mParams.config) : {}
+            await $App.showModal({
+              formCode: 'hr_importStudentAPIConfig',
+              isClosable: true,
+              description: UB.i18n('Параметри доступу до АСУ ВНЗ'),
+              customParams: {
+                config
+              }
+            })
+          }
+        })
+      }
+    })
+
+    me.callParent(arguments)
+  }
+
+})

@@ -1,0 +1,231 @@
+{
+  "caption": "Тарифікація",
+  "description": "Тарифікація",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "docDate",
+      "dataType": "Date",
+      "caption": "Дата",
+      "description": "Дата",
+      "documentation": "Дата",
+      "allowNull": false
+    },
+    {
+      "name": "docNumber",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Номер",
+      "description": "Номер",
+      "documentation": "Номер",
+      "allowNull": false
+    },
+    {
+      "name": "type",
+      "dataType": "Enum",
+      "enumGroup": "HR_DOCUMENT_TYPE",
+      "caption": "Тип",
+      "description": "Тип",
+      "documentation": "Тип",
+      "allowNull": false
+    },
+    {
+      "name": "parentDocID",
+      "dataType": "Entity",
+      "associatedEntity": "trf_document",
+      "caption": "Підпорядкування",
+      "description": "Підпорядкування",
+      "documentation": "Підпорядкування",
+      "allowNull": true
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": true,
+      "defaultView": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата кінця",
+      "description": "Дата кінця",
+      "documentation": "Дата кінця",
+      "allowNull": true,
+      "defaultView": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата кінця",
+      "description": "Дата кінця",
+      "documentation": "Дата кінця",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": true
+    },
+    {
+      "name": "docState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан",
+      "description": "Стан",
+      "documentation": "Стан",
+      "allowNull": true,
+      "defaultValue": "PROJECT"
+    },
+    {
+      "name": "workPlaces",
+      "dataType": "Int",
+      "caption": "Робочих місць",
+      "documentation": "Робочих місць",
+      "description": "Робочих місць",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT count(*) FROM trf_workPlace WHERE documentID = {self}.ID AND mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "positionPlaces",
+      "dataType": "Int",
+      "caption": "Посадових місць",
+      "documentation": "Посадових місць",
+      "description": "Посадових місць",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT count(*) FROM trf_workPlace wp JOIN trf_position p ON p.workPlaceID = wp.ID and wp.documentID = {self}.ID AND p.mi_deleteDate >= '9999-12-31' AND wp.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "positionVacants",
+      "dataType": "Int",
+      "caption": "Вакансій",
+      "documentation": "Вакансій",
+      "description": "Вакансій",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT count(*) FROM trf_workPlace wp JOIN trf_position p ON p.workPlaceID = wp.ID AND wp.employeeNumberID is null AND wp.documentID = {self}.ID AND p.mi_deleteDate >= '9999-12-31' AND wp.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "accrualSum",
+      "dataType": "Float",
+      "caption": "Сума",
+      "documentation": "Сума",
+      "description": "Сума",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT sum(p.accrualSum) FROM trf_workPlace wp JOIN trf_position p ON p.workPlaceID = wp.ID AND wp.documentID = {self}.ID and p.mi_deleteDate >= '9999-12-31' and wp.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Опис",
+      "documentation": "Опис",
+      "description": "Опис",
+      "allowNull": true
+    },
+    {
+      "name": "hasPosted",
+      "dataType": "Int",
+      "caption": "Ознака наявності дочірніх документів в статусі POSTED",
+      "description": "Ознака наявності дочірніх документів в статусі POSTED",
+      "documentation": "Ознака наявності дочірніх документів в статусі POSTED",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT count(*) FROM trf_workPlace wp WHERE wp.documentID = {self}.ID AND wp.state = 'POSTED' AND wp.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "hasProject",
+      "dataType": "Int",
+      "caption": "Ознака наявності дочірніх документів в статусі PROJECT",
+      "description": "Ознака наявності дочірніх документів в статусі PROJECT",
+      "documentation": "Ознака наявності дочірніх документів в статусі PROJECT",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT count(*) FROM trf_workPlace wp WHERE wp.documentID = {self}.ID AND wp.state = 'PROJECT' AND wp.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер наказу",
+      "description": "Номер наказу",
+      "documentation": "Номер наказу"
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу",
+      "description": "Дата наказу",
+      "documentation": "Дата наказу"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

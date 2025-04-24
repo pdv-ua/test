@@ -1,0 +1,285 @@
+/* global $App AC UB HR */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'organizationID', 'paraID', 'employeeID',
+      'lastNameOld', 'firstNameOld', 'middleNameOld', 'genNameOld', 'datNameOld', 'accusativeNameOld', 'insNameOld',
+      'locNameOld', 'shortFIOOld', 'fullFIOOld', 'orderNumberFull', 'orderDate', 'employeeID.sexType'
+    ],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [
+      {
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        items: [
+          {
+            attributeName: 'orderNumberFull',
+            fieldLabel: UB.i18n('№ наказу'),
+            flex: 1,
+            width: 400,
+            minWidth: 400,
+            maxWidth: 400
+          },
+          {
+            attributeName: 'orderDate'
+          }
+
+        ]
+      },
+
+      {
+        xtype: 'tabpanel',
+        listeners: {
+          tabchange: function (tp, t) {}
+        },
+        items: [
+          {
+            ubID: 'tabNewData',
+            title: UB.i18n('Змінені дані'),
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            items: [{
+              layout: {
+                type: 'hbox'
+              },
+              items: [{
+                flex: 1,
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                items: [{
+                  attributeName: 'lastName',
+                  allowBlank: false
+                },
+                {
+                  attributeName: 'firstName',
+                  allowBlank: false
+                },
+                {
+                  attributeName: 'middleName'
+                },
+                {
+                  attributeName: 'fullFIO'
+                },
+                {
+                  attributeName: 'shortFIO'
+                }
+                ]
+              },
+              { // Права частина
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                flex: 1,
+                items: [{
+                  attributeName: 'genName',
+                  caseName: 'gen'
+                },
+                {
+                  attributeName: 'datName',
+                  caseName: 'dat'
+                },
+                {
+                  attributeName: 'accusativeName',
+                  caseName: 'acc'
+                },
+                {
+                  attributeName: 'insName',
+                  caseName: 'ins'
+                },
+                {
+                  attributeName: 'locName',
+                  caseName: 'loc'
+                },
+                {
+                  ubID: 'fillNameCase',
+                  xtype: 'button',
+                  text: UB.i18n('Заповнити відмінки'),
+                  cls: 'fill-action',
+                  handler: btn => {
+                    const me = btn.up('form')
+                    const surname = me.getField('lastName')
+                    const name = me.getField('firstName')
+                    const lastname = me.getField('middleName')
+                    let gender = me.record.get('employeeID.sexType')
+                    gender = gender === 'W' ? 'female' : gender === 'M' ? 'male' : null
+                    HR.nameCase.getNameCase((surname.getValue() || '').trim(), (name.getValue() || '').trim(), (lastname.getValue() || '').trim(), gender).then(nc => {
+                      me.query('[caseName]').forEach(item => {
+                        const value = nc.getSurName(item.caseName) + ' ' + nc.getName(item.caseName) + ' ' + nc.getLastName(item.caseName)
+                        item.setValue(value.trim())
+                      })
+                    })
+                  }
+                }
+                ]
+              }
+              ]
+            }]
+          },
+          {
+            ubID: 'tabOldData',
+            title: UB.i18n('Попередні дані'),
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            items: [{
+              layout: {
+                type: 'hbox'
+              },
+              items: [{
+                flex: 1,
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                items: [{
+                  attributeName: 'lastNameOld',
+                  fieldLabel: UB.i18n('Прізвище'),
+                  allowBlank: false
+                },
+                {
+                  attributeName: 'firstNameOld',
+                  fieldLabel: UB.i18n('Ім\'я'),
+                  allowBlank: false
+                },
+                {
+                  attributeName: 'middleNameOld',
+                  fieldLabel: UB.i18n('По батькові')
+                },
+                {
+                  attributeName: 'fullFIOOld',
+                  fieldLabel: UB.i18n('Повний ПІБ')
+                },
+                {
+                  attributeName: 'shortFIOOld',
+                  fieldLabel: UB.i18n('ПІБ')
+                }
+                ]
+              },
+              { // Права частина
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                flex: 1,
+                items: [{
+                  attributeName: 'genNameOld'
+                },
+                {
+                  attributeName: 'datNameOld'
+                },
+                {
+                  attributeName: 'accusativeNameOld'
+                },
+                {
+                  attributeName: 'insNameOld'
+                },
+                {
+                  attributeName: 'locNameOld'
+                }
+                ]
+              }
+              ]
+            }]
+          }
+        ]
+      },
+      {
+        xtype: 'tabpanel',
+        region: 'center',
+        layout: 'fit',
+        flex: 1,
+        items: [{
+          title: UB.i18n('Додані документи:'),
+          name: 'hr_empOrderDocs',
+          xtype: 'ubdetailgrid',
+          autoScroll: true,
+          flex: 1,
+          entityConfig: {
+            entity: 'hr_empOrderDocs',
+            method: 'select',
+            fieldList: [{
+              'name': 'dictDocKindID',
+              'description': UB.i18n('Вид документа')
+            }, {
+              'name': 'docSeries',
+              'description': UB.i18n('Серія')
+            }, {
+              'name': 'docNumber',
+              'description': UB.i18n('№ документа')
+            }, {
+              'name': 'docIssued',
+              'description': UB.i18n('Ким видано')
+            }, {
+              'name': 'docIssuedDate',
+              'description': UB.i18n('Дата видачі')
+            }, {
+              'name': 'docValidUntil',
+              'description': UB.i18n('Дiйсний до')
+            }, {
+              'name': 'state',
+              'description': UB.i18n('Стан документа')
+            }, {
+              'name': 'comment',
+              'description': UB.i18n('Примітки')
+            }]
+          },
+          masterFields: ['paraID', 'orderID'],
+          detailFields: ['paraID', 'orderID'],
+          listeners: {
+            changeData: function (grid, action) {
+              // let me = grid.up('form')
+              // me.setIsDirty(true)
+            },
+            afterrender: grid => {}
+          },
+          cmpInitConfig: {
+            customInit: function () {
+              let grid = this
+              let newOnDel = function () {
+                let me = grid.up('form')
+                if (['POSTED', 'PROCESSED'].includes(me.record.get('orderState'))) {
+                  AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Неможливо видалити запис з проведеного наказу'))
+                  return
+                }
+                let reco = AC.gridUtils.getCurrentRecord('grid')
+                reco && $App.connection.run({
+                  entity: reco.get('mi_unityEntity'),
+                  method: 'delete',
+                  execParams: {
+                    ID: reco.get('ID')
+                  }
+                }).then(() => {
+                  grid.onRefresh()
+                })
+              }
+              AC.gridUtils.replaceListener(grid, 'del', grid.onDel, newOnDel)
+              let _doOnEdit = grid.doOnEdit
+              AC.gridUtils.tuneGridColumns(grid, {})
+              grid.doOnEdit = function () {
+                grid.isEditMode = true
+                _doOnEdit.call(grid)
+              }
+            }
+          }
+        }]
+      }
+    ]
+  }
+}())

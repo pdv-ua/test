@@ -1,0 +1,117 @@
+/* global $App AC */
+exports.formDef = {
+  requiredFields: [],
+  parentConfig: {
+    layout: { type: 'vbox', align: 'stretch' },
+    defaults: { labelWidth: 320 }
+  },
+  size: {
+    width: 600,
+    height: 480
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'fillData'
+        },
+        {
+          orderId: 5,
+          actionId: 'exportData'
+        },
+        {
+          orderId: 6,
+          actionId: 'reportData'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Умови розрахунку даних для порталу'),
+      layout: { type: 'vbox', align: 'stretch' },
+      margin: '0 15 0 15',
+      padding: '0 0 10 10',
+      defaults: { labelWidth: 295 },
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'orgTotalAll', allowBlank: false, labelWidth: 295, width: 400 },
+            {
+              xtype: 'label',
+              margin: '10 0 0 10',
+              text: UB.i18n(`Кількість організації, яка використовується в розділі сумарних даних порталу при розрахунку відсотку заведених в системі організацій.`),
+            }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'appointPercent', minValue: 0, maxValue: 100, allowBlank: false, labelWidth: 295, width: 400},
+            {
+              xtype: 'label',
+              margin: '10 0 0 10',
+              text: UB.i18n(`Якщо відсоток зайнятих посад в організації менше зазначеного, то дані відповідної організації не враховуються в розрахунку сумарних даних.`),
+            }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'refreshCurrentData', labelWidth: 295, width: 320 },
+            {
+              xtype: 'label',
+              margin: '5 0 0 10',
+              text: UB.i18n(` - Якщо перемикач встановлено в значення "Так", то при натисканні кнопки "Заповнити..." в блоці Кількість/Відсотки обов'язково оновлюються поля з назвами виділеними напівжирним шрифтом. Обов'язково оновлюються порожні поля.`),
+            }
+          ]
+        },
+
+      ]
+    },
+    { attributeName: 'orgTotal', labelStyle: 'font-weight: bold;' },
+    { attributeName: 'orgTotal01' },
+    { attributeName: 'empTotal', labelStyle: 'font-weight: bold;' },
+    { attributeName: 'empTotal01' },
+    { attributeName: 'fillOrgPrc', labelStyle: 'font-weight: bold;' },
+    { attributeName: 'fillOrgPrc01' },
+    { attributeName: 'sitePurpose' },
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Експортовані файли'),
+      layout: { type: 'hbox' },
+      margin: '0 15 0 15',
+      padding: '0 0 10 10',
+      items: [
+        {
+          xtype: 'linkbutton',
+          name: 'publicTotalsLink',
+          text: 'publicTotals.json',
+          hidden: true,
+          handler: function () {
+            const me = this.up('form')
+            me.setLoading(true)
+            $App.connection.run({
+              entity: 'hr_exportTotals',
+              method: 'getJsonFile',
+              exportPath: me.exportPath
+            }).then(mParams => {
+              if (mParams.resultData) {
+                AC.filesService.saveAsPlain(mParams.resultData, 'publicTotals.json')
+              }
+              me.setLoading(false)
+            }, function (err) {
+              me.setLoading(false)
+              throw err
+            })
+          }
+        }
+      ]
+    }
+  ]
+}

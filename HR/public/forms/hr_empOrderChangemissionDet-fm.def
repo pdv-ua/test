@@ -1,0 +1,167 @@
+/* global UB HR Ext */
+exports.formDef = {
+  requiredFields: ['orderID', 'empOrderType', 'organizationID', 'lastName', 'firstName', 'middleName', 'employeeID', 'positionID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    autoScroll: true
+  },
+  autoScroll: true,
+  defaults: {
+    layout: 'fit'
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      attributeName: 'employeePositionID',
+      labelWidth: 160,
+      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+      gridFieldList: ['description'],
+      fieldLabel: UB.i18n('Працівник'),
+      fieldList: ['ID', 'description', 'employeeID.firstName', 'employeeID.lastName', 'employeeID.middleName',
+        'employeeID', 'employeeNumberID', 'departmentID', 'positionID',
+        'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'
+      ],
+      xtype: 'empPositionCombobox',
+      addWorkPlace: true,
+      required: true
+    },
+    { attributeName: 'missionOrderID', hidden: true },
+    {
+      attributeName: 'missionOrderDetID',
+      labelWidth: 160,
+      fieldList: ['ID', 'orderDetDescription', 'description', 'orderState', 'orderID', 'dateFrom', 'dateTo', 'dayCount',
+        'purpose', 'cityName', 'isHolidayPay', 'destOrganizationName'],
+      initContextMenu: function () {
+        const me = this
+        let menuItems = []
+        menuItems.push({
+          text: UB.i18n('clearSelection'),
+          iconCls: 'fa fa-eraser',
+          itemID: 'clearValue',
+          hidden: me.disableClearSelection,
+          handler: me.clearValue,
+          disabled: me.disabled || me.readOnly,
+          scope: me
+        })
+        me.contextMenu = Ext.create('Ext.menu.Menu', { items: menuItems })
+        me.clearValueButton = me.contextMenu.items.getAt(0)
+      }
+    },
+    {
+      layout: {
+        type: 'hbox',
+        flex: 1
+      },
+      items: [
+        {
+          attributeName: 'dateFrom',
+          labelWidth: 160,
+          listeners: {
+            focus: ctrl => { ctrl._oldValue = ctrl.getRawValue() },
+            blur: ctrl => { ctrl.up('form').calcPeriod(ctrl) }
+          }
+        },
+        {
+          attributeName: 'dateTo',
+          labelWidth: 120,
+          listeners: {
+            focus: ctrl => { ctrl._oldValue = ctrl.getRawValue() },
+            blur: ctrl => { ctrl.up('form').calcPeriod(ctrl) }
+          }
+        },
+        {
+          attributeName: 'dayCount',
+          labelWidth: 60,
+          width: 140,
+          minValue: 0,
+          listeners: {
+            focus: ctrl => { ctrl._oldValue = ctrl.getRawValue() },
+            blur: ctrl => { ctrl.up('form').calcPeriod(ctrl) }
+          }
+        }
+      ]
+    },
+    {
+      xtype: 'label',
+      name: 'missionOrderDescriptionInfo',
+      text: '',
+      cls: 'x-form-item-label field-label-red',
+      margin: '10 10 5 15'
+    },
+    {
+      xtype: 'panel',
+      name: 'missionOrderDescriptionPanel',
+      layout: { type: 'vbox', align: 'stretch' },
+      collapsible: true,
+      collapsed: true,
+      cls: 'panel-bordered',
+      header: {
+        style: 'background-color: #e7e7e7;',
+        title: UB.i18n('Опис')
+      },
+      margin: '0 15 10 15',
+      items: [{
+        name: 'missionOrderDescription',
+        xtype: 'textarea',
+        align: 'stretch',
+        padding: '5 5 5 5',
+        flex: 1,
+        readOnly: true
+      }]
+    },
+    {
+      name: 'errorText',
+      xtype: 'label',
+      cls: 'x-form-item-label field-label-red',
+      margin: '10 10 5 15'
+    },
+    {
+      layout: {
+        type: 'hbox',
+        flex: 1
+      },
+      name: 'reasonDocPanel',
+      items: [
+        {
+          labelWidth: 160,
+          margins: '5 10 0 0',
+          fieldLabel: UB.i18n('Підстава (до пункту наказу)'),
+          attributeName: 'reason',
+          flex: 1
+        },
+        {
+          xtype: 'button',
+          cls: 'list-icon',
+          name: 'reasonButton',
+          tooltip: UB.i18n('Вибрати'),
+          width: 35,
+          height: 35,
+          margin: '5 10 0 -53',
+          handler: btn => { btn.up('form').getField('reason').selectHandler(btn) }
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      layout: 'fit',
+      ubID: 'tpDetail',
+      flex: 1,
+      items: [
+        HR.orderManager.getActingParaGrid('hr_empOrderChangemissionDet', {
+          title: UB.i18n('Виконуючі обов\'язки'),
+          flex: 1,
+          hidden: false,
+          rowEditing: true
+        })
+      ]
+    }
+  ]
+}

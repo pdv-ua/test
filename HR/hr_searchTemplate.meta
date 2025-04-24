@@ -1,0 +1,103 @@
+{
+  "caption": "Шаблони пошуку",
+  "description": "Шаблони пошуку",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 40,
+      "caption": "Код",
+      "description": "Код",
+      "allowNull": false,
+      "defaultView": true
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Назва",
+      "description": "Назва",
+      "allowNull": false,
+      "defaultView": true
+    },
+    {
+      "name": "description_text",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Опис",
+      "description": "Опис",
+      "allowNull": true,
+      "defaultView": true
+    },
+    {
+      "name": "template",
+      "dataType": "Text",
+      "caption": "Шаблон",
+      "description": "Шаблон",
+      "allowNull": true,
+      "defaultView": false
+    },
+    {
+      "name": "isGlobal",
+      "dataType": "Boolean",
+      "caption": "Для всіх",
+      "description": "Загальний шаблон для всіх користувачів",
+      "allowNull": true,
+      "defaultValue": "0",
+      "defaultView": true
+    },
+    {
+      "name": "searchEntity",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Базова сутність",
+      "description": "Базова сутність",
+      "allowNull": false,
+      "defaultView": false
+    },
+    {
+      "name": "userName",
+      "dataType": "String",
+      "size": 128,
+      "caption": "Автор",
+      "description": "Користувач, який створив шаблон",
+      "documentation": "Користувач, який створив шаблон",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT u.name FROM uba_user u WHERE u.ID = {self}.mi_owner)"
+        }
+      ]
+    }
+  ],
+  "dbExtensions": {
+    "UIDX_SRCH_TEMPLATE_CODE": {
+      "type": "INDEX",
+        "definition": {
+        "keys": {
+          "searchEntity": {
+            "sort": "ASC"
+          },
+          "mi_owner": {
+            "sort": "ASC"
+          },
+          "isGlobal": {
+            "sort": "ASC"
+          },
+          "code": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": true
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true
+    }
+  }
+}

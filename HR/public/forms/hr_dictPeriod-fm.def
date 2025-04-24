@@ -1,0 +1,114 @@
+/* global AC UB */
+
+exports.formDef = {
+  requiredFields: [ 'isCurrent', 'isClosed', 'nextPeriodID', 'nextPeriodID.isCurrent', 'nextPeriodID.isClosed',
+    'priorPeriodID', 'priorPeriodID.isCurrent', 'priorPeriodID.isClosed', 'name' ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'openPeriodAction',
+          iconCls: 'fas fa-unlock-alt',
+          cls: 'green-action',
+          scale: 'medium'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox' },
+      items: [
+        {
+          attributeName: 'description',
+          fieldLabel: UB.i18n('Розрахунковий період'),
+          readOnly: true,
+          width: 350
+        },
+        {
+          xtype: 'checkboxfield',
+          fieldLabel: UB.i18n('Поточний'),
+          name: 'current',
+          boxLabelAlign: 'before',
+          readOnly: true,
+          labelWidth: 80,
+          width: 100
+        },
+        {
+          xtype: 'checkboxfield',
+          fieldLabel: UB.i18n('Блокувати зміни особових рахунків і табеля'),
+          attributeName: 'isBlock',
+          boxLabelAlign: 'before',
+          labelWidth: 200,
+          width: 200
+        },
+        {
+          xtype: 'checkboxfield',
+          fieldLabel: UB.i18n('Закритий'),
+          name: 'closed',
+          readOnly: true,
+          boxLabelAlign: 'before',
+          labelWidth: 80,
+          width: 100
+        }
+      ]
+    },
+    {
+
+      title: UB.i18n('Історія зміни стану'),
+      xtype: 'ubdetailgrid',
+      region: 'center',
+      autoScroll: true,
+      pageSize: 10000,
+      flex: 1,
+      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+      stateful: true,
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_dictPeriod_history'),
+      entityConfig: {
+        entity: 'hr_dictPeriodHistory',
+        method: 'select',
+        fieldList: [
+          { name: 'dateFrom', format: 'd.m.Y H:i:s' },
+          { name: 'periodState' },
+          { name: 'appVersion' },
+          { name: 'platformVersion' },
+          { name: 'mi_createUser.name', description: UB.i18n('Користувач') },
+          { name: 'mi_createUser.fullName', visibility: false }
+        ],
+        orderList: { dateFrom: { expression: 'dateFrom', order: 'asc' } }
+      },
+      masterFields: ['ID'],
+      detailFields: ['periodID'],
+      cmpInitConfig: {
+        afterInit: function () {
+          AC.gridUtils.tuneGridColumns(this, {
+            dateFrom: {
+              renderer: function (value, meta, record) {
+                return record.get('fullName') || AC.dateService.formatDate(AC.dateService.shiftDate(value), 'dd.mm.yyyy hh:nn:ss')
+              }
+            }
+          })
+        },
+        onItemDblClick: function () {
+          return false
+        }
+      }
+    }
+
+  ]
+
+}

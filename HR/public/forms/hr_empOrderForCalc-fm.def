@@ -1,0 +1,170 @@
+/* global Ext AC $App */
+
+exports.formDef = 'HR.empOrderForCalc'
+
+Ext.define('HR.empOrderForCalc', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empOrderForCalc',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        layout: 'fit',
+        flex: 1,
+        hideActions: ['addNew', 'addNewByCurrent', 'del', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        cmdType: 'showList',
+        cmdData: {
+          params: [{
+            entity: 'hr_order',
+            method: 'select',
+            fieldList: [
+              { name: 'empOrderType' },
+              { name: 'orderDate', description: UB.i18n('Дата наказу'), format: 'd.m.Y' },
+              { name: 'orderNumber' },
+              { name: 'description', description: UB.i18n('Наказ') },
+              { name: 'respEmployeePositionID.description', description: UB.i18n('Підписав') },
+              { name: 'respEmployeeNumID.description', description: UB.i18n('Відповідальний') },
+              { name: 'orderState', visibility: false },
+              { name: 'orderClass.entityName', visibility: false }
+            ],
+            whereList: {
+              entityName: {
+                expression: '[orderClass.entityName]',
+                condition: 'in',
+                value: ['hr_empOrder', 'hr_sicknessMeeting']
+              },
+              empOrderType: {
+                expression: '[empOrderType]',
+                condition: 'in',
+                value: ['MISSION', 'MISSION_G', 'BOUNTY', 'VACATION', 'SICKNESSMEETING', 'CWSRELAXDONOR', 'DISM', 'VACATIONREVOKE']
+              },
+              orderState: {
+                expression: '[orderState]',
+                condition: '!=',
+                value: 'PROCESSED'
+              }
+            },
+            orderList: {
+              orderBy: { expression: 'orderDate', order: 'desc' }
+            }
+          }]
+        },
+        cmpInitConfig: {
+          disableAutoLoadStore: true,
+          getRowClass: function (record) {
+            if (record.get('orderState') === 'POSTED') {
+              return 'org-node'
+            } else {
+              return 'grd-color-grey'
+            }
+          },
+          afterInit: function () {
+            const grid = this
+            AC.gridUtils.setGlobalOrganization(grid, 'organizationID')
+            let actCol = Ext.create('Ext.grid.column.Column', {
+              xtype: 'actioncolumn',
+              text: UB.i18n('Дія'),
+              width: 50,
+              align: 'center',
+              filterable: false,
+              sortable: false,
+              renderer: function (value, meta, record) {
+                if (record.get('orderState') === 'POSTED') {
+                  let id = Ext.id()
+                  Ext.defer(function () {
+                    Ext.widget('button', {
+                      renderTo: Ext.query('#' + id)[0],
+                      tooltip: UB.i18n('Опрацювати'),
+                      scale: 'small',
+                      iconCls: 'fas fa-check-circle',
+                      cls: 'green-action',
+                      handler: function () {
+                        const form = grid.up('[formCode=hr_empOrderForCalc]')
+                        if (form) form.createPayOrder(grid, record)
+                      }
+                    })
+                  }, 50)
+                  return Ext.String.format('<div id="{0}"></div>', id)
+                }
+              }
+            })
+            grid.headerCt.insert(0, actCol)
+            grid.columns.unshift(actCol)
+          },
+          onItemDblClick: function (grid, record) {
+            let ubdetailgrid = grid.up('ubdetailgrid')
+            $App.doCommand({
+              cmdType: 'showForm',
+              formCode: record.get('orderClass.entityName'),
+              entity: record.get('orderClass.entityName'),
+              isModal: false,
+              instanceID: record.get('ID'),
+              tabId: record.get('orderClass.entityName') + record.get('ID'),
+              target: $App.getViewport().centralPanel,
+              sender: ubdetailgrid.getView(),
+              store: ubdetailgrid.store
+            })
+          }
+        }
+      }
+    ]
+  },
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+    me.createPayOrder = function (grid, record) {
+      if (['MISSION', 'MISSION_G', 'BOUNTY', 'VACATION', 'SICKNESSMEETING', 'CWSRELAXDONOR', 'DISM', 'VACATIONREVOKE'].includes(record.get('empOrderType'))) {
+        me.setLoading(true)
+        $App.connection.run({
+          entity: 'hr_orderRegistry',
+          method: 'createPayOrder',
+          empOrderID: record.get('ID')
+        }).then(resp => {
+          const resultData = JSON.parse(resp.resultData)
+          if (resultData.errorMessages.length) {
+            $App.dialogInfo(resultData.errorMessages.join('<br>'))
+          } else {
+            grid.getStore().remove(record)
+            AC.viewUtils.showToast(UB.i18n('Наказ опрацьовано'))
+            if (Array.isArray(resultData.warningMessages) && resultData.warningMessages.length) {
+              $App.dialogInfo(resultData.warningMessages.join('<br>'))
+            }
+          }
+          me.setLoading(false)
+        }, err => {
+          me.setLoading(false)
+          if (err.config && err.config.timeout) {
+            grid.getStore().remove(record)
+            $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+          } else {
+            throw err
+          }
+        })
+      }
+    }
+
+    me.on('afterrender', () => {
+
+    }, me)
+    me.on('destroy', () => {
+
+    }, me)
+    me.callParent(arguments)
+  }
+})

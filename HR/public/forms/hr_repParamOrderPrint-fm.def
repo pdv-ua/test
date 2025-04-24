@@ -1,0 +1,161 @@
+/* global Ext AC $App HR Blob appAC UB */
+exports.formDef = 'HR.repParamOrderPrint'
+
+Ext.define('HR.repParamOrderPrint', {
+  extend: 'Ext.form.Panel',
+  height: 190,
+  width: 700,
+  layout: 'border',
+  alias: 'widget.repParamOrderPrint',
+  isModal: true,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'ubdatefield',
+            labelWidth: 90,
+            name: 'dateReport',
+            fieldLabel: UB.i18n('Дата'),
+            value: appAC.globalApplicationDate()
+          },
+          HR.controlService.getRespEmpCombo({
+            fieldLabel: UB.i18n('Підписант'),
+            labelWidth: 90,
+            allowBlank: false,
+            margin: '10 15 5 15',
+            defaultOrgBoss: true,
+            defaultRefSigner: me.defaultRefSigner,
+            respPosition: 'signerVacNotification',
+            onlyRespPosition: true
+          }),
+          {
+            layout: { type: 'vbox', align: 'center' },
+            items: [
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'button',
+                    text: UB.i18n('Формувати'),
+                    iconCls: 'iconDoc',
+                    width: 120,
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      const me = btn.up('form')
+                      if (me.runReport()) {
+                        me.closeForm()
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    text: UB.i18n('Відмінити'),
+                    iconCls: 'fa fa-ban',
+                    width: 120,
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.closeForm()
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.runReport = () => {
+      const notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return false
+      }
+
+      me.formPrintDocument(me.reportCode)
+
+      return true
+    }
+
+    me.closeForm = () => {
+      me.up('window').close()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        respEmp: me.down('[name=respEmp]'),
+        dateReport: me.down('[name=dateReport]')
+      }
+      const wnd = me.up('window')
+      switch (me.reportCode) {
+        case 'vacationNotification':
+          wnd.setTitle(UB.i18n(`Звіт 'Повідомлення про заплановану відпустку'`))
+          break
+      }
+      initComponentDone(me)
+    }, me)
+
+    me.validateParams = () => {
+      let res
+      const params = []
+      if ((!me.attr.respEmp.getValue() && !me.attr.respEmp.allowBlank)) {
+        params.push(AC.viewUtils.formatFieldLabel(`"${me.attr.respEmp.fieldLabel}"`))
+      }
+      if (params.length) {
+        res = {
+          msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+        }
+      }
+      return res
+    }
+
+    me.callParent(arguments)
+
+    me.formPrintDocument = (code) => {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_empOrder',
+        method: 'docPrintForm',
+        params: {
+          code: code,
+          orderID: me.orderID,
+          respEmployeePositionID: me.attr.respEmp.getValue(),
+          dateReport: me.attr.dateReport.getValue(),
+          onDate: appAC.globalApplicationDate()
+        }
+      }).then(function (result) {
+        me.setLoading(false)
+
+        if (result.docs) {
+          const docs = JSON.parse(result.docs)
+          _.forEach(docs, function (item) {
+            const fileContent = JSON.parse(item.fileContent)
+            const contentLength = fileContent.length
+            const pdfArray = new Uint8Array(new ArrayBuffer(contentLength))
+            const filename = item.fileName + '.docx'
+            for (let i = 0; i < contentLength; i++) {
+              pdfArray[i] = fileContent.charCodeAt(i)
+            }
+            const dBlob = new Blob([pdfArray], { type: 'application/msword' })
+            saveAs(dBlob, filename)
+          })
+        }
+      }).then(function () {
+        me.setLoading(false)
+      })
+    }
+  }
+})
+
+function initComponentDone (form) {
+  const signerAllowBlank = form.signerAllowBlank || false
+  form.attr.respEmp.setAllowBlank(signerAllowBlank)
+  form.attr.respEmp.setAllowBlank(true)
+}

@@ -1,0 +1,595 @@
+/* global UB AC */
+
+exports.formDef = {
+  requiredFields: ['mi_deleteUser', 'fullFIO', 'description', 'mi_deleteUser', 'organizationID'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  parentConfig: {
+    layout: {
+      type: 'hbox',
+      align: 'stretch'
+    },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 5,
+          actionId: 'rlAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'printAction'
+        },
+        {
+          xtype: 'tbtext',
+          text: '',
+          orderId: 7,
+          ubID: 'personInfo',
+          style: {
+            'font-style': 'bold',
+            'color': '#2196f3',
+            'font-size': '20px',
+            'margin-left': '0px'
+          }
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      width: '100%',
+      layout: { type: 'hbox', align: 'stretch' },
+      items: [
+        {
+          xtype: 'panel',
+          collapsible: true,
+          ubId: 'menuPanel',
+          flex: 1.5,
+          style: { border: 'solid 1px lightgray' },
+          animate: true,
+          collapseDirection: 'left',
+          layout: 'fit',
+          activateTab: function (nodeId, me) {
+            me.activateTab(nodeId, me)
+          },
+          layoutConfig: {
+            titleCollapse: true,
+            animate: true,
+            activeOnTop: false
+          },
+          items: [
+            {
+              collapsed: false,
+              xtype: 'treepanel',
+              rootVisible: false,
+              multiSelect: false,
+              hideCollapseTool: true,
+              lines: false,
+              hideHeaders: true,
+              hideIcons: true,
+              ubID: 'treeInfo',
+              listeners: {
+                render: function (tree) {
+                  const me = tree.view.up('form')
+                  me.checkNodeSelection(tree, me)
+                },
+                select: function (tree, record) {
+                  const me = tree.view.up('form')
+                  me.treepanelSelect(tree, record)
+                }
+              },
+              findNodeId: function (nodeId) {
+                let rootNode = this.getRootNode()
+                return rootNode.findChildBy(function (node) {
+                  return node.raw.nodeId === nodeId
+                }, null, true)
+              },
+              filters: [],
+              addFilterRemoveNodeId: function (nodeId) {
+                const me = this
+                me.filters.push(nodeId)
+              },
+              clearFilter: function () {
+                const me = this
+                while (me.filters.length) {
+                  me.filters.pop()
+                }
+              },
+              updateNodes: function () {
+                const me = this
+                let rootNode = me.getRootInitial()
+                let filters = me.filters
+
+                let deleteNodeId = function (rootNode, nodeId) {
+                  if (rootNode.children) {
+                    let removeItems = []
+                    rootNode.children.forEach(node => {
+                      if (node.nodeId === nodeId) {
+                        removeItems.push(node)
+                      } else {
+                        deleteNodeId(node, nodeId)
+                      }
+                    })
+                    removeItems.forEach(item => {
+                      let index = rootNode.children.indexOf(item)
+                      rootNode.children.splice(index, 1)
+                    })
+                  }
+                }
+                filters.forEach(item => {
+                  deleteNodeId(rootNode, item)
+                })
+
+                me.setRootNode(rootNode)
+              },
+              getRootInitial: function () {
+                return {
+                  expanded: true,
+                  text: UB.i18n('Розділи'),
+                  children: [
+                    {
+                      text: UB.i18n('<span style="font-weight: bold">Навчання студента</span>'),
+                      nodeId: 'rootNode',
+                      expanded: true,
+                      children: [
+                        {
+                          text: UB.i18n('Загальні дані'),
+                          leaf: true,
+                          nodeId: 'hr_basicInfo'
+                        },
+                        {
+                          text: UB.i18n('Родина'),
+                          leaf: true,
+                          nodeId: 'hr_employeeFamily'
+                        },
+                        {
+                          text: UB.i18n('Адреси'),
+                          leaf: true,
+                          nodeId: 'ac_address'
+                        },
+                        {
+                          text: UB.i18n('Документи'),
+                          leaf: true,
+                          nodeId: 'hr_employeeDocs'
+                        },
+                        {
+                          text: UB.i18n('Інші контакти'),
+                          leaf: true,
+                          nodeId: 'hr_employeeContact'
+                        },
+                        {
+                          text: UB.i18n('Відпустки'),
+                          leaf: true,
+                          nodeId: 'hr_studVacation'
+                        },
+                        {
+                          text: UB.i18n('Пільги'),
+                          leaf: true,
+                          nodeId: 'hr_employeeBenefits'
+                        },
+                        {
+                          text: UB.i18n('Вид навчання'),
+                          leaf: true,
+                          nodeId: 'hr_studEducationKind'
+                        },
+                        {
+                          text: UB.i18n('Навчання'),
+                          leaf: true,
+                          nodeId: 'hr_studEducationHistory'
+                        },
+                        {
+                          text: UB.i18n('Стипендія'),
+                          leaf: true,
+                          nodeId: 'hr_studStipend'
+                        },
+                        {
+                          text: UB.i18n('Історія змін'),
+                          leaf: true,
+                          nodeId: 'hr_employeePosition'
+                        },
+                        {
+                          text: UB.i18n('Постійні нарахування'),
+                          leaf: true,
+                          nodeId: 'hr_employeeAccrualStud'
+                        },
+                        {
+                          text: UB.i18n('Постійні утримання'),
+                          leaf: true,
+                          nodeId: 'hr_payRetentionStud'
+                        },
+                        {
+                          text: UB.i18n('Зміна облікових даних'),
+                          leaf: true,
+                          nodeId: 'hr_employeeCgh'
+                        },
+                        {
+                          text: UB.i18n('Виплата стипендії'),
+                          leaf: true,
+                          nodeId: 'hr_payOut'
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          xtype: 'tabpanel',
+          flex: 5,
+          plain: true,
+          tabPosition: 'top',
+          items: [
+            {
+              title: UB.i18n('Загальні дані'),
+              nodeId: 'hr_basicInfo',
+              hidden: true,
+              overflowY: 'auto',
+              overflowX: false,
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              items: [
+                {
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  items: [{
+                    layout: {
+                      type: 'hbox'
+                    },
+                    items: [
+                      {
+                        layout: {
+                          type: 'vbox',
+                          align: 'stretch'
+                        },
+                        flex: 1,
+                        defaults: { labelWidth: 150 },
+                        items: [
+                          {
+                            layout: {
+                              type: 'hbox'
+                            },
+                            items: [
+                              {
+                                attributeName: 'empTaxCodeType',
+                                labelWidth: 150,
+                                width: 340
+                              },
+                              {
+                                attributeName: 'taxCode',
+                                vtype: 'taxCodeValidator',
+                                labelWidth: 110,
+                                flex: 1,
+                                fieldLabel: UB.i18n('Значення')
+                              }
+                            ]
+                          },
+                          {
+                            layout: {
+                              type: 'hbox'
+                            },
+                            items: [
+                              {
+                                attributeName: 'dictTaxCodeReasonID',
+                                labelWidth: 150,
+                                flex: 1
+                              }
+                            ]
+                          },
+                          {
+                            attributeName: 'lastName'
+                          },
+                          {
+                            attributeName: 'firstName'
+                          },
+                          {
+                            attributeName: 'middleName'
+                          },
+                          {
+                            xtype: 'ubtextfield',
+                            name: 'tabNum',
+                            fieldLabel: UB.i18n('Ідентифікатор студента'),
+                            recordValue: 'tabNum',
+                            labelWidth: 150,
+                            formParams: true,
+                            allowBlank: false
+                          },
+                          {
+                            attributeName: 'shortFIO',
+                            hidden: true
+                          },
+                          {
+                            attributeName: 'fullFIO',
+                            hidden: true
+                          }
+                        ]
+                      },
+                      {
+                        layout: {
+                          type: 'hbox'
+                        },
+                        items: [
+                          {
+                            attributeName: 'photo',
+                            flex: 0.5,
+                            width: 200,
+                            layout: 'auto',
+                            expanded: true,
+                            cmpConfig: {
+                              height: 200
+                            }
+                          },
+                          {
+                            xtype: 'image',
+                            name: 'emptyPhoto',
+                            src: '/models/HR/images/emptyPhoto.png',
+                            height: 200,
+                            hidden: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    layout: {
+                      type: 'hbox'
+                    },
+                    items: [
+                      {
+                        attributeName: 'birthDate',
+                        labelWidth: 150,
+                        margin: '0 145 0 15'
+                      },
+                      {
+                        attributeName: 'sexType',
+                        labelWidth: 150,
+                        width: 400
+                      }
+                    ]
+                  },
+                  {
+                    layout: {
+                      type: 'hbox'
+                    },
+                    items: [
+                      {
+                        attributeName: 'birthPlace',
+                        labelWidth: 150,
+                        width: 400
+                      },
+                      {
+                        attributeName: 'citizenshipID',
+                        labelWidth: 150,
+                        width: 400
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px'
+                  },
+                  {
+                    layout: {
+                      type: 'hbox'
+                    },
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'dateFrom',
+                        fieldLabel: UB.i18n('Дата початку навчання'),
+                        recordValue: 'dateFrom',
+                        labelWidth: 150,
+                        formParams: true,
+                        allowBlank: false,
+                        margin: '0 145 0 15'
+                      },
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'dateToEmpty',
+                        labelWidth: 150,
+                        fieldLabel: UB.i18n('Дата закінчення навчання'),
+                        recordValue: 'dateToEmpty',
+                        formParams: true
+                      }
+                    ]
+                  },
+                  {
+                    layout: {
+                      type: 'hbox'
+                    },
+                    items: [
+                      {
+                        xtype: 'textfield',
+                        readOnly: true,
+                        name: 'facultyName',
+                        labelWidth: 150,
+                        fieldLabel: UB.i18n('Факультет'),
+                        width: 400
+                      },
+                      {
+                        xtype: 'textfield',
+                        readOnly: true,
+                        name: 'groupName',
+                        labelWidth: 150,
+                        fieldLabel: UB.i18n('Група'),
+                        width: 400
+                      }
+                    ]
+                  },
+                  {
+                    layout: {
+                      type: 'hbox'
+                    },
+                    items: [
+                      {
+                        xtype: 'textfield',
+                        readOnly: true,
+                        name: 'dictStaffCatName',
+                        labelWidth: 150,
+                        fieldLabel: UB.i18n('Категорія персоналу для розрахунків'),
+                        width: 400
+                      },
+                      {
+                        xtype: 'textfield',
+                        readOnly: true,
+                        name: 'payElName',
+                        labelWidth: 150,
+                        fieldLabel: UB.i18n('Вид оплати'),
+                        width: 400
+                      }
+                    ]
+                  },
+                  {
+                    layout: {
+                      type: 'hbox'
+                    },
+                    items: [
+                      {
+                        xtype: 'textfield',
+                        readOnly: true,
+                        name: 'averageScore',
+                        labelWidth: 150,
+                        fieldLabel: UB.i18n('Середній балл'),
+                        width: 400
+                      },
+                      {
+                        xtype: 'textfield',
+                        readOnly: true,
+                        name: 'stipendAmount',
+                        labelWidth: 150,
+                        fieldLabel: UB.i18n('Сума стипендії'),
+                        width: 400
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px'
+                  },
+                  {
+                    attributeName: 'other',
+                    xtype: 'textarea',
+                    height: 90,
+                    labelWidth: 150
+                  },
+                  {
+                    attributeName: 'phoneMobile',
+                    xtype: 'textfield',
+                    labelWidth: 150
+                  },
+                  {
+                    attributeName: 'phoneWorking',
+                    xtype: 'textfield',
+                    labelWidth: 150
+                  },
+                  {
+                    attributeName: 'phoneHome',
+                    xtype: 'textfield',
+                    labelWidth: 150
+                  },
+                  {
+                    attributeName: 'email',
+                    xtype: 'textfield',
+                    labelWidth: 150
+                  }]
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Виплата стипендії'),
+              nodeId: 'hr_payOut',
+              hidden: true,
+              autoScroll: true,
+              flex: 1,
+              layout: 'border',
+              items: [
+                {
+                  region: 'north',
+                  layout: { type: 'vbox', align: 'stretch' },
+                  items: [
+                    {
+                      xtype: 'ubcombobox',
+                      name: 'payOutID',
+                      recordValue: 'payOutID',
+                      formParams: true,
+                      fieldLabel: UB.i18n('Шаблон виплати'),
+                      valueField: 'ID',
+                      displayField: 'name',
+                      labelWidth: 150,
+                      ubRequest: {
+                        entity: 'hr_payOut',
+                        fieldList: ['ID', 'name', 'organizationID']
+                      }
+                    },
+                    {
+                      xtype: 'ubtextfield',
+                      name: 'personalAccount',
+                      labelWidth: 150,
+                      fieldLabel: UB.i18n('Номер особового рахунку'),
+                      recordValue: 'personalAccount',
+                      formParams: true
+                    },
+                    {
+                      xtype: 'ubtextfield',
+                      name: 'bankSubAccount',
+                      labelWidth: 150,
+                      fieldLabel: UB.i18n('Номер субрахунку'),
+                      recordValue: 'bankSubAccount',
+                      formParams: true
+                    }
+                  ]
+                },
+                AC.gridUtils.getDefaultGridConfig({
+                  title: UB.i18n('Інші способи виплати стипендії'),
+                  region: 'center',
+                  name: 'hr_employeePayOut',
+                  flex: 1,
+                  entityName: 'hr_employeePayOut',
+                  fieldList: [
+                    { name: 'dateFromEmpty', description: UB.i18n('Початок') },
+                    { name: 'dateToEmpty', description: UB.i18n('Кінець') },
+                    { name: 'paymentMethod' },
+                    { name: 'bankAccount', description: UB.i18n('Номер р/р') },
+                    { name: 'personalAccount', description: UB.i18n('Номер о/р') },
+                    { name: 'personalSubAccount', description: UB.i18n('Номер c/р') },
+                    { name: 'bankID.name', description: UB.i18n('Банк') },
+                    { name: 'employeeNumberID', visibility: false }
+                  ],
+                  whereList: {
+                    employeeNumberID: {
+                      expression: '[employeeNumberID]',
+                      condition: 'equal',
+                      value: 0
+                    }
+                  },
+                  cmpInitConfig: {
+                    onDeterminateForm: function (grid) {
+                      const me = grid.up('form')
+                      return {
+                        entityName: 'hr_employeePayOut',
+                        cmpInitConfig: {
+                          defaultValues: { employeeNumberID: me.employeeNumberID }
+                        }
+                      }
+                    }
+                  }
+                })
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

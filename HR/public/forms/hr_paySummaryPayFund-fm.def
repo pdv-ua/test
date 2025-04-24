@@ -1,0 +1,223 @@
+/* global Ext $App UB saveAs Blob AC */
+exports.formDef = 'HR.paySummaryPayFund'
+
+Ext.define('HR.paySummaryPayFund', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_paySummaryPayFund',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'acGrid',
+        name: 'accrual',
+        // stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_paySummaryPayFund_accrual'),
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        storeType: 'local',
+        disablePaging: true,
+        notWriteChanges: true,
+        showToolBar: true,
+        enableMultifilter: true,
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        baseSummary: true,
+        summary: { fullFIO: 'count', paySum: 'sum' },
+        customToolBarActions: [
+          {
+            tooltip: UB.i18n('Оновити'),
+            scale: 'medium',
+            iconCls: 'u-icon-refresh',
+            handler: function () {
+              me.getData()
+            }
+          },
+          {
+            scale: 'medium',
+            iconCls: 'fas fa-file-excel',
+            tooltip: UB.i18n('Експорт'),
+            cls: 'green-action',
+            handler: function (btn) {
+              const grid = btn.up('[name=accrual]')
+              const title = grid.up().title
+              let data = grid.getData()
+
+              function setStyles () {
+                defFont = stl.fonts.add({
+                  code: 'def',
+                  name: 'Calibri',
+                  fontSize: 11,
+                  scheme: 'minor'
+                })
+                stl.fonts.add({
+                  code: 'defBold',
+                  name: 'Calibri',
+                  fontSize: 11,
+                  scheme: 'minor',
+                  bold: true
+                })
+
+                borderFull = stl.borders.add({
+                  left: {
+                    style: 'thin'
+                  },
+                  right: {
+                    style: 'thin'
+                  },
+                  top: {
+                    style: 'thin'
+                  },
+                  bottom: {
+                    style: 'thin'
+                  }
+                })
+                stl.alignments.add({
+                  code: 'Hright',
+                  horizontal: 'right'
+                })
+                stl.alignments.add({
+                  code: 'Hcenter',
+                  horizontal: 'center',
+                  wrapText: '1'
+                })
+                stl.alignments.add({
+                  code: 'HVcenter',
+                  horizontal: 'center',
+                  vertical: 'center',
+                  wrapText: '1'
+                })
+                stl.alignments.add({
+                  code: 'wrapText',
+                  wrapText: '1'
+                })
+                styleCol = stl.getStyle({
+                  font: defFont,
+                  border: borderFull
+                })
+                styleNumCol = stl.getStyle({
+                  font: defFont,
+                  alignment: stl.alignments.named.Hright,
+                  border: borderFull,
+                  format: '#,##0.00'
+                })
+                headerStyle = stl.getStyle({
+                  font: stl.fonts.named.defBold,
+                  alignment: stl.alignments.named.HVcenter,
+                  border: borderFull
+                })
+                rowHeaderStyle = stl.getStyle({
+                  font: stl.fonts.named.defBold,
+                  fill: 'EBEDED',
+                  border: borderFull,
+                  alignment: stl.alignments.named.HVcenter
+                })
+              }
+              let wb, defFont, ws, borderFull, headerStyle, rowHeaderStyle, stl, styleCol, styleNumCol
+              wb = new window.XLSX.XLSXWorkbook()
+              wb.useSharedString = true
+              stl = wb.style
+              setStyles()
+
+              ws = wb.addWorkSheet({ caption: title, name: title })
+              ws.addMerge({ colFrom: 0, colTo: 3 })
+              ws.addRow({ value: title, column: 0, style: headerStyle }, {}, { height: 40 })
+              ws.setColsProperties([
+                { column: 0, width: 50 },
+                { column: 1, width: 20 },
+                { column: 2, width: 60 },
+                { column: 3, width: 75 }
+              ])
+              ws.addRow([
+                { column: 0, value: UB.i18n('Працівник'), style: rowHeaderStyle },
+                { column: 1, value: UB.i18n('Сума'), style: rowHeaderStyle },
+                { column: 2, value: UB.i18n('Підрозділ'), style: rowHeaderStyle },
+                { column: 3, value: UB.i18n('Посада'), style: rowHeaderStyle }
+              ], null, { height: 30 })
+              let summarySum = 0
+              data.forEach((fix, idx) => {
+                ws.addRow([
+                  { column: 0, value: fix['fullFIO'], style: styleCol },
+                  { column: 1, value: fix['paySum'], style: styleNumCol },
+                  { column: 2, value: fix['depName'], style: styleCol },
+                  { column: 3, value: fix['posName'], style: styleCol }
+                ], null, { height: 20 })
+                summarySum += fix['paySum']
+              })
+              ws.addRow([
+                { column: 0, value: 'Всього', style: styleCol },
+                { column: 1, value: summarySum, style: styleNumCol }
+              ], null, { height: 20 })
+              const rData = wb.render()
+              const dBlob = new Blob([rData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) // data:  ;base64
+              saveAs(dBlob, UB.i18n('Розрахункова відомість') + '.xlsx')
+            }
+          }
+        ],
+        fields: [
+          { name: 'ID' },
+          { name: 'employeeNumberID' },
+          { name: 'fullFIO', columnConfig: { text: UB.i18n('Працівник'), flex: 1, filterBy: 'string' } },
+          { name: 'paySum', columnConfig: { text: UB.i18n('Сума'), width: 150, align: 'right', floatFormat: 2, sortBy: 'Number', filterBy: 'float' } },
+          { name: 'depName', columnConfig: { text: UB.i18n('Підрозділ'), flex: 1, filterBy: 'string' } },
+          { name: 'posName', columnConfig: { text: UB.i18n('Посада'), flex: 1, filterBy: 'string' } }
+        ],
+        onItemDoubleClick: function (grid, record) {
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'hr_rl',
+            tabId: 'hr_rl' + record.get('employeeNumberID') + (me.defaultValues && me.defaultValues.periodID),
+            target: $App.getViewport().centralPanel,
+            cmpInitConfig: {
+              defaultValues: {
+                employeeNumberID: record.get('employeeNumberID'),
+                periodID: (me.defaultValues && me.defaultValues.periodID),
+                makeBold: 'accrualFund',
+                payFundID: me.defaultValues.payFundID
+              }
+            }
+          })
+        }
+      }
+    ]
+    me.getData = () => {
+      if (me.defaultValues) {
+        me.setLoading(true)
+        $App.connection.run({
+          entity: 'hr_paySummary',
+          method: 'getDataByPayFund',
+          periodID: me.defaultValues.periodID,
+          dictFundSourceID: me.defaultValues.dictFundSourceID,
+          dictProgClassID: me.defaultValues.dictProgClassID,
+          dictProjectID: me.defaultValues.dictProjectID,
+          payFundID: me.defaultValues.payFundID,
+          departmentID: me.defaultValues.departmentID,
+          childDep: me.defaultValues.childDep
+        }).then(response => {
+          const data = JSON.parse(response.resultData)
+          me.attr.accrual.setLocalStoreData(data)
+          me.setLoading(false)
+        }, (err) => {
+          me.setLoading(false)
+          throw err
+        })
+      }
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        accrual: me.down('[name=accrual]')
+      }
+      if (me.defaultValues) {
+        if (me.defaultValues.openFrom && me.defaultValues.openFrom === 'PaySummary') {
+          me.setTitle(me.defaultValues.payFundName + UB.i18n(', підсумок за ') + me.defaultValues.periodName)
+        }
+      }
+      me.getData()
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

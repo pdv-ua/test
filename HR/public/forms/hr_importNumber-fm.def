@@ -1,0 +1,225 @@
+/* global Ext $App appAC UB */
+exports.formDef = 'HR.importNumber'
+
+Ext.define('HR.importNumber', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_importNumber',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        ubID: 'mainToolbar',
+        enableOverflow: true,
+        items: [
+          {
+            xtype: 'button',
+            scale: 'small',
+            icon: $App.getImagePath('download.png'),
+            tooltip: UB.i18n('Завантажити csv'),
+            text: UB.i18n('Завантажити csv'),
+            handler: function () {
+              me.fileLoad()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Імпортувати'),
+            text: UB.i18n('Імпортувати'),
+            iconCls: 'fas fa-cloud-download-alt',
+            cls: 'fill-action',
+            handler: function () {
+              me.import()
+            }
+          },
+          {
+            xtype: 'combo',
+            labelWidth: 180,
+            editable: false,
+            name: 'encoding',
+            fieldLabel: UB.i18n('Тип кодування файлів'),
+            allowBlank: false,
+            width: 300,
+            store: Ext.create('Ext.data.Store', { fields: ['text', 'value'],
+              data: [
+                { text: 'win1251', value: 'win1251' },
+                { text: 'utf8', value: 'utf8' }
+              ]
+            })
+          }
+        ]
+      }
+    ]
+
+    me.items = [
+      {
+        xtype: 'tabpanel',
+        region: 'center',
+        flex: 1,
+        items: [
+
+          {
+            xtype: 'acGrid',
+            title: UB.i18n('Дані'),
+            name: 'planGrid',
+            flex: 1,
+            autoScroll: true,
+            region: 'center',
+            storeType: 'local',
+            disablePaging: false,
+            pagerConfig: {
+              pageSize: 100
+            },
+            notWriteChanges: true,
+            showToolBar: false,
+            getRowClass: () => {},
+            hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+            fields: [
+              { name: 'taxCode', columnConfig: { text: UB.i18n('РНОКПП'), width: 320, sortable: false } },
+              { name: 'tabNum', columnConfig: { text: UB.i18n('Табельний номер'), width: 320, sortable: false } }
+            ]
+
+          },
+
+          {
+            xtype: 'acGrid',
+            title: UB.i18n('Не знайдені дані для працівників'),
+            name: 'emptyEmployee',
+            flex: 1,
+            autoScroll: true,
+            region: 'center',
+            storeType: 'local',
+            disablePaging: false,
+            pagerConfig: {
+              pageSize: 100
+            },
+            notWriteChanges: true,
+            showToolBar: false,
+            getRowClass: () => {},
+            hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+            fields: [
+              { name: 'taxCode', columnConfig: { text: UB.i18n('РНОКПП'), width: 320, sortable: false } },
+              { name: 'description', columnConfig: { text: UB.i18n('Працівник'), width: 420, sortable: false } }
+            ]
+          }
+
+        ]
+      }
+
+    ]
+    me.import = () => {
+      me.setLoading(true)
+      const data = me.attr.planGrid.parsedData
+      $App.connection.run({
+        entity: 'hr_importPlan',
+        method: 'doImportNumbers',
+        data: JSON.stringify(data),
+        orgID: appAC.globalOrganization()
+      }).then(response => {
+        me.setLoading(false)
+        $App.dialogInfo(UB.i18n('Операція успішно виконана'))
+      }, (err) => {
+        me.setLoading(false)
+        if (err.config && err.config.timeout) {
+          $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+        } else {
+          throw err
+        }
+      })
+    }
+
+    me.fileLoad = () => {
+      if (!me.attr.encoding.getValue()) {
+        $App.dialogInfo(UB.i18n('Оберіть кодування файлу для завантаження'))
+        return
+      }
+      Ext.create('UB.view.UploadFileAjax', {
+        scope: this,
+        listeners: {
+          afterrender: function (cmp) {
+            this.fieldFile.fileInputEl.set({
+              accept: '.csv'
+            })
+          }
+        },
+        upLoad: function (btn) {
+          me.setLoading(true)
+          const dialogWindow = btn.up('window')
+          const inputDom = this.fieldFile.fileInputEl.dom
+          if (inputDom.files.length === 0) {
+            return
+          }
+          const file = inputDom.files[0]
+          if (file.name.indexOf('.csv', file.name.length - 4) === -1) {
+            $App.dialogInfo(UB.i18n('Невірний формат файлу, для завантаження використовується формат csv'))
+            me.setLoading(false)
+            return
+          }
+          btn.disable()
+
+          UB.connection.post('loadImportDataEx', file, {
+            params: {
+              entityName: '',
+              encoding: me.attr.encoding.getValue(),
+              fileName: file.name
+            },
+            headers: { 'Content-Type': 'application/octet-stream' }
+          }).then(response => {
+            me.setLoading(false)
+            const data = response.data
+            const attrs = [ 'taxCode', 'tabNum' ]
+            const parsedData = []
+            data && data.forEach((item, key) => {
+              if (key === 0) {
+                return
+              }
+              let row = {}
+              attrs.forEach((attr, idx) => {
+                row[attr] = item[idx] || ''
+              })
+              parsedData.push(row)
+            })
+            me.attr.planGrid.parsedData = parsedData
+            $App.connection.run({
+              entity: 'hr_importPlan',
+              method: 'doEmptyNumbers',
+              data: JSON.stringify(parsedData),
+              orgID: appAC.globalOrganization()
+            }).then(response => {
+              me.attr.emptyEmployee.setLocalStoreData(JSON.parse(response.resultData))
+              me.attr.planGrid.setLocalStoreData(me.attr.planGrid.parsedData)
+            })
+          }, (err) => {
+            me.setLoading(false)
+            if (err.config && err.config.timeout) {
+              $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+            } else {
+              throw err
+            }
+          }).finally(() => {
+            me.setLoading(false)
+          })
+          dialogWindow.close()
+        }
+      })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        planGrid: me.down('[name=planGrid]'),
+        emptyEmployee: me.down('[name=emptyEmployee]'),
+        encoding: me.down('[name=encoding]')
+      }
+      me.attr.encoding.setValue('utf8')
+
+      // me.getData()
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

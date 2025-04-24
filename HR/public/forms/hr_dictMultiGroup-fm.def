@@ -1,0 +1,164 @@
+/* global appAC UB AC */
+exports.formDef = {
+  requiredFields: ['code', 'shortName', 'name' ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 800,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              layout: { type: 'vbox' },
+              defaults: {
+                labelWidth: 170
+              },
+              flex: 1,
+              items: [
+                { attributeName: 'code', width: 400 },
+                { attributeName: 'shortName', width: 400 },
+                { attributeName: 'name', width: 400 },
+                { attributeName: 'orgID', hidden: true },
+                { attributeName: 'isClose' }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [{
+        title: UB.i18n('Підрозділи'),
+        layout: { type: 'border' },
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            region: 'center',
+            name: 'department',
+            autoScroll: true,
+            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+            flex: 1,
+            entityConfig: {
+              entity: 'hr_dictMultiGroupDep',
+              method: 'select',
+              fieldList: [
+                {
+                  name: 'departmentID.description',
+                  description: UB.i18n('Підрозділи'),
+                  simpleFilter: true
+                },
+                { name: 'mi_deleteDate', description: UB.i18n('Дата видалення') }
+              ],
+              whereList: {
+                depDateDelete: {
+                  expression: '[departmentID.mi_deleteDate]',
+                  condition: '=',
+                  value: '#maxdate'
+                },
+                depState: {
+                  expression: '[departmentID.state]',
+                  condition: '=',
+                  value: 'ACTIVE'
+                },
+                depDateFrom: {
+                  expression: '[departmentID.mi_dateFrom]',
+                  condition: '<=',
+                  value: appAC.globalApplicationDate()
+                },
+                depDateTo: {
+                  expression: '[departmentID.mi_dateTo]',
+                  condition: '>=',
+                  value: appAC.globalApplicationDate()
+                }
+              }
+            },
+            masterFields: ['ID'],
+            detailFields: ['dictMultiGroupID'],
+            cmpInitConfig: {
+              customInit: function () {
+                const me = this
+                AC.gridUtils.tuneGridColumns(this, {
+                  mi_deleteDate: {
+                    renderer: function (value) {
+                      if (AC.dateService.isMaxDate(value)) {
+                        return UB.i18n('')
+                      } else {
+                        return AC.dateService.formatDate(value)
+                      }
+                    }
+                  }
+                })
+              },
+              customActions: [
+                {
+                  text: UB.i18n('Редагувати'),
+                  iconCls: 'u-icon-edit-alt',
+                  cls: 'fill-action',
+                  scale: 'medium',
+                  handler: function (btn) {
+                    const grid = btn.up('grid')
+                    const form = grid.up('form')
+                    if (form.isNewInstance) {
+                      form.saveForm().then(result => {
+                        if (result !== -1) {
+                          form.changeGridValue(form, grid)
+                        }
+                      })
+                    } else {
+                      form.changeGridValue(form, grid)
+                    }
+                  }
+                },
+                {
+                  xtype: 'button',
+                  name: 'viewDeletedBtn',
+                  text: UB.i18n('Показати видалені'),
+                  iconCls: 'fas fa-eye',
+                  scale: 'medium',
+                  cls: 'red-action',
+                  handler: function (btn) {
+                    const grid = btn.up('grid')
+                    grid.viewDeleted = !grid.viewDeleted
+                    AC.gridUtils.getColumnByIndex(grid, 'mi_deleteDate').setVisible(grid.viewDeleted)
+                    const request = grid.getStore().ubRequest
+                    btn.addCls(grid.viewDeleted ? 'add-new-action' : 'red-action')
+                    btn.removeCls(!grid.viewDeleted ? 'add-new-action' : 'red-action')
+                    btn.setTooltip(!grid.viewDeleted ? UB.i18n('Показати видалені') : UB.i18n('Приховати видалені'))
+                    request.__allowSelectSafeDeleted = grid.viewDeleted
+                    grid.getStore().load()
+                  }
+                }
+              ],
+              getRowClass: function (record) {
+                let mi_deleteDate = record.get('mi_deleteDate')
+                if (!AC.dateService.isMaxDate(mi_deleteDate)) {
+                  return 'grd-color-grey'
+                }
+              },
+              onItemDblClick: function (grid) {
+                const form = grid.up('form')
+                form.changeGridValue(form, grid.ownerCt)
+              }
+            }
+          }
+        ]
+      }]
+    }
+  ]
+}

@@ -1,0 +1,137 @@
+{
+  "caption": "Схема посадових окладів (оклади)",
+  "description": "Схема посадових окладів (оклади)",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "dictSalarySchemeLevelID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictSalarySchemeLevel",
+      "cascadeDelete": true,
+      "caption": "Схема посадових окладів. Рівень",
+      "description": "Схема посадових окладів. Рівень",
+      "documentation": "Схема посадових окладів. Рівень"
+    },
+    {
+      "name": "accrualSum",
+      "dataType": "Currency",
+      "caption": "Рекомендоване значення окладу",
+      "documentation": "Рекомендоване значення окладу",
+      "description": "Рекомендоване значення окладу"
+    },
+    {
+      "name": "accrualSumMin",
+      "dataType": "Currency",
+      "caption": "Сума окладу (мін)",
+      "documentation": "Сума окладу (мін)",
+      "description": "Сума окладу (мін)",
+      "allowNull": false
+    },
+    {
+      "name": "accrualSumMax",
+      "dataType": "Currency",
+      "caption": "Сума окладу (макс)",
+      "documentation": "Сума окладу (макс)",
+      "description": "Сума окладу (макс)",
+      "allowNull": false
+    },
+    {
+      "name": "coefMin",
+      "dataType": "Float",
+      "caption": "Коефіцієнт (мін)",
+      "description": "Коефіцієнт (мін)",
+      "documentation": "Коефіцієнт (мін)",
+      "allowNull": true
+    },
+    {
+      "name": "coefMax",
+      "dataType": "Float",
+      "caption": "Коефіцієнт (макс)",
+      "description": "Коефіцієнт (макс)",
+      "documentation": "Коефіцієнт (макс)",
+      "allowNull": true
+    },
+    {
+      "name": "accrualSumAvg",
+      "dataType": "Currency",
+      "caption": "Середнє значення",
+      "description": "Середнє значення",
+      "documentation": "Середнє значення",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "((accrualSumMax + accrualSumMin)/2)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "((accrualSumMax + accrualSumMin)/2)"
+        }
+      ]
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

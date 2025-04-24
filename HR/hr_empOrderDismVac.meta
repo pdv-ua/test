@@ -1,0 +1,118 @@
+{
+  "caption": "Наказ з персоналу про звільнення. Блок компенсації відпусток",
+  "description": "Наказ з персоналу про звільнення. Блок компенсації відпусток",
+  "descriptionAttribute": "orderDetID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orderDetID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDismDet",
+      "caption": "Пункт наказу",
+      "description": "Пункт наказу",
+      "documentation": "Пункт наказу",
+      "allowNull": false
+    },
+    {
+      "name": "dictVacationKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictVacationKind",
+      "caption": "Вид відпустки",
+      "description": "Вид відпустки",
+      "documentation": "Вид відпустки",
+      "allowNull": false
+    },
+    {
+      "name": "empVacationPeriodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empVacationPeriod",
+      "caption": "Період відпусток",
+      "description": "Період відпусток",
+      "documentation": "Період відпусток",
+      "allowNull": false
+    },
+    {
+      "name": "dayDiff",
+      "dataType": "Int",
+      "caption": "Залишок днів",
+      "description": "Залишок днів",
+      "documentation": "Залишок днів"
+    },
+    {
+      "name": "dayRestitute",
+      "dataType": "Int",
+      "caption": "Компенсувати днів",
+      "description": "Компенсувати днів",
+      "documentation": "Компенсувати днів"
+    },
+    {
+      "name": "dayRecalc",
+      "dataType": "Int",
+      "caption": "Перерахувати у організацію",
+      "description": "Перерахувати у організацію",
+      "documentation": "Перерахувати у організацію"
+    },
+    {
+      "name": "recalcDate",
+      "dataType": "Date",
+      "caption": "Компенсація на дату",
+      "description": "Компенсація на дату",
+      "documentation": "Компенсація на дату"
+    },
+    {
+      "name": "dayReturn",
+      "dataType": "Int",
+      "caption": "Відрахувати",
+      "description": "Відрахувати",
+      "documentation": "Відрахувати"
+    },
+    {
+      "name": "dayReturnIsEdit",
+      "dataType": "boolean",
+      "caption": "Змінювати відображення Відрахувати на 0",
+      "description": "Змінювати відображення Відрахувати на 0",
+      "documentation": "Змінювати відображення Відрахувати на 0",
+      "defaultValue": "0"
+    },
+    {
+      "name": "periodDesc",
+      "dataType": "String",
+      "size": 128,
+      "caption": "Період відпустки",
+      "description": "Період відпустки",
+      "documentation": "Період відпустки"
+    },
+    {
+      "name": "periodDescNotNull",
+      "dataType": "String",
+      "size": 128,
+      "caption": "Період відпустки",
+      "description": "Період відпустки",
+      "documentation": "Період відпустки",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT COALESCE({self}.periodDesc,vp.description) FROM hr_empVacationPeriod vp WHERE vp.ID = {self}.empVacationPeriodID and vp.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "defaultView": false,
+      "allowNull": false
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

@@ -1,0 +1,85 @@
+/* global Ext AC $App UB */
+
+exports.formDef = 'HR.dictTarifCoeffChange'
+
+Ext.define('HR.dictTarifCoeffChange', {
+  extend: 'Ext.form.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  size: {
+    width: 600,
+    height: 400
+  },
+
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        region: 'center',
+        layout: { type: 'vbox' },
+        defaults: {
+          labelWidth: 160
+        },
+        items: [
+          {
+            xtype: 'ubdatefield',
+            name: 'dateFrom',
+            fieldLabel: UB.i18n('Дата зміни'),
+            allowBlank: false
+          },
+          {
+            xtype: 'numberfield',
+            vtype: 'floatValidator',
+            fieldLabel: UB.i18n('Базовий оклад, грн'),
+            name: 'baseAccrualSum',
+            allowBlank: false,
+            decimalPrecision: 2,
+            minValue: 1,
+            valueToRaw: UB.core.UBUtil.formatAsCurrency,
+            allowExponential: false,
+            hideTrigger: true,
+            width: 400
+          }
+        ]
+      },
+      {
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Продовжити'),
+            width: 110,
+            height: 30,
+            margin: '10 20 10 0',
+            handler: function () {
+              me.attr = {
+                dateFrom: me.down('[name=dateFrom]'),
+                baseAccrualSum: me.down('[name=baseAccrualSum]')
+              }
+              if (me.isValid() && AC.dateService.isValid(me.attr.dateFrom.getValue())) {
+                me.setLoading(true)
+                $App.connection.run({
+                  entity: 'hr_dictTarifCoeff',
+                  method: 'changeTariffCoeff',
+                  dateFrom: me.attr.dateFrom.getValue(),
+                  baseAccrualSum: me.attr.baseAccrualSum.getValue()
+                }).then(() => {
+                  me.setLoading(false)
+                  me.up('window') ? me.up('window').close() : me.close()
+                }).catch(err => {
+                  AC.viewUtils.showToast(UB.i18n('Помилка'), err.message)
+                  me.setLoading(false)
+                })
+              }
+            }
+          }
+        ]
+      }
+    ]
+
+    me.callParent(arguments)
+  }
+})

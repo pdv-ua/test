@@ -1,0 +1,91 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+
+/* global */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'empOrderType', 'organizationID', 'isGroup'],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    size: {
+      width: 800,
+      height: 400
+    },
+    dockedItems: [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        // {
+        //   orderId: 4,
+        //   actionId: 'fillData',
+        //   iconCls: 'fas fa-angle-double-down',
+        //   cls: 'fill-action',
+        //   text: 'Завантажити згідно вибраним параметрам'
+        // }
+      ]
+    }],
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      listeners: {
+        tabchange: function (tp, t) {
+
+        }
+      },
+      items: [{
+        title: UB.i18n('Загальне'),
+        ubID: 'tabMain',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            layout: {
+              type: 'hbox',
+              align: 'stretch'
+            },
+            items: [
+              {
+                layout: {
+                  type: 'vbox',
+                  align: 'stretch'
+                },
+                flex: 1,
+                items: [
+                  {
+                    attributeName: 'targetOrderID',
+                    fieldList: ['ID', 'description', 'organizationID'],
+                    gridFieldList: ['ID', 'description', 'organizationID'],
+                    disableModifyEntity: true,
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                    valueField: 'ID',
+                    displayField: 'description'
+                  },
+                  {
+                    attributeName: 'action'
+                  },
+                  {
+                    attributeName: 'dateInvalidation'
+                  },
+                  {
+                    xtype: 'label',
+                    name: 'info',
+                    text: 'Увага! Цей наказ призначений ЛИШЕ для формування друкованої форми. Якщо користувач використовує цей наказ, то йому необхідно вручну виконати всі дії, які були виконані наказом що скасовується: відмінити відповідні елементи обліку робочого часу в табелі, скасувати нарахування, змінити права на відпустку і т.ін.',
+                    cls: 'x-form-item-label grd-italic',
+                    margin: '10 15 5 15'
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }]
+    }]
+
+  }
+})()

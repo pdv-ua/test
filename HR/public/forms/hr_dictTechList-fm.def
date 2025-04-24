@@ -1,0 +1,215 @@
+// @isModal true
+/* global appAC UB Ext AC _ */
+
+exports.formDef = 'HR.dictTechList'
+
+Ext.define('HR.dictTechList', {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.dictTechList',
+  width: 1100,
+  height: 600,
+  layout: { type: 'border' },
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  isModal: true,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            region: 'center',
+            flex: 1,
+            name: 'gridDictTechList',
+            autoScroll: true,
+            disableSearchBar: true,
+            forceDataLoad: true,
+            disableAutoLoadStore: true,
+            hideActions: ['addNew', 'addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+            stateful: true,
+            stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_dictTechList'),
+            disableMenuItemDetails: true,
+            margin: '5, 10, 0, 10',
+            cmdType: 'showList',
+            entityName: 'hr_dictTech',
+            description: UB.i18n('Технологічні карти'),
+            cmdData: {
+              params: [{
+                entity: 'hr_dictTech',
+                method: 'select',
+                fieldList: [
+                  { name: 'ID', visibility: false },
+                  { name: 'code', config: { width: 120 } },
+                  { name: 'name', config: { width: 240 } },
+                  { name: 'description', visibility: false },
+                  { name: 'nomenclatureID', visibility: false },
+                  { name: 'nomenclatureID.description', description: UB.i18n('Продукція'), tooltip: UB.i18n('Продукція'), config: { width: 240 } },
+                  { name: 'quantity', config: { width: 120 } },
+                  { name: 'nomenclatureID.dictMeasureID.symbolUkr', description: UB.i18n('Одиниця виміру'), tooltip: UB.i18n('Одиниця виміру'), config: { width: 120 } },
+                  { name: 'dateFrom', visibility: false },
+                  { name: 'dateTo', visibility: false }
+                ]
+              }]
+            },
+            cmpInitConfig: {
+              disableAutoLoadStore: true,
+              hideActions: ['showDetail', 'addNew', 'refresh', 'edit', 'del', 'addNewByCurrent'],
+              selModel: {
+                selectionMode: 'MULTI',
+                showHeaderCheckbox: false,
+                checkOnly: true,
+                selType: 'checkboxmodel'
+              },
+              onItemDblClick: function () {
+                return false
+              },
+              customInit: function () {
+              },
+              afterInit: function () {
+                const me = this
+                function setFilters (me) {
+                  const req = me.store.ubRequest
+                  req.orgID = appAC.globalOrganization()
+                  if (!req.whereList) {
+                    req.whereList = {}
+                  }
+                  if (this.isPosted) {
+                    req.whereList.isPosted = {
+                      expression: '[orderState]',
+                      condition: '=',
+                      value: 'POSTED'
+                    }
+                  }
+                  // me.store.reload()
+                }
+                setFilters(me)
+              },
+              customActions: [
+                {
+                  text: UB.i18n('Відмітити всі'),
+                  iconCls: 'u-icon-check',
+                  cls: 'green-action',
+                  handler: function (btn) {
+                    const grid = btn.up('ubdetailgrid')
+                    const sm = grid.getSelectionModel()
+                    sm.selectAll(true)
+                    me.calcTotal()
+                  }
+                },
+                {
+                  text: UB.i18n('Виключити всі'),
+                  iconCls: 'u-icon-close',
+                  cls: 'red-action',
+                  handler: function (btn) {
+                    const grid = btn.up('ubdetailgrid')
+                    const sm = grid.getSelectionModel()
+                    sm.deselectAll(true)
+                    me.calcTotal()
+                  }
+                },
+                {
+                  text: UB.i18n('Зберегти та закрити'),
+                  iconCls: 'u-icon-save-and-close',
+                  cls: 'save-action',
+                  handler: function (btn) {
+                    const grid = btn.up('ubdetailgrid')
+                    if (me.onSelect) {
+                      const data = []
+                      const selModel = grid.getSelectionModel()
+                      selModel.selected.each(record => {
+                        data.push(record.getData())
+                      })
+                      me.onSelect(data)
+                    }
+                    me.up('window').close()
+                  }
+                }
+              ],
+              listeners: {
+                selectionchange: () => {
+                  this.calcTotal()
+                }
+              }
+            }
+          },
+          {
+            xtype: 'ubfieldset',
+            border: false,
+            region: 'south',
+            layout: { type: 'vbox', align: 'right' },
+            margin: '10 10 10 10',
+            items: [
+              {
+                xtype: 'textfield',
+                fieldLabel: UB.i18n('Вибрано позицій'),
+                labelWidth: 180,
+                name: 'totalCount',
+                readOnly: true,
+                value: '0',
+                fieldStyle: 'text-align: right;'
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.calcTotal = () => {
+      let count = 0
+      const selModel = this.attr.grid.getSelectionModel()
+      selModel.selected.each(record => {
+        count++
+      })
+      this.attr.totalCount.setValue(count)
+    }
+
+    me.filterDictTechList = async () => {
+      if (!me.onDate) {
+        me.onDate = AC.dateService.currentDate()
+      }
+      const req = this.attr.grid.store.ubRequest
+      req.orgID = appAC.globalOrganization()
+      req.whereList.dateFrom = {
+        expression: '[dateFrom]',
+        condition: '<=',
+        value: me.onDate
+      }
+      req.whereList.dateTo = {
+        expression: '[dateTo]',
+        condition: '>=',
+        value: me.onDate
+      }
+      this.attr.grid.store.load()
+      this.attr.grid.getSelectionModel().deselectAll()
+      this.calcTotal()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.up('window').setTitle(UB.i18n('Вибір технологічних карт'))
+      me.attr = {
+        grid: me.down('[name=gridDictTechList]'),
+        totalCount: me.down('[name=totalCount]')
+      }
+      if (me.defaultValues) {
+        _.forEach(me.attr, attr => {
+          if (me.defaultValues[attr.name]) {
+            attr[attr.setValueById ? 'setValueById' : 'setValue'](attr.xtype === 'ubdatefield' ? new Date(me.defaultValues[attr.name]) : me.defaultValues[attr.name])
+          }
+        })
+      }
+      if (me.readOnlyAttr) {
+        me.readOnlyAttr.forEach(attrName => {
+          me.attr[attrName].setReadOnly(true)
+        })
+      }
+      me.filterDictTechList()
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

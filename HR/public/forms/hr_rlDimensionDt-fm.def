@@ -1,0 +1,160 @@
+/* global Ext UB AC appAC HR */
+exports.formDef = 'HR.rlDimensionDt'
+
+Ext.define('HR.rlDimensionDt', {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.hr_rlDimensionDt',
+  width: 400,
+  height: 600,
+  layout: { type: 'vbox', align: 'stretch' },
+  actionId: {
+    save: 'save'
+  },
+  eventId: {
+    save: 'save'
+  },
+  hotKeys: {
+    save: {
+      key: Ext.EventObject.ENTER,
+      shift: false,
+      ctrl: true,
+      text: ' (Ctrl+Enter)'
+    }
+  },
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [],
+      ubID: 'mainToolbar',
+      enableOverflow: true
+    }]
+    me.items = [
+      {
+        xtype: 'ubcombobox',
+        name: 'dictFundSourceID',
+        fieldLabel: UB.i18n('Джерело фінансування'),
+        hideEntityItemInContext: true,
+        ubRequest: {
+          entity: 'ac_fundSource',
+          method: 'selectByOrg',
+          fieldList: ['ID', 'name']
+        },
+        listeners: {
+          beforeQuerySend: (ctrl) => {
+            ctrl.combo.store.ubRequest.orgID = me.parentForm.orgID || appAC.globalOrganization()
+          }
+        }
+      },
+      {
+        xtype: 'ubcombobox',
+        name: 'dictProgClassID',
+        fieldLabel: UB.i18n('КПК'),
+        hideEntityItemInContext: true,
+        ubRequest: {
+          entity: 'ac_dictProgClass',
+          fieldList: ['ID', 'description']
+        },
+        hidden: true
+      },
+      {
+        xtype: 'ubcombobox',
+        name: 'dictProjectID',
+        fieldLabel: UB.i18n('Проєкт'),
+        hideEntityItemInContext: true,
+        ubRequest: {
+          entity: 'ac_dictProject',
+          fieldList: ['ID', 'description']
+        },
+        hidden: true
+      },
+      {
+        xtype: 'accountDimensionsControl',
+        name: 'dimControl',
+        fieldLabel: UB.i18n('Рахунок витрат'),
+        accountDisplayField: 'description',
+        allowBlank: true,
+        allowBlankDims: true,
+        getDefaultDimension: HR.accrualService.getDefaultDimension
+      },
+      {
+        layout: { type: 'vbox' },
+        items: [
+          {
+            xtype: 'numberfield',
+            name: 'paySum',
+            fieldLabel: UB.i18n('Сума'),
+            width: 250,
+            maxLength: 17,
+            allowBlank: false,
+            enforceMaxLength: true,
+            hideTrigger: true,
+            keyNavEnabled: false,
+            mouseWheelEnabled: false,
+            enableKeyEvents: true,
+            vtype: 'floatValidator',
+            maskRe: AC.validators.maskRe('currency'),
+            valueToRaw: UB.core.UBUtil.formatAsCurrency,
+            decimalPrecision: 2,
+            maxValue: 8999000000000000,
+            minValue: -8999000000000000,
+            flagsFix: 1 << 4
+          }
+        ]
+      }
+
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      me.createToolbarButtons(me)
+      me.attr = {
+        paySum: me.down('[name=paySum]'),
+        dictFundSourceID: me.down('[name=dictFundSourceID]'),
+        dictProgClassID: me.down('[name=dictProgClassID]'),
+        dictProjectID: me.down('[name=dictProjectID]'),
+        dimControl: me.down('[name=dimControl]')
+      }
+      me.parentForm = me.gridSender.up('hr_rlDimension') || {}
+      me.attr.dictFundSourceID.store.ubRequest.orgID = me.parentForm.orgID || appAC.globalOrganization()
+      const record = (me.gridRecord ? me.gridRecord.getData() : me.formData) || {}
+      me.dtData = record.dtData ? JSON.parse(record.dtData) : {}
+      me.attr.dimControl.setValue(me.dtData)
+      me.attr.dictFundSourceID.setValueById(me.dtData.dictFundSourceID)
+      me.attr.dictProgClassID.setValueById(me.dtData.dictProgClassID)
+      me.attr.dictProjectID.setValueById(me.dtData.dictProjectID)
+      me.attr.paySum.setValue(record.paySum)
+      me.attr.dictProgClassID[AC.settings.get('hrProgClassAcc', me.parentForm.orgID || appAC.globalOrganization()) ? 'show' : 'hide']()
+      me.attr.dictProjectID[AC.settings.get('hrProjectAcc', me.parentForm.orgID || appAC.globalOrganization()) ? 'show' : 'hide']()
+    }, me)
+
+    me.callParent(arguments)
+  },
+  createToolbarButtons: function (me) {
+    let tb = me.down('toolbar')
+    tb.insert(tb.items.length - 2, {
+      xtype: 'button',
+      scale: 'medium',
+      name: 'saveAndClose',
+      iconCls: 'fas fa-share-square',
+      tooltip: UB.i18n('saveAndClose') + me.hotKeys[me.actionId.save].text,
+      cls: 'save-action',
+      handler: function () {
+        me.onButtonSave(me)
+      }
+    })
+  },
+  onButtonSave: function (me) {
+    if (me.attr.paySum.getValue() && me.attr.paySum.isValid()) {
+      const formData = me.attr.dimControl.getValue(true) || {}
+      formData.dictFundSourceID = me.attr.dictFundSourceID.getValue()
+      formData.dictProgClassID = me.attr.dictProgClassID.getValue()
+      formData.dictProjectID = me.attr.dictProjectID.getValue()
+      formData.paySum = me.attr.paySum.getValue()
+      formData.departmentID = me.dtData.departmentID
+      formData.ID = me.dtData.ID
+      me.onSave(me.parentForm, me.gridSender, me.gridRecord, formData)
+      me.up('window').close()
+    }
+  }
+})

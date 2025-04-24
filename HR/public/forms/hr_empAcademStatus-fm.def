@@ -1,0 +1,32 @@
+/* global HR */
+exports.formDef = {
+  requiredFields: ['dictAcademStatusID.name', 'dictSpecialtyID.name', 'impSourceID', 'educationOrgID', 'educationOrgName'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' },
+    defaults: { labelWidth: 150 }
+  },
+  items: [
+    { attributeName: 'employeeID', hidden: true },
+    {
+      attributeName: 'dictAcademStatusID',
+      fieldList: ['ID', 'name', 'setStatus']
+    },
+    { attributeName: 'setStatus', disableContextMenu: false, hideEntityItemInContext: true },
+    { attributeName: 'dictSpecialtyID' },
+    { attributeName: 'educationName' },
+    HR.controlService.getEduOrgCombo({
+      allowBlank: true,
+      fieldID: 'educationOrgID',
+      fieldName: 'educationOrgName'
+    }),
+    { attributeName: 'docNumber' },
+    { attributeName: 'docDate' },
+    { attributeName: 'comment' }
+
+  ]
+}

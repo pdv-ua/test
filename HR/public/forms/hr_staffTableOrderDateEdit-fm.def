@@ -1,0 +1,107 @@
+// @isModal true
+/* global UB Ext appAC UB $App _ appAC AC */
+
+exports.formDef = 'HR.staffTableOrderDateEdit'
+
+Ext.define('HR.staffTableOrderDateEdit', {
+  extend: 'Ext.form.Panel',
+  width: 560,
+  height: 170,
+  layout: 'border',
+  alias: 'widget.staffTableOrderDateEdit',
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        header: false,
+        region: 'north',
+        layout: 'vbox',
+        margin: '20 0 0 0',
+        items: [
+          {
+            xtype: 'label',
+            name: 'warningLabel',
+            text: 'Увага! Необхідно вказати дату, яка буде менша за дату вступу в дію цього Штатного розпису (або рівна, але не більша)!',
+            width: 420,
+            cls: 'x-form-item-label field-label-red',
+            margin: '0 0 20 20',
+            hidden: true
+          },
+          {
+            xtype: 'ubdatefield',
+            name: 'orderDate',
+            fieldLabel: UB.i18n('Мінімальна дата для введення змін в дію'),
+            labelWidth: 300,
+            allowBlank: false
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            name: 'cancelBtn',
+            height: 30,
+            cls: 'red-action',
+            iconCls: 'u-icon-close',
+            margin: '10 10 10 0',
+            handler: function () {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Зберегти'),
+            name: 'saveBtn',
+            height: 30,
+            iconCls: 'u-icon-save-and-close',
+            margin: '10 10 10 0',
+            cls: 'blue-action',
+            handler: async function () {
+              if (!me.isReadOnly && me.sender) {
+                const entryDate = AC.dateService.shiftDate(me.attr.orderDate.getValue())
+                const newUnit = await UB.Repository('hr_staffUnit')
+                  .attrs('ID')
+                  .where('mi_dateFrom', '>', entryDate)
+                  .where('state', '=', 'ACTIVE')
+                  .where('orgID', '=', me.orgID)
+                  .misc({
+                    __mip_recordhistory_all: true
+                  })
+                  .selectSingle()
+                const result = newUnit
+                  ? $App.dialogYesNo(UB.i18n('Увага'), `Для даного штатного розпису існують пізніші зміни ніж ${AC.dateService.formatDate(entryDate)}. Це може заблокувати введення в дію поточних змін. Продовжити?`)
+                  : true
+                if (result) {
+                  me.sender.record.set('orderDate', entryDate)
+                  me.up('window').close()
+                }
+              } else {
+                me.up('window').close()
+              }
+            }
+          }
+        ]
+      }
+    ]
+
+    me.on('afterrender', function () {
+      me.attr = {
+        orderDate: me.down('[name=orderDate]')
+      }
+      me.attr.orderDate.setValue(me.orderDate)
+      me.attr.orderDate.setReadOnly(me.isReadOnly)
+      if (me.askingMode) {
+        me.down('[name=warningLabel]').show()
+        me.down('[name=cancelBtn]').hide()
+      }
+    })
+
+    me.callParent(arguments)
+  }
+})

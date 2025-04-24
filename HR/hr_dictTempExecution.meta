@@ -1,0 +1,123 @@
+{
+    "caption": "Довідник ТВО за положенням",
+    "description": "Довідник ТВО за положенням",
+    "documentation": "Довідник ТВО за положенням",
+    "descriptionAttribute": "",
+    "cacheType": "None",
+    "attributes": [
+      {
+        "name": "organizationID",
+        "dataType": "Entity",
+        "associatedEntity": "hr_organization",
+        "associationAttr": "mi_data_id",
+        "caption": "Організація",
+        "description": "Організація",
+        "documentation": "Організація",
+        "allowNull": false
+      },
+      {
+        "name": "employeePositionID",
+        "dataType": "Entity",
+        "associatedEntity": "hr_employeePositionS",
+        "caption": "Працівник",
+        "description": "Працівник",
+        "documentation": "Працівник",
+        "allowNull": false
+      },
+      {
+        "name": "employeePositionTempID",
+        "dataType": "Entity",
+        "associatedEntity": "hr_employeePositionS",
+        "caption": "Працівника",
+        "description": "Виконує обов`язки працівника",
+        "documentation": "Виконує обов`язки працівника"
+      },
+      {
+        "name": "departmentTempID",
+        "dataType": "Entity",
+        "associatedEntity": "hr_department",
+        "associationAttr": "mi_data_id",
+        "caption": "Підрозділ",
+        "description": "Виконує обов`язки за Підрозділ",
+        "documentation": "Виконує обов`язки за Підрозділ"
+      },
+      {
+        "name": "positionTempID",
+        "dataType": "Entity",
+        "associatedEntity": "hr_position",
+        "associationAttr": "mi_data_id",
+        "caption": "Посада",
+        "description": "Виконує обов`язки за Посада",
+        "documentation": "Виконує обов`язки за Посада"
+      },
+
+      {
+        "name": "dateFrom",
+        "dataType": "Date",
+        "caption": "Дата початку дії",
+        "description": "Дата початку",
+        "documentation": "Дата початку",
+        "allowNull": false
+      },
+      {
+        "name": "dateTo",
+        "dataType": "Date",
+        "caption": "Дата закінчення дії",
+        "description": "Дата закінчення дії",
+        "documentation": "Дата закінчення дії",
+        "allowNull": false
+      },
+      {
+        "name": "numQueue",
+        "dataType": "Int",
+        "caption": "Пріоритет",
+        "documentation": "Пріоритет",
+        "description": "Пріоритет",
+        "defaultValue": "1"
+      },
+      {
+        "name": "dateFromEmpty",
+        "dataType": "Date",
+        "caption": "Діє з",
+        "description": "Діє з",
+        "documentation": "Діє з",
+        "mapping": [
+          {
+            "name": "MSSQL2012",
+            "expressionType": "Expression",
+            "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+          },
+          {
+            "name": "PostgreSQL",
+            "expressionType": "Expression",
+            "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+          }
+        ]
+      },
+      {
+        "name": "dateToEmpty",
+        "dataType": "Date",
+        "caption": "Діє по",
+        "description": "Діє по",
+        "documentation": "Діє по",
+        "mapping": [
+          {
+            "name": "MSSQL2012",
+            "expressionType": "Expression",
+            "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+          },
+          {
+            "name": "PostgreSQL",
+            "expressionType": "Expression",
+            "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+          }
+        ]
+      }
+    ],
+    "mixins": {
+      "mStorage": {
+        "simpleAudit": true,
+        "safeDelete": true
+      }
+    }
+  }

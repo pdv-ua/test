@@ -1,0 +1,99 @@
+{
+  "caption": "Сесія розрахунку",
+  "description": "Сесія розрахунку",
+  "descriptionAttribute": "orgID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "documentation": "Організаційна одиниця",
+      "allowNull": false
+    },
+    {
+      "name": "timeStampBegin",
+      "dataType": "DateTime",
+      "caption": "Початок розрахунку",
+      "description": "Початок розрахунку",
+      "documentation": "Початок розрахунку",
+      "allowNull": false
+    },
+    {
+      "name": "timeStampEnd",
+      "dataType": "DateTime",
+      "caption": "Кінець розрахунку",
+      "description": "Кінець розрахунку",
+      "documentation": "Кінець розрахунку"
+    },
+    {
+      "name": "flags",
+      "dataType": "Int",
+      "caption": "Ознака розрахунку",
+      "description": "Ознака розрахунку",
+      "documentation": "Ознака розрахунку"
+    },
+    {
+      "name": "numCount",
+      "dataType": "Int",
+      "caption": "Кількість табельних номерів",
+      "description": "Кількість табельних номерів",
+      "documentation": "Кількість табельних номерів"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис"
+    },
+    {
+      "name": "calcBalance",
+      "dataType": "Boolean",
+      "caption": "Розрахунок баланса",
+      "description": "Розрахунок баланса",
+      "documentation": "Розрахунок баланса",
+      "defaultValue": "0"
+    },
+    {
+      "name": "result",
+      "dataType": "BigInt",
+      "caption": "Час перерахунку в секундах",
+      "description": "Час перерахунку в секундах",
+      "documentation": "Час перерахунку в секундах",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(DATEDIFF(ss, {self}.timeStampBegin, {self}.timeStampEnd))"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(extract(epoch from ({self}.timeStampEnd - {self}.timeStampBegin)))"
+        }
+      ]
+    }
+  ],
+  "mapping":[
+    {
+      "name": "AnsiSQL",
+      "selectName": "hr_payCalc",
+      "execName": "hr_payCalc",
+      "pkGenerator": "S_HR_PAYCALC"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": false,
+      "safeDelete": false
+    },
+    "audit": {
+      "enabled": false
+    }
+  }
+}

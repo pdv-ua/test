@@ -1,0 +1,113 @@
+/* global appAC appHR UB Ext $App AC */
+
+exports.formDef = 'HR.empOrderIntCombSelect'
+
+Ext.define('HR.empOrderIntCombSelect', {
+    extend: 'Ext.form.Panel',
+    width: 800,
+    height: 180,
+    layout: { type: 'border' },
+    /**
+     * @cfg {UBS.UBReport} report
+     */
+    initComponent: function () {
+        const me = this
+        me.items = [
+           /* {
+                region: 'north',
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                    {
+                        xtype: 'ubboxselect',
+                        name: 'employeePositionID',
+                        fieldLabel: UB.i18n('Сумісник'),
+                        multiSelect: true,
+                        valueField: 'ID',
+                        displayField: 'description',
+                        ubRequest: {
+                            entity: 'hr_employeePosition',
+                            method: UB.core.UBCommand.methodName.SELECT,
+                            fieldList: ['ID', 'description']
+                        }
+                    }
+                ]
+            },
+            {
+                layout: { type: 'hbox', pack: 'end' },
+                region: 'south',
+                items: [
+                    {
+                        xtype: 'button',
+                        text: UB.i18n('Продовжити'),
+                        width: 110,
+                        height: 30,
+                        margin: '10 20 10 0',
+                        handler: function (btn) {
+
+                        }
+                    }
+                ]
+            },*/
+            {
+                layout: { type: 'vbox', align: 'stretch' },
+
+                items: [
+                    {
+                        region: 'north',
+                        layout: { type: 'vbox', align: 'stretch' },
+                        items: [
+                            {
+                                xtype: 'ubboxselect',
+                                name: 'employeePositionID',
+                                fieldLabel: UB.i18n('Сумісник'),
+                                multiSelect: true,
+                                valueField: 'ID',
+                                displayField: 'description',
+                                width: 760,
+                                ubRequest: {
+                                    entity: 'hr_employeePosition',
+                                    method: UB.core.UBCommand.methodName.SELECT,
+                                    fieldList: ['ID', 'description']
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        layout: { type: 'hbox', pack: 'end' },
+                        region: 'south',
+                        items: [
+                            {
+                                xtype: 'button',
+                                text: UB.i18n('Продовжити'),
+                                width: 110,
+                                height: 30,
+                                margin: '10 20 10 0',
+                                handler: function (btn) {
+                                    if (me.onSave) {
+                                        me.onSave(me.attr.employeePositionID.getValue())
+                                    }
+                                    me.up('window').close()
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+        me.on('afterrender', () => {
+            const me = this
+            me.attr = {
+                employeePositionID: me.down('[name=employeePositionID]')
+            }
+
+            if (me.defaultValues) {
+                AC.viewUtils.setFilterValue(me.attr.employeePositionID, {
+                    ID: { value: me.defaultValues.employeePositions.map(o => o.ID), condition: 'in' },
+                })
+            }
+
+        }, me)
+
+        me.callParent(arguments)
+    }
+})

@@ -1,0 +1,810 @@
+/* global UB moment appAC $App AC */
+exports.formDef = {
+  requiredFields: ['dateFrom', 'dateTo'],
+  parentConfig: { layout: { type: 'border' } },
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [
+      {
+        orderId: 4,
+        actionId: 'addScheduleCopy'
+      },
+      {
+        orderId: 5,
+        actionId: 'showTimPlan'
+      }
+
+    ]
+  }],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: false,
+      // split: true,
+      items: [
+        AC.viewUtils.getCollapsiblePanel(
+          '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Код")}</span> ${get("code")}' +
+            '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Назва")}</span> ${get("name")}' +
+            '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Опис")}</span> ${get("scheduleDescription")}'
+          , {
+            expandTitle: UB.i18n('Інформація про графік роботи'),
+            layout: {
+              type: 'hbox'
+            },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                defaults: { labelWidth: 160 },
+                items: [
+                  {
+                    attributeName: 'code'
+                  },
+                  {
+                    attributeName: 'name'
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        attributeName: 'scheduleDescription',
+                        labelWidth: 160,
+                        flex: 1
+                      },
+                      {
+                        xtype: 'button',
+                        scale: 'small',
+                        name: 'generateTabNumButton',
+                        iconCls: 'fas fa-angle-double-left',
+                        margin: '10 10 10 0',
+                        width: 40,
+                        visibility: false,
+                        tooltip: UB.i18n('Заповнити опис'),
+                        cls: 'add-new-action',
+                        handler: function (btn) {
+                          btn.up('form').setDescription()
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    attributeName: 'dateFromEmpty'
+                  },
+                  {
+                    attributeName: 'dateToEmpty'
+                  }
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                defaults: { labelWidth: 160 },
+                items: [
+                  {
+                    attributeName: 'begins',
+                    fieldLabel: UB.i18n('Починається з')
+                  },
+                  {
+                    attributeName: 'shortName'
+                  },
+                  {
+                    attributeName: 'organizationID',
+                    fieldList: ['mi_data_id', 'description'],
+                    valueField: 'mi_data_id',
+                    displayField: 'description',
+                    __mip_recordhistory_all: true,
+                    whereList: {
+                      state: {
+                        expression: '[state]',
+                        condition: '=',
+                        values: {
+                          state: 'ACTIVE'
+                        }
+                      }
+                    }
+                  },
+                  {
+                    attributeName: 'weekDays'
+                  },
+                  {
+                    attributeName: 'weekHours'
+                  }
+                ]
+              }
+            ]
+          })
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          xtype: 'acGrid',
+          name: 'workScheduleDay',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_workSchedule_workScheduleDay'),
+          title: UB.i18n('Режим роботи'),
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          cellEditing: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          summary: { paySum: 'sum' },
+          summaryDataOnClient: true,
+          ignoreAttr: ['posName', 'depName'],
+          lineNumberColumn: 'numDay',
+          ignoreAttrNewByCurrent: ['posName', 'depName', 'employeeNumberID.description', 'employeeNumberID'],
+          getRowClass: function (row) {
+            return row.get('hoursWork') ? '' : 'grd-color-red'
+          },
+          viewConfig: {
+            markDirty: false
+          },
+          onBeforeEdit: function (ctrl, context) {
+            const me = context.grid.up('form')
+            switch (context.field) {
+              case 'hoursWorkNight':
+                context.column.field.setMaxValue((context.record.get('hoursWork') || 0) - (context.record.get('hoursWorkEvening') || 0))
+                break
+              case 'hoursWorkEvening':
+                context.column.field.setMaxValue((context.record.get('hoursWork') || 0) - (context.record.get('hoursWorkNight') || 0))
+                break
+            }
+            if (context.column.dataIndex === 'dictTimeCostID.nameSmall') {
+              context.column.field.on('change', (ctrl) => {
+                if (ctrl.getFieldValue('code') !== appAC.langCodei18n('РбДн')) {
+                  context.record.set('hoursWork', 0)
+                  context.record.set('hoursWorkNight', 0)
+                  context.record.set('hoursWorkDop', 0)
+                  context.record.set('hoursWorkHarm', 0)
+                }
+              })
+            }
+            me.setIsDirty(true)
+          },
+          edit: function (control, context) {
+            const me = this.up('form')
+            if (!context.record.get('hoursWork')) {
+              context.record.set('hoursWork', 0)
+            }
+            if (!context.record.get('hoursWorkNight')) {
+              context.record.set('hoursWorkNight', 0)
+            }
+            if (!context.record.get('hoursWorkEvening')) {
+              context.record.set('hoursWorkEvening', 0)
+            }
+            if (!context.record.get('hoursWorkDop')) {
+              context.record.set('hoursWorkDop', 0)
+            }
+            if (!context.record.get('hoursWorkHarm')) {
+              context.record.set('hoursWorkHarm', 0)
+            }
+            switch (context.field) {
+              case 'hoursWork':
+                if ((context.record.get('hoursWorkNight') || 0) > (context.record.get('hoursWork') || 0)) {
+                  context.record.set('hoursWorkNight', (context.record.get('hoursWork') || 0))
+                }
+                if ((context.record.get('hoursWorkEvening') || 0) > (context.record.get('hoursWork') || 0) - (context.record.get('hoursWorkNight') || 0)) {
+                  context.record.set('hoursWorkEvening', (context.record.get('hoursWork') || 0) - (context.record.get('hoursWorkNight') || 0))
+                }
+                if ((context.record.get('hoursWorkHarm') || 0) > (context.record.get('hoursWork') || 0)) {
+                  context.record.set('hoursWorkHarm', (context.record.get('hoursWork') || 0))
+                }
+                if ((context.record.get('hoursWorkDop') || 0) > (context.record.get('hoursWork') || 0)) {
+                  context.record.set('hoursWorkDop', (context.record.get('hoursWork') || 0))
+                }
+                break
+              case 'hoursWorkHarm':
+                if ((context.record.get('hoursWorkHarm') || 0) > (context.record.get('hoursWork') || 0)) {
+                  context.record.set('hoursWorkHarm', (context.record.get('hoursWork') || 0))
+                }
+                break
+              case 'hoursWorkDop':
+                if ((context.record.get('hoursWorkDop') || 0) > (context.record.get('hoursWork') || 0)) {
+                  context.record.set('hoursWorkDop', (context.record.get('hoursWork') || 0))
+                }
+                break
+            }
+
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null
+            }
+            if (context.column.dataIndex !== 'dictTimeCostID.nameSmall') {
+              const dictTimeCost = context.record.get('hoursWork') === 0 ? me.dictTimeCost.find(o => o.code === appAC.langCodei18n('Вих')) : me.dictTimeCost.find(o => o.code === appAC.langCodei18n('РбДн'))
+              context.record.set('dictTimeCostID.nameSmall', dictTimeCost.nameSmall)
+              context.record.set('dictTimeCostID', dictTimeCost.ID)
+            }
+            if (context.column.dataIndex === 'dictTimeCostID.nameSmall' || context.column.dataIndex === 'hoursWork') {
+              let begins = me.attr.begins.getValue()
+              if (begins && begins === 'FROM_WEEKBEGIN') {
+                let gridData = context.grid.getData() || []
+                let workHours = 0
+                gridData.forEach(row => {
+                  workHours += (row.hoursWork)
+                })
+                me.attr.weekHours.setValue(workHours)
+                UB.Repository('hr_dictTimeCost')
+                  .attrs(['ID'])
+                  .where('ID', 'in', gridData.map(o => o.dictTimeCostID))
+                  .where('timeCostType', '=', 'WORK')
+                  .selectAsArrayOfValues().then(dictTimeCost => {
+                    me.attr.weekDays.setValue(gridData.filter(el => dictTimeCost.includes(el.dictTimeCostID)).length)
+                  })
+              }
+            }
+            return true
+          },
+          fields: [
+            { name: 'ID' },
+            { name: 'mi_modifyDate' },
+            {
+              name: 'numDay',
+              width: 150,
+              columnConfig: {
+                text: UB.i18n('Номер дня'),
+                sortBy: 'Number'
+              }
+            },
+            {
+              name: 'dictTimeCostID.nameSmall',
+              columnConfig: {
+                text: UB.i18n('Витрата робочого часу'),
+                hidden: true,
+                flex: 1,
+                editor: {
+                  dataType: 'Entity',
+                  xtype: 'accombobox',
+                  associatedEntity: 'hr_dictTimeCost',
+                  disableClearSelection: true,
+                  hideEntityItemInContext: true,
+                  disableContextMenu: true,
+                  storeAttributeValueField: 'dictTimeCostID',
+                  allowBlank: false,
+                  fieldList: ['ID', 'nameSmall', 'timeCostType', 'code'],
+                  whereList: {
+                    timeCostType: {
+                      expression: '[timeCostType]',
+                      condition: 'in',
+                      value: ['WORK', 'FREE']
+                    }
+                  }
+                }
+              }
+            },
+            { name: 'dictTimeCostID' },
+            {
+              name: 'hoursWork',
+              columnConfig: {
+                text: UB.i18n('Годин роботи'),
+                sortable: true,
+                dataType: 'Currency',
+                sortBy: 'Number',
+                width: 150,
+                floatFormat: 2,
+                align: 'right',
+                editor: {
+                  dataType: 'Currency',
+                  decimalPrecision: 2,
+                  minValue: 0,
+                  maxValue: 24,
+                  allowExponential: false,
+                  maxText: UB.i18n('Кількість годин не може бути більшою ніж {0}'),
+                  allowBlank: false,
+                  selectOnFocus: true
+                },
+                renderer: (value, metaData) => {
+                  return value || ''
+                }
+              }
+            },
+            {
+              name: 'hoursWorkNight',
+              columnConfig: {
+                text: UB.i18n('Нічні години'),
+                width: 150,
+                sortable: true,
+                dataType: 'Currency',
+                sortBy: 'Number',
+                floatFormat: 2,
+                align: 'right',
+                editor: {
+                  dataType: 'Currency',
+                  decimalPrecision: 2,
+                  minValue: 0,
+                  maxValue: 24,
+                  allowExponential: false,
+                  maxText: UB.i18n('Кількість нічних не може бути більшою ніж {0}'),
+                  allowBlank: false,
+                  selectOnFocus: true
+                },
+                renderer: (value, metaData) => {
+                  return value || ''
+                }
+              }
+            },
+            {
+              name: 'hoursWorkEvening',
+              columnConfig: {
+                text: UB.i18n('Вечірні години'),
+                width: 150,
+                sortable: true,
+                dataType: 'Currency',
+                sortBy: 'Number',
+                floatFormat: 2,
+                align: 'right',
+                editor: {
+                  dataType: 'Currency',
+                  decimalPrecision: 2,
+                  minValue: 0,
+                  maxValue: 24,
+                  allowExponential: false,
+                  maxText: UB.i18n('Кількість вечірніх не може бути більшою ніж {0}'),
+                  allowBlank: false,
+                  selectOnFocus: true
+                },
+                renderer: (value, metaData) => {
+                  return value || ''
+                }
+              }
+            },
+            {
+              name: 'hoursWorkHarm',
+              columnConfig: {
+                text: UB.i18n('Шкідливі години'),
+                hidden: true,
+                width: 150,
+                sortable: true,
+                dataType: 'Currency',
+                sortBy: 'Number',
+                floatFormat: 2,
+                align: 'right',
+                editor: {
+                  dataType: 'Currency',
+                  decimalPrecision: 2,
+                  minValue: 0,
+                  maxValue: 24,
+                  allowExponential: false,
+                  maxText: UB.i18n('Кількість шкідливих не може бути більшою ніж {0}'),
+                  allowBlank: false,
+                  selectOnFocus: true
+                },
+                renderer: (value, metaData) => {
+                  return value || ''
+                }
+              }
+            },
+            {
+              name: 'hoursWorkDop',
+              columnConfig: {
+                text: UB.i18n(AC.settings.get('hrTimeSheetAdditionalCol', appAC.globalOrganization()) || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'),
+                hidden: true,
+                width: 150,
+                sortable: true,
+                dataType: 'Currency',
+                sortBy: 'Number',
+                floatFormat: 2,
+                align: 'right',
+                editor: {
+                  dataType: 'Currency',
+                  decimalPrecision: 2,
+                  minValue: 0,
+                  maxValue: 24,
+                  allowExponential: false,
+                  maxText: UB.i18n('Кількість годин не може бути більшою ніж {0}'),
+                  allowBlank: false,
+                  selectOnFocus: true
+                },
+                renderer: (value, metaData) => {
+                  return value || ''
+                }
+              }
+            },
+            {
+              name: 'timeFrom',
+              columnConfig: {
+                text: UB.i18n('Початок о'),
+                editor: {
+                  // xtype: 'textfield',
+                  xtype: 'timefield',
+                  displayFormat: 'H:i',
+                  format: 'H:i',
+                  altFormats: 'H:i',
+                  increment: 1,
+                  regex: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+                  invalidText: UB.i18n('Невірний формат'),
+                  allowBlank: true,
+                  maxLength: 5,
+                  selectOnFocus: true
+                },
+                renderer: function (value) {
+                  if (!value || value.length === 5) {
+                    return value
+                  }
+                  let date = moment(value)
+                  return date.isValid() ? date.format('HH:mm') : value
+                }
+
+              }
+            },
+            {
+              name: 'timeTo',
+              columnConfig: {
+                text: UB.i18n('Закінчення о'),
+                editor: {
+                  // xtype: 'textfield',
+                  xtype: 'timefield',
+                  format: 'H:i',
+                  altFormats: 'H:i',
+                  increment: 1,
+                  regex: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+                  invalidText: UB.i18n('Невірний формат'),
+                  allowBlank: true,
+                  maxLength: 5,
+                  selectOnFocus: true
+                },
+                renderer: function (value) {
+                  if (!value || value.length === 5) {
+                    return value
+                  }
+                  let date = moment(value)
+                  return date.isValid() ? date.format('HH:mm') : value
+                }
+              }
+            },
+            {
+              name: 'recreationFrom',
+              columnConfig: {
+                text: UB.i18n('Перерва з'),
+                editor: {
+                  // xtype: 'textfield',
+                  xtype: 'timefield',
+                  format: 'H:i',
+                  altFormats: 'H:i',
+                  increment: 1,
+                  regex: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+                  invalidText: UB.i18n('Невірний формат'),
+                  allowBlank: true,
+                  maxLength: 5,
+                  selectOnFocus: true
+                },
+                renderer: function (value) {
+                  if (!value || value.length === 5) {
+                    return value
+                  }
+                  let date = moment(value)
+                  return date.isValid() ? date.format('HH:mm') : value
+                }
+              }
+            },
+            {
+              name: 'recreationTo',
+              columnConfig: {
+                text: UB.i18n('Перерва по'),
+                editor: {
+                  // xtype: 'textfield',
+                  xtype: 'timefield',
+                  format: 'H:i',
+                  altFormats: 'H:i',
+                  increment: 1,
+                  regex: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+                  invalidText: UB.i18n('Невірний формат'),
+                  allowBlank: true,
+                  maxLength: 5,
+                  selectOnFocus: true
+                },
+                renderer: function (value) {
+                  if (!value || value.length === 5) {
+                    return value
+                  }
+                  let date = moment(value)
+                  return date.isValid() ? date.format('HH:mm') : value
+                }
+              }
+            }
+          ]
+        },
+        {
+          xtype: 'panel',
+          region: 'center',
+          title: UB.i18n('Налаштування'),
+          autoScroll: true,
+          items: [
+            { attributeName: 'isOnlyForPositions', labelWidth: 250 },
+            {
+              layout: { type: 'hbox' },
+              flex: 1,
+              autoScroll: true,
+              items: [
+                {
+                  xtype: 'fieldset',
+                  title: UB.i18n(`Доплачувати за роботу:`),
+                  flex: 1,
+                  margin: '5 15 5 15',
+                  layout: { type: 'vbox', align: 'stretch' },
+                  items: [
+                    { attributeName: 'isPayDayOff', labelWidth: 250 },
+                    { attributeName: 'isPayHoliday', labelWidth: 250 },
+                    { attributeName: 'isNightHours', labelWidth: 250 },
+                    { attributeName: 'isEveningHours', labelWidth: 250 },
+                    { attributeName: 'isOvertime', labelWidth: 250 }
+                  ]
+                },
+                {
+                  xtype: 'fieldset',
+                  title: UB.i18n(`При формуванні розклада враховувати:`),
+                  margin: '5 15 5 15',
+                  flex: 1,
+                  layout: { type: 'vbox', align: 'stretch' },
+                  items: [
+                    { attributeName: 'isHoliday', labelWidth: 250 },
+                    { attributeName: 'isLastHoliday', labelWidth: 250 },
+                    { attributeName: 'isChangeDay', labelWidth: 250 },
+                    { attributeName: 'isMtCount', labelWidth: 250 },
+                    { attributeName: 'maxMtCount', labelWidth: 250 }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              flex: 1,
+              autoScroll: true,
+              items: [
+                {
+                  xtype: 'fieldset',
+                  title: UB.i18n(`При формуванні табеля:`),
+                  margin: '5 15 5 15',
+                  flex: 1,
+                  layout: { type: 'vbox', align: 'stretch' },
+                  items: [
+                    {
+                      attributeName: 'normScheduleID',
+                      fieldList: ['ID', 'name'],
+                      labelWidth: 250
+                    },
+                    {
+                      attributeName: 'planScheduleID',
+                      fieldList: ['ID', 'name'],
+                      labelWidth: 250
+                    },
+                    { attributeName: 'isDayAsPlan', labelWidth: 250 }
+                  ]
+                },
+                {
+                  xtype: 'fieldset',
+                  title: UB.i18n(`Підсумований облік робочого часу:`),
+                  margin: '5 15 5 15',
+                  flex: 1,
+                  layout: { type: 'vbox', align: 'stretch' },
+                  items: [
+                    { attributeName: 'isSummarized', labelWidth: 250 },
+                    {
+                      attributeName: 'periodSummarized',
+                      disableContextMenu: false,
+                      hideEntityItemInContext: true,
+                      labelWidth: 250
+                    },
+                    {
+                      attributeName: 'payElID',
+                      labelWidth: 250,
+                      whereList: {
+                        methodCode: {
+                          expression: '[methodID.code]',
+                          condition: '=',
+                          value: '138'
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Об\'єднані графіки'),
+          layout: { type: 'border' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              region: 'north',
+              items: [
+                {
+                  attributeName: 'parentsWorkScheduleID',
+                  fieldLabel: UB.i18n('Основний графік'),
+                  fieldList: ['ID', 'name'],
+                  labelWidth: 250,
+                  width: 600
+                }
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'connectedWorkSchedule',
+              autoScroll: true,
+              notWriteChanges: true,
+              readOnly: true,
+              hideActions: ['addNewByCurrent', 'del'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_workSchedule',
+                method: 'select',
+                fieldList: [
+                  { name: 'code', description: `Код` },
+                  { name: 'name', description: `Графік роботи` }
+                ],
+                whereList: {},
+                orderList: {
+                  orderBy: { expression: 'code', order: 'asc' }
+                }
+              },
+              customActions: [
+
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Розклад роботи'),
+          layout: { type: 'border' },
+          items: [
+            {
+              layout: { type: 'vbox' },
+              region: 'north',
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      xtype: 'label',
+                      text: UB.i18n('Рік:'),
+                      cls: 'x-form-item-label',
+                      margin: '12 0 0 5',
+                      width: 40
+                    },
+                    {
+                      xtype: 'button',
+                      name: 'btnPrevPeriod',
+                      text: '<',
+                      margin: '5 0 0 0',
+                      tooltip: UB.i18n('Попередній рік'),
+                      width: 30,
+                      handler: ctrl => {
+                        let me = ctrl.up('form')
+                        me.setYear(-1)
+                        me.reloadData(me)
+                      }
+                    },
+                    {
+                      xtype: 'numberfield',
+                      name: 'period',
+                      fieldLabel: '',
+                      margin: '5 0 0 5',
+                      labelWidth: 0,
+                      width: 145,
+                      readOnly: true,
+                      value: appAC.globalApplicationDate().getFullYear(),
+                      listeners: {
+                        change: ctrl => {
+                          const me = ctrl.up('form')
+                          const btnCalculate = me.down('[name=recalcPlan]')
+                          btnCalculate.setDisabled(!me.down('[name=period]').getValue())
+                        }
+                      }
+                    },
+                    {
+                      xtype: 'button',
+                      name: 'btnNextPeriod',
+                      text: '>',
+                      margin: '5 0 0 0',
+                      tooltip: UB.i18n('Наступний рік'),
+                      width: 30,
+                      handler: ctrl => {
+                        let me = ctrl.up('form')
+                        me.setYear(1)
+                        me.reloadData(me)
+                      }
+                    },
+                    {
+                      xtype: 'ubcombobox',
+                      name: 'showType',
+                      fieldLabel: UB.i18n('Відображати'),
+                      margin: '3 0 0 0',
+                      valueField: 'code',
+                      displayField: 'name',
+                      labelWidth: 120,
+                      width: 320,
+                      listeners: {
+                        change: (ctrl, value) => {
+                          const me = ctrl.up('form')
+                          if (me.detailData.daysData) {
+                            me.detailData.daysData.grid.setLocalStoreData(value ? me.gridData : [])
+                          }
+                        }
+                      },
+                      ubRequest: {
+                        entity: 'ubm_enum',
+                        method: UB.core.UBCommand.methodName.SELECT,
+                        fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                        whereList: {
+                          eGroup: {
+                            expression: '[eGroup]',
+                            condition: 'equal',
+                            values: { 'eGroup': 'HR_TIME_SHEET_TYPE' }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      xtype: 'ubdatefield',
+                      name: 'startDate',
+                      hidden: true
+                    },
+                    {
+                      xtype: 'ubdatefield',
+                      name: 'endDate',
+                      hidden: true
+                    }
+                  ]
+                },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      xtype: 'button',
+                      name: 'recalcPlan',
+                      tooltip: UB.i18n('Розрахувати'),
+                      iconCls: 'fas fa-angle-double-down',
+                      margin: '5 0 0 0',
+                      cls: 'fill-action',
+                      handler: function (btn) {
+                        let me = btn.up('form')
+                        let params = me.getParams()
+                        if (params) {
+                          me.fillPlan(params)
+                        } else {
+                          $App.dialogError(UB.i18n('Не вибрані параметри'))
+                        }
+                      }
+                    },
+                    {
+                      xtype: 'label',
+                      name: 'hrUsePlanByOrgLabel',
+                      text: '',
+                      margin: '11 10 12 140',
+                      style: {
+                        'float': 'left',
+                        'color': '#ff0000',
+                        'height': '16px'
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              xtype: 'tabpanel',
+              region: 'center',
+              items: [{
+                title: UB.i18n(`По днях`),
+                name: 'tabDay',
+                layout: 'fit',
+                items: []
+              }]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

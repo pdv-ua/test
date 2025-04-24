@@ -1,0 +1,381 @@
+/* global Ext _ UB */
+/* global AC HR $App UB Ext _ */
+
+exports.formDef = 'HR.settingsTimeCostInt'
+
+Ext.define('HR.settingsTimeCostInt', {
+  extend: 'Ext.panel.Panel',
+  width: 900,
+  height: 430,
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  actionId: {
+    save: 'save'
+  },
+  eventId: {
+    save: 'save'
+  },
+  hotKeys: {
+    save: {
+      key: Ext.EventObject.ENTER,
+      shift: false,
+      ctrl: true,
+      text: ' (Ctrl+Enter)'
+    }
+  },
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [],
+      ubID: 'mainToolbar',
+      enableOverflow: true
+    }]
+    me.items = [
+
+      {
+        xtype: 'fieldset',
+        layout: {
+          type: 'vbox',
+          align: 'stretch',
+          region: 'center'
+        },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            fieldLabel: UB.i18n('Перший елемент'),
+            name: 'valueDictTimeCost1',
+            hideEntityItemInContext: true,
+            allowBlank: false,
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'hr_dictTimeCost',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['ID', 'name']
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            fieldLabel: UB.i18n('Другий елемент'),
+            name: 'idDictTimeCost1',
+            hideEntityItemInContext: true,
+            allowBlank: false,
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'hr_dictTimeCost',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['ID', 'name']
+            }
+          },
+          {
+            layout: {
+              type: 'hbox',
+              align: 'stretch'
+            },
+            items: [
+              {
+                xtype: 'ubcombobox',
+                fieldLabel: UB.i18n('Правило пріоритету'),
+                name: 'timeCost1PriorityType',
+                hideEntityItemInContext: true,
+                selectOnFocus: true,
+                flex: 1,
+                valueField: 'code',
+                displayField: 'name',
+                enumGroupFilter: 'HR_ORDERELEM',
+                ubRequest: {
+                  entity: 'ubm_enum',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                  whereList: {
+                    eGroup: {
+                      expression: '[eGroup]',
+                      condition: 'equal',
+                      values: { 'eGroup': 'HR_ORDERELEM' }
+                    }
+                  }
+                }
+              },
+              {
+                xtype: 'checkboxfield',
+                name: 'isCrossInfo1',
+                flex: 1,
+                fieldLabel: UB.i18n('Інформувати про перетин')
+              }
+            ]
+          },
+          {
+            layout: {
+              type: 'hbox'
+            },
+            items: [
+              {
+                xtype: 'ubdatefield',
+                name: 'dateFromEmpty1',
+                flex: 1,
+                labelWidth: 120,
+                fieldLabel: UB.i18n('Дата початку дії:')
+              },
+              {
+                xtype: 'ubdatefield',
+                name: 'dateToEmpty1',
+                flex: 1,
+                labelWidth: 150,
+                fieldLabel: UB.i18n('Дата закінчення дії:')
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'fieldset',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            fieldLabel: UB.i18n('Перший елемент'),
+            name: 'idDictTimeCost2',
+            hideEntityItemInContext: true,
+            allowBlank: false,
+            flex: 1,
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'hr_dictTimeCost',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['ID', 'name']
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            fieldLabel: UB.i18n('Другий елемент'),
+            name: 'valueDictTimeCost2',
+            hideEntityItemInContext: true,
+            allowBlank: false,
+            flex: 1,
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'hr_dictTimeCost',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['ID', 'name']
+            }
+          },
+          {
+            layout: {
+              type: 'hbox',
+              align: 'stretch'
+            },
+            items: [
+              {
+                xtype: 'ubcombobox',
+                fieldLabel: UB.i18n('Правило пріоритету'),
+                name: 'timeCost2PriorityType',
+                hideEntityItemInContext: true,
+                valueField: 'code',
+                flex: 1,
+                //allowBlank: false,
+                displayField: 'name',
+                selectOnFocus: true,
+                ubRequest: {
+                  entity: 'ubm_enum',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                  whereList: {
+                    eGroup: {
+                      expression: '[eGroup]',
+                      condition: 'equal',
+                      values: { 'eGroup': 'HR_ORDERELEM' }
+                    }
+                  }
+                }
+              },
+              {
+                xtype: 'checkboxfield',
+                name: 'isCrossInfo2',
+                flex: 1,
+                fieldLabel: UB.i18n('Інформувати про перетин')
+              }
+            ]
+          },
+          {
+            layout: {
+              type: 'hbox'
+            },
+            items: [
+              {
+                xtype: 'ubdatefield',
+                name: 'dateFromEmpty2',
+                flex: 1,
+                labelWidth: 120,
+                fieldLabel: UB.i18n('Дата початку дії:')
+              },
+              {
+                xtype: 'ubdatefield',
+                name: 'dateToEmpty2',
+                flex: 1,
+                labelWidth: 150,
+                fieldLabel: UB.i18n('Дата закінчення дії:')
+              }
+            ]
+          }
+        ]
+      }
+    ]
+    me.createToolbarButtons = (me) => {
+      let tb = me.down('toolbar')
+      tb.insert(tb.items.length - 2, {
+        xtype: 'button',
+        scale: 'medium',
+        iconCls: 'fas fa-share-square',
+        tooltip: UB.i18n('saveAndClose') + me.hotKeys[me.actionId.save].text,
+        cls: 'save-action',
+        handler: async function (btn) {
+          let commandList = []
+          let valueDictTimeCost1 = me.attr.valueDictTimeCost1.getValue()
+          let idDictTimeCost1 = me.attr.idDictTimeCost1.getValue()
+          let timeCost1PriorityType = me.attr.timeCost1PriorityType.getValue()
+          let dateFromEmpty1 = me.attr.dateFromEmpty1.getValue()
+          let dateToEmpty1 = me.attr.dateToEmpty1.getValue()
+          let isCrossInfo1 = me.attr.isCrossInfo1.getValue()
+          let valueDictTimeCost2 = me.attr.valueDictTimeCost2.getValue()
+          let idDictTimeCost2 = me.attr.idDictTimeCost2.getValue()
+          let timeCost2PriorityType = me.attr.timeCost2PriorityType.getValue()
+          let dateFromEmpty2 = me.attr.dateFromEmpty2.getValue()
+          let dateToEmpty2 = me.attr.dateToEmpty2.getValue()
+          let isCrossInfo2 = me.attr.isCrossInfo2.getValue()
+
+          if (me.data.priorityId1) {
+            if (valueDictTimeCost1 !== me.data.valueDictTimeCost || idDictTimeCost1 !== me.data.idDictTimeCost || timeCost1PriorityType !== me.data.timeCost1PriorityType || dateFromEmpty1 !== me.data.dateFromEmpty1 || dateToEmpty1 !== me.data.dateToEmpty1 || isCrossInfo1 !== me.data.isCrossInfo1) {
+              if (valueDictTimeCost1 === null || idDictTimeCost1 === null || timeCost1PriorityType === null) {
+                commandList.push({
+                  entity: 'hr_dictTimeCostInt',
+                  method: 'delete',
+                  execParams: {
+                    ID: me.data.priorityId1
+                  }
+                })
+              } else {
+                commandList.push({
+                  entity: 'hr_dictTimeCostInt',
+                  method: 'update',
+                  __skipOptimisticLock: true,
+                  execParams: {
+                    ID: me.data.priorityId1,
+                    dictTimeCost1ID: valueDictTimeCost1,
+                    dictTimeCost2ID: idDictTimeCost1,
+                    priorityType: timeCost1PriorityType,
+                    dateFromEmpty: AC.dateService.shiftDate(dateFromEmpty1),
+                    dateToEmpty: AC.dateService.shiftDate(dateToEmpty1),
+                    isCrossInfo: isCrossInfo1
+                  }
+                })
+              }
+            }
+          } else {
+            if (valueDictTimeCost1 && idDictTimeCost1 && timeCost1PriorityType) {
+              commandList.push({
+                entity: 'hr_dictTimeCostInt',
+                method: 'insert',
+                execParams: {
+                  dictTimeCost1ID: valueDictTimeCost1,
+                  dictTimeCost2ID: idDictTimeCost1,
+                  priorityType: timeCost1PriorityType,
+                  dateFromEmpty: AC.dateService.shiftDate(dateFromEmpty1),
+                  dateToEmpty: AC.dateService.shiftDate(dateToEmpty1),
+                  isCrossInfo: isCrossInfo1
+                }
+              })
+            }
+          }
+
+          if (me.data.priorityId2) {
+            if (valueDictTimeCost2 !== me.data.valueDictTimeCost || idDictTimeCost2 !== me.data.idDictTimeCost || timeCost2PriorityType !== me.data.timeCost2PriorityType || dateFromEmpty2 !== me.data.dateFromEmpty2 || dateToEmpty2 !== me.data.dateToEmpty2 || isCrossInfo2 !== me.data.isCrossInfo2) {
+              if (valueDictTimeCost2 === null || idDictTimeCost2 === null || timeCost2PriorityType === null) {
+                commandList.push({
+                  entity: 'hr_dictTimeCostInt',
+                  method: 'delete',
+                  execParams: {
+                    ID: me.data.priorityId2
+                  }
+                })
+              } else {
+                commandList.push({
+                  entity: 'hr_dictTimeCostInt',
+                  method: 'update',
+                  __skipOptimisticLock: true,
+                  execParams: {
+                    ID: me.data.priorityId2,
+                    dictTimeCost1ID: idDictTimeCost2,
+                    dictTimeCost2ID: valueDictTimeCost2,
+                    priorityType: timeCost2PriorityType,
+                    dateFromEmpty: AC.dateService.shiftDate(dateFromEmpty2),
+                    dateToEmpty: AC.dateService.shiftDate(dateToEmpty2),
+                    isCrossInfo: isCrossInfo2
+                  }
+                })
+              }
+            }
+          } else {
+            if (valueDictTimeCost2 && idDictTimeCost2 && timeCost2PriorityType) {
+              commandList.push({
+                entity: 'hr_dictTimeCostInt',
+                method: 'insert',
+                execParams: {
+                  dictTimeCost1ID: idDictTimeCost2,
+                  dictTimeCost2ID: valueDictTimeCost2,
+                  priorityType: timeCost2PriorityType,
+                  dateFromEmpty: AC.dateService.shiftDate(dateFromEmpty2),
+                  dateToEmpty: AC.dateService.shiftDate(dateToEmpty2),
+                  isCrossInfo: isCrossInfo2
+                }
+              })
+            }
+          }
+          if (commandList.length) {
+            await $App.connection.runTrans(commandList)
+            me.sender.loadData()
+            me.up('window').close()
+          }
+        }
+      })
+    }
+    me.on('afterrender', async function () {
+      const me = this
+      me.createToolbarButtons(me)
+      me.attr = {
+        idDictTimeCost1: me.down('[name=idDictTimeCost1]'),
+        valueDictTimeCost1: me.down('[name=valueDictTimeCost1]'),
+        timeCost1PriorityType: me.down('[name=timeCost1PriorityType]'),
+        dateFromEmpty1: me.down('[name=dateFromEmpty1]'),
+        dateToEmpty1: me.down('[name=dateToEmpty1]'),
+        isCrossInfo1: me.down('[name=isCrossInfo1]'),
+
+        idDictTimeCost2: me.down('[name=idDictTimeCost2]'),
+        valueDictTimeCost2: me.down('[name=valueDictTimeCost2]'),
+        timeCost2PriorityType: me.down('[name=timeCost2PriorityType]'),
+        dateFromEmpty2: me.down('[name=dateFromEmpty2]'),
+        dateToEmpty2: me.down('[name=dateToEmpty2]'),
+        isCrossInfo2: me.down('[name=isCrossInfo2]')
+      }
+      me.attr.valueDictTimeCost1.setValueById(me.data.valueDictTimeCost)
+      me.attr.idDictTimeCost1.setValueById(me.data.idDictTimeCost)
+      me.attr.timeCost1PriorityType.setValueById(me.data.timeCost1PriorityType)
+      me.attr.dateFromEmpty1.setValue(me.data.dateFromEmpty1)
+      me.attr.dateToEmpty1.setValue(me.data.dateToEmpty1)
+      me.attr.isCrossInfo1.setValue(me.data.isCrossInfo1)
+
+      me.attr.idDictTimeCost2.setValueById(me.data.idDictTimeCost)
+      me.attr.valueDictTimeCost2.setValueById(me.data.valueDictTimeCost)
+      me.attr.timeCost2PriorityType.setValueById(me.data.timeCost2PriorityType)
+      me.attr.dateFromEmpty2.setValue(me.data.dateFromEmpty2)
+      me.attr.dateToEmpty2.setValue(me.data.dateToEmpty2)
+      me.attr.isCrossInfo2.setValue(me.data.isCrossInfo2)
+    })
+    me.callParent(arguments)
+  }
+})

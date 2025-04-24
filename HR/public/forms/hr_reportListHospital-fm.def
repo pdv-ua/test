@@ -1,0 +1,85 @@
+/* global Ext $App HR */
+exports.formDef = 'HR.reportListHospital'
+
+Ext.define('HR.reportListHospital', {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.reportListHospital',
+  width: 800,
+  height: 400,
+  layout: { type: 'vbox', align: 'stretch' },
+  autoScroll: true,
+  flex: 1,
+  items: [
+    {
+      xtype: 'panel',
+      region: 'center',
+      name: 'reportPanel',
+      flex: 1,
+      items: []
+    }
+  ],
+  initComponent: function () {
+    const me = this
+    const control = Ext.create('Ext.Component', {
+      flex: 1,
+      margin: 0,
+      autoEl: {
+        tag: 'iframe'
+      }
+    })
+    const container = Ext.create('Ext.panel.Panel', {
+      layout: { type: 'vbox', align: 'stretch' },
+      flex: 1,
+      items: [
+        {
+          flex: 1,
+          autoScroll: true,
+          layout: { type: 'hbox', pack: 'center', align: 'stretch' },
+          bodyCls: 'ub-panel-gray',
+          items: [control]
+        }]
+    })
+    me.items = [container]
+    me.reportControl = control
+    me.on('afterrender', function () {
+      me.showDesktop()
+    })
+    me.callParent(arguments)
+  },
+  showDesktop: async function () {
+    const me = this
+    const iFrame = me.reportControl.getEl().dom
+    const iFrameDoc = iFrame.contentDocument
+    const style = [HR.controlService.getShortcutListStyle()]
+    const template = `<table style="border-collapse: collapse; width: 100%; word-break: break-all;" border="0px" cellspacing="0" cellpadding="3px">
+                     <tbody>
+                       <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalEmpCounts'>Кількісний склад організації</a></td></tr>
+                       <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportEmpCountPosByCategory'>Кількісний склад за категоріями посад</a></td></tr>
+                       <tr><td style="font-size: 16px; height: 48px; font-weight: bold;">Медичні кадри. Форма 17</td></tr>
+                       <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalF17Doctors'>Лікарі</a></td></tr>
+                       <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalF17PensionDoctors'>Лікарі пенсійного віку</a></td></tr>
+                       <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalF17Nurses'>Середній медичний персонал</a></td></tr>
+                       <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalF17PensionNurses'>Середній медичний персонал пенсійного віку</a></td></tr>
+                       <tr><td style="font-size: 16px; height: 48px; font-weight: bold;">Звіт юридичної особи. Форма 20</td></tr>
+                       <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalF20Staff'>Штати закладу на кінець звітного року</a></td></tr>
+                       <tr><td style="font-size: 14px; padding-left: 10px;"><a href="#" data-code='hr_reportHospitalF20NotMed'>Кількість фізичних осіб спеціалістів з вищою немедичною освітою</a></td></tr>
+                    </tbody>
+                    </table>`
+    iFrameDoc.body.innerHTML = template
+    iFrameDoc.head.innerHTML = `<style type="text/css">
+        ${style.join('\n')}
+      </style>`
+
+    const refs = iFrameDoc.getElementsByTagName('a')
+    for (let i = 0, L = refs.length; i < L; i++) {
+      refs[i].addEventListener('click', me.onReportClick, true)
+    }
+  },
+  onReportClick: (e) => {
+    e.preventDefault()
+    let shortcutCode = e.target.dataset.code
+    if (shortcutCode) {
+      $App.runShortcutCommand(shortcutCode)
+    }
+  }
+})

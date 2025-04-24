@@ -1,0 +1,66 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['orderID', 'organizationID', 'empOrderType', 'firstName', 'lastName', 'middleName', 'employeePositionID.employeeNumberID'],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [{
+    attributeName: 'employeePositionID',
+    fieldLabel: UB.i18n('Працівник'),
+    labelWidth: 140,
+    fieldList: ['ID', 'description', 'workScheduleID', 'employeeNumberID', 'workPlace', 'organizationID', 'vacancyDateFrom', 'vacancyDateTo'],
+    orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+    allowBlank: false,
+    addWorkPlace: true,
+    xtype: 'empPositionCombobox'
+  },
+  {
+    attributeName: 'dateFrom',
+    labelWidth: 140,
+    listeners: {
+      focus: ctrl => {
+        ctrl._oldValue = ctrl.getRawValue()
+      },
+      blur: ctrl => {
+        if (ctrl._oldValue !== ctrl.getRawValue()) {
+          let me = ctrl.up('form')
+          if (ctrl.wasValid) {
+            me.filterWorkSchedule({
+              isClear: true,
+              isReload: true,
+              onDate: ctrl.getValue()
+            })
+          } else {
+            me.getField('workScheduleID').setValue()
+            me.getField('workScheduleID').getStore().loadData([])
+          }
+        }
+      }
+    }
+  },
+  {
+    attributeName: 'workScheduleID',
+    gridFieldList: ['name'],
+    allowBlank: false,
+    labelWidth: 140,
+    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+  },
+  {
+    attributeName: 'isPaymentProp',
+    labelWidth: 140
+  },
+  {
+    attributeName: 'workScheduleOldID',
+    labelWidth: 140,
+    readOnly: true,
+    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+  }
+  ]
+}

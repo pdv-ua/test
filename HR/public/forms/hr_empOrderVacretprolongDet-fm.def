@@ -1,0 +1,352 @@
+/* global $App AC HR UB */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'empOrderType', 'organizationID', 'isGroup', 'organizationID.mi_data_id',
+    'employeeNumberID', 'errorText'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  defaults: {
+    layout: 'fit'
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'addIntComb'
+        }
+      ]
+    }
+  ],
+  items: [{
+    xtype: 'tabpanel',
+    region: 'center',
+    items: [{
+      title: UB.i18n('Загальне'),
+      ubID: 'tabMain',
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [{
+        layout: {
+          type: 'hbox',
+          align: 'stretch'
+        },
+        padding: '10 0 0 0',
+        items: [
+          {
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            flex: 1,
+            items: [
+              {
+                attributeName: 'employeePositionID',
+                xtype: 'empPositionCombobox',
+                addWorkPlace: true,
+                fieldList: ['ID', 'description', 'employeeNumberID', 'workPlace', 'organizationID', 'vacancyDateFrom', 'vacancyDateTo'],
+                orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                labelWidth: 160
+              },
+              {
+                layout: {
+                  type: 'hbox'
+                },
+                items: [{
+                  attributeName: 'dateFrom',
+                  fieldLabel: UB.i18n('Відкликати з'),
+                  labelWidth: 160
+                }
+                ]
+              },
+              {
+                attributeName: 'dateTo',
+                fieldLabel: UB.i18n('По'),
+                labelWidth: 160
+              },
+              {
+                layout: {
+                  type: 'hbox'
+                },
+                items: [{
+                  width: 232,
+                  maxWidth: 232,
+                  minWidth: 232,
+                  attributeName: 'dayCount',
+                  fieldLabel: UB.i18n('Тривалість'),
+                  labelWidth: 160,
+                  readOnly: true
+                }
+                ]
+              },
+              {
+                xtype: 'label',
+                name: 'holidayInfo',
+                text: '',
+                cls: 'x-form-item-label field-label-red',
+                margin: '10 10 5 15'
+              },
+              {
+                xtype: 'label',
+                name: 'holidayInfo2',
+                text: '',
+                cls: 'x-form-item-label field-label-red',
+                margin: '10 10 5 15'
+              }
+            ]
+          },
+          {
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            flex: 1,
+            items: [
+              {
+                layout: { type: 'hbox', align: 'top' },
+                flex: 1,
+                items: [
+                  {
+                    attributeName: 'reason',
+                    fieldLabel: UB.i18n('Причина відкликання з відпустки'),
+                    flex: 1
+                  },
+                  {
+                    xtype: 'button',
+                    cls: 'list-icon',
+                    name: 'reasonButton',
+                    tooltip: UB.i18n('Вибрати'),
+                    width: 35,
+                    height: 35,
+                    margin: '0 2 0 -45',
+                    handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox', align: 'top' },
+                flex: 1,
+                hidden: true,
+                items: [
+                  {
+                    attributeName: 'reasonDoc',
+                    flex: 1
+                  },
+                  {
+                    xtype: 'button',
+                    cls: 'list-icon',
+                    name: 'reasonDocButton',
+                    tooltip: UB.i18n('Вибрати'),
+                    width: 35,
+                    height: 35,
+                    margin: '0 2 0 -45',
+                    handler: btn => btn.up('form').getField('reasonDoc').selectHandler(btn)
+                  }
+                ]
+              },
+              {
+                attributeName: 'dateFromProlong'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name: 'errorText',
+        xtype: 'label',
+        cls: 'x-form-item-label field-label-red',
+        margin: '10 10 5 15'
+      },
+      {
+        xtype: 'panel',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        margin: '5 15 5 15',
+        padding: '0 0 0 0',
+        height: 200,
+        cls: 'x-fieldset',
+        flex: 1,
+        items: [
+          {
+            name: 'empOrderVacationListDet',
+            xtype: 'acGrid',
+            disableSearchBar: true,
+            autoScroll: true,
+            storeType: 'local',
+            disablePaging: true,
+            readOnly: true,
+            flex: 1,
+            fields: [
+              {
+                name: 'dictVacationKindID.name',
+                columnConfig: {
+                  text: UB.i18n('Вид відпусток'),
+                  flex: 1
+                }
+              },
+              {
+                name: 'dateFrom',
+                columnConfig: {
+                  text: UB.i18n('Дата з'),
+                  width: 100,
+                  dateFormat: 'd.m.Y'
+                }
+              },
+              {
+                name: 'dateTo',
+                columnConfig: {
+                  text: UB.i18n('Дата по'),
+                  width: 100,
+                  dateFormat: 'd.m.Y'
+                }
+              },
+              {
+                name: 'dayCount',
+                columnConfig: {
+                  text: UB.i18n('Кількість днів'),
+                  align: 'center',
+                  width: 80
+                }
+              },
+              {
+                name: 'empVacationPeriodID.description',
+                columnConfig: {
+                  text: UB.i18n('За період'),
+                  width: 200
+                }
+              },
+              { name: 'employeeNumberID' },
+              { name: 'dictVacationKindID' },
+              { name: 'empVacationPeriodID' },
+              { name: 'sourceParaID' },
+              { name: 'ID' },
+              { name: 'orderID' }
+            ],
+            cmpInitConfig: {
+              onItemDblClick: function () {
+              },
+              customInit: function () {
+                let grid = this
+                AC.gridUtils.tuneGridColumns(grid, {})
+              },
+              onItemContextMenu: function (grid, record, item, index, event) {
+                event.stopEvent()
+              }
+            }
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        margin: '5 15 10 15',
+        padding: '0 0 0 0',
+        height: 200,
+        cls: 'x-fieldset',
+        flex: 1,
+        items: [
+          {
+            name: 'empOrderVacationMoveDet',
+            xtype: 'acGrid',
+            paraGrid: true,
+            disableSearchBar: true,
+            autoScroll: true,
+            storeType: 'local',
+            disablePaging: true,
+            readOnly: true,
+            flex: 1,
+            /*
+            ubStoreConfig: {
+              entity: 'hr_empOrderVacationMoveDet',
+              method: 'select',
+              fieldList: [ 'ID', 'paraID', 'dictVacationKindID.name', 'dateFrom', 'dateTo', 'dayCount',
+                'empVacationPeriodID.description', 'employeeNumberID', 'dictVacationKindID'
+              ]
+            },
+            onAfterRender: function (grid) {
+              const form = grid.up('form')
+              AC.viewUtils.setWhereListProperty(grid, [
+                ['paraID', '=', form.instanceID || 0]
+              ], null, ['clearStore'])
+            },
+            */
+            fields: [
+              {
+                name: 'dictVacationKindID.name',
+                columnConfig: {
+                  text: UB.i18n('Перенесення відпусток'),
+                  flex: 1
+                }
+              },
+              {
+                name: 'dateFrom',
+                columnConfig: {
+                  text: UB.i18n('Дата з'),
+                  width: 100,
+                  dateFormat: 'd.m.Y'
+                }
+              },
+              {
+                name: 'dateTo',
+                columnConfig: {
+                  text: UB.i18n('Дата по'),
+                  width: 100,
+                  dateFormat: 'd.m.Y'
+                }
+              },
+              {
+                name: 'dayCount',
+                columnConfig: {
+                  text: UB.i18n('Кількість днів'),
+                  align: 'center',
+                  width: 80
+                }
+              },
+              {
+                name: 'empVacationPeriodID.description',
+                columnConfig: {
+                  text: UB.i18n('За період'),
+                  width: 200
+                }
+              },
+              { name: 'employeeNumberID' },
+              { name: 'dictVacationKindID' },
+              { name: 'empVacationPeriodID' },
+              { name: 'orderID' },
+              { name: 'ID' },
+              { name: 'mi_modifyDate' }
+            ],
+            cmpInitConfig: {
+              onItemDblClick: function () {
+              },
+              customInit: function () {
+                let grid = this
+                AC.gridUtils.tuneGridColumns(grid, {})
+              },
+              onItemContextMenu: function (grid, record, item, index, event) {
+                event.stopEvent()
+              }
+            }
+          }
+        ]
+      }
+      ]
+    }]
+  }]
+}

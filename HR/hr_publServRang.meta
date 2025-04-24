@@ -1,0 +1,249 @@
+{
+  "caption": "Присвоєння рангу держслужбовця",
+  "description": "Присвоєння рангу держслужбовця",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dictRankID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictRank",
+      "caption": "Ранг",
+      "description": "Ранг",
+      "documentation": "Ранг",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата присвоєння",
+      "description": "Дата присвоєння",
+      "documentation": "Дата присвоєння",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Закінчення дії",
+      "description": "Закінчення дії",
+      "documentation": "Закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Закінчення дії",
+      "description": "Закінчення дії",
+      "documentation": "Закінчення дії",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "dateNext",
+      "dataType": "Date",
+      "caption": "Планована дата присвоєння",
+      "description": "Планована дата присвоєння",
+      "documentation": "Планована дата присвоєння"
+    },
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер наказу",
+      "description": "Номер наказу",
+      "documentation": "Номер наказу"
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу",
+      "description": "Дата наказу",
+      "documentation": "Дата наказу"
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ",
+      "description": "Наказ",
+      "documentation": "Наказ"
+    },
+    {
+      "name": "rankAssignKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictRankAssignKind",
+      "caption": "Вид присвоєння",
+      "documentation": "Вид присвоєння",
+      "description": "Вид присвоєння",
+      "allowNull": true
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Коментар",
+      "description": "Коментар",
+      "documentation": "Коментар"
+    },
+    {
+      "name": "impRankID",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Технічні дані, ідентифікатор запису довідника 'Службові звання та доплати за них' АС Картка(таблиця K53)",
+      "description": "Технічні дані, ідентифікатор запису довідника 'Службові звання та доплати за них' АС Картка(таблиця K53)",
+      "documentation": "Використовується тільки при імпорті"
+    },
+    {
+      "name": "impRankCode",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Допоміжне поле, вираховується числове значення рангу. Таке значення відповідає коду запису рангу з hr_dictRank.",
+      "description": "Допоміжне поле, вираховується числове значення рангу. Таке значення відповідає коду запису рангу з hr_dictRank.",
+      "documentation": "Використовується тільки при імпорті"
+    },
+    {
+      "name": "impIsActive",
+      "dataType": "String",
+      "size": 3,
+      "caption": "Активне",
+      "description": "Активне",
+      "documentation": "Ознака активності запису в АС Картка. Потрібна для вираховування дати закінчення дії для неактивних записів, яка в АС Картка явно не вказується.\nВ файлі Y - означає активна, N - неактивна."
+    },
+    {
+      "name": "impExtraOrdinary",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Позачергове",
+      "description": "Приймає значення 1, якщо присвоєння позачергове, 0 або null, якщо планове",
+      "documentation": "Використовується тільки при імпорті"
+    },
+    {
+      "name": "impRankName",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Назва рангу",
+      "description": "Заповнювати через розв'язку довідникових даних.",
+      "documentation": "Використовується тільки при імпорті"
+    },
+    {
+      "name": "taxCode",
+      "dataType": "String",
+      "size": 20,
+      "caption": "РНОКПП",
+      "description": "РНОКПП",
+      "documentation": "Використовується тільки при імпорті",
+      "allowNull": true,
+      "isUnique": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "fullFIO",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Повне ім'я особи",
+      "description": "Повне ім'я особи",
+      "documentation": "Використовується тільки при імпорті'я",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "birthDate",
+      "dataType": "Date",
+      "caption": "Дата народження",
+      "description": "Дата народження",
+      "documentation": "Використовується тільки при імпорті",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "impDictRank",
+      "dataType": "String",
+      "size": 10,
+      "caption": "Ранг",
+      "description": "Ранг",
+      "documentation": "Використовується тільки при імпорті"
+    },
+    {
+      "name": "impEmployeeID",
+      "dataType": "Bigint",
+      "caption": "Зовнішній ID особи при імпорті",
+      "description": "Зовнішній ID особи при імпорті",
+      "documentation": "Використовується тільки при імпорті"
+    },
+    {
+      "name": "impSourceID",
+      "dataType": "Bigint",
+      "caption": "Код джерела",
+      "description": "Код джерела даних імпорту",
+      "documentation": "Код джерела даних імпорту",
+      "allowNull": true
+    },
+    {
+      "name": "impOrderName",
+      "dataType": "String",
+      "size": 250,
+      "caption": "Назва наказу",
+      "description": "Назва наказу про присвоєння. Інформаційна колонка. Зберігати в imp_ полі. String 250.",
+      "documentation": "Використовується тільки при імпорті"
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_PUBLSERVRANG_EMPDAT": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeeID": { "sort": "ASC" },
+          "dateFrom": { "sort": "ASC" },
+          "dateTo": { "sort": "ASC" },
+          "mi_deleteDate": { "sort": "ASC" }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

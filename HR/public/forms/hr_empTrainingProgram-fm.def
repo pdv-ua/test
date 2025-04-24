@@ -1,0 +1,232 @@
+/* global UB AC HR $App */
+
+exports.formDef = {
+  requiredFields: ['organizationID'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  parentConfig: {
+    hideActions: ['docActiondocument'],
+    layout: {
+      type: 'border'
+    }
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      flex: 1,
+      listeners: {
+        tabchange: function (tabPanel, activeTab) {
+          let me = tabPanel.up('form')
+          if (activeTab.ubID === 'report') {
+            if (!me.isPdfCreated) {
+              if (!me.record.get('docText')) {
+                HR.reportTab.editHtml(me)
+              } else {
+                HR.reportTab.setReportMode(me, 'view')
+              }
+            }
+            me.isPdfCreated = true
+          } else if (me.isNewInstance) {
+            me.saveForm().then(result => {
+              if (result === -1) {
+                me.down('tabpanel').setActiveTab(0)
+              }
+            })
+          }
+        }
+      },
+      items: [
+        {
+          title: UB.i18n('Загальні дані'),
+          region: 'center',
+          layout: { type: 'vbox', align: 'stretch' },
+          items: [
+            {
+              layout: { type: 'hbox' },
+              defaults: {
+                labelWidth: 120
+              },
+              items: [
+                {
+                  attributeName: 'employeeNumberID',
+                  fieldList: ['ID', 'description', 'employeeID'],
+                  gridFieldList: [{ name: 'ID', visibility: false }, 'tabNum', 'employeeID.fullFIO', 'posName', 'depName', 'dateFrom', 'dateToEmpty'],
+                  displayField: 'description',
+                  margin: '10 365 5 15',
+                  flex: 1
+                },
+                {
+                  attributeName: 'groupCategory',
+                  readOnly: true,
+                  hidden: true,
+                  labelWidth: 120,
+                  width: 320
+                }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                HR.controlService.getAttrDepPosBlock({
+                  valueField: 'mi_data_id',
+                  labelWidth: 120,
+                  showPosCategory: true,
+                  posCatWidth: 320,
+                  posCatMargin: '10 15 5 15'
+                })
+              ]
+            },
+            {
+              xtype: 'ubdetailgrid',
+              name: 'empTrainingProgramDet',
+              autoScroll: true,
+              disableSearchBar: true,
+              rowEditing: true,
+              sortableColumns: false,
+              flex: 1,
+              lineNumberColumn: 'itemIdx',
+              entityConfig: {
+                entity: 'hr_empTrainingProgramDet',
+                method: 'select',
+                fieldList: [
+                  { name: 'itemIdx', config: { align: 'center' }, readOnly: true },
+                  { name: 'groupCategory', description: UB.i18n('Для категорії') },
+                  { name: 'dictProfCompetencyID.name', description: UB.i18n('Найменування професійної компетентності') },
+                  { name: 'dictTrainingFormID.name', description: UB.i18n('Вид (форма навчання)') },
+                  { name: 'dictTrainingTopicID.name', description: UB.i18n('Орієнтовна тематика') },
+                  { name: 'comment' }
+                ],
+                orderList: { orderBy: { expression: 'itemIdx' } }
+              },
+              masterFields: ['ID'],
+              detailFields: ['empTrainingProgramID'],
+              onBeforeEdit: function (editor, context) {
+                const me = context.grid.up('form')
+                me.onBeforeEditGrid(editor, context)
+              },
+              listeners: {
+                afterdel: function () {
+                  let me = this.up('form')
+                  $App.connection.run({
+                    entity: 'hr_empTrainingProgramDet',
+                    method: 'enumerateItems',
+                    empTrainingProgramID: me.instanceID
+                  }).then(() => {
+                    this.getStore().load()
+                  })
+                },
+                render: grid => {
+                  let me = grid.up('form')
+                  grid.menu.add([
+                    {
+                      text: UB.i18n('Оновити нумерацію'),
+                      iconCls: '',
+                      ubID: 'enumerateItems',
+                      handler: function () {
+                        $App.connection.run({
+                          entity: 'hr_empTrainingProgramDet',
+                          method: 'enumerateItems',
+                          empTrainingProgramID: me.instanceID
+                        }).then(() => {
+                          grid.getStore().load()
+                        })
+                      }
+                    }
+                  ])
+                }
+              },
+              customActions: [
+                {
+                  text: UB.i18n('Перемістити вище'),
+                  iconCls: 'fas fa-arrow-up',
+                  cls: 'fill-action',
+                  ubID: 'itemMoveUp',
+                  handler: function (btn) {
+                    const me = btn.up('form')
+                    let grid = btn.up('ubdetailgrid')
+                    let reco = AC.gridUtils.getCurrentRecord(grid)
+                    if (!reco) {
+                      AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вибраний запис'))
+                      return
+                    }
+                    let ID = reco.get('ID')
+                    $App.connection.run({
+                      entity: 'hr_empTrainingProgramDet',
+                      method: 'moveItemUp',
+                      empTrainingProgramID: me.instanceID,
+                      ID: ID,
+                      itemIdx: reco.get('itemIdx')
+                    }).then(mParams => {
+                      if (mParams.isMoved) {
+                        let store = grid.getStore()
+                        store.load().then(() => {
+                          grid.getSelectionModel().select(store.find('ID', ID), true)
+                        })
+                      }
+                    })
+                  }
+                },
+                {
+                  text: UB.i18n('Перемістити нижче'),
+                  iconCls: 'fas fa-arrow-down',
+                  cls: 'fill-action',
+                  ubID: 'itemMoveDown',
+                  handler: function (btn) {
+                    const me = btn.up('form')
+                    let grid = btn.up('ubdetailgrid')
+                    let reco = AC.gridUtils.getCurrentRecord(grid)
+                    if (!reco) {
+                      AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вибраний запис'))
+                      return
+                    }
+                    let ID = reco.get('ID')
+                    $App.connection.run({
+                      entity: 'hr_empTrainingProgramDet',
+                      method: 'moveItemDown',
+                      empTrainingProgramID: me.instanceID,
+                      ID: ID,
+                      itemIdx: reco.get('itemIdx')
+                    }).then(mParams => {
+                      if (mParams.isMoved) {
+                        let store = grid.getStore()
+                        store.load().then(() => {
+                          grid.getSelectionModel().select(store.find('ID', ID), true)
+                        })
+                      }
+                    })
+
+                    /*
+                    $App.doCommand({
+                      cmdType: 'showForm',
+                      formCode: 'ac_dictRepVersion',
+                      entity: 'ac_dictRepVersion',
+                      tabId: 'ac_dictRepVersionNew',
+                      title: UB.i18n('Версія регламентного звіту'),
+                      description: UB.i18n('Версія регламентного звіту'),
+                      target: $App.getViewport().centralPanel,
+                      sender: grid.getView(),
+                      store: grid.store,
+                      cmpInitConfig:
+                        {
+                          defaultValues: {
+                            dictRepID: me.record.get('ID') || null,
+                            code: me.record.get('code') || null,
+                            subCode: me.record.get('subCode') || null
+                          }
+                        }
+                    })
+                   */
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        HR.reportTab.getTabConfig({ getRepName: 'getReportName' })
+      ]
+    }
+  ]
+}

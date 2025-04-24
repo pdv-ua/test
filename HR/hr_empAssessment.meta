@@ -1,0 +1,407 @@
+{
+  "caption": "Оцінювання",
+  "description": "Оцінювання",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "allowNull": false
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "assessmentType",
+      "dataType": "Enum",
+      "enumGroup": "HR_ASSESSMENT_TYPE",
+      "caption": "Тип оцінювання",
+      "documentation": "Тип оцінювання",
+      "description": "Тип оцінювання",
+      "allowNull": false
+    },
+    {
+      "name": "assessmentTaskType",
+      "dataType": "Enum",
+      "enumGroup": "HR_ASSESSMENT_TASK_TYPE",
+      "caption": "Тип завдання",
+      "documentation": "Тип завдання",
+      "description": "Тип завдання",
+      "allowNull": false
+    },
+    {
+      "name": "periodTypeID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictRepType",
+      "caption": "Період",
+      "documentation": "Період",
+      "description": "Період"
+    },
+    {
+      "name": "year",
+      "dataType": "Int",
+      "caption": "Рік"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку"
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення"
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "documentation": "Підрозділ"
+    },
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада"
+    },
+    {
+      "name": "hasResult",
+      "dataType": "BigInt",
+      "caption": "Результат оформлено",
+      "description": "Результат оформлено",
+      "documentation": "Результат оформлено",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select count(*) from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "empAssessmentResultID",
+      "dataType": "BigInt",
+      "caption": "Результат",
+      "description": "Результат",
+      "documentation": "Результат",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 ID from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select ID from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "avgValue",
+      "dataType": "Float",
+      "caption": "Середній бал",
+      "description": "Середній бал",
+      "documentation": "Середній бал",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 avgValue from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select avgValue from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "assessmentValue",
+      "dataType": "Enum",
+      "enumGroup": "HR_ASSESSMENT_VALUE",
+      "caption": "Оцінка",
+      "documentation": "Оцінка",
+      "description": "Оцінка",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 assessmentValue from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select assessmentValue from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "assessmentDescription",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Обгрунтування оцінки",
+      "description": "Обгрунтування оцінки",
+      "documentation": "Обгрунтування оцінки",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 assessmentDescription from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select assessmentDescription from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "dictCompetencyID",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Компетенції",
+      "documentation": "Компетенції",
+      "description": "Компетенції",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 dictCompetencyID from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dictCompetencyID from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "agreementState",
+      "dataType": "Enum",
+      "enumGroup": "HR_AGREEMENT_STATE",
+      "caption": "Стан",
+      "documentation": "Стан погодження",
+      "description": "Стан погодження"
+    },
+    {
+      "name": "agreementDate",
+      "dataType": "Date",
+      "caption": "Дата погодження",
+      "description": "Дата погодження",
+      "documentation": "Дата погодження"
+    },
+    {
+      "name": "agreedByPositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Погодив",
+      "description": "Погодив",
+      "documentation": "Погодив"
+    },
+    {
+      "name": "acquaintanceDate",
+      "dataType": "Date",
+      "caption": "Дата ознайомлення працівника",
+      "description": "Дата ознайомлення працівника",
+      "documentation": "Дата ознайомлення працівника"
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Коментар",
+      "description": "Коментар",
+      "documentation": "Коментар"
+    },
+    {
+      "name": "appealDate",
+      "dataType": "Date",
+      "caption": "Дата оскарження",
+      "description": "Дата оскарження",
+      "documentation": "Дата оскарження",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 appealDate from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select appealDate from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "appealDescription",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Опис",
+      "description": "Опис оскарження",
+      "documentation": "Опис оскарження",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 appealDescription from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select appealDescription from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "appealResult",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Результат",
+      "description": "Результат оскарження",
+      "documentation": "Результат оскарження",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 appealResult from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select appealResult from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "appealComment",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Коментар",
+      "description": "Коментар до оскарження",
+      "documentation": "Коментар до оскарження",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 appealComment from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select appealComment from hr_empAssessmentResult er where er.assessmentID = {self}.ID and er.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "docText",
+      "dataType": "Text",
+      "caption": "Збережений текст",
+      "documentation": "Збережений текст",
+      "description": "Збережений текст",
+      "allowNull": true
+    },
+    {
+      "name": "document",
+      "dataType": "Document",
+      "caption": "PDF образ",
+      "documentation": "PDF образ",
+      "description": "PDF образ",
+      "allowNull": true
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "allowNull": false,
+      "defaultValue": "EMPASSESMENT"
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultValue": "PROJECT",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "reportSettings",
+      "dataType": "Text",
+      "caption": "Налаштування звіту",
+      "documentation": "Налаштування звіту",
+      "description": "Налаштування звіту",
+      "allowNull": true
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": true,
+      "customSettings": {
+        "compositeFields": ["assessmentType","assessmentTaskType","employeeNumberID.description","year"],
+        "compositeSeparator": ", "
+      }
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "unity": {
+      "entity": "hr_attachEntity",
+      "attributeList": [],
+      "defaults": {
+        "entityName": "hr_empAssessment"
+      }
+    },
+    "rls": {
+      "func": "RLS.byOrganization"
+    }
+  }
+}

@@ -1,0 +1,459 @@
+/* global Ext AC appAC $App HR UB */
+exports.formDef = 'HR.empListByAge'
+const accMainReportsSubOrg = AC.entityUtils.verifyRightsMethod('ac_service', 'subOrg')
+
+Ext.define('HR.empListByAge', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empListByAge',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'hbox' },
+            autoScroll: true,
+            collapsed: false,
+            items: [
+              {
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          HR.controlService.getOrgCombo({
+                            labelWidth: 130,
+                            width: 700,
+                            flex: 1,
+                            readOnly: !accMainReportsSubOrg,
+                            ubRequest: {
+                              entity: 'hr_organization',
+                              fieldList: ['mi_data_id', 'description', 'mi_treePath'],
+                              whereList: {
+                                state: {
+                                  expression: '[state]',
+                                  condition: '=',
+                                  values: {
+                                    state: 'ACTIVE'
+                                  }
+                                },
+                                path: {
+                                  expression: accMainReportsSubOrg ? '[mi_treePath]' : '[mi_data_id]',
+                                  condition: accMainReportsSubOrg ? 'like' : '=',
+                                  values: {
+                                    state: accMainReportsSubOrg ? `/${appAC.globalOrganization()}/` : appAC.globalOrganization()
+                                  }
+                                }
+                              },
+                              orderList: { orderBy: { expression: 'description' } },
+                              __mip_ondate: appAC.globalApplicationDate()
+                            },
+                            listeners: {
+                              change: function (ctrl) {
+                                const form = ctrl.up('form')
+                                HR.controlService.onChangeIncludeChildOrgs(form)
+                              }
+                            }
+                          }),
+                          HR.controlService.getIncludeChildOrgs(accMainReportsSubOrg)
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          HR.controlService.getDepCombo({
+                            labelWidth: 130,
+                            width: 700,
+                            displayField: 'description',
+                            flex: 1,
+                            listeners: {
+                              change: function (ctrl, value) {
+                                const form = ctrl.up('form')
+                                form.down('[name=includeChildDepts]').setReadOnly(!value)
+                                if (!value) {
+                                  form.down('[name=includeChildDepts]').setValue()
+                                }
+                              }
+                            }
+                          }),
+                          HR.controlService.getIncludeChildDepts()
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        layout: { type: 'vbox', align: 'stretch' },
+                        items: [
+                          {
+                            layout: { type: 'hbox' },
+                            items: [
+                              {
+                                xtype: 'checkboxfield',
+                                labelWidth: 80,
+                                name: 'isMale',
+                                fieldLabel: UB.i18n('Чоловіки'),
+                                listeners: {
+                                  change: function (ctrl) {
+                                    const me = ctrl.up('form')
+                                    let isChecked = ctrl.getValue()
+                                    me.attr.maleAgeFrom.setDisabled(!isChecked)
+                                    me.attr.maleAgeTo.setDisabled(!isChecked)
+                                  }
+                                }
+                              },
+                              {
+                                xtype: 'numberfield',
+                                labelWidth: 40,
+                                width: 110,
+                                name: 'maleAgeFrom',
+                                fieldLabel: UB.i18n('від'),
+                                maxValue: 120,
+                                minValue: 0,
+                                hideTrigger: true,
+                                vtype: 'numberValidator'
+                              },
+                              {
+                                xtype: 'numberfield',
+                                labelWidth: 40,
+                                width: 110,
+                                name: 'maleAgeTo',
+                                fieldLabel: UB.i18n('до'),
+                                maxValue: 120,
+                                minValue: 0,
+                                hideTrigger: true,
+                                vtype: 'numberValidator'
+                              }
+                            ]
+                          },
+                          {
+                            layout: { type: 'hbox' },
+                            items: [
+                              {
+                                xtype: 'checkboxfield',
+                                labelWidth: 80,
+                                name: 'isFemale',
+                                fieldLabel: UB.i18n('Жінки'),
+                                listeners: {
+                                  change: function (ctrl) {
+                                    const me = ctrl.up('form')
+                                    let isChecked = ctrl.getValue()
+                                    me.attr.femaleAgeFrom.setDisabled(!isChecked)
+                                    me.attr.femaleAgeTo.setDisabled(!isChecked)
+                                  }
+                                }
+                              },
+                              {
+                                xtype: 'numberfield',
+                                labelWidth: 40,
+                                width: 110,
+                                name: 'femaleAgeFrom',
+                                fieldLabel: UB.i18n('від'),
+                                maxValue: 120,
+                                minValue: 0,
+                                hideTrigger: true,
+                                vtype: 'numberValidator'
+                              },
+                              {
+                                xtype: 'numberfield',
+                                labelWidth: 40,
+                                width: 110,
+                                name: 'femaleAgeTo',
+                                fieldLabel: UB.i18n('до'),
+                                maxValue: 120,
+                                minValue: 0,
+                                hideTrigger: true,
+                                vtype: 'numberValidator'
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        padding: '15 0 0 0',
+                        items: [
+                          {
+                            xtype: 'ubdatefield',
+                            labelWidth: 130,
+                            name: 'onDate',
+                            fieldLabel: UB.i18n('Вік на дату'),
+                            allowBlank: false
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                padding: '45 0 0 0',
+                items: [
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Шукати'),
+                    iconCls: 'fas fa-search',
+                    width: 30,
+                    cls: 'green-action',
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.searchEmployee()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Очистити'),
+                    iconCls: 'fas fa-eraser',
+                    width: 30,
+                    cls: 'fill-action',
+                    margin: '5 0 0 0',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.clearSearch()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    iconCls: 'fas fa-print',
+                    width: 30,
+                    cls: 'blue-action',
+                    margin: '5 0 0 0',
+                    tooltip: UB.i18n('Друкувати'),
+                    handler: function () {
+                      me.doReport()
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'employeeNumberListGrid',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink',
+          'commandLink', 'showDetail', 'audit'],
+        cmdData: {
+          params: [{
+            entity: 'hr_empListByAge',
+            method: 'search',
+            fieldList: [
+              { name: 'tabNum' },
+              { name: 'employeeID', visibility: false },
+              { name: 'employeeNumberID', visibility: false },
+              { name: 'fullFIO', description: UB.i18n('ПIБ') },
+              { name: 'taxCode', description: UB.i18n('РНОКПП'), config: { align: 'center', width: 100 } },
+              { name: 'birthDate', description: UB.i18n('Дата народження'), format: 'd.m.Y', config: { align: 'center', width: 100 } },
+              { name: 'age', description: UB.i18n('Вік'), config: { align: 'center', width: 60 } },
+              { name: 'sexType', config: { align: 'center', width: 100 } },
+              { name: 'addDescrPerson', description: UB.i18n('Додаткова інформація') },
+              { name: 'posName' },
+              { name: 'actualPositionName' },
+              { name: 'depName' },
+              { name: 'orgName', description: UB.i18n('Організація') }
+            ]
+          }]
+        },
+        cmpInitConfig: {
+          onDeterminateForm: HR.employeeTabs.onDeterminateCard,
+          listeners: {
+            render: (grid) => {
+              grid.menu.removeAll()
+              grid.menu.add([HR.employeeTabs.getEmpCardMenu(grid)])
+              const showAddDescrPerson = !!AC.settings.get('hrShowAddDescrPerson', appAC.globalOrganization())
+              const colPersonDescr = AC.gridUtils.getColumnByIndex(grid, 'addDescrPerson')
+              colPersonDescr.setVisible(showAddDescrPerson)
+              const useActualPositionName = AC.settings.get('hrOrderActualPositionName', appAC.globalOrganization()) === true
+              const colActualPositionName = AC.gridUtils.getColumnByIndex(grid, 'actualPositionName')
+              colActualPositionName.setVisible(useActualPositionName)
+            }
+          }
+        },
+        getExportTitle: function () {
+          return UB.i18n(`Працівники за віком`)
+        }
+      }
+    ]
+
+    me.setDefaultParams = (isInit) => {
+      const me = this
+      me.attr.isMale.setValue(isInit)
+      me.attr.maleAgeFrom.setValue(0)
+      me.attr.maleAgeTo.setValue(99)
+      me.attr.isFemale.setValue(isInit)
+      me.attr.femaleAgeFrom.setValue(0)
+      me.attr.femaleAgeTo.setValue(99)
+      me.attr.onDate.setValue(appAC.globalApplicationDate())
+      me.attr.organizationID.setValue(appAC.globalOrganization())
+      me.attr.includeChildOrgs.setValue()
+      me.attr.departmentID.setValue()
+      me.attr.includeChildDepts.setValue()
+    }
+
+    me.clearSearch = () => {
+      me.setDefaultParams(false)
+    }
+
+    me.searchEmployee = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+      const store = me.attr.grid.getStore()
+      let req = store.ubRequest
+      req.organizationID = me.attr.organizationID.getValue()
+      req.includeChildOrgs = me.attr.includeChildOrgs.getValue()
+      req.departmentID = me.attr.departmentID.getValue()
+      req.includeChildDepts = me.attr.includeChildDepts.getValue()
+      req.isMale = me.attr.isMale.getValue()
+      req.maleAgeFrom = me.attr.maleAgeFrom.getValue()
+      req.maleAgeTo = me.attr.maleAgeTo.getValue()
+      req.isFemale = me.attr.isFemale.getValue()
+      req.femaleAgeFrom = me.attr.femaleAgeFrom.getValue()
+      req.femaleAgeTo = me.attr.femaleAgeTo.getValue()
+      req.onDate = AC.dateService.shiftDate(me.attr.onDate.getValue()) || AC.dateService.shiftDate(appAC.globalApplicationDate())
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=employeeNumberListGrid]'),
+        isMale: me.down('[name=isMale]'),
+        maleAgeFrom: me.down('[name=maleAgeFrom]'),
+        maleAgeTo: me.down('[name=maleAgeTo]'),
+        isFemale: me.down('[name=isFemale]'),
+        femaleAgeFrom: me.down('[name=femaleAgeFrom]'),
+        femaleAgeTo: me.down('[name=femaleAgeTo]'),
+        onDate: me.down('[name=onDate]'),
+        organizationID: me.down('[name=organizationID]'),
+        includeChildOrgs: me.down('[name=includeChildOrgs]'),
+        departmentID: me.down('[name=departmentID]'),
+        includeChildDepts: me.down('[name=includeChildDepts]')
+      }
+      me.setDefaultParams(true)
+    }, me)
+
+    me.validateParams = () => {
+      let res
+      let params = []
+      if (!me.attr.organizationID.getValue()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Організація"')))
+      }
+      let isMale = me.attr.isMale.getValue()
+      let isFemale = me.attr.isFemale.getValue()
+      if (!isMale && !isFemale) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Чоловіки" або "Жінки"')))
+      }
+      if (isMale && me.attr.maleAgeFrom.getValue() === null) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Чоловіки від"')))
+      }
+      if (isMale && me.attr.maleAgeTo.getValue() === null) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Чоловіки до"')))
+      }
+      if (isFemale && me.attr.femaleAgeFrom.getValue() === null) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Жінки від"')))
+      }
+      if (isFemale && me.attr.femaleAgeTo.getValue() === null) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Жінки до"')))
+      }
+      if (!me.attr.onDate.getValue() || !me.attr.onDate.isValid()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"вік на дату"')))
+      }
+      if (params.length) {
+        res = {
+          msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+        }
+      } else {
+        if (isMale && me.attr.maleAgeFrom.getValue() > me.attr.maleAgeTo.getValue()) {
+          res = {
+            msg: UB.i18n(`Значення {0} не може перевищувати значення {1}`, AC.viewUtils.formatFieldLabel('"Чоловіки від"'), AC.viewUtils.formatFieldLabel('"до"'))
+          }
+        } else if (isFemale && me.attr.femaleAgeFrom.getValue() > me.attr.femaleAgeTo.getValue()) {
+          res = {
+            msg: UB.i18n(`Значення {0} не може перевищувати значення {1}`, AC.viewUtils.formatFieldLabel('"Жінки від"'), AC.viewUtils.formatFieldLabel('"до"'))
+          }
+        }
+      }
+      return res
+    }
+
+    me.report_code = 'hr_empListByAge'
+    me.doReport = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+
+      const execParams = {
+        isMale: me.attr.isMale.getValue(),
+        maleAgeFrom: me.attr.maleAgeFrom.getValue(),
+        maleAgeTo: me.attr.maleAgeTo.getValue(),
+        isFemale: me.attr.isFemale.getValue(),
+        femaleAgeFrom: me.attr.femaleAgeFrom.getValue(),
+        femaleAgeTo: me.attr.femaleAgeTo.getValue(),
+        onDate: AC.dateService.shiftDate(me.attr.onDate.getValue()) || AC.dateService.shiftDate(appAC.globalApplicationDate()),
+        organizationID: me.attr.organizationID.getValue(),
+        includeChildOrgs: me.attr.includeChildOrgs.getValue(),
+        departmentID: me.attr.departmentID.getValue(),
+        includeChildDepts: me.attr.includeChildDepts.getValue()
+      }
+
+      $App.doCommand({
+        cmdType: 'showReport',
+        caption: UB.i18n('Друкована форма'),
+        tabId: 'printDocument' + me.report_code + Date.now(),
+        target: $App.getViewport().centralPanel,
+        cmdData: {
+          reportCode: me.report_code,
+          reportParams: {
+            execParams,
+            onDate: appAC.globalApplicationDate()
+          },
+          reportOptions: {
+            allowExportToExcel: true,
+            isModal: false
+          }
+        }
+      })
+    }
+
+    me.callParent(arguments)
+  }
+})

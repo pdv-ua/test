@@ -1,0 +1,162 @@
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'organizationID', 'employeeNumberID',
+      'destOrganizationName', 'cityName', 'destOrganizationID', 'cityID', 'organizationID.name'
+    ],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      defaults: { labelWidth: 135 }
+    },
+    defaults: {
+      layout: 'fit'
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [
+      {
+        attributeName: 'paraID.title',
+        fieldLabel: UB.i18n('Посада'),
+        readOnly: true
+      },
+      {
+        layout: {
+          type: 'hbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            attributeName: 'isInsideCountry',
+            labelWidth: 135,
+            readOnly: true
+          },
+          {
+            attributeName: 'countryID',
+            labelWidth: 100,
+            flex: 1,
+            showIf: (ctrl, me) => !me.record.get('isInsideCountry'),
+            readOnly: true
+          }
+        ]
+      },
+      {
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        items: [
+          {
+            attributeName: 'destOrganizationName',
+            fieldLabel: UB.i18n('Організація'),
+            labelWidth: 135,
+            xtype: 'textfield',
+            readOnly: true,
+            flex: 1
+
+          },
+          {
+            attributeName: 'cityName',
+            fieldLabel: UB.i18n('Нас. пункт'),
+            readOnly: true,
+            flex: 1
+          }
+        ]
+      },
+      {
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        items: [{
+          attributeName: 'dateFrom',
+          labelWidth: 135,
+          readOnly: true
+        },
+        {
+          attributeName: 'dayCount',
+          labelWidth: 50,
+          width: 120,
+          readOnly: true
+        },
+        {
+          attributeName: 'dateTo',
+          labelWidth: 70,
+          readOnly: true
+        }
+        ]
+      },
+      {
+        attributeName: 'purpose',
+        fieldLabel: UB.i18n('З метою'),
+        readOnly: true
+      },
+      {
+        attributeName: 'reason',
+        readOnly: true,
+        hidden: true
+      },
+      {
+        xtype: 'fieldset',
+        title: UB.i18n('Інформація про звіт'),
+        layout: { type: 'vbox', align: 'stretch' },
+        margin: '0 10 10 10',
+        items: [
+          {
+            attributeName: 'requisites'
+          },
+          {
+            attributeName: 'comment'
+          },
+          {
+            layout: { type: 'hbox', align: 'top' },
+            items: [
+              {
+                attributeName: 'isNeedReport',
+                readOnly: true
+              },
+              {
+                attributeName: 'reportDate',
+                labelWidth: 150,
+                showIf: (ctrl, me) => me.record.get('isNeedReport')
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'fieldset',
+        title: UB.i18n('Наказ'),
+        layout: { type: 'vbox', align: 'stretch' },
+        margin: '0 10 10 10',
+        items: [
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+
+                attributeName: 'orderID.orderNumberFull',
+                fieldLabel: UB.i18n('№ наказу'),
+                width: 300,
+                readOnly: true
+              },
+              {
+                attributeName: 'orderID.orderDate',
+                readOnly: true,
+                width: 240
+              }
+            ]
+          },
+          {
+            attributeName: 'organizationID.name',
+            xtype: 'ubtextfield',
+            readOnly: true
+          }
+        ]
+      }
+    ]
+  }
+})()

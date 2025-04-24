@@ -1,0 +1,242 @@
+/* global UB AC appAC */
+
+exports.formDef = {
+  requiredFields: ['orderID', 'empOrderType', 'organizationID', 'isGroup', 'organizationID.mi_data_id'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          attributeName: 'dateFrom',
+          fieldLabel: UB.i18n('Вступ в дію з'),
+          wight: 320
+        },
+        {
+          attributeName: 'dictReasonAccrualID',
+          allowBlank: true,   // UBHR-20357 п.1
+          flex: 1
+        }
+      ]
+    },
+    {
+      xtype: 'acGrid',
+      name: 'empOrderChgSalPosDet',
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_empOrderChgsalaryDet_empOrderChgSalPosDet'),
+      region: 'center',
+      flex: 1,
+      autoScroll: true,
+      rowEditing: true,
+      notWriteChanges: true,
+      storeType: 'local',
+      showToolBar: true,
+      disablePaging: true,
+      loadMaskMessage: UB.i18n('Завантаження даних...'),
+      summaryDataOnClient: true,
+      hideActions: ['addNewByCurrent'],
+      onBeforeEdit: (rowEditor, context) => {
+        const me = context.grid.up('form')
+        if (['ON_RECONCILATION', 'RECONCILED', 'POSTED'].includes(me.record.get('orderState'))) {
+          return false
+        }
+        me.setIsDirty(true)
+        const editor = rowEditor.editor
+        const employeePositionCtrl = editor.query('[name=employeePositionID.description]')[0]
+        const onDate = AC.dateService.shiftDate(me.record.get('dateFrom')) || appAC.globalApplicationDate()
+        AC.viewUtils.setWhereListProperty(employeePositionCtrl, [
+          [ 'organizationID', '=', me.record.get('organizationID') ],
+          [ 'dateFrom', '<=', onDate ],
+          [ 'dateTo', '>=', onDate ]
+        ])
+        employeePositionCtrl.on('change', (ctrl) => {
+          context.record.set('orderID', me.record.get('orderID'))
+          context.record.set('paraID', me.instanceID)
+          context.record.set('organizationID', me.record.get('organizationID'))
+          context.record.set('employeeNumberID', ctrl.getFieldValue('employeeNumberID'))
+          context.record.set('employeeID', ctrl.getFieldValue('employeeID'))
+          context.record.set('empOrderType', 'CHGSALARYEMP')
+          context.record.set('employeePositionID.employeeID.fullFIO', ctrl.getFieldValue('employeeID.fullFIO'))
+          context.record.set('employeePositionID', ctrl.getFieldValue('ID'))
+          context.record.set('empPosDateFrom', ctrl.getFieldValue('dateFrom'))
+          context.record.set('posName', ctrl.getFieldValue('posName'))
+          context.record.set('positionID', ctrl.getFieldValue('positionID'))
+          context.record.set('posAccrualSum', ctrl.getFieldValue('posAccrualSum'))
+          context.record.set('posDateFrom', ctrl.getFieldValue('posDateFrom'))
+          context.record.set('previousAccrualSum', ctrl.getFieldValue('accrualSum'))
+          context.record.set('employeePositionID.contractType.name', ctrl.getFieldValue('contractType.name'))
+          context.record.set('employeePositionID.dictPositionID', ctrl.getFieldValue('dictPositionID'))
+          context.record.set('employeePositionID.dictPositionValue', ctrl.getFieldValue('dictPositionValue'))
+        })
+      },
+      getRowClass: function (record) {
+        return record.get('employeePositionID.dictPositionID') !== record.get('employeePositionID.dictPositionValue') ? 'grd-color-blue-italic' : ''
+      },
+      fields: [
+        { name: 'ID' },
+        { name: 'orderID' },
+        { name: 'paraID' },
+        { name: 'organizationID' },
+        { name: 'mi_modifyDate' },
+        { name: 'employeeNumberID' },
+        { name: 'employeeID' },
+        { name: 'empOrderType' },
+        {
+          name: 'empPosDateFrom',
+          columnConfig: {
+            text: UB.i18n('Дата призначення'),
+            dateFormat: 'd.m.Y',
+            width: 100
+          }
+        },
+        {
+          name: 'employeePositionID.description',
+          columnConfig: {
+            text: UB.i18n('Працівник'),
+            flex: 1,
+            editor: {
+              dataType: 'Entity',
+              hideEntityItemInContext: true,
+              associatedEntity: 'hr_employeePositionS',
+              storeAttributeValueField: 'employeePositionID',
+              allowBlank: false,
+              fieldList: ['ID', 'description', 'dateFrom', 'employeeNumberID', 'employeeID', 'posName',
+                'positionID', 'posAccrualSum', 'accrualSum', 'posDateFrom', 'contractType', 'contractType.name',
+                'dictPositionID', 'dictPositionValue'
+              ]
+            }
+          }
+        },
+        { name: 'employeePositionID' },
+        { name: 'positionID' },
+        { name: 'employeePositionID.dictPositionID' },
+        { name: 'employeePositionID.dictPositionValue' },
+        {
+          name: 'posDateFrom',
+          columnConfig: {
+            text: UB.i18n('Дата встановлення оклада посади'),
+            dateFormat: 'd.m.Y',
+            width: 100
+          }
+        },
+        {
+          name: 'posAccrualSum',
+          columnConfig: {
+            text: UB.i18n('Оклад Посади'),
+            width: 150,
+            floatFormat: 2,
+            align: 'right'
+          }
+        },
+        {
+          name: 'previousAccrualSum',
+          columnConfig: {
+            text: UB.i18n('Оклад Призначення'),
+            width: 150,
+            floatFormat: 2,
+            align: 'right'
+          }
+        },
+        {
+          name: 'accrualSum',
+          columnConfig: {
+            text: UB.i18n('Новий оклад'),
+            width: 150,
+            floatFormat: 2,
+            align: 'right',
+            editor: {
+              dataType: 'Currency',
+              decimalPrecision: 2,
+              minValue: 0
+            }
+          }
+        },
+        {
+          name: 'posName',
+          columnConfig: {
+            text: UB.i18n('Посада'),
+            flex: 1
+          }
+        },
+        {
+          name: 'employeePositionID.contractType.name',
+          columnConfig: {
+            text: UB.i18n('Вид договору'),
+            width: 100
+          }
+        }
+      ],
+      customToolBarActions: [
+        {
+          xtype: 'button',
+          name: 'fillBtn',
+          tooltip: UB.i18n('Заповнити'),
+          iconCls: 'fas fa-angle-double-down',
+          cls: 'fill-action',
+          handler: function (btn) {
+            const me = btn.up('form')
+            me.setEmployeePositions(me)
+          }
+        },
+        {
+          xtype: 'button',
+          scale: 'medium',
+          iconCls: 'fas fa-sort-amount-down',
+          tooltip: UB.i18n('Встановити оклади за тарифом'),
+          hidden: true,
+          cls: 'add-new-action',
+          handler: (btn) => {
+            const me = btn.up('form')
+            me.setAccrualSumByTarif(me)
+          }
+        },
+        {
+          xtype: 'button',
+          scale: 'medium',
+          iconCls: 'u-icon-digits',
+          tooltip: UB.i18n('Встановити новий оклад з посади'),
+          hidden: true,
+          cls: 'add-new-action',
+          handler: (btn) => {
+            const me = btn.up('form')
+            me.setAccrualSumByPosition(me)
+          }
+        },
+        {
+          xtype: 'textfield',
+          name: 'searchBox',
+          skipSetReadOnly: true,
+          labelWidth: 60,
+          fieldLabel: UB.i18n('filter'),
+          listeners: {
+            change: function (ctrl, value) {
+              const me = ctrl.up('form')
+              const store = me.attr.empOrderChgSalPosDet.getStore()
+              store.clearFilter()
+              if (value === '') {
+                return
+              }
+              if (store.sorters.items.length) {
+                store.sorters.removeAll()
+              }
+              store.filter(row => {
+                return (row.get('employeePositionID.employeeID.fullFIO') && row.get('employeePositionID.employeeID.fullFIO').toUpperCase().includes(value.toUpperCase()))
+              })
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

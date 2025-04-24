@@ -1,0 +1,281 @@
+/* global Ext $App appAC AC UB */
+exports.formDef = 'HR.importMap'
+
+Ext.define('HR.importMap', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_importMap',
+  height: 700,
+  width: 1200,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'acGrid',
+        name: 'planGrid',
+        margin: '5 10 5 5',
+        width: 200,
+        autoScroll: true,
+        region: 'west',
+        storeType: 'local',
+        disablePaging: true,
+        notWriteChanges: true,
+        showToolBar: false,
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        onItemClick: (view, record) => {
+          me.loadMapData(record.get('entityName'))
+        },
+        fields: [
+          { name: 'ID' },
+          { name: 'entityName' },
+          { name: 'entityDescription', columnConfig: { text: UB.i18n('Назва таблиці'), flex: 1 } },
+          { name: 'fileName' },
+          { name: 'mapNullCount' },
+          { name: 'state' }
+        ],
+        getRowClass: function (record) {
+          if (record.get('mapNullCount') > 0) {
+            return 'grd-color-red'
+          } else {
+            return ''
+          }
+        }
+      },
+      {
+        xtype: 'acGrid',
+        title: UB.i18n('Таблиця відповідності записів'),
+        name: 'mapGrid',
+        margin: '5 5 5 10',
+        flex: 1,
+        split: true,
+        autoScroll: true,
+        region: 'center',
+        storeType: 'local',
+        disablePaging: true,
+        notWriteChanges: true,
+        cellEditing: true,
+        showToolBar: true,
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        getRowClass: function (record) {
+          if (!record.get('outputID')) {
+            return ' grd-color-red'
+          } else {
+            return ''
+          }
+        },
+        edit: (control, context) => {
+          const lastSelection = context.column.field.getValue() && context.column.field.lastSelection.length ? context.column.field.lastSelection[0] : null
+          $App.connection.run({
+            entity: 'hr_importMap',
+            method: 'update',
+            execParams: {
+              ID: context.record.get('ID'),
+              outputID: lastSelection ? lastSelection.get('ID') : null,
+              outputCode: lastSelection ? lastSelection.get('code') : null,
+              outputName: lastSelection ? lastSelection.get('name') : null
+            }
+          }).then(() => {
+            context.record.set('outputID', lastSelection ? lastSelection.get('ID') : null)
+            context.record.set('outputDescription', lastSelection ? lastSelection.get('description') : null)
+            const misMap = me.attr.mapGrid.getData().find(o => !o.outputID)
+            const selection = me.attr.planGrid.getSelectionModel().getSelection()
+            selection[0].set('mapNullCount', misMap ? 1 : 0)
+          })
+        },
+        fields: [
+          { name: 'ID' },
+          { name: 'inputDescription', columnConfig: { text: UB.i18n('Зовнішня таблиця'), flex: 1 } },
+          { name: 'outputID' },
+          { name: 'outputDescription',
+            columnConfig: {
+              text: UB.i18n('Робоча таблиця'),
+              flex: 1,
+              editor: {
+                xtype: 'combo',
+                valueField: 'description',
+                displayField: 'description',
+                triggerCls: 'hr-list-trigger',
+                queryMode: 'local',
+                triggerAction: 'all',
+                mode: 'local',
+                anyMatch: true,
+                store: Ext.create('Ext.data.Store', {
+                  fields: ['description', 'ID', 'name', 'code'],
+                  data: []
+                })
+              }
+            }
+          }
+        ],
+        customToolBarActions: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Оновити'),
+            scale: 'medium',
+            iconCls: 'u-icon-refresh',
+            handler: () => {
+              const record = me.attr.planGrid.getSelectedRowData()
+              if (!record) {
+                return
+              }
+              me.loadMapData(record.entityName)
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Видалити всі відповідності'),
+            scale: 'medium',
+            iconCls: 'fa fa-eraser',
+            handler: () => { me.removeMap() }
+          },
+          {
+            xtype: 'button',
+            scale: 'medium',
+            iconCls: 'fas fa-file-excel',
+            tooltip: UB.i18n('Сформувати XLSX'),
+            cls: 'green-action',
+            handler: () => { me.exportXLSX() }
+          },
+          {
+            xtype: 'textfield',
+            name: 'searchText',
+            flex: 1,
+            emptyText: UB.i18n('Пошук'),
+            margin: '2 15 0 30'
+          }
+        ],
+        customPopupMenuItems: [
+          {
+            text: UB.i18n('Очистити'),
+            iconCls: 'fa fa-eraser',
+            ubID: 'cleanValue',
+            handler: function (context) {
+              const record = context.up('').record || AC.gridUtils.getCurrentRecord(context.up('').grid)
+              if (record) {
+                record.set('outputDescription', null)
+              }
+            }
+          }
+        ]
+      }
+
+    ]
+    me.removeMap = () => {
+      const record = me.attr.planGrid.getSelectedRowData()
+      if (!record) {
+        return
+      }
+      $App.dialogYesNo('Попередження', UB.i18n(`Видалити відповідність для {0}`, record.entityDescription)).then(result => {
+        if (result) {
+          $App.dialogYesNo('Попередження', UB.i18n(`Співставити автоматично після видалення?`, record.entityDescription)).then(toCompare => {
+            $App.connection.run({
+              entity: 'hr_importMap',
+              method: 'removeMap',
+              orgID: me.orgID,
+              toCompare: !!toCompare,
+              entityName: record.entityName
+            }).then(response => {
+              me.loadMapData(record.entityName)
+            })
+          })
+        }
+      })
+    }
+    me.exportXLSX = () => {
+      const record = me.attr.planGrid.getSelectedRowData()
+      if (!record) {
+        return
+      }
+      $App.connection.run({
+        entity: 'hr_importMap',
+        method: 'generateXLSX',
+        orgID: me.orgID,
+        entityName: record.entityName
+      }).then(response => {
+        const data = JSON.parse(response.data)
+        AC.filesService.saveAsByBase64Buffer(data, record.entityDescription + '.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+        me.setLoading(false)
+      }, function (err) {
+        me.setLoading(false)
+        throw err
+      })
+    }
+    me.loadMapData = (entityName) => {
+      me.setLoading(true)
+      me.attr.searchText.setValue()
+      $App.connection.run({
+        entity: 'hr_importMap',
+        method: 'loadMapData',
+        orgID: me.orgID,
+        entityName
+      }).then(response => {
+        const resultData = JSON.parse(response.resultData)
+        const columns = me.attr.mapGrid.getGridColumns()
+        columns[1].editor.store.loadData(resultData.dictList)
+        me.attr.mapGrid.setLocalStoreData(resultData.data)
+        me.setLoading(false)
+      })
+    }
+
+    me.updateMapData = (entityName) => {
+      me.setLoading(true)
+      me.attr.searchText.setValue()
+      $App.connection.run({
+        entity: 'hr_importMap',
+        method: 'updateMapData',
+        orgID: me.orgID,
+        entityName
+      }).then(response => {
+        me.loadMapData(entityName)
+        me.setLoading(false)
+      })
+    }
+
+    me.getData = () => {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_importPlan',
+        method: 'getImportPlan',
+        orgID: appAC.globalOrganization(),
+        isMapping: true,
+        appCode: me.customParams.appCode
+      }).then(response => {
+        const resultData = JSON.parse(response.resultData)
+        me.attr.planGrid.setLocalStoreData(resultData)
+        me.setLoading(false)
+      })
+    }
+    me.changeGlobal = () => {
+      me.orgID = appAC.globalOrganization()
+    }
+
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+
+    me.on('afterrender', () => {
+      const me = this
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+      me.attr = {
+        planGrid: me.down('[name=planGrid]'),
+        mapGrid: me.down('[name=mapGrid]'),
+        searchText: me.down('[name=searchText]')
+      }
+      me.attr.searchText.on('change', (ctrl, value) => {
+        if (me.attr.mapGrid.getStore().filters.items.length) {
+          me.attr.mapGrid.getStore().removeFilter(me.attr.mapGrid.getStore().filters.items[0])
+        }
+        if (value && value !== '') {
+          me.attr.mapGrid.getStore().addFilter(row =>
+            (row.get('inputDescription') || '').toUpperCase().includes(me.attr.searchText.getValue().toUpperCase()) ||
+            (row.get('outputDescription') || '').toUpperCase().includes(me.attr.searchText.getValue().toUpperCase())
+          )
+        }
+      })
+      me.orgID = appAC.globalOrganization()
+      me.getData()
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

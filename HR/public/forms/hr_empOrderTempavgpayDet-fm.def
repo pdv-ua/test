@@ -1,0 +1,111 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['orderID', 'empOrderType', 'organizationID', 'lastName', 'firstName', 'middleName', 'employeeID'],
+  parentConfig: {
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [],
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          defaults: { labelWidth: 175 },
+          items: [
+            {
+              attributeName: 'employeePositionID',
+              margins: '5 0 0 0',
+              gridFieldList: ['description'],
+              fieldList: ['ID', 'description', 'employeeID.firstName', 'employeeID.lastName', 'employeeID.middleName',
+                'employeeID', 'employeeNumberID', 'departmentID', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo',
+                'dictStaffCatID', 'positionType'
+              ],
+              xtype: 'empPositionCombobox',
+              addWorkPlace: true,
+              allowBlank: false,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+            },
+            {
+              attributeName: 'dateFrom',
+              fieldLabel: UB.i18n('Перевести з')
+            },
+            {
+              attributeName: 'dateToEmpty',
+              fieldLabel: UB.i18n('по')
+            },
+            HR.controlService.getAttrDepPosBlock({
+              valueField: 'ID',
+              labelWidth: 175,
+              showPosCategory: false,
+              // showFundSource: true,
+              posFieldLabel: UB.i18n('Штатна посада'),
+              vehicleField: 'dictPositionID.isVehicle',
+              onDateField: 'dateFrom',
+              tryApplyOrderOnDate: true
+            }),
+            {
+              attributeName: 'dictReasonTempAvgPayID'
+            },
+            {
+              attributeName: 'payElID',
+              hideEntityItemInContext: true,
+              orderList: { orderBy: { expression: 'codeSort' } },
+              fieldList: ['ID', 'description', 'methodID.code', 'codeSort', 'dictTimeCostID'],
+              whereList: {
+                isSalary: {
+                  expression: '[methodID.code]',
+                  condition: 'equal',
+                  value: '44'
+                }
+              }
+            },
+            {
+              attributeName: 'dictTimeCostID',
+              gridFieldList: ['nameSmall'],
+              fieldList: ['nameSmall'],
+              displayField: 'nameSmall',
+              readOnly: true
+            },
+            {
+              layout: {
+                type: 'hbox',
+                align: 'middle'
+              },
+              name: 'orderWordPanel',
+              items: [
+                {
+                  attributeName: 'orderWord',
+                  labelWidth: 175,
+                  flex: 1,
+                  rows: 3
+                },
+                {
+                  xtype: 'button',
+                  cls: 'list-icon',
+                  name: 'orderWordButton',
+                  tooltip: UB.i18n('Вибрати'),
+                  width: 35,
+                  height: 35,
+                  margin: '0 13 0 -45',
+                  handler: btn => btn.up('form').getField('orderWord').selectHandler(btn)
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

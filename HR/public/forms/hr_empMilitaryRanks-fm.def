@@ -1,0 +1,60 @@
+/* global $App UB _ AC HR appAC Ext SystemJS saveAs Blob moment */
+
+exports.formDef = {
+  requiredFields: ['dictMilitaryRankID.name', 'employeeID', 'organizationID', 'organizationName'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'fieldset',
+      layout: {
+        type: 'vbox',
+        align: 'stretch',
+        region: 'center'
+      },
+      margin: '0 15 10 10',
+      items: [
+        { attributeName: 'dictMilitaryRankID' },
+        { attributeName: 'dictMilitaryRankTypeID' },
+        { attributeName: 'type', disableContextMenu: false, hideEntityItemInContext: true }
+      ]
+    },
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Наказ'),
+      layout: { type: 'vbox', align: 'stretch' },
+      margin: '0 15 10 10',
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'orderNum', labelWidth: 180, width: 300 },
+            { attributeName: 'orderDate', labelWidth: 105, width: 225 }
+          ]
+        },
+        HR.controlService.getIDNameCombo({
+          fieldID: 'organizationID',
+          fieldName: 'organizationName',
+          fieldLabel: UB.i18n('Огранізація'),
+          labelWidth: 180,
+          maxLength: 200,
+          ubRequest: {
+            entity: 'ac_organization',
+            fieldList: ['ID', 'name'],
+            orderList: { orderBy: { expression: 'name' } }
+          }
+        }),
+        {
+          attributeName: 'dictNomMilitaryRankID',
+          labelWidth: 180
+        }
+      ]
+    }
+  ]
+}

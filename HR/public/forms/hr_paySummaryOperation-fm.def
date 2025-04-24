@@ -1,0 +1,49 @@
+/* global Ext UB */
+exports.formDef = 'HR.paySummaryOperation'
+
+Ext.define('HR.paySummaryOperation', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_paySummaryOperation',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'acGrid',
+        name: 'accrual',
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_paySummaryOperation_accrual'),
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        storeType: 'local',
+        disablePaging: true,
+        notWriteChanges: true,
+        showToolBar: true,
+        enableMultifilter: true,
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        summary: { paySum: 'sum' },
+        fields: [
+          { name: 'ID' },
+          { name: 'periodName', columnConfig: { text: UB.i18n('Обліковий період'), flex: 1, filterBy: 'string' } },
+          { name: 'code', columnConfig: { text: UB.i18n('Код вида оплати'), flex: 1, sortBy: 'Number', filterBy: 'float' } },
+          { name: 'name', columnConfig: { text: UB.i18n('Вид оплати'), flex: 1, filterBy: 'string' } },
+          { name: 'paySum', columnConfig: { text: UB.i18n('Сума'), width: 150, align: 'right', floatFormat: 2, sortBy: 'Number', filterBy: 'float' } }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        accrual: me.down('[name=accrual]')
+      }
+      if (me.defaultValues) {
+        me.up('window').setTitle(me.defaultValues.operationName)
+        me.attr.accrual.setLocalStoreData(me.defaultValues.accrual)
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

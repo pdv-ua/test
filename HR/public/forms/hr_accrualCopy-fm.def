@@ -1,0 +1,596 @@
+/* global Ext $App appAC appHR UB AC */
+exports.formDef = 'HR.accrualCopy'
+
+Ext.define('HR.accrualCopy', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_accrualCopy',
+  height: 400,
+  width: 800,
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+
+    me.dockedItems = [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        ubID: 'mainToolbar',
+        enableOverflow: true,
+        items: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Створити копію'),
+            scale: 'medium',
+            iconCls: 'fas fa-copy',
+            handler: function () {
+              me.createCopy()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Порівняти'),
+            scale: 'medium',
+            cls: 'fill-action',
+            iconCls: 'u-icon-edit-alt',
+            handler: function () {
+              me.getProtocol()
+            }
+          }
+        ]
+      }
+    ]
+    me.items = [
+      {
+        region: 'north',
+        layout: { type: 'vbox', align: 'stretch' },
+        split: true,
+        items: [
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox' },
+                flex: 1,
+                items: [
+                  {
+                    xtype: 'checkboxfield',
+                    name: 'childOrg',
+                    fieldLabel: UB.i18n('з підлеглими організаціями'),
+                    boxLabelAlign: 'after',
+                    labelWidth: 200,
+                    listeners: {
+                      change: function () {
+                        me.setLoading(true)
+                        me.getCopyList()
+                        me.setLoading(false)
+
+                      }
+                    }
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'label',
+                        text: UB.i18n('Період:'),
+                        cls: 'x-form-item-label',
+                        margin: '8 0 0 15',
+                        width: 60
+                      },
+                      {
+                        xtype: 'button',
+                        text: '<',
+                        margin: '2 0 0 0',
+                        tooltip: UB.i18n('Попередній період'),
+                        width: 30,
+                        handler: () => {
+                          const priorID = me.attr.periodID.getFieldValue('priorPeriodID')
+                          if (priorID) {
+                            me.attr.periodID.setValueById(priorID)
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'periodID',
+                        fieldLabel: '',
+                        labelWidth: 160,
+                        width: 200,
+                        hideEntityItemInContext: true,
+                        selectOnFocus: true,
+                        pageSize: 50,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'description', 'name', 'dateFrom', 'dateTo', 'orgID', 'priorPeriodID', 'nextPeriodID', 'isClosed', 'isCurrent', 'priorPeriodID.isCurrent'],
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                        },
+                        listeners: {
+                          change: function (ctrl, value) {
+                            me.setLoading(true)
+                            me.getCopyList()
+                            me.setLoading(false)
+                          },
+                          expand: appHR.periodExpand
+                        }
+                      },
+                      {
+                        xtype: 'button',
+                        text: '>',
+                        margin: '2 15 0 0',
+                        tooltip: UB.i18n('Наступний період'),
+                        width: 30,
+                        handler: () => {
+                          const nextID = me.attr.periodID.getFieldValue('nextPeriodID')
+                          if (nextID) {
+                            me.attr.periodID.setValueById(nextID)
+                          }
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                xtype: 'ubfieldset',
+                title: UB.i18n('Параметри порівняння'),
+                flex: 2,
+                defaults: { labelWidth: 130 },
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'isTotal',
+                        fieldLabel: UB.i18n('Тільки підсумки'),
+                        boxLabelAlign: 'after',
+                        labelWidth: 180,
+                        value: true
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'isAccrual',
+                        fieldLabel: UB.i18n('Розрахунковий лист'),
+                        boxLabelAlign: 'after',
+                        labelWidth: 180,
+                        value: true
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'isAccrualDt',
+                        fieldLabel: UB.i18n('Деталізація РЛ'),
+                        boxLabelAlign: 'after',
+                        labelWidth: 120
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'isTaxIndivid',
+                        fieldLabel: UB.i18n('Деталізація податків'),
+                        boxLabelAlign: 'after',
+                        labelWidth: 160
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'isAccrualFund',
+                        fieldLabel: UB.i18n('Нарахування на зарплату'),
+                        boxLabelAlign: 'after',
+                        labelWidth: 180
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        name: 'isAccrualFundDt',
+                        fieldLabel: UB.i18n('Деталізація нарахування на ЗП'),
+                        boxLabelAlign: 'after',
+                        labelWidth: 220
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'tabpanel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        items: [
+          {
+            xtype: 'panel',
+            title: UB.i18n('Протокол порівняння'),
+            layout: 'border',
+            flex: 1,
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'protocol',
+                stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_accrualCopyPr'),
+                flex: 1,
+                autoScroll: true,
+                region: 'center',
+                storeType: 'local',
+                disablePaging: true,
+                notWriteChanges: true,
+                showToolBar: true,
+                enableMultifilter: true,
+                summary: {
+                  paySum: 'sum',
+                  copyPaySum: 'sum',
+                  orgName: (data, dataIndex) => {
+                    return data.reduce((sum, row) => {
+                      return AC.currencyService.round(sum + (row.get('copyPaySum') || 0) - (row.get('paySum') || 0))
+                    }, 0)
+                  }
+                },
+                baseSummary: true,
+                exportExcel: {
+                  title: async function (grid) {
+                    const me = grid.up('hr_accrualCopy')
+                    const orgName = await UB.Repository('ac_organization').attrs('name').where('ID', '=', appAC.globalOrganization()).selectScalar()
+                    return `Організація ${orgName}${me.attr.childOrg.getValue() ? ' з підлеглими' : ''}\r\nЗа період ${me.attr.periodID.getValue() ? me.attr.periodID.getFieldValue('name') : me.currentPeriod.name}`
+                  },
+                  showFilterData: true,
+                  titleHeight: 30,
+                  fileName: UB.i18n('Протокол порівняння'),
+                  renderer: {
+                    copyDate: (dataIndex, row) => {
+                      return AC.dateService.formatDate(row.copyDate, 'dd.mm.yyyy hh:nn:ss')
+                    }
+                  }
+                },
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                onItemDoubleClick: function (grid, record) {
+                  if (record.get('employeeNumberID')) {
+                    $App.doCommand({
+                      cmdType: 'showForm',
+                      formCode: 'hr_rl',
+                      tabId: 'hr_rl' + record.get('employeeNumberID') + record.get('periodCalcID'),
+                      target: $App.getViewport().centralPanel,
+                      modal: false,
+                      cmpInitConfig: {
+                        defaultValues: {
+                          employeeNumberID: record.get('employeeNumberID'),
+                          periodID: record.get('periodCalcID'),
+                          makeBold: record.get('payElID') ? 'accrual' : 'accrualFund',
+                          payElID: record.get('payElID'),
+                          payFundID: record.get('payFundID'),
+                          periodSalaryID: record.get('periodSalaryID')
+                        }
+                      }
+                    })
+                  } else if (record.get('orgID') && (record.get('payElID') || record.get('payFundID'))) {
+                    me.showDetail(me, record)
+                  }
+                },
+                fields: [
+                  { name: 'orgID' },
+                  { name: 'periodCalcID' },
+                  { name: 'periodSalaryID' },
+                  { name: 'payElID' },
+                  { name: 'payFundID' },
+                  { name: 'employeeNumberID' },
+                  { name: 'listType' },
+                  { name: 'orgName', columnConfig: { text: UB.i18n('Організація'), width: 100, filterBy: 'string' } },
+                  {
+                    name: 'tabNum',
+                    columnConfig: {
+                      text: UB.i18n('Таб.№'),
+                      width: 100,
+                      filterBy: 'string'
+                    }
+                  },
+                  {
+                    name: 'fullFIO',
+                    columnConfig: {
+                      text: UB.i18n('Працівник'),
+                      width: 150,
+                      filterBy: 'string'
+                    }
+                  },
+                  {
+                    name: 'description',
+                    columnConfig: {
+                      text: UB.i18n('Опис'),
+                      flex: 1,
+                      filterBy: 'string'
+                    }
+                  },
+                  {
+                    name: 'periodCalc',
+                    columnConfig: {
+                      text: UB.i18n('Розрахунковий період'),
+                      width: 150,
+
+                      filterBy: 'string'
+                    }
+                  },
+                  {
+                    name: 'periodSalary',
+                    columnConfig: {
+                      text: UB.i18n('Обліковий період'),
+                      width: 150,
+                      filterBy: 'string'
+                    }
+                  },
+                  {
+                    name: 'copyPaySum',
+                    columnConfig: {
+                      text: UB.i18n('Сума стара'),
+                      width: 150,
+                      floatFormat: 2,
+                      align: 'right',
+                      sortBy: 'Number',
+                      filterBy: 'float'
+                    }
+                  },
+                  {
+                    name: 'paySum',
+                    columnConfig: {
+                      text: UB.i18n('Сума нова'),
+                      width: 150,
+                      floatFormat: 2,
+                      align: 'right',
+                      sortBy: 'Number',
+                      filterBy: 'float'
+                    }
+                  },
+                  {
+                    name: 'additional',
+                    columnConfig: {
+                      text: UB.i18n('Додатково'),
+                      flex: 1,
+                      filterBy: 'string'
+                    }
+                  },
+                  {
+                    name: 'tableType',
+                    columnConfig: {
+                      text: UB.i18n('Тип таблиці'),
+                      flex: 1,
+                      filterBy: 'string'
+                    }
+                  },
+                  {
+                    name: 'copyDate',
+                    columnConfig: {
+                      text: UB.i18n('Копія створена'),
+                      width: 200,
+                      dateFormat: 'd.m.Y H:i:s',
+                      dataType: 'Date',
+                      filterBy: 'date'
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            title: UB.i18n('Наявні копії по організаціям'),
+            layout: 'border',
+            flex: 1,
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'copyList',
+                stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_accrualCopyList'),
+                flex: 1,
+                autoScroll: true,
+                region: 'center',
+                storeType: 'local',
+                disablePaging: true,
+                notWriteChanges: true,
+                showToolBar: true,
+                enableMultifilter: true,
+                exportExcel: {
+                  title: async function () {
+                    return AC.dateService.formatDate(new Date(), 'dd.mm.yyyy hh:nn:ss')
+                  },
+                  showFilterData: true,
+                  titleHeight: 20,
+                  fileName: UB.i18n('Наявні копії по організаціям'),
+                  renderer: {
+                    copyDate: (dataIndex, row) => {
+                      return AC.dateService.formatDate(row.copyDate, 'dd.mm.yyyy hh:nn:ss')
+                    }
+                  }
+                },
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                fields: [
+                  { name: 'orgID' },
+                  { name: 'periodCalcID' },
+                  { name: 'orgName', columnConfig: { text: UB.i18n('Організація'), width: 300, filterBy: 'string' } },
+                  {
+                    name: 'periodCalc',
+                    columnConfig: {
+                      text: UB.i18n('Розрахунковий період'),
+                      width: 200,
+                      filterBy: 'string'
+                    }
+                  },
+                  {
+                    name: 'copyDate',
+                    columnConfig: {
+                      text: UB.i18n('Дата/час створення'),
+                      width: 200,
+                      dateFormat: 'd.m.Y H:i:s',
+                      dataType: 'Date',
+                      filterBy: 'date'
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.createCopy = () => {
+      $App.dialogYesNo('Попередження', `Створити копію?`)
+        .then(res => {
+          if (res) {
+            me.setLoading(true)
+            $App.connection.run({
+              entity: 'hr_accrualCopy',
+              method: 'createCopy',
+              orgID: appAC.globalOrganization(),
+              periodID: me.attr.periodID.getValue(),
+              childOrg: me.attr.childOrg.getValue()
+            }).then(response => {
+              const resultData = JSON.parse(response.resultData)
+              if (resultData.errorMessages.length) {
+                $App.dialogInfo(`${UB.i18n('Під час створення копії не було закінчено розрахунок')} </br> ${resultData.errorMessages.join('</br>')}`)
+              } else {
+                $App.dialogInfo(UB.i18n('Копії створено без зауважень!'))
+              }
+              me.setLoading(true)
+              me.getCopyList()
+              me.setLoading(false)
+              me.setLoading(false)
+            }, err => {
+              me.setLoading(false)
+              throw err
+            })
+          }
+        })
+    }
+
+    me.getCopyList = () => {
+      $App.connection.run({
+        entity: 'hr_accrualCopy',
+        method: 'getCopyList',
+        orgID: appAC.globalOrganization(),
+        periodID: me.attr.periodID.getValue(),
+        childOrg: me.attr.childOrg.getValue(),
+        isTotal: me.attr.isTotal.getValue(),
+        isAccrual: me.attr.isAccrual.getValue(),
+        isAccrualDt: me.attr.isAccrualDt.getValue(),
+        isTaxIndivid: me.attr.isTaxIndivid.getValue(),
+        isAccrualFund: me.attr.isAccrualFund.getValue(),
+        isAccrualFundDt: me.attr.isAccrualFundDt.getValue()
+      }).then(response => {
+        const data = JSON.parse(response.resultData)
+        me.attr.copyList.setLocalStoreData(data)
+        me.attr.protocol.setLocalStoreData([])
+      })
+    }
+    me.getProtocol = () => {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_accrualCopy',
+        method: 'getProtocol',
+        orgID: appAC.globalOrganization(),
+        periodID: me.attr.periodID.getValue(),
+        childOrg: me.attr.childOrg.getValue(),
+        isTotal: me.attr.isTotal.getValue(),
+        isAccrual: me.attr.isAccrual.getValue(),
+        isAccrualDt: me.attr.isAccrualDt.getValue(),
+        isTaxIndivid: me.attr.isTaxIndivid.getValue(),
+        isAccrualFund: me.attr.isAccrualFund.getValue(),
+        isAccrualFundDt: me.attr.isAccrualFundDt.getValue()
+      }).then(response => {
+        const data = JSON.parse(response.resultData)
+        me.attr.protocol.setLocalStoreData(data)
+        $App.dialogInfo(UB.i18n('Порівняння виконано'))
+        me.setLoading(false)
+      }, err => {
+        me.setLoading(false)
+        throw err
+      })
+    }
+
+    me.showDetail = (me, record) => {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_accrualCopy',
+        method: 'getProtocol',
+        orgID: record.get('orgID'),
+        periodID: record.get('periodCalcID'),
+        isAccrual: record.get('listType') === 'isAccrual',
+        isAccrualDt: record.get('listType') === 'isAccrualDt',
+        isTaxIndivid: record.get('listType') === 'isTaxIndivid',
+        isAccrualFund: record.get('listType') === 'isAccrualFund',
+        isAccrualFundDt: record.get('listType') === 'isAccrualFundDt',
+        additional: (record.get('listType') === 'isAccrualDt' || record.get('listType') === 'isAccrualFundDt') ? record.get('additional') : null,
+        payElID: record.get('payElID'),
+        payFundID: record.get('payFundID'),
+        periodSalaryID: record.get('periodSalaryID')
+      }).then(response => {
+        const data = JSON.parse(response.resultData)
+        $App.doCommand({
+          cmdType: 'showForm',
+          formCode: 'hr_accrualCopyDt',
+          tabId: 'hr_rl' + record.get('employeeNumberID') + record.get('periodCalcID'),
+          target: $App.getViewport().centralPanel,
+          modal: false,
+          cmpInitConfig: {
+            parentForm: me,
+            protocolData: data
+          }
+        })
+        me.setLoading(false)
+      }, err => {
+        me.setLoading(false)
+        throw err
+      })
+    }
+
+    me.changeGlobal = () => {
+      const globalOrganization = appAC.globalOrganization()
+      me.attr.periodID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization }, [], 0)
+      me.attr.periodID.clearValue()
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        me.attr.periodID.setValueById(null)
+        me.currentPeriod = response
+        me.setLoading(true)
+        me.getCopyList()
+        me.setLoading(false)
+      })
+    }
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+
+    me.on('afterrender', () => {
+      const me = this
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+      me.attr = {
+        periodID: me.down('[name=periodID]'),
+        childOrg: me.down('[name=childOrg]'),
+        isTotal: me.down('[name=isTotal]'),
+        isAccrual: me.down('[name=isAccrual]'),
+        isAccrualDt: me.down('[name=isAccrualDt]'),
+        isTaxIndivid: me.down('[name=isTaxIndivid]'),
+        isAccrualFund: me.down('[name=isAccrualFund]'),
+        isAccrualFundDt: me.down('[name=isAccrualFundDt]'),
+        copyList: me.down('[name=copyList]'),
+        protocol: me.down('[name=protocol]')
+      }
+      const globalOrganization = appAC.globalOrganization()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization }, [], 0)
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        me.currentPeriod = response
+        me.setLoading(true)
+        me.getCopyList()
+        me.setLoading(false)
+      })
+    })
+
+    me.callParent(arguments)
+  }
+})

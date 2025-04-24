@@ -1,0 +1,74 @@
+{
+  "caption": "Розрахункова відомість (зведена) нарахування на зарплату",
+  "description": "Розрахункова відомість (зведена) нарахування на зарплату",
+  "descriptionAttribute": "periodID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "periodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Розрахунковий період",
+      "description": "Розрахунковий період",
+      "documentation": "Розрахунковий період",
+      "allowNull": false
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "documentation": "Організаційна одиниця",
+      "allowNull": false
+    },
+    {
+      "name": "payFundID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payFund",
+      "caption": "Фонд",
+      "description": "Фонд",
+      "documentation": "Фонд",
+      "allowNull": false
+    },
+    {
+      "name": "paySum",
+      "dataType": "Currency",
+      "caption": "Сума",
+      "description": "Сума",
+      "documentation": "Сума"
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_PAYFUNDSUM_ORGPER": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "periodID": {
+            "sort": "ASC"
+          },
+          "orgID": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mapping":[{
+    "name": "AnsiSQL",
+    "selectName": "hr_payFundSummarySheet",
+    "execName": "hr_payFundSummarySheet",
+    "pkGenerator": "S_HR_PAYFUNDSUMMARYSHEET"
+  }],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": false,
+      "safeDelete": false
+    },
+    "audit": {
+      "enabled": false
+    }
+  }
+}

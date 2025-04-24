@@ -1,0 +1,225 @@
+/* global Ext AC appAC appHR $App UB */
+
+exports.formDef = 'HR.exportMethod'
+
+Ext.define('HR.exportMethod', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.exportMethod',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        name: 'exportMethodGrid',
+        layout: 'fit',
+        flex: 1,
+        hideActions: ['addNew', 'addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        cmdType: 'showList',
+        entity: 'hr_exportMethod',
+        cmdData: {
+          params: [{
+            entity: 'hr_exportMethod',
+            method: 'select',
+            fieldList: [
+              { name: 'name' },
+              { name: 'shortName' },
+              { name: 'nameFile' },
+              { name: 'typeFile' },
+              { name: 'isActive' }
+            ]
+          }]
+        },
+        cmpInitConfig: {
+          onDeterminateForm: function (grid) {
+            let res = {
+              entityName: 'hr_exportMethod'
+            }
+            const reco = AC.gridUtils.getCurrentRecord(grid)
+            if (reco && reco.get('typeFile') === 'fileSAP') {
+              res.formCode = 'hr_exportMethodFileSap'
+            }
+            if (reco && reco.get('typeFile') === 'filePay') {
+              res.formCode = 'hr_exportMethodFilePay'
+            }
+            if (reco && reco.get('typeFile') === 'fileWFM') {
+              res.formCode = 'hr_exportMethodFileWFM'
+            }
+            if (reco && reco.get('typeFile') === 'fileExpress') {
+              res.formCode = 'hr_exportMethodFileExpress'
+            }
+            return res
+          },
+          customInit: function () {
+          },
+          afterInit: function () {
+            AC.gridUtils.setGlobalOrganization(this, 'orgID')
+          },
+          customActions: [
+            {
+              text: UB.i18n('Додати'),
+              iconCls: 'u-icon-add',
+              scale: 'medium',
+              cls: 'add-new-action',
+              disabled: !AC.entityUtils.verifyRightsMethod('hr_exportMethod', 'addnew'),
+              handler: function (btn) {
+                const grid = btn.up('[entityName=hr_exportMethod]')
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: 'hr_exportMethodSelect',
+                  sender: grid,
+                  store: grid.store
+                })
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[entityName=hr_exportMethod]')
+      }
+      /* const tb = me.down('toolbar')
+      const allActions = tb && tb.query('[menuId=AllActions]')[0]
+      if (!allActions) {
+        return
+      }
+      allActions.menu.add({
+        text: UB.i18n('Додати "Файли експорту SAP"'),
+        name: 'actionAllowEdit',
+        iconCls: 'iconEdit',
+        handler: async function () {
+          const orgID = appAC.globalOrganization()
+          const methodTvn = await UB.Repository('hr_exportMethod')
+            .attrs('ID')
+            .where('nameFile', '=', 'Tvn')
+            .where('typeFile', '=', 'fileSAP')
+            .where('orgID', '=', orgID)
+            .selectScalar()
+          if (!methodTvn) {
+            await $App.connection.insert({
+              entity: 'hr_exportMethod',
+              fieldList: ['ID'],
+              execParams: {
+                name: 'Дані про  відпрацьований час',
+                shortName: 'Дані про  відпрацьований час',
+                nameFile: 'Tvn',
+                typeFile: 'fileSAP',
+                isActive: 1,
+                orgID: orgID
+              }
+            })
+          }
+
+          const methodN34 = await UB.Repository('hr_exportMethod')
+            .attrs('ID')
+            .where('nameFile', '=', 'N34')
+            .where('typeFile', '=', 'fileSAP')
+            .where('orgID', '=', orgID)
+            .selectScalar()
+          if (!methodN34) {
+            await $App.connection.insert({
+              entity: 'hr_exportMethod',
+              fieldList: ['ID'],
+              execParams: {
+                name: 'Для звіту № 2-НКРЕКП - розподiл електричної енергiї (квартальна)',
+                shortName: 'Для звіту № 2-НКРЕКП  (N34)',
+                nameFile: 'N34',
+                typeFile: 'fileSAP',
+                isActive: 1,
+                orgID: orgID
+              }
+            })
+          }
+
+          const methodZvn = await UB.Repository('hr_exportMethod')
+            .attrs('ID')
+            .where('nameFile', '=', 'Zvn')
+            .where('typeFile', '=', 'fileSAP')
+            .where('orgID', '=', orgID)
+            .selectScalar()
+          if (!methodZvn) {
+            await $App.connection.insert({
+              entity: 'hr_exportMethod',
+              fieldList: ['ID'],
+              execParams: {
+                name: 'Нарахування ЗП, ЄСВ та резерв відпусток',
+                shortName: 'Нарахування 8 класу (Zvn)',
+                nameFile: 'Zvn',
+                typeFile: 'fileSAP',
+                isActive: 1,
+                orgID: orgID
+              }
+            })
+          }
+
+          const methodUvn = await UB.Repository('hr_exportMethod')
+            .attrs('ID')
+            .where('nameFile', '=', 'Uvn')
+            .where('typeFile', '=', 'fileSAP')
+            .where('orgID', '=', orgID)
+            .selectScalar()
+          if (!methodUvn) {
+            await $App.connection.insert({
+              entity: 'hr_exportMethod',
+              fieldList: ['ID'],
+              execParams: {
+                name: 'Проведення сум по податках, утриманнях  та по іншим рахунках',
+                shortName: 'Інши рахунки (Uvn)',
+                nameFile: 'Uvn',
+                typeFile: 'fileSAP',
+                isActive: 1,
+                orgID: orgID
+              }
+            })
+          }
+
+          const methodALvn = await UB.Repository('hr_exportMethod')
+            .attrs('ID')
+            .where('nameFile', '=', 'ALvn')
+            .where('typeFile', '=', 'fileSAP')
+            .where('orgID', '=', orgID)
+            .selectScalar()
+          if (!methodALvn) {
+            await $App.connection.insert({
+              entity: 'hr_exportMethod',
+              fieldList: ['ID'],
+              execParams: {
+                name: 'Профспілкові внески та виконавчі листи',
+                shortName: 'Перерахування утримань (ALvn)',
+                nameFile: 'ALvn',
+                typeFile: 'fileSAP',
+                isActive: 1,
+                orgID: orgID
+              }
+            })
+          }
+          me.attr.grid.onRefresh()
+        }
+      }) */
+    })
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,270 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+
+/* global AC $App UB */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'empOrderType', 'organizationID', 'isGroup'],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      listeners: {
+        tabchange: function (tp, t) {
+        }
+      },
+      items: [{
+        title: UB.i18n('Загальне'),
+        ubID: 'tabMain',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [{
+          layout: {
+            type: 'hbox',
+            align: 'stretch'
+          },
+          items: [{
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            flex: 1,
+            items: [{
+              attributeName: 'dateFrom',
+              labelWidth: 130,
+              fieldLabel: UB.i18n('Вступ в дію з')
+            },
+            {
+              attributeName: 'payElID',
+              fieldLabel: UB.i18n('Вид нарахування'),
+              labelWidth: 130,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              displayField: 'description',
+              gridFieldList: ['description'],
+              fieldList: ['ID', 'description', 'codeSort'],
+              whereList: {
+                isSalary: {
+                  expression: '[methodID.methodGroupID.code]', // Надбавки і доплати
+                  condition: 'equal',
+                  value: '2'
+                },
+                isDownTime: {
+                  expression: '[methodID.code]', // Простій
+                  condition: 'equal',
+                  value: '137'
+                }
+              },
+              logicalPredicates: ['([isSalary] OR [isDownTime])'],
+              orderList: { orderBy: { expression: 'codeSort' } }
+            },
+            {
+              attributeName: 'departmentID',
+              labelWidth: 130,
+              fieldList: ['ID', 'description', 'mi_data_id'],
+              gridFieldList: ['description']
+            }
+            ]
+          },
+          {
+            layout: 'fit',
+            flex: 1,
+            items: [
+              {
+                layout: { type: 'hbox', align: 'top' },
+                flex: 1,
+                items: [
+                  {
+                    attributeName: 'reason',
+                    flex: 1,
+                    rows: 6
+                  },
+                  {
+                    xtype: 'button',
+                    cls: 'list-icon',
+                    name: 'reasonButton',
+                    tooltip: UB.i18n('Вибрати'),
+                    width: 35,
+                    height: 35,
+                    margin: '0 2 0 -45',
+                    handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+                  }
+                ]
+              }
+            ]
+          }
+
+          ]
+        },
+        {
+          xtype: 'tabpanel',
+          region: 'center',
+          layout: 'fit',
+          flex: 1,
+          items: [{
+            title: UB.i18n('Працівники'),
+            name: 'hr_empOrderChgSalEmpDet',
+            xtype: 'ubdetailgrid',
+            paraGrid: true,
+            autoScroll: true,
+            rowEditing: true,
+            sortableColumns: false,
+            enableColumnHide: false,
+            hideActions: [ /* 'refresh', 'exportXls', 'exportCsv', 'exportHtml', */ 'showPreview', 'itemLink',
+              'commandLink', 'addNewByCurrent', 'audit', 'history', 'showDetail'
+            ],
+            flex: 1,
+            entityConfig: {
+              entity: 'hr_empOrderChgSalEmpDet',
+              method: 'select',
+              fieldList: [
+                {
+                  name: 'employeePositionID.description',
+                  description: UB.i18n('Призначення'),
+                  visibility: true,
+                  editor: {
+                    gridFieldList: ['description'],
+                    fieldList: ['employeeNumberID', 'description', 'ID'],
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                  }
+                },
+                {
+                  name: 'accrualID.descriptionExt',
+                  description: UB.i18n('Нарахування'),
+                  editor: {
+                    fieldList: ['ID', 'descriptionExt', 'dateFrom', 'dateTo'],
+                    hideEntityItemInContext: true,
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                  }
+                },
+                {
+                  name: 'dateFrom',
+                  visibility: false,
+                  editor: {
+                    readOnly: true
+                  }
+                },
+                {
+                  name: 'dateToEmpty',
+                  visibility: true,
+                  editor: {
+                    readOnly: false,
+                    allowBlank: false
+                  }
+                },
+                {
+                  name: 'removeAccrual',
+                  visibility: true,
+                  editor: {
+                  }
+                },
+                {
+                  name: 'payElID',
+                  visibility: false
+                },
+                {
+                  name: 'empOrderType',
+                  visibility: false
+                },
+                {
+                  name: 'employeePositionID.employeeNumberID',
+                  visibility: false
+                }
+              ]
+            },
+            masterFields: ['ID', 'orderID'],
+            detailFields: ['paraID', 'orderID'],
+            onBeforeEdit: function (rowEditor, context) {
+              return context.grid.up('form').onBeforeGridEdit(rowEditor, context)
+            },
+            onValidateEdit: function (rowEditor, context) {
+              const empCtrl = rowEditor.editor.form.findField('employeePositionID.description')
+              const accrualCtrl = rowEditor.editor.form.findField('accrualID.descriptionExt')
+              if (!empCtrl.getFieldValue('ID')) {
+                empCtrl.markInvalid(UB.i18n('Не вибрано працівника!'))
+                return false
+              }
+              if (!accrualCtrl.getFieldValue('ID')) {
+                accrualCtrl.markInvalid(UB.i18n('Не вибрано нарахування!'))
+                return false
+              }
+            },
+            cmpInitConfig: {
+              customInit: function () {
+                let grid = this
+                let oldOnDel = grid.onDel
+                let newOnDel = function () {
+                  let me = grid.up('form')
+                  if (me.record.get('orderState') === 'POSTED') {
+                    AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Неможливо видалити запис з проведеного наказу'))
+                    return
+                  }
+                  oldOnDel.call(grid)
+                }
+                AC.gridUtils.replaceListener(grid, 'del', oldOnDel, newOnDel)
+                let _doOnEdit = grid.doOnEdit
+                AC.gridUtils.tuneGridColumns(grid, {})
+                grid.doOnEdit = function () {
+                  grid.isEditMode = true
+                  _doOnEdit.call(grid)
+                }
+              },
+              customActions: [
+                {
+                  actionId: 'fillData',
+                  iconCls: 'fas fa-angle-double-down',
+                  cls: 'fill-action',
+                  text: UB.i18n('Завантажити згідно вибраним параметрам'),
+                  handler: async item => {
+                    const me = item.up('form')
+                    if (me.isReadOnly) {
+                      return
+                    }
+                    if (await me.saveForm() === -1) {
+                      return
+                    }
+                    let gridPos = me.down('[name=hr_empOrderChgSalEmpDet]')
+                    let store = gridPos.getStore()
+                    $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Раніше внесені записи будуть видалені! Продовжити?'))
+                      .then(result => {
+                        if (result) {
+                          me.setLoading(UB.i18n('Завантаження....'))
+                          $App.connection.run({
+                            entity: 'hr_empOrderChgSalEmpDet',
+                            method: 'fillCancelSalary',
+                            orderID: me.record.get('orderID'),
+                            payElID: me.record.get('payElID'),
+                            paraID: me.instanceID,
+                            departmentID: me.getField('departmentID').getFieldValue('mi_data_id'),
+                            organizationID: me.record.get('organizationID'),
+                            dateFrom: AC.dateService.truncTimeToUtcNull(me.record.get('dateFrom'))
+                          }).then(mParams => {
+                            store.load().then(() => {
+                              AC.viewUtils.showToast(UB.i18n(`Завантажено {0} записів`, mParams.count))
+                            })
+                          }).finally(() => {
+                            me.setLoading(false)
+                          })
+                        }
+                      })
+                  }
+                }
+              ]
+            }
+          }]
+        }
+        ]
+      }]
+    }]
+  }
+})()

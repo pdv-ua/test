@@ -1,0 +1,69 @@
+/* global Ext */
+
+exports.formDef = 'HR.selectAddPeriod'
+
+Ext.define('HR.selectAddPeriod', {
+  extend: 'Ext.form.Panel',
+  width: 400,
+  height: 100,
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        defaults: {
+          labelWidth: 140
+        },
+        items: [
+          {
+            xtype: 'ubdatefield',
+            name: 'dateFrom',
+            fieldLabel: UB.i18n('Дата початку')
+          }
+        ]
+      },
+      {
+        layout: { type: 'hbox', pack: 'center' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 110,
+            height: 30,
+            margin: '20 10 10 0',
+            handler: function (btn) {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Продовжити'),
+            width: 110,
+            height: 30,
+            margin: '20 10 10 0',
+            handler: function (btn) {
+              if (me.onSelect) {
+                me.onSelect(me.attr.dateFrom.getValue())
+              }
+              me.up('window').close()
+            }
+          }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        dateFrom: me.down('[name=dateFrom]')
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

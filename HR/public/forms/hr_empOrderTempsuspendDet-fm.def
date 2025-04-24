@@ -1,0 +1,117 @@
+/* global AC HR UB appAC */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'empOrderType', 'organizationID', 'isGroup', 'errorText'],
+  parentConfig: {
+    layout: { type: 'border' }
+  },
+  size: {
+    width: 1100,
+    height: 700
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          ubID: 'tabMain',
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 150 },
+          items: [
+            {
+              attributeName: 'employeePositionID',
+              margins: '5 0 0 0',
+              gridFieldList: ['description'],
+              fieldList: ['ID', 'description', 'employeeID.firstName', 'employeeID.lastName', 'employeeID.middleName',
+                'employeeID', 'employeeNumberID', 'departmentID', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo',
+                'dictStaffCatID', 'positionType'
+              ],
+              xtype: 'empPositionCombobox',
+              addWorkPlace: true,
+              allowBlank: false,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+            },
+            {
+              layout: { type: 'hbox' },
+              margin: '10 15 5 0',
+              items: [
+                {
+                  attributeName: 'dateFrom',
+                  fieldLabel: UB.i18n('На термін з'),
+                  labelWidth: 150,
+                  width: 270
+                },
+                {
+                  attributeName: 'dateTo',
+                  fieldLabel: UB.i18n('по'),
+                  labelWidth: 50,
+                  width: 170
+                }
+              ]
+            },
+            {
+              attributeName: 'payElID',
+              fieldList: ['ID', 'description', 'dictTimeCostID'],
+              displayField: 'description',
+              whereList: {
+                code: {
+                  expression: '[methodID.methodGroupID.code]',
+                  condition: 'equal',
+                  value: 1
+                }
+              }
+            },
+            {
+              attributeName: 'textOrder'
+            },
+            {
+              layout: {
+                type: 'hbox',
+                align: 'middle'
+              },
+              items: [
+                {
+                  attributeName: 'reason',
+                  labelWidth: 150,
+                  flex: 1,
+                  rows: 3
+                },
+                {
+                  xtype: 'button',
+                  cls: 'list-icon',
+                  name: 'reasonButton',
+                  tooltip: UB.i18n('Вибрати'),
+                  width: 35,
+                  height: 35,
+                  margin: '0 13 0 -45',
+                  handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+                }
+              ]
+            },
+            {
+              name: 'errorText',
+              xtype: 'label',
+              cls: 'x-form-item-label field-label-red',
+              margin: '10 10 5 15'
+            },
+            {
+              xtype: 'checkbox',
+              name: 'isTempVacancy',
+              attributeName: 'isTempVacancy',
+              fieldLabel: UB.i18n('Тимчасово вакантна посада'),
+              tooltip: UB.i18n('Тимчасово вакантна посада')
+            },
+            {
+              xtype: 'checkbox',
+              name: 'isTempsuspend',
+              attributeName: 'isTempsuspend',
+              fieldLabel: UB.i18n('Тимчасове припинення прав на відпустку'),
+              tooltip: UB.i18n('Тимчасове припинення прав на відпустку')
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

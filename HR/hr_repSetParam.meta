@@ -1,0 +1,163 @@
+{
+  "caption": "Параметри налаштування",
+  "description": "Параметри налаштування",
+  "descriptionAttribute": "name",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код",
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "statisticType",
+      "dataType": "Enum",
+      "enumGroup": "HR_STATTYPE",
+      "caption": "Вид статистики",
+      "description": "Вид статистики",
+      "documentation": "Вид статистики",
+      "allowNull": true
+    },
+    {
+      "name": "dictStReportID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStReport",
+      "caption": "Звіт",
+      "description": "Звіт",
+      "documentation": "Звіт"
+    },
+    {
+      "name": "reportNumStr",
+      "dataType": "String",
+      "size": 10,
+      "caption": "Рядок звіту",
+      "description": "Рядок звіту",
+      "documentation": "Рядок звіту"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 210,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "customSettings": {
+        "compositeFields": ["code", "name"],
+        "compositeSeparator": " "
+       }
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "codePadded",
+      "dataType": "String",
+      "caption": "Код",
+      "size": 10,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "SELECT RIGHT(REPLICATE('0', 10) + CAST({self}.code as varchar(10)),10)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "LPAD({self}.code, 10, '0')"
+        }
+      ]
+    },
+    {
+      "name": "reportNumStrPadded",
+      "dataType": "String",
+      "caption": "Рядок звіту",
+      "size": 10,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "SELECT RIGHT(REPLICATE('0', 10) + CAST({self}.reportNumStr as varchar(10)),10)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "LPAD({self}.reportNumStr, 10, '0')"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

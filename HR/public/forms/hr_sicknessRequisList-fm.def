@@ -1,0 +1,221 @@
+/* global Ext AC appAC appHR UB $App */
+
+exports.formDef = 'HR.sicknessRequisList'
+
+Ext.define('HR.sicknessRequisList', {
+  extend: 'Ext.panel.Panel',
+  height: 600,
+  width: 1100,
+  layout: 'border',
+  alias: 'widget.sicknessRequisList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        layout: 'fit',
+        flex: 1,
+        forceDataLoad: true,
+        disableAutoLoadStore: true,
+        hideActions: ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        cmdType: 'showList',
+        entity: 'hr_sicknessRequis',
+        cmdData: {
+          params: [{
+            entity: 'hr_sicknessRequis',
+            method: 'select',
+            fieldList: [
+              { name: 'orderNumber', description: UB.i18n('Номер документу'), config: { align: 'center' } },
+              { name: 'orderDate', description: UB.i18n('Дата документу'), config: { align: 'center' } },
+              { name: 'totalPaySum', description: UB.i18n('Сума по документу') },
+              { name: 'periodID.name', description: UB.i18n('За період') },
+              { name: 'orderState', description: UB.i18n('Стан'), config: { align: 'center' }, format: 'appHR.stateFormat' },
+              { name: 'dictFssReqID.name', description: UB.i18n('Тип') },
+              { name: 'mi_createDate', description: UB.i18n('Дата створення'), config: { align: 'center' } },
+              { name: 'payRollName', description: UB.i18n('Відомість на виплату'), config: { align: 'center' } },
+              { name: 'paymentPeriod', description: UB.i18n('Період виплати'), config: { align: 'center' } },
+              { name: 'orgID', visibility: false }
+            ],
+            orderList: { orderBy: { expression: 'orderDate', order: 'desc' } }
+          }]
+        },
+        cmpInitConfig: {
+          getRowClass: function (row) {
+            return row.get('orderState') === 'POSTED' ? 'ub-row-green' : 'ub-row-lightgrey'
+          },
+          customInit: function () {
+          },
+          afterInit: function () {
+            const grid = this
+
+            function setFilters (grid) {
+              const globalOrganization = appAC.globalOrganization()
+              let req = grid.store.ubRequest
+              req.whereList = {
+                organizationID: {
+                  expression: '[orgID]',
+                  condition: 'equal',
+                  values: { value: globalOrganization }
+                },
+                orgID: {
+                  expression: '[periodID.orgID]',
+                  condition: 'equal',
+                  values: { value: globalOrganization }
+                }
+              }
+
+              if (grid.up('sicknessRequisList').attr.periodID.getValue()) {
+                req.whereList.periodID = {
+                  expression: '[periodID]',
+                  condition: 'equal',
+                  value: grid.up('sicknessRequisList').attr.periodID.getValue()
+                }
+              } else {
+                delete req.whereList.periodID
+              }
+              grid.store.load()
+            }
+            const dictPeriodFilter = Ext.create('Ext.panel.Panel',
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Сформувати заявки'),
+                    iconCls: 'fas fa-angle-double-down',
+                    cls: 'fill-action',
+                    name: 'makeRequisBtn',
+                    disabled: !AC.entityUtils.verifyRightsMethod('hr_sicknessRequis', 'makeSicknessList'),
+                    handler: function (btn) {
+                      grid.setLoading(true)
+                      $App.connection.run({
+                        entity: 'hr_sicknessRequis',
+                        method: 'makeSicknessList',
+                        execParams: {
+                          periodID: grid.up('sicknessRequisList').attr.periodID.getValue(),
+                          onDate: appAC.globalApplicationDate(),
+                          orgID: appAC.globalOrganization()
+                        }
+                      }).then(response => {
+                        grid.setLoading(false)
+                        const errors = JSON.parse(response.errors)
+                        const accrualErrors = JSON.parse(response.accrualErrors)
+                        if (errors.length) {
+                          $App.dialogInfo(UB.i18n(`Увага! Види оплат {0} не додано ні до одного типу заявки! Для них не буде сформована заявка!`, errors.join(',')))
+                        }
+                        if (accrualErrors.length) {
+                          $App.dialogInfo(UB.i18n(`Нарахування за рахунок СС вже частково додані до інших заявок:`) + ' <br /> ' + accrualErrors.join('<br />'))
+                        }
+                        grid.onRefresh()
+                      }).finally(() => {
+                        grid.setLoading(false)
+                      })
+                    }
+                  },
+                  {
+                    xtype: 'label',
+                    text: UB.i18n('Період:'),
+                    cls: 'x-form-item-label',
+                    margin: '8 0 0 15',
+                    width: 80
+                  },
+                  {
+                    xtype: 'button',
+                    text: '<',
+                    margin: '2 0 0 0',
+                    tooltip: UB.i18n('Попередній період'),
+                    width: 30,
+                    handler: () => {
+                      const priorID = grid.up('sicknessRequisList').attr.periodID.getFieldValue('priorPeriodID')
+                      if (priorID) {
+                        grid.up('sicknessRequisList').attr.periodID.setValueById(priorID)
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'periodID',
+                    fieldLabel: '',
+                    labelWidth: 130,
+                    margin: '2 0 0 5',
+                    pageSize: 50,
+                    width: 300,
+                    hideEntityItemInContext: true,
+                    selectOnFocus: true,
+                    ubRequest: {
+                      entity: 'hr_dictPeriod',
+                      fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'isCurrent', 'isClosed',
+                        'priorPeriodID', 'nextPeriodID', 'priorPeriodID.isCurrent', 'nextPeriodID.isCurrent'],
+                      orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                    },
+                    listeners: {
+                      expand: appHR.periodExpand,
+                      change: function (ctrl, value) {
+                        setFilters(grid)
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    text: '>',
+                    margin: '2 15 0 0',
+                    tooltip: UB.i18n('Наступний період'),
+                    width: 30,
+                    handler: () => {
+                      const nextID = grid.up('sicknessRequisList').attr.periodID.getFieldValue('nextPeriodID')
+                      if (nextID) {
+                        grid.up('sicknessRequisList').attr.periodID.setValueById(nextID)
+                      }
+                    }
+                  }
+                ]
+              }
+            )
+            grid.down('toolbar').insert(2, dictPeriodFilter)
+          }
+        }
+      }
+    ]
+  },
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+
+    me.globalOrganizationChange = () => {
+      const globalOrganization = appAC.globalOrganization()
+      if (!me.attr.grid.store.ubRequest.whereList) {
+        me.attr.grid.store.ubRequest.whereList = {}
+      }
+      me.attr.periodID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization }, [])
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        me.attr.periodID.setValueById(response.ID)
+      })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[entityName=hr_sicknessRequis]'),
+        periodID: me.down('[name=periodID]')
+      }
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: appAC.globalOrganization() })
+      appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+        me.attr.periodID.setValueById(response.ID)
+      })
+    })
+    me.callParent(arguments)
+  }
+})

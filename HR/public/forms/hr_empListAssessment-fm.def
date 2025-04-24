@@ -1,0 +1,285 @@
+/* global Ext $App UB appAC AC */
+
+exports.formDef = 'HR.empListAssessment'
+
+Ext.define('HR.empListAssessment', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empListAssessment',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'vbox', align: 'stretch' },
+            collapsed: false,
+            items: [
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    attributeName: 'year',
+                    xtype: 'numberfield',
+                    vtype: 'numberValidator',
+                    maxValue: 2099,
+                    minValue: 2000,
+                    labelWidth: 60,
+                    width: 160,
+                    name: 'year',
+                    fieldLabel: UB.i18n('Рік'),
+                    allowBlank: false
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'psCategory',
+                    fieldLabel: UB.i18n('Категорія посади'),
+                    labelWidth: 150,
+                    width: 350,
+                    valueField: 'code',
+                    ubRequest: {
+                      entity: 'ubm_enum',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'name', 'code', 'eGroup'],
+                      whereList: {
+                        enumGroupFilter: {
+                          expression: '[eGroup]',
+                          condition: 'equal',
+                          values: {
+                            val: 'HR_POSITION_PSCATEGORY'
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    attributeName: 'dictCompetencyID',
+                    name: 'dictCompetencyID',
+                    xtype: 'ubcombobox',
+                    fieldLabel: UB.i18n('Напрямок підготовки'),
+                    labelWidth: 155,
+                    formParams: true,
+                    flex: 1,
+                    valueField: 'ID',
+                    displayField: 'description',
+                    ubRequest: {
+                      entity: 'hr_dictCompetency',
+                      fieldList: ['ID', 'description']
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Шукати'),
+                    iconCls: 'fas fa-search',
+                    width: 30,
+                    cls: 'green-action',
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.searchEmployee()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Очистити'),
+                    iconCls: 'fas fa-eraser',
+                    width: 30,
+                    cls: 'fill-action',
+                    margin: '5 0 0 0',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.clearSearch()
+                    }
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    name: 'withoutAssessment',
+                    xtype: 'checkboxfield',
+                    fieldLabel: UB.i18n('Не оцінювалися'),
+                    labelWidth: 150,
+                    formParams: true,
+                    listeners: {
+                      change: (el) => {
+                        let me = el.up('form')
+                        if (el.getValue()) {
+                          me.down('[name=withoutResult]').setValue(false).setDisabled(true)
+                          me.down('[name=withoutTasks]').setValue(false).setDisabled(true)
+                        } else {
+                          me.down('[name=withoutResult]').setDisabled(false)
+                          me.down('[name=withoutTasks]').setDisabled(false)
+                        }
+                      }
+                    }
+                  },
+                  {
+                    name: 'withoutResult',
+                    xtype: 'checkboxfield',
+                    fieldLabel: UB.i18n('Без висновку'),
+                    labelWidth: 150,
+                    formParams: true
+                  },
+                  {
+                    name: 'withoutTasks',
+                    xtype: 'checkboxfield',
+                    fieldLabel: UB.i18n('Без завдань'),
+                    labelWidth: 150,
+                    formParams: true
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'empListAssessmentGrid',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink',
+          'commandLink', 'showDetail', 'audit'],
+        cmdData: {
+          params: [{
+            entity: 'hr_empListAssessment',
+            method: 'search',
+            fieldList: [
+              { name: 'recordID', visibility: false },
+              { name: 'assessmentType', description: UB.i18n('Тип оцінювання') },
+              { name: 'assessmentTaskType', description: UB.i18n('Тип завдання') },
+              { name: 'year', description: UB.i18n('Рік') },
+              { name: 'employeeID', description: UB.i18n('Особа'), visibility: false },
+              { name: 'employeeNumberID', description: UB.i18n('Працівник'), visibility: false },
+              { name: 'employeeDesc', description: UB.i18n('Працівник') },
+              { name: 'positionID', description: UB.i18n('Посада') },
+              { name: 'psCategory', description: UB.i18n('Категорія посади') },
+              { name: 'departmentID', description: UB.i18n('Підрозділ') },
+              { name: 'assessmentValue', description: UB.i18n('Оцінка') },
+              { name: 'agreementState', description: UB.i18n('Стан') },
+              { name: 'appealDate', description: UB.i18n('Дата оскарження') },
+              { name: 'dictCompetencyID', description: UB.i18n('Напрямок підготовки'), visibility: false }
+            ]
+          }]
+        },
+        cmpInitConfig: {
+          onDeterminateForm: function (grid) {
+            throw new UB.UBAbortError()
+          },
+          onItemDblClick: function (grid, record) {
+            if (record.get('recordID')) {
+              $App.doCommand({
+                cmdType: 'showForm',
+                entityName: 'hr_empAssessment',
+                entity: 'hr_empAssessment',
+                isModal: true,
+                sender: grid,
+                instanceID: record.get('recordID')
+              })
+            }
+          },
+          listeners: {
+            render: grid => {
+              grid.menu.add([
+                {
+                  text: UB.i18n('Відкрити картку працівника'),
+                  ubID: 'itemShowEmployee',
+                  disabled: !AC.entityUtils.verifyRightsMethod('hr_employee', 'view'),
+                  handler: function () {
+                    let reco = AC.gridUtils.getCurrentRecord(grid)
+                    let message
+                    if (!reco) {
+                      message = UB.i18n('Не вибрано запис')
+                    }
+                    if (!reco.get('employeeNumberID')) {
+                      message = UB.i18n(`{0} не є працівником`, reco.get('employeeDesc'))
+                    }
+                    if (message) {
+                      AC.viewUtils.showToast(UB.i18n('Помилка'), message)
+                      return
+                    }
+                    $App.doCommand({
+                      cmdType: 'showForm',
+                      formCode: 'hr_employee',
+                      entity: 'hr_employee',
+                      instanceID: reco.get('employeeID'),
+                      sender: grid,
+                      cmpInitConfig: {
+                        employeeNumberID: reco.get('employeeNumberID')
+                      }
+                    })
+                  }
+                }
+              ])
+            }
+          }
+        }
+      }
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=empListAssessmentGrid]'),
+        year: me.down('[name=year]'),
+        psCategory: me.down('[name=psCategory]'),
+        dictCompetencyID: me.down('[name=dictCompetencyID]'),
+        withoutResult: me.down('[name=withoutResult]'),
+        withoutAssessment: me.down('[name=withoutAssessment]'),
+        withoutTasks: me.down('[name=withoutTasks]')
+      }
+      me.setDefaultValues()
+    }, me)
+
+    me.setDefaultValues = function () {
+      me.attr.year.setValue(new Date().getFullYear())
+      me.attr.psCategory.setValue()
+      me.attr.dictCompetencyID.setValue()
+    }
+
+    me.searchEmployee = function () {
+      const store = me.attr.grid.getStore()
+      let req = store.ubRequest
+      req.orgID = appAC.globalOrganization()
+      req.year = me.attr.year.getValue()
+      if (me.attr.psCategory.getValue()) { req.psCategory = me.attr.psCategory.getValue() } else { req.psCategory = null }
+      if (me.attr.dictCompetencyID.getValue()) { req.dictCompetencyID = me.attr.dictCompetencyID.getValue() } else { req.dictCompetencyID = null }
+      req.withoutAssessment = me.attr.withoutAssessment.getValue()
+      req.withoutResult = me.attr.withoutResult.getValue()
+      req.withoutTasks = me.attr.withoutTasks.getValue()
+      req.onDate = appAC.globalApplicationDate()
+      store.load()
+    }
+
+    me.clearSearch = function () {
+      me.setDefaultValues()
+    }
+
+    me.callParent(arguments)
+  }
+})

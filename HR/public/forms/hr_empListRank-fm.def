@@ -1,0 +1,466 @@
+/* global Ext AC appAC $App HR UB */
+exports.formDef = 'HR.empListRank'
+const accMainReportsSubOrg = AC.entityUtils.verifyRightsMethod('ac_service', 'subOrg')
+
+Ext.define('HR.empListRank', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empListRank',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'hbox' },
+            collapsed: false,
+            items: [
+              {
+                layout: { type: 'vbox' },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getOrgCombo({
+                        labelWidth: 110,
+                        width: 700,
+                        flex: 1,
+                        readOnly: !accMainReportsSubOrg,
+                        ubRequest: {
+                          entity: 'hr_organization',
+                          fieldList: ['mi_data_id', 'description', 'mi_treePath'],
+                          whereList: {
+                            state: {
+                              expression: '[state]',
+                              condition: '=',
+                              values: {
+                                state: 'ACTIVE'
+                              }
+                            },
+                            path: {
+                              expression: accMainReportsSubOrg ? '[mi_treePath]' : '[mi_data_id]',
+                              condition: accMainReportsSubOrg ? 'like' : '=',
+                              values: {
+                                state: accMainReportsSubOrg ? `/${appAC.globalOrganization()}/` : appAC.globalOrganization()
+                              }
+                            }
+                          },
+                          orderList: { orderBy: { expression: 'description' } },
+                          __mip_ondate: appAC.globalApplicationDate()
+                        },
+                        listeners: {
+                          change: function (ctrl) {
+                            const form = ctrl.up('form')
+                            HR.controlService.onChangeIncludeChildOrgs(form)
+                          }
+                        }
+                      }),
+                      HR.controlService.getIncludeChildOrgs(accMainReportsSubOrg)
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      HR.controlService.getDepCombo({
+                        labelWidth: 110,
+                        width: 700,
+                        displayField: 'description',
+                        flex: 1,
+                        listeners: {
+                          change: function (ctrl, value) {
+                            const form = ctrl.up('form')
+                            form.down('[name=includeChildDepts]').setReadOnly(!value)
+                            if (!value) {
+                              form.down('[name=includeChildDepts]').setValue()
+                            }
+                          }
+                        }
+                      }),
+                      HR.controlService.getIncludeChildDepts()
+                    ]
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'dictRangID',
+                    fieldLabel: UB.i18n('Ранг'),
+                    allowBlank: true,
+                    labelWidth: 110,
+                    width: 700,
+                    ubRequest: {
+                      entity: 'hr_dictRank',
+                      fieldList: ['ID', 'name']
+                    }
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        labelWidth: 110,
+                        name: 'dateFrom',
+                        fieldLabel: UB.i18n('Дата з')
+                      },
+                      {
+                        xtype: 'ubdatefield',
+                        labelWidth: 30,
+                        name: 'dateTo',
+                        fieldLabel: UB.i18n('по')
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'radiogroup',
+                        name: 'rankGroup',
+                        columns: 3,
+                        margin: '5 0 0 8',
+                        vertical: false,
+                        items: [{
+                          margin: '0 0 0 0',
+                          width: 160,
+                          boxLabel: UB.i18n('Мають діючий ранг'),
+                          name: 'rb',
+                          inputValue: 'AR',
+                          checked: true
+                        },
+                        {
+                          margin: '0 0 0 0',
+                          width: 200,
+                          boxLabel: UB.i18n('Присвоєно ранг за період'),
+                          name: 'rb',
+                          inputValue: 'PR',
+                          checked: false
+                        },
+                        {
+                          margin: '0 0 0 0',
+                          width: 250,
+                          boxLabel: UB.i18n('Присвоєння чергового рангу'),
+                          name: 'rb',
+                          inputValue: 'NR',
+                          checked: false
+                        }
+                        ],
+                        listeners: {
+                          change: function (item, newVal, oldVal) {
+                            if (newVal.rb === 'AR') {
+                              me.attr.dateFrom.setAllowBlank(true)
+                              me.attr.dateTo.setAllowBlank(true)
+                              // me.attr.dictRangID.setAllowBlank(false)
+                              me.attr.showDism.setValue(false)
+                              me.attr.showDism.setDisabled(true)
+                            }
+
+                            if (newVal.rb === 'PR' || newVal.rb === 'NR') {
+                              me.attr.dateFrom.setAllowBlank(false)
+                              me.attr.dateTo.setAllowBlank(false)
+                              // me.attr.dictRangID.setAllowBlank(true)
+                              me.attr.showDism.setDisabled(false)
+                            }
+                          }
+                        }
+
+                      }
+
+                    ]
+                  },
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'checkbox',
+                        labelWidth: 260,
+                        name: 'showDism',
+                        disabled: true,
+                        fieldLabel: UB.i18n('Відображати звільнених працівників')
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                padding: '45 0 0 0',
+                items: [
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Шукати'),
+                    iconCls: 'fas fa-search',
+                    width: 30,
+                    cls: 'green-action',
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.searchEmployee()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Очистити'),
+                    iconCls: 'fas fa-eraser',
+                    width: 30,
+                    cls: 'fill-action',
+                    margin: '5 0 0 0',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.clearSearch()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    iconCls: 'fas fa-print',
+                    width: 30,
+                    cls: 'blue-action',
+                    margin: '5 0 0 0',
+                    tooltip: UB.i18n('Друкувати'),
+                    handler: function () {
+                      me.doReport()
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'employeeNumberListGrid',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink',
+          'commandLink', 'showDetail', 'audit'],
+        cmdData: {
+          params: [{
+            entity: 'hr_empListRank',
+            method: 'search',
+            fieldList: [
+              { name: 'employeeID', visibility: false },
+              { name: 'employeeNumberID', visibility: false },
+              { name: 'tabNum', description: UB.i18n('Таб. №') },
+              { name: 'fullFIO', description: UB.i18n('ПIБ') },
+              { name: 'taxCode', description: UB.i18n('РНОКПП'), config: { align: 'center', width: 100 } },
+              { name: 'posCategory', description: UB.i18n('Категорія посади') },
+              { name: 'rankCur', description: UB.i18n('Ранг') },
+              { name: 'rankDateFrom', description: UB.i18n('Дата присвоєння рангу'), format: 'd.m.Y', config: { align: 'center', width: 100 } },
+              { name: 'rankDateNext', description: UB.i18n('Дата присвоєння чергового рангу'), format: 'd.m.Y', config: { align: 'center', width: 100 } },
+              { name: 'dismDate', description: UB.i18n('Дата звільнення'), format: 'd.m.Y', config: { align: 'center', width: 100 } },
+              { name: 'sexType', description: UB.i18n('Стать'), config: { align: 'center', width: 100 } },
+              { name: 'addDescrPerson', description: UB.i18n('Додаткова інформація') },
+              { name: 'rankComment', description: UB.i18n('Коментар') },
+              { name: 'posName', description: UB.i18n('Посада') },
+              { name: 'depName', description: UB.i18n('Підрозділ') },
+              { name: 'orgName', description: UB.i18n('Організація') }
+            ]
+          }]
+        },
+
+        cmpInitConfig: {
+          onDeterminateForm: HR.employeeTabs.onDeterminateCard,
+          getRowClass: function (row) {
+            return row.get('dismDate') ? 'grd-color-blue' : null
+          },
+          listeners:
+          {
+            render: (grid) => {
+              grid.menu.removeAll()
+              grid.menu.add([HR.employeeTabs.getEmpCardMenu(grid)])
+              const showAddDescrPerson = !!AC.settings.get('hrShowAddDescrPerson', appAC.globalOrganization())
+              const colPersonDescr = AC.gridUtils.getColumnByIndex(grid, 'addDescrPerson')
+              colPersonDescr.setVisible(showAddDescrPerson)
+            }
+          }
+        },
+
+        getExportTitle: function () {
+          let grid = this
+          let me = grid.up('form')
+
+          let title = UB.i18n(`Список осіб: `)
+
+          let dateFrom = me.attr.dateFrom.getValue()
+          let dateTo = me.attr.dateTo.getValue()
+          let rankGroup = me.attr.rankGroup.getChecked()[0].inputValue
+          let onDate = appAC.globalApplicationDate()
+          // let dictRangID = me.attr.dictRangID.getValue()
+
+          switch (rankGroup) {
+            case 'AR':
+              title += UB.i18n(`мають дiючий ранг станом на {0}`, AC.dateService.formatDate(onDate))
+              break
+
+            case 'PR':
+              title += UB.i18n('присвоєно ранг ')
+              title += UB.i18n(`за перiод з {0} по {1}`, AC.dateService.formatDate(dateFrom), AC.dateService.formatDate(dateTo))
+              break
+
+            case 'NR':
+              title += UB.i18n('присвоєння чергового рангу ')
+              title += UB.i18n(`за перiод з {0} по {1}`, AC.dateService.formatDate(dateFrom), AC.dateService.formatDate(dateTo))
+              break
+          }
+          return title
+        }
+      }
+    ]
+
+    me.clearSearch = () => {
+      me.attr.dateFrom.setValue(AC.dateService.firstDayOfMonth(new Date()))
+      me.attr.dateTo.setValue(new Date())
+      me.attr.dictRangID.setValue()
+      me.attr.rankGroup.setValue({ rb: 'AR' })
+      me.attr.organizationID.setValue(appAC.globalOrganization())
+      me.attr.includeChildOrgs.setValue()
+      me.attr.departmentID.setValue()
+      me.attr.includeChildDepts.setValue()
+      me.attr.showDism.setValue()
+    }
+
+    me.searchEmployee = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+      const store = me.attr.grid.getStore()
+      let req = store.ubRequest
+      req.orgID = appAC.globalOrganization()
+      req.onDate = appAC.globalApplicationDate()
+      req.dateFrom = AC.dateService.shiftDate(me.attr.dateFrom.getValue())
+      req.dateTo = AC.dateService.shiftDate(me.attr.dateTo.getValue())
+      req.dictRangID = me.attr.dictRangID.getValue()
+      req.rankGroup = me.attr.rankGroup.getChecked()[0].inputValue
+      req.organizationID = me.attr.organizationID.getValue()
+      req.includeChildOrgs = me.attr.includeChildOrgs.getValue()
+      req.departmentID = me.attr.departmentID.getValue()
+      req.includeChildDepts = me.attr.includeChildDepts.getValue()
+      req.showDism = me.attr.showDism.getValue()
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=employeeNumberListGrid]'),
+        dateFrom: me.down('[name=dateFrom]'),
+        dateTo: me.down('[name=dateTo]'),
+        dictRangID: me.down('[name=dictRangID]'),
+        rankGroup: me.down('[name=rankGroup]'),
+        organizationID: me.down('[name=organizationID]'),
+        includeChildOrgs: me.down('[name=includeChildOrgs]'),
+        departmentID: me.down('[name=departmentID]'),
+        includeChildDepts: me.down('[name=includeChildDepts]'),
+        showDism: me.down('[name=showDism]')
+      }
+      me.attr.dateTo.setValue(new Date())
+      me.attr.dateFrom.setValue(AC.dateService.firstDayOfMonth(new Date()))
+      me.attr.dictRangID.setValue()
+    }, me)
+
+    me.validateParams = () => {
+      let res
+      let params = []
+
+      if (!me.attr.organizationID.getValue()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Організація"')))
+      }
+
+      if (me.attr.rankGroup.getChecked()[0].inputValue === 'AR') {
+        /*
+        if (!me.attr.dictRangID.getValue()) {
+          res = {
+            msg: UB.i18n(`Не обрано параметр :<br/>Ранг`)
+          }
+        }
+         */
+      } else {
+        let dateFromCtrl = me.attr.dateFrom
+        let dateFrom = dateFromCtrl.getValue()
+        if (!dateFrom || !dateFromCtrl.isValid()) {
+          params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Дата з"')))
+        }
+        let dateToCtrl = me.attr.dateTo
+        let dateTo = dateToCtrl.getValue()
+        if (!dateTo || !dateToCtrl.isValid()) {
+          params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"по"')))
+        }
+
+        if (params.length) {
+          res = {
+            msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+          }
+        } else {
+          if (dateFrom > dateTo) {
+            res = {
+              msg: UB.i18n(`{0} не може перевищувати дату {1}`, AC.viewUtils.formatFieldLabel('"Дата з"'), AC.viewUtils.formatFieldLabel('"по"'))
+            }
+          }
+        }
+      }
+
+      return res
+    }
+
+    me.report_code = 'hr_empListRank_1'
+    me.doReport = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+      let reportParams = {
+        organizationID: me.attr.organizationID.getValue(),
+        includeChildOrgs: me.attr.includeChildOrgs.getValue(),
+        departmentID: me.attr.departmentID.getValue(),
+        includeChildDepts: me.attr.includeChildDepts.getValue(),
+        onDate: appAC.globalApplicationDate(),
+        dateFrom: AC.dateService.shiftDate(me.attr.dateFrom.getValue()),
+        dateTo: AC.dateService.shiftDate(me.attr.dateTo.getValue()),
+        dictRangID: me.attr.dictRangID.getValue(),
+        showDism: me.attr.showDism.getValue(),
+        rankGroup: me.attr.rankGroup.getChecked()[0].inputValue
+      }
+
+      $App.doCommand({
+        cmdType: 'showReport',
+        caption: UB.i18n('Друкована форма'),
+        tabId: 'printDocument' + me.report_code + Date.now(),
+        target: $App.getViewport().centralPanel,
+        cmdData: {
+          reportCode: me.report_code,
+          reportParams: reportParams,
+          reportOptions: {
+            allowExportToExcel: true,
+            isModal: false
+          }
+        }
+      })
+    }
+
+    me.callParent(arguments)
+  }
+})

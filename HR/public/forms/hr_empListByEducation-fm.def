@@ -1,0 +1,249 @@
+/* global Ext AC appAC $App HR UB */
+exports.formDef = 'HR.empListByEducation'
+
+Ext.define('HR.empListByEducation', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empListByEducation',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'vbox', align: 'stretch' },
+            collapsed: false,
+            items: [
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'ubdatefield',
+                    labelWidth: 110,
+                    name: 'onDate',
+                    fieldLabel: UB.i18n('На дату'),
+                    allowBlank: false
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'dictEducationLevelID',
+                    fieldLabel: UB.i18n('Рівень освіти'),
+                    labelWidth: 100,
+                    width: 300,
+                    allowBlank: true,
+                    ubRequest: {
+                      entity: 'hr_dictEducationLevel',
+                      fieldList: ['ID', 'name']
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Шукати'),
+                    iconCls: 'fas fa-search',
+                    width: 30,
+                    cls: 'green-action',
+                    margin: '5 5 0 15',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.searchEmployee()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Очистити'),
+                    iconCls: 'fas fa-eraser',
+                    width: 30,
+                    cls: 'fill-action',
+                    margin: '5 0 0 0',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.clearSearch()
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    iconCls: 'fas fa-print',
+                    width: 30,
+                    cls: 'blue-action',
+                    margin: '5 0 0 0',
+                    tooltip: UB.i18n('Друкувати'),
+                    handler: function () {
+                      me.doReport()
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'employeeNumberListGrid',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink',
+          'commandLink', 'showDetail', 'audit'],
+        cmdData: {
+          params: [{
+            entity: 'hr_empListByEducation',
+            method: 'search',
+            fieldList: [
+              { name: 'tabNum' },
+              { name: 'employeeID', visibility: false },
+              { name: 'lastName', description: UB.i18n('Прізвище') },
+              { name: 'firstName', description: UB.i18n('Ім\'я') },
+              { name: 'middleName', description: UB.i18n('По батькові') },
+              { name: 'taxCode', description: UB.i18n('РНОКПП'), config: { align: 'center', width: 100 } },
+              { name: 'posCategory', description: UB.i18n('Категорія посади') },
+              { name: 'rankCur', description: UB.i18n('Ранг') },
+              { name: 'dictEducationLevelName', description: UB.i18n('Рівень освіти') },
+              { name: 'dictSpecialtyName', description: UB.i18n('Спеціальність') },
+              { name: 'qualification', description: UB.i18n('Кваліфікація') },
+              { name: 'dictDegreeName', description: UB.i18n('Науковий ступінь') },
+              { name: 'docSeries', description: UB.i18n('Серія') },
+              { name: 'docNumber', description: UB.i18n('Номер диплому') },
+              { name: 'dateIssue', description: UB.i18n('Дата отримання диплому'), format: 'd.m.Y', config: { align: 'center', width: 100 } },
+              { name: 'educationName', description: UB.i18n('Заклад освіти') },
+              { name: 'sexType', config: { align: 'center', width: 100 } },
+              { name: 'posName' },
+              { name: 'depName' }
+            ]
+          }]
+        },
+        cmpInitConfig: {
+          onDeterminateForm: HR.employeeTabs.onDeterminateCard,
+          listeners: {
+            render: (grid) => {
+              grid.menu.removeAll()
+              grid.menu.add([HR.employeeTabs.getEmpCardMenu(grid)])
+            }
+          }
+        },
+        getExportTitle: function () {
+          let grid = this
+          let me = grid.up('form')
+          let onDateFilter = ''
+          let onDate = me.attr.onDate.getValue()
+          if (onDate) {
+            onDateFilter = UB.i18n(` станом на {0} р.`, AC.dateService.formatDate(onDate))
+          }
+          let orgFilter = appAC.globalOrganizationName()
+          if (orgFilter) {
+            orgFilter = UB.i18n(` по організації "{0}"`, orgFilter)
+          }
+          // return UB.i18n(`Список працівників із дисциплінарними порушеннями{0}{1}`, onDateFilter, orgFilter)
+          return UB.i18n(`Список працівників із дисциплінарними порушеннями`)
+        }
+      }
+    ]
+
+    me.setDefaultParams = (isInit) => {
+      const me = this
+      me.attr.onDate.setValue(appAC.globalApplicationDate())
+    }
+
+    me.clearSearch = () => {
+      me.setDefaultParams(false)
+      me.attr.dictEducationLevelID.setValue()
+    }
+
+    me.searchEmployee = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+      const store = me.attr.grid.getStore()
+      let req = store.ubRequest
+      req.orgID = appAC.globalOrganization()
+      req.onDate = AC.dateService.shiftDate(me.attr.onDate.getValue())
+      req.dictEducationLevelID = me.attr.dictEducationLevelID.getValue()
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=employeeNumberListGrid]'),
+        onDate: me.down('[name=onDate]'),
+        dictEducationLevelID: me.down('[name=dictEducationLevelID]')
+      }
+      me.setDefaultParams(true)
+    }, me)
+
+    me.validateParams = () => {
+      let res
+      let params = []
+      let onDateCtrl = me.attr.onDate
+      let onDate = onDateCtrl.getValue()
+      if (!onDate || !onDateCtrl.isValid()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"На дату"')))
+      }
+      if (!appAC.globalOrganization()) {
+        params.push(AC.viewUtils.formatFieldLabel(UB.i18n('"Організація"')))
+      }
+      if (params.length) {
+        res = {
+          msg: UB.i18n(`Не вибрано наступні параметри:<br/>{0}`, params.join(',<br/>'))
+        }
+      }
+      return res
+    }
+
+    me.report_code = 'hr_empListByEducation'
+    me.doReport = () => {
+      let notValidParams = me.validateParams()
+      if (notValidParams) {
+        AC.viewUtils.showToast(UB.i18n('Інформація'), notValidParams.msg)
+        return
+      }
+
+      const execParams = {
+        onDate: AC.dateService.shiftDate(me.attr.onDate.getValue()),
+        orgID: appAC.globalOrganization(),
+        dictEducationLevelID: me.attr.dictEducationLevelID.getValue()
+      }
+
+      $App.doCommand({
+        cmdType: 'showReport',
+        caption: UB.i18n('Друкована форма'),
+        tabId: 'printDocument' + me.report_code + Date.now(),
+        target: $App.getViewport().centralPanel,
+        cmdData: {
+          reportCode: me.report_code,
+          reportParams: execParams,
+          reportOptions: {
+            allowExportToExcel: true,
+            isModal: false
+          }
+        }
+      })
+    }
+
+    me.callParent(arguments)
+  }
+})

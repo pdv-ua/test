@@ -1,0 +1,85 @@
+/* global AC UB */
+exports.formDef = {
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: {
+        type: 'hbox'
+      },
+      defaults: {
+        labelWidth: 100,
+        flex: 1
+      },
+      items: [
+        {
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              attributeName: 'orderEntity',
+              xtype: 'ubcombobox',
+              name: 'orderEntity',
+              fieldLabel: UB.i18n('Наказ'),
+              displayField: 'description',
+              valueField: 'entityName',
+              hideEntityItemInContext: true,
+              ubRequest: {
+                entity: 'hr_orderClass',
+                method: UB.core.UBCommand.methodName.SELECT,
+                fieldList: ['entityName', 'description']
+              }
+            },
+            {
+
+              attributeName: 'size',
+              allowExponential: false,
+              maskRe: AC.validators.maskRe('number'),
+              minValue: 1,
+              maxValue: 14
+            },
+            {
+              attributeName: 'prefix',
+              maxLength: 3,
+              maskRe: AC.validators.maskRe('docNumber')
+            },
+            {
+              attributeName: 'period'
+            },
+
+            {
+              attributeName: 'organization'
+            }
+          ]
+        },
+        {
+          xtype: 'textfield',
+          fieldLabel: UB.i18n('Вигляд'),
+          name: 'example',
+          value: '',
+          allowBlank: true,
+          readOnly: true
+        }
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      name: 'numcounter',
+      flex: 1,
+      ubRequest: {
+        entity: 'ubs_numcounter',
+        method: UB.core.UBCommand.methodName.SELECT,
+        fieldList: ['regKey', 'counter']
+      },
+      entityConfig: {
+        entity: 'ubs_numcounter',
+        method: 'select',
+        fieldList: ['regKey', 'counter']
+      }
+    }
+  ]
+}

@@ -1,0 +1,319 @@
+/* global appAC appHR UB Ext $App AC */
+
+exports.formDef = 'HR.orderRegistrySelect'
+
+Ext.define('HR.orderRegistrySelect', {
+  extend: 'Ext.form.Panel',
+  width: 800,
+  height: 300,
+  layout: { type: 'border' },
+  /**
+   * @cfg {UBS.UBReport} report
+   */
+  initComponent: function () {
+    const me = this
+    const formWhereList = {
+      eGroup: {
+        expression: '[eGroup]',
+        condition: 'equal',
+        values: { 'eGroup': 'HR_ACCRDOC_TYPE' }
+      }
+    }
+    if (me.commandConfig.cmpInitConfig.customParams && me.commandConfig.cmpInitConfig.customParams.orderType) {
+      formWhereList.orderType = {
+        expression: '[code]',
+        condition: 'in',
+        value: me.commandConfig.cmpInitConfig.customParams.orderType
+      }
+    }
+    me.items = [
+      {
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        defaults: {
+          labelWidth: 180,
+          width: 420
+        },
+        items: [
+          {
+            xtype: 'textfield',
+            name: 'orderNumber',
+            fieldLabel: UB.i18n('Номер')
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'periodID',
+            fieldLabel: UB.i18n('Розрахунковий період'),
+            allowBlank: false,
+            pageSize: 50,
+            ubRequest: {
+              entity: 'hr_dictPeriod',
+              fieldList: ['ID', 'description', 'name', 'dateFrom', 'dateTo', 'orgID'],
+              orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+            },
+            listeners: {
+              expand: appHR.periodExpand
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'orderType',
+            fieldLabel: UB.i18n('Тип документа'),
+            allowBlank: false,
+            hideEntityItemInContext: true,
+            enumGroupFilter: 'HR_ACCRDOC_TYPE',
+            valueField: 'code',
+            displayField: 'name',
+            ubRequest: {
+              entity: 'ubm_enum',
+              method: UB.core.UBCommand.methodName.SELECT,
+              fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+              whereList: formWhereList,
+              orderList: { orderBy: { expression: 'name' } }
+            }
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'ubcombobox',
+                name: 'dictMultiGroupID',
+                flex: 1,
+                hidden: true,
+                labelWidth: 180,
+                fieldLabel: UB.i18n('Група підрозділів'),
+                valueField: 'ID',
+                displayField: 'name',
+                ubRequest: {
+                  entity: 'hr_dictMultiGroup',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['ID', 'name'],
+                  __mip_ondate: appAC.globalApplicationDate(),
+                  whereList: {
+                    orgID: {
+                      expression: '[orgID]',
+                      condition: '=',
+                      value: appAC.globalOrganization()
+                    },
+                    isClose: {
+                      expression: '[isClose]',
+                      condition: '=',
+                      value: false
+                    }
+                  }
+                },
+                listeners: {
+                  change: (ctrl, value) => {
+                    me.attr.includeSubDepGroup.setValue(false)
+                    me.attr.includeSubDepGroup.setReadOnly(!value)
+                    if (value) {
+                      me.attr.departmentID.setValueById()
+                    }
+                    me.setDescription()
+                  }
+                }
+              },
+              {
+                xtype: 'checkbox',
+                width: 120,
+                name: 'includeSubDepGroup',
+                boxLabel: UB.i18n('з підлеглими'),
+                boxLabelAlign: 'after',
+                labelWidth: 80,
+                readOnly: true,
+                hidden: true,
+                listeners: {
+                  change: () => {
+                    me.setDescription()
+                  }
+                }
+              }
+            ]
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                xtype: 'ubcombobox',
+                name: 'departmentID',
+                fieldLabel: UB.i18n('Підрозділ'),
+                flex: 1,
+                hidden: true,
+                labelWidth: 180,
+                hideEntityItemInContext: true,
+                valueField: 'mi_data_id',
+                displayField: 'caption',
+                ubRequest: {
+                  entity: 'hr_department',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['mi_data_id', 'caption', 'parentUnitID', 'orgID', 'name'],
+                  whereList: { state: { expression: '[state]', condition: '=', value: 'ACTIVE' } }
+                },
+                listeners: {
+                  change: (ctrl, value) => {
+                    me.attr.includeSubDep.setValue(false)
+                    me.attr.includeSubDep.setReadOnly(!value)
+                    if (value) {
+                      me.attr.dictMultiGroupID.setValueById()
+                    }
+                    me.setDescription()
+                  }
+                }
+              },
+              {
+                xtype: 'checkbox',
+                width: 120,
+                name: 'includeSubDep',
+                boxLabel: UB.i18n('з підлеглими'),
+                boxLabelAlign: 'after',
+                labelWidth: 80,
+                readOnly: true,
+                hidden: true,
+                listeners: {
+                  change: () => {
+                    me.setDescription()
+                  }
+                }
+              }
+            ]
+          },
+          {
+            xtype: 'textfield',
+            name: 'description',
+            fieldLabel: UB.i18n('Назва')
+          }
+        ]
+      },
+      {
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Продовжити'),
+            width: 110,
+            height: 30,
+            margin: '10 20 10 0',
+            handler: function (btn) {
+              if (!me.attr.periodID.getFieldValue('dateFrom')) {
+                return
+              }
+              if (!me.attr.orderNumber.getValue()) {
+                $App.connection.run({
+                  entity: 'hr_orderRegistry',
+                  method: 'getOrderNum',
+                  organizationID: appAC.globalOrganization(),
+                  onDate: me.attr.periodID.getFieldValue('dateFrom')
+                }).then((result) => {
+                  me.attr.orderNumber.setValue(result.orderNumber)
+                  me.createDocument()
+                })
+              } else {
+                me.createDocument()
+              }
+            }
+          }
+        ]
+      }
+    ]
+    me.setDescription = () => {
+      const attrNames = ['dictMultiGroupID', 'includeSubDepGroup', 'departmentID', 'includeSubDep']
+      attrNames.forEach(attrName => {
+        if (['hr_orderRegistryPremium', 'hr_orderRegistryNetSum'].includes(me.attr.orderType.getValue())) {
+          me.attr[attrName].show()
+        } else {
+          me.attr[attrName].hide()
+          me.attr[attrName][me.attr[attrName].setValueById ? 'setValueById' : 'setValue'](me.attr[attrName].setValueById ? null : false)
+        }
+      })
+      me.attr.description.setValue(`${me.attr.orderType.getFieldValue('name') || ''}${me.attr.dictMultiGroupID.getValue()
+        ? `, ${UB.i18n('Група підрозділів')}: ${me.attr.dictMultiGroupID.getFieldValue('name') + (me.attr.includeSubDepGroup.getValue() ? `, ${UB.i18n('з підлеглими')}` : '')}` : ''}${me.attr.departmentID.getValue()
+        ? `, ${UB.i18n('Підрозділ')}: ${me.attr.departmentID.getFieldValue('name') + (me.attr.includeSubDep.getValue() ? `, ${UB.i18n('з підлеглими')}` : '')}` : ''}`)
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        orderNumber: me.down('[name=orderNumber]'),
+        periodID: me.down('[name=periodID]'),
+        orderType: me.down('[name=orderType]'),
+        description: me.down('[name=description]'),
+        dictMultiGroupID: me.down('[name=dictMultiGroupID]'),
+        includeSubDepGroup: me.down('[name=includeSubDepGroup]'),
+        departmentID: me.down('[name=departmentID]'),
+        includeSubDep: me.down('[name=includeSubDep]')
+      }
+
+      me.attr.orderType.on('change', (ctrl, value) => {
+        me.setDescription()
+        if (value) {
+          me.attr.description.focus(false, 1)
+        }
+        switch (value) {
+          case 'hr_orderRegistryReserve':
+            me.attr.periodID.setReadOnly(true)
+            me.attr.periodID.setValueById(me.currentPeriod.ID)
+            break
+          default:
+            me.attr.periodID.setReadOnly(false)
+            break
+        }
+      })
+
+      const desiredOrderTypes = me.commandConfig.cmpInitConfig.customParams ? me.commandConfig.cmpInitConfig.customParams.orderType : []
+      if (desiredOrderTypes.length === 1) {
+        me.attr.orderType.setValueById(desiredOrderTypes[0])
+      } else {
+        me.attr.orderType.focus(true, 1)
+      }
+
+      const globalOrganization = appAC.globalOrganization()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization }, ['setDisabled'])
+      me.attr.departmentID.store.ubRequest.__mip_ondate = appAC.globalApplicationDate()
+      AC.viewUtils.setFilterValue(me.attr.departmentID, { orgID: globalOrganization })
+      AC.viewUtils.setFilterValue(me.attr.dictMultiGroupID, { orgID: globalOrganization })
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        me.currentPeriod = response
+        me.attr.periodID.setValueById(me.currentPeriod.ID)
+      })
+    }, me)
+
+    me.createDocument = () => {
+      if (me.isValid() && me.attr.periodID.getValue() && me.attr.orderType.getValue()) {
+        $App.doCommand({
+          cmdType: 'showForm',
+          formCode: me.attr.orderType.getValue(),
+          entity: 'hr_orderRegistry',
+          isModal: false,
+          tabId: 'hr_orderRegistry' + Date.now(),
+          target: $App.getViewport().centralPanel,
+          sender: me.sender,
+          onClose: () => { me.sender.onRefresh() },
+          cmpInitConfig:
+            {
+              defaultValues: {
+                name: `${me.attr.description.getValue()}`,
+                orderNumber: me.attr.orderNumber.getValue(),
+                periodID: me.attr.periodID.getValue(),
+                periodSalaryID: me.attr.periodID.getValue(),
+                orderType: me.attr.orderType.getValue(),
+                organizationID: appAC.globalOrganization(),
+                dictMultiGroupID: me.attr.dictMultiGroupID.getValue(),
+                includeSubDepGroup: me.attr.includeSubDepGroup.getValue(),
+                departmentID: me.attr.departmentID.getValue(),
+                includeSubDep: me.attr.includeSubDep.getValue(),
+                filterParams: JSON.stringify({
+                  organizationID: appAC.globalOrganization()
+                })
+              },
+              periods: {
+                periodName: me.attr.periodID.getFieldValue('name')
+              }
+            }
+        })
+        me.up('window') ? me.up('window').close() : me.close()
+      }
+    }
+    me.callParent(arguments)
+  }
+})

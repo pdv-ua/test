@@ -1,0 +1,84 @@
+/* global Ext AC appAC $App UB */
+
+exports.formDef = 'HR.positionInstructionList'
+
+Ext.define('HR.positionInstructionList', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.positionInstructionList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        layout: 'fit',
+        flex: 1,
+        cmdType: 'showList',
+        description: UB.i18n('Підрозділ'),
+        entity: 'hr_position',
+        cmdData: {
+          params: [{
+            entity: 'hr_positionInstruction',
+            method: 'select',
+            fieldList: [
+              { name: 'positionID.name', description: UB.i18n('Посада') },
+              { name: 'departmentID.name', description: UB.i18n('Підрозділ') },
+              { name: 'state' },
+              { name: 'approvalDate' },
+              { name: 'employeePositionID' },
+              { name: 'dateFromEmpty' },
+              { name: 'dateToEmpty' },
+              { name: 'comment' },
+              { name: 'orderState' }
+            ],
+            orderList: { dateFrom: { expression: 'dateFrom', order: 'DESC' } }
+          }]
+        },
+        cmpInitConfig: {
+          getRowClass: function (row) {
+            return AC.gridUtils.getOrderRowClass(row.get('orderState'))
+          },
+          afterInit: function () {
+            AC.gridUtils.setGlobalOrganization(this, 'positionID.orgID')
+          }
+        }
+      }
+    ]
+  },
+
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+    me.changeGlobal = function () {
+      const store = me.down('ubdetailgrid').getStore()
+      const globalDate = appAC.globalApplicationDate()
+      store.ubRequest.whereList.parentDateFrom.value = globalDate
+      store.ubRequest.whereList.parentDateTo.value = globalDate
+      store.ubRequest.whereList.dateFrom.value = globalDate
+      store.ubRequest.whereList.dateTo.value = globalDate
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      $App.on('ac:app:operationDateChanged', me.changeGlobal)
+    }, me)
+    me.on('destroy', () => {
+      $App.un('ac:app:operationDateChanged', me.changeGlobal)
+    }, me)
+    me.callParent(arguments)
+  }
+})

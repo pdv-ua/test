@@ -1,0 +1,303 @@
+/* global HR AC UB */
+
+exports.formDef = {
+  requiredFields: ['orderID.orderNumber', 'orderID.orderDate', 'dateFrom', 'dateTo', 'organizationID',
+    'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9', 'positionID.accrualSum', 'employeeID.fullFIO',
+    'd0Value', 'd1Value', 'd2Value', 'd3Value', 'd4Value', 'd5Value', 'd6Value', 'd7Value', 'd8Value', 'd9Value',
+    'accountID.code', 'accountID', 'orderID.orderClass.entityName', 'employeeNumberID'
+  ],
+  parentConfig: {
+    postOnlySimpleAttributes: false,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    defaults: {
+      labelWidth: 150
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      flex: 1,
+      autoScroll: true,
+      items: [
+        {
+          layout: {
+            type: 'hbox'
+          },
+          items: [
+            {
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              defaults: {
+                labelWidth: 145
+              },
+              flex: 1,
+              items: [
+                {
+                  attributeName: 'organizationID',
+                  hidden: true
+                },
+                {
+                  attributeName: 'employeeID',
+                  fieldLabel: UB.i18n('Прізвище І. Б.'),
+                  fieldList: ['ID', 'fullFIO', 'taxCode', 'sexType', 'birthDate', 'citizenshipID', 'empTaxCodeType'],
+                  valueField: 'ID',
+                  displayField: 'fullFIO',
+                  allowBlank: true,
+                  allowCustomText: true,
+                  triggerCls: 'hr-list-trigger'
+                },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  defaults: {
+                    labelWidth: 145
+                  },
+                  items: [
+                    {
+                      attributeName: 'employeeNumberID.tabNum',
+                      width: 265
+                    },
+                    {
+                      xtype: 'button',
+                      scale: 'small',
+                      name: 'generateTabNumButton',
+                      iconCls: 'fas fa-angle-double-left',
+                      margin: '4 15 0 0',
+                      width: 30,
+                      visibility: false,
+                      tooltip: UB.i18n('Згенерувати'),
+                      cls: 'add-new-action',
+                      handler: function (btn) {
+                        const me = btn.up('form')
+                        me.generateTabNum(me)
+                      }
+                    },
+                    {
+                      attributeName: 'employeeID.empTaxCodeType',
+                      labelWidth: 145,
+                      width: 350
+                    },
+                    {
+                      attributeName: 'employeeID.taxCode',
+                      flex: 1,
+                      validator: function (v) {
+                        let error = UB.i18n('Неприпустимий формат. (Має бути 10-значний ІПН або паспорт XX999999 (серія 2 знаки та номер 6 знаків) або номер ID картки 999999999 (9 цифр).)')
+                        let result = false
+                        const ctrl = this
+                        if (ctrl) {
+                          let me = ctrl.up('form')
+                          let empTaxCodeType = me.record.get('employeeID.empTaxCodeType') || me.attr['employeeID.empTaxCodeType'].getValue()
+                          switch (empTaxCodeType) {
+                            case 'TAXCODE':
+                              error = UB.i18n('Неприпустимий формат. Має бути 10-значний ІПН (10 цифр)')
+                              result = v.length === 10 && /^[0-9]{10}$/.test(v)
+                              break
+                            case 'PASSPORT':
+                              error = UB.i18n('Неприпустимий формат. Має бути серія, номер паспорту XX999999 (серія 2 літери та номер 6 цифр)')
+                              result = v.length === 8 && /[а-яА-ЯҐЄЇІіґєїЁёa-zA-Z]{2}/.test(v) && /^[0-9]{6}/.test(v.substr(2, 6))
+                              break
+                            case 'IDCARD':
+                              error = UB.i18n('Неприпустимий формат. Має бути номер ID картки 999999999 (9 цифр)')
+                              result = v.length === 9 && /^[0-9]{9}$/.test(v)
+                              break
+                            default:
+                              error = UB.i18n('Не вибрано тип ідентифікації')
+                          }
+                          if (!result) {
+                            return error
+                          } else {
+                            ctrl.clearInvalid()
+                            return true
+                          }
+                        }
+                        return error
+                      },
+                      allowBlank: false,
+                      hideLabel: true
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          layout: {
+            type: 'hbox'
+          },
+          defaults: {
+            labelWidth: 145
+          },
+          items: [
+            {
+              attributeName: 'dateFrom',
+              readOnly: true
+            },
+            {
+              attributeName: 'dateTo',
+              readOnly: true
+            }
+          ]
+        },
+        {
+          layout: {
+            type: 'hbox'
+          },
+          style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px'
+        },
+        {
+          layout: {
+            type: 'hbox'
+          },
+          items: [
+            {
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              defaults: {
+                labelWidth: 145
+              },
+              flex: 1,
+              items: [{
+                attributeName: 'dictStaffCatID'
+              },
+              {
+                attributeName: 'dictCategoryECBID'
+              },
+              {
+                attributeName: 'workPlace'
+              },
+              {
+                attributeName: 'workerType'
+              },
+              HR.controlService.getAttrDepPosBlock({
+                labelWidth: 145,
+                showPosCategory: false,
+                posFieldLabel: UB.i18n('Штатна посада'),
+                valueField: 'mi_data_id'
+              }),
+              {
+                attributeName: 'dictPositionID'
+              },
+              {
+                attributeName: 'dictTarifCoeffID',
+                recordValue: 'positionID.dictTarifCoeffID',
+                width: '100%'
+              }
+              ]
+            }
+          ]
+        },
+        {
+          layout: {
+            type: 'hbox'
+          },
+          style: 'border-bottom: 1px solid #BFBFBF !important; margin-top: 10px; margin-bottom: 10px'
+        },
+        {
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              layout: {
+                type: 'hbox'
+              },
+              defaults: {
+                labelWidth: 145
+              },
+              items: [
+                {
+                  attributeName: 'workScheduleID',
+                  fieldLabel: UB.i18n('Графік роботи'),
+                  flex: 1
+                },
+                {
+                  xtype: 'numberfield',
+                  name: 'mtCount',
+                  decimalPrecision: 2,
+                  attributeName: 'mtCount',
+                  hideTrigger: true,
+                  width: 300
+                }
+              ]
+            },
+            {
+              layout: {
+                type: 'hbox'
+              },
+              defaults: {
+                labelWidth: 145
+              },
+              items: [
+                {
+                  attributeName: 'payElID',
+                  whereList: {
+                    isSalary: {
+                      expression: '[methodID.methodGroupID.code]',
+                      condition: 'equal',
+                      value: 1
+                    },
+                    tariff: {
+                      expression: '[methodID.code]',
+                      condition: 'notIn',
+                      value: ['143', '144', '145', '146', '147', '156']
+                    }
+                  },
+                  flex: 1
+                },
+                {
+                  xtype: 'numberfield',
+                  name: 'accrualSum',
+                  attributeName: 'accrualSum',
+                  vtype: 'floatValidator',
+                  maskRe: AC.validators.maskRe('currency'),
+                  valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                  minValue: 0,
+                  hideTrigger: true,
+                  width: 300
+                }
+              ]
+            }
+          ]
+        },
+        {
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          defaults: {
+            labelWidth: 145
+          },
+          items: [
+            {
+              fieldLabel: UB.i18n('Наказ на створення'),
+              attributeName: 'orderID',
+              readOnly: true
+            },
+            {
+              fieldLabel: UB.i18n('Наказ на закриття'),
+              attributeName: 'changeOrderID',
+              readOnly: true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

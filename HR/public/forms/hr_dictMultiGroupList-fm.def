@@ -1,0 +1,122 @@
+/* global Ext AC appAC appHR $App UB */
+
+exports.formDef = 'HR.exportMethod'
+
+Ext.define('HR.exportMethod', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.exportMethod',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        name: 'exportMethodGrid',
+        layout: 'fit',
+        flex: 1,
+        hideActions: ['del'],
+        cmdType: 'showList',
+        entity: 'hr_dictMultiGroup',
+        entityConfig: {
+          entity: 'hr_dictMultiGroup',
+          method: 'select',
+          fieldList: [
+            { name: 'code' },
+            { name: 'name' },
+            { name: 'shortName' },
+            { name: 'isClose', visibility: false },
+            { name: 'mi_deleteDate', description: UB.i18n('Дата видалення') }
+          ]
+        },
+        cmpInitConfig: {
+          customInit: function () {
+            const me = this
+            AC.gridUtils.tuneGridColumns(this, {
+              mi_deleteDate: {
+                renderer: function (value) {
+                  if (AC.dateService.isMaxDate(value)) {
+                    return UB.i18n('')
+                  } else {
+                    return AC.dateService.formatDate(value)
+                  }
+                }
+              }
+            })
+          },
+          afterInit: function () {
+            let grid = this
+            AC.gridUtils.setGlobalOrganization(grid, 'orgID')
+            const request = grid.getStore().ubRequest
+            request.whereList.isClose = {
+              expression: '[isClose]',
+              condition: 'IN',
+              value: ['0']
+            }
+            AC.gridUtils.getColumnByIndex(grid, 'mi_deleteDate').setVisible(false)
+          },
+          getRowClass: function (record) {
+            let isClose = record.get('isClose')
+            let mi_deleteDate = record.get('mi_deleteDate')
+            if (isClose || !AC.dateService.isMaxDate(mi_deleteDate)) {
+              return 'grd-color-grey'
+            }
+          },
+          customActions: [
+            {
+              text: UB.i18n('Показати всі'),
+              xtype: 'button',
+              name: 'viewAllBtn',
+              iconCls: 'fas fa-eye',
+              scale: 'medium',
+              cls: 'red-action',
+              handler: function (btn) {
+                const grid = btn.up('[entityName=hr_dictMultiGroup]')
+                grid.viewDeleted = !grid.viewDeleted
+                AC.gridUtils.getColumnByIndex(grid, 'mi_deleteDate').setVisible(grid.viewDeleted)
+                const request = grid.getStore().ubRequest
+                btn.addCls(grid.viewDeleted ? 'add-new-action' : 'red-action')
+                btn.removeCls(!grid.viewDeleted ? 'add-new-action' : 'red-action')
+                btn.setTooltip(!grid.viewDeleted ? UB.i18n('Показати всі') : UB.i18n('Приховати неактивні'))
+                request.__allowSelectSafeDeleted = grid.viewDeleted
+                request.whereList.isClose.value = request.whereList.isClose.value.length === 2 ? ['0'] : ['0', '1']
+                grid.getStore().load()
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[entityName=hr_exportMethod]')
+      }
+      const tb = me.down('toolbar')
+      const allActions = tb && tb.query('[menuId=AllActions]')[0]
+      if (!allActions) {
+
+      }
+    })
+
+    me.callParent(arguments)
+  }
+})

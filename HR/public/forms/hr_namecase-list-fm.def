@@ -1,0 +1,248 @@
+/* global Ext $App HR localStorage */
+exports.formDef = 'HR.nameCaseList'
+
+Ext.define(exports.formDef, {
+  ident: 'nameCaseList',
+  extend: 'Ext.panel.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  isModal: true,
+  listeners: {
+    render: function () {
+      let me = this
+      let win = me.window
+      let surname = me.down('[name=surname]')
+      let name = me.down('[name=name]')
+      let lastname = me.down('[name=lastname]')
+
+      if (win) {
+        if (!win.height) {
+          win.height = 300
+        }
+        if (!win.width) {
+          win.width = 600
+        }
+        win.center()
+      }
+      let checkNames = me.checkNames || {}
+      surname.setValue(checkNames.surname || localStorage.getItem('namecase.surname'))
+      name.setValue(checkNames.name || localStorage.getItem('namecase.name'))
+      lastname.setValue(checkNames.lastname || localStorage.getItem('namecase.lastname'))
+    }
+  },
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [{
+      orderId: 4,
+      text: UB.i18n('Дії'),
+      menu: [{
+        text: UB.i18n('Завантажити за замовчуванням'),
+        handler: item => {
+          let form = item.up('[ident=nameCaseList]')
+          let grid = form.down('[name=gridnamecase]')
+          let store = grid.getStore()
+          let promise = Promise.resolve(true)
+          store.load().then(store => {
+            if (store.getCount()) {
+              promise = $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n('Таблиця містить дані, вони будуть видалені. Продовжити?'))
+            }
+            promise.then(isAgree => {
+              if (isAgree) {
+                form.setLoading(true)
+                $App.connection.run({
+                  entity: 'hr_namecase',
+                  method: 'loadDefaultRules'
+                }).then(mParams => {
+                  store.load().then(store => {
+                    form.setLoading(false)
+                  })
+                })
+              }
+            })
+          })
+        }
+      }]
+    }]
+  }],
+  items: [{
+    xtype: 'tabpanel',
+    flex: 1,
+    items: [{
+      title: UB.i18n('Дані'),
+      layout: 'fit',
+      items: [{
+        xtype: 'entitygridpanel',
+        name: 'gridnamecase',
+        flex: 1,
+        rowEditing: true,
+        entityConfig: {
+          entity: 'hr_namecase',
+          method: 'select',
+          fieldList: [{
+            name: 'sexType',
+            config: {
+              width: 10,
+              minWidthChar: 10,
+              maxWidthChar: 10
+            }
+          },
+          {
+            name: 'namePart',
+            config: {
+              width: 10,
+              minWidthChar: 10,
+              maxWidthChar: 10
+            }
+          },
+          {
+            name: 'suff',
+            config: {
+              maxWidthChar: 40,
+              minWidthChar: 40
+            }
+          },
+          {
+            name: 'gen',
+            config: {
+              maxWidthChar: 10,
+              minWidthChar: 10
+            }
+          },
+          {
+            name: 'dat'
+          },
+          {
+            name: 'acc'
+          },
+          {
+            name: 'ins'
+          },
+          {
+            name: 'loc'
+          },
+          {
+            name: 'voc'
+          }
+          ]
+        }
+      }]
+    },
+    {
+      title: UB.i18n('Перевірка'),
+      items: [{
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        items: [{
+          xtype: 'textfield',
+          fieldLabel: UB.i18n('Прізвище'),
+          name: 'surname',
+          flex: 2
+        }, {
+          xtype: 'textfield',
+          fieldLabel: UB.i18n('Ім\'я'),
+          name: 'name',
+          flex: 2
+        }, {
+          xtype: 'textfield',
+          fieldLabel: UB.i18n('По батькові'),
+          name: 'lastname',
+          flex: 2
+        }, {
+          xtype: 'button',
+          text: UB.i18n('Виконати'),
+          flex: 0.5,
+          handler: btn => {
+            let me = btn.up('[ident=nameCaseList]')
+            let surname = me.down('[name=surname]')
+            let name = me.down('[name=name]')
+            let lastname = me.down('[name=lastname]')
+            let cases = ['acc', 'dat', 'gen', 'ins', 'loc', 'voc']
+            delete HR.nameCase.rules
+            localStorage.setItem('namecase.surname', surname.getValue())
+            localStorage.setItem('namecase.name', name.getValue())
+            localStorage.setItem('namecase.lastname', lastname.getValue())
+            HR.nameCase.getNameCase(surname.getValue(), name.getValue(), lastname.getValue()).then(nc => {
+              cases.forEach(item => {
+                let value = nc.getSurName(item) + ' ' + nc.getName(item) + ' ' + nc.getLastName(item)
+                me.down(`[name=${item}]`).setValue(value)
+              })
+            })
+          }
+        }]
+
+      },
+      {
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        items: [{
+          flex: 1,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [{
+            flex: 1,
+            xtype: 'textfield',
+            name: 'gen',
+            fieldLabel: UB.i18n('Родовий')
+          },
+          {
+            xtype: 'textfield',
+            name: 'dat',
+            fieldLabel: UB.i18n('Давальний')
+          },
+          {
+            xtype: 'textfield',
+            name: 'acc',
+            fieldLabel: UB.i18n('Знахідний')
+          }
+
+          ]
+        },
+        {
+          flex: 1,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [{
+            flex: 1,
+            xtype: 'textfield',
+            name: 'ins',
+            fieldLabel: UB.i18n('Орудний')
+          },
+          {
+            xtype: 'textfield',
+            name: 'loc',
+            fieldLabel: UB.i18n('Місцевий')
+          },
+          {
+            xtype: 'textfield',
+            name: 'voc',
+            fieldLabel: UB.i18n('Кличний')
+          }
+          ]
+
+        }
+        ]
+      }
+      ]
+
+    }
+
+    ]
+  }],
+  initComponent: function () {
+    let me = this
+    me.callParent(arguments)
+    me.on('render', () => {})
+  }
+
+})

@@ -1,0 +1,180 @@
+/* global Ext $App UB appAC AC */
+exports.formDef = 'HR.importStudentCSV'
+
+Ext.define('HR.importStudentCSV', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.importStudentCSV',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    me.dockedItems = []
+
+    me.items = [
+      {
+        region: 'center',
+        autoScroll: true,
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            name: 'importStudLog',
+            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion'],
+            flex: 1,
+            disableSearchBar: true,
+            sortableColumns: false,
+            disableAutoLoadStore: true,
+            stateful: true,
+            stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_importStudentCSV_importStudLog'),
+            autoScroll: true,
+            layout: 'fit',
+            entityConfig: {
+              entity: 'hr_importStudentLog',
+              method: 'select',
+              fieldList: [
+                { name: 'importDate', config: { width: 150, align: 'center' } },
+                {
+                  name: 'resultMessage',
+                  config: { flex: 1 }
+                }
+              ],
+              orderList: {
+                orderBy: { expression: 'importDate', order: 'desc' }
+              },
+              whereList: {
+                type: { expression: '[type]', condition: 'equal', value: 'csv' }
+              }
+            },
+            cmpInitConfig: {
+              onItemDblClick: function (grid, record) {
+                $App.showModal({
+                  formCode: 'hr_importStudentLog',
+                  isClosable: true,
+                  isResizable: true,
+                  description: UB.i18n('Результат завантаження'),
+                  customParams: {
+                    instanceID: record.get('ID')
+                  }
+                })
+              },
+              afterInit: function () {
+                const grid = this
+                AC.gridUtils.setGlobalOrganization(this, 'orgID')
+                grid.store.load()
+                grid.down('toolbar').insert(2,
+                  Ext.create('Ext.Button', {
+                    tooltip: UB.i18n('Завантажити'),
+                    text: UB.i18n('Завантажити'),
+                    iconCls: 'u-icon-download',
+                    cls: 'fill-action',
+                    handler: function () {
+                      me.doImport()
+                    }
+                  })
+                )
+              }
+            }
+          }
+        ]
+      }
+    ]
+
+    me.doImport = async function (mode) {
+      const me = this
+      Ext.create('AC.controls.acUploadFileAjax', {
+        scope: this,
+        height: 400,
+        customArea: {
+          xtype: 'panel',
+          region: 'center',
+          height: 250,
+          items: [
+            {
+              xtype: 'combobox',
+              width: 250,
+              editable: false,
+              name: 'encoding',
+              fieldLabel: UB.i18n('Кодування'),
+              allowBlank: false,
+              store: Ext.create('Ext.data.Store', {
+                fields: ['text', 'value'],
+                data: [
+                  {
+                    text: 'utf8',
+                    value: 'utf8'
+                  },
+                  {
+                    text: 'win1251',
+                    value: 'win1251'
+                  }
+                ]
+              })
+            },
+            {
+              name: 'dateFromStipend',
+              xtype: 'ubdatefield',
+              fieldLabel: UB.i18n('Дата початку нарахування стипендії'),
+              allowBlank: false
+            }
+          ]
+        },
+        listeners: {
+          afterrender: function (cmp) {
+            this.fieldFile.fileInputEl.set({
+              accept: '.csv'
+            })
+            const encodingCtrl = this.down('[name=encoding]')
+            encodingCtrl.setValue('utf8')
+            this.down('[name=dateFromStipend]').setValue(AC.dateService.firstDayOfMonth(AC.dateService.addMonths(appAC.globalApplicationDate(), 1)))
+          }
+        },
+        upLoad: function (btn) {
+          const dialogWindow = btn.up('window')
+          const inputDom = this.fieldFile.fileInputEl.dom
+          if (inputDom.files.length === 0) {
+            return
+          }
+          const dateFromStipendCtrl = this.down('[name=dateFromStipend]')
+          if (!dateFromStipendCtrl.getValue()) {
+            dateFromStipendCtrl.markInvalid(UB.i18n(dateFromStipendCtrl.blankText))
+            AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказана дата початку нарахування стипендії'))
+            return
+          }
+          me.setLoading(UB.i18n('Виконується завантаження даних'))
+          const file = inputDom.files[0]
+          btn.disable()
+          const encodingCtrl = this.down('[name=encoding]')
+
+          UB.connection.post('loadImportStudentData', file, {
+            params: {
+              orgID: appAC.globalOrganization(),
+              encoding: (encodingCtrl ? encodingCtrl.getValue() : null) || 'utf8',
+              dateFromStipend: dateFromStipendCtrl.getValue().getTime(),
+              fileName: file.name
+            },
+            headers: { 'Content-Type': 'application/octet-stream' }
+          }).then((response) => {
+            if (response.data && typeof response.data === 'object' && response.data.error) {
+              $App.dialogError(response.data.error)
+            }
+            me.down('[name=importStudLog]').onRefresh()
+            me.setLoading(false)
+          }, (err) => {
+            me.setLoading(false)
+            if (err.config && err.config.timeout) {
+              $App.dialogInfo(UB.i18n('Операція виконується на сервері застосувань,\n та потребує додаткового часу для завершення.\n Зачекайте будь ласка, операцію буде виконано'))
+            } else {
+              throw err
+            }
+          }).finally(() => {
+            me.setLoading(false)
+          })
+          dialogWindow.close()
+        }
+      })
+    }
+
+    me.callParent(arguments)
+  }
+
+})

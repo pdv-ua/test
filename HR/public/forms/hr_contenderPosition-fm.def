@@ -1,0 +1,268 @@
+/* global UB appAC AC */
+exports.formDef = {
+  parentConfig: {
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'print'
+        },
+        {
+          orderId: 5,
+          actionId: 'createOrder'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          xtype: 'panel',
+          title: UB.i18n('Загальна інформація про кандидата'),
+          autoScroll: true,
+          flex: 1,
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 170 },
+              flex: 1,
+              items: [
+                {
+                  attributeName: 'positionID',
+                  displayField: 'name',
+                  valueField: ['ID'],
+                  fieldList: ['ID', 'name', 'caption', 'departmentID'],
+                  whereList: {
+                    orgID: {
+                      expression: '[orgID]',
+                      condition: '=',
+                      value: appAC.globalOrganization()
+                    },
+                    vacancyRate: {
+                      expression: '[vacancyRate]',
+                      condition: 'isNotNull'
+                    },
+                    mi_dateFrom: {
+                      expression: '[mi_dateFrom]',
+                      condition: '<=',
+                      value: appAC.globalApplicationDate()
+                    },
+                    mi_dateTo: {
+                      expression: '[mi_dateTo]',
+                      condition: '>=',
+                      value: appAC.globalApplicationDate()
+                    }
+                  }
+                },
+                {
+                  attributeName: 'isVacant',
+                  listeners: {
+                    change: (ctrl, value) => {
+                      ctrl.up('form').filterPosition(value)
+                    }
+                  }
+                },
+                { attributeName: 'positionName' },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [{
+                    layout: {
+                      type: 'hbox',
+                      align: 'top'
+                    },
+                    flex: 1,
+                    items: [{
+                      attributeName: 'fullName',
+                      flex: 1,
+                      labelWidth: 170,
+                      fieldLabel: 'ПІБ особи кандидата',
+                      margin: '5 13 0 15'
+                    },
+                    {
+                      xtype: 'button',
+                      cls: 'list-icon',
+                      name: 'fullNameButton',
+                      tooltip: UB.i18n('Вибрати'),
+                      width: 35,
+                      height: 35,
+                      margin: '2 13 0 -45',
+                      handler: btn => btn.up('form').selectPreamble()
+                    }]
+                  }
+                  ]
+                },
+                {
+                  attributeName: 'recruterID',
+                  whereList: {
+                    organizationID: {
+                      expression: '[orgID]',
+                      condition: '=',
+                      value: appAC.globalOrganization()
+                    },
+                    dateFrom: {
+                      expression: '[dateFrom]',
+                      condition: '<=',
+                      value: appAC.globalApplicationDate()
+                    },
+                    dateTo: {
+                      expression: '[dateTo]',
+                      condition: '>=',
+                      value: appAC.globalApplicationDate()
+                    }
+                  }
+                },
+                {
+                  attributeName: 'supervisorID',
+                  whereList: {
+                    organizationID: {
+                      expression: '[orgID]',
+                      condition: '=',
+                      value: appAC.globalOrganization()
+                    },
+                    dateFrom: {
+                      expression: '[dateFrom]',
+                      condition: '<=',
+                      value: appAC.globalApplicationDate()
+                    },
+                    dateTo: {
+                      expression: '[dateTo]',
+                      condition: '>=',
+                      value: appAC.globalApplicationDate()
+                    }
+                  }
+                },
+                { attributeName: 'typeID' },
+                { attributeName: 'sourceID' },
+                { attributeName: 'workerType' },
+                { attributeName: 'organizationID', hidden: true },
+                { attributeName: 'employeeID', hidden: true },
+                { attributeName: 'departmentID', hidden: true }
+              ]
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  defaults: { labelWidth: 170 },
+                  flex: 1,
+                  items: [
+                    { attributeName: 'dateFrom', fieldLabel: 'Створено' },
+                    { attributeName: 'dateApprove' }
+                  ]
+                },
+                {
+                  layout: { type: 'vbox', align: 'stretch' },
+                  defaults: { labelWidth: 170 },
+                  flex: 1,
+                  items: [
+                    { attributeName: 'dateTo', fieldLabel: 'Закрито' },
+                    { attributeName: 'status' }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 170 },
+              flex: 1,
+              items: [
+                {
+                  attributeName: 'note',
+                  xtype: 'textarea',
+                  height: 60
+                }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 170 },
+              flex: 1,
+              items: [
+                {
+                  attributeName: 'empOrderAppointID',
+                  allowCustomText: true,
+                  fieldList: ['ID', 'orderID.description']
+                },
+                {
+                  attributeName: 'empOrderDismID',
+                  allowCustomText: true,
+                  fieldList: ['ID', 'orderID.description']
+                }
+              ]
+            }
+          ]
+        },
+        {
+          xtype: 'panel',
+          title: UB.i18n('Резюме'),
+          ubID: 'emailText',
+          layout: {
+            type: 'border'
+          },
+          items: [
+            {
+              region: 'center',
+              flex: 4,
+              xtype: 'container',
+              layout: 'fit',
+              items: [
+                {
+                  xtype: 'ubreporteditor',
+                  enableTemplateEditor: false,
+                  attributeName: 'resume',
+                  labelWidth: 0,
+                  fieldLabel: '',
+                  isMainEditor: true,
+                  height: '100%',
+                  flex: 1,
+                  style: {
+                    background: 'white'
+                  },
+                  tinyMCEConfig: {
+                    object_resizing: false,
+                    entity_encoding: 'named',
+                    entities: '160,nbsp',
+                    toolbar1: 'undo redo | bold italic underline | alignleft aligncenter alignright alignjustify | formatselect fontsizeselect | pageOrientation | Colontitle | borderL borderR borderT borderB borderE borderA | forecolor | bullist numlist outdent indent | pagebreak nonbreaking'
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          xtype: 'panel',
+          title: UB.i18n('Додатки'),
+          flex: 1,
+          items: [{
+            xtype: 'docAttachment',
+            entity: 'hr_contenderPositionAttachment',
+            detailFields: 'documentID',
+            masterFields: 'ID',
+            showOriginal: true,
+            minHeight: 55,
+            maxHeight: 140,
+            height: 95
+          }]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+exports.formDef = {
+  requiredFields: ['errorText', 'impSourceID', 'dayFact', 'dayComp', 'empVacationPlanID.employeeNumberID.dateFrom',
+    'isBackOrder'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 600,
+    height: 500
+  },
+  items: [
+    {
+      region: 'center',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 200, width: 320 },
+      items: [
+        { attributeName: 'empVacationPlanID', hidden: true },
+        { attributeName: 'dateFrom' },
+        { attributeName: 'dateTo' },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'dayCountPlan', labelWidth: 200, width: 320 }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'dayCountFactCorr', labelWidth: 200, width: 320, readOnly: true }
+          ]
+        },
+        { attributeName: 'isMainPart' },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'dayFix', labelWidth: 200, width: 320, hidden: true }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'isPartYear', labelWidth: 200 },
+            {
+              xtype: 'label',
+              flex: 1,
+              cls: 'x-form-item-label grd-italic',
+              text: UB.i18n('Встановлювати для випадків, коли відпустку потрібно розраховувати за термін менше року, наприклад для тимчасової трудової угоди')
+            }
+          ]
+        },
+        {
+          attributeName: 'fromOrgID',
+          fieldList: ['description', 'mi_data_id'],
+          gridFieldList: ['description'],
+          valueField: 'mi_data_id',
+          displayField: 'description',
+          whereList: {
+            state: {
+              expression: '[state]',
+              condition: 'equal',
+              value: 'ACTIVE'
+            }
+          }
+        },
+        {
+          attributeName: 'comment',
+          xtype: 'ubtextareafield'
+        },
+        {
+          name: 'infoText',
+          xtype: 'label',
+          cls: 'x-form-item-label field-label-blue',
+          margin: '10 10 5 15'
+        },
+        {
+          name: 'errorText',
+          xtype: 'label',
+          cls: 'x-form-item-label field-label-red',
+          margin: '10 10 5 15'
+        }
+      ]
+    }
+  ]
+}

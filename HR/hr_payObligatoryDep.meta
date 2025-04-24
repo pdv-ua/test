@@ -1,0 +1,140 @@
+{
+  "caption": "Отримувачі по підрозділам",
+  "description": "Отримувачі по підрозділам",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "payObligatoryID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payObligatory",
+      "caption": "Обов'язкові платежі",
+      "description": "Обов'язкові платежі",
+      "documentation": "Обов'язкові платежі",
+      "allowNull": false
+    },
+    {
+      "name": "departmentID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_department",
+      "associationAttr": "mi_data_id",
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "allowNull": false
+    },
+    {
+      "name": "contractorID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_contractor",
+      "caption": "Отримувач",
+      "description": "Отримувач",
+      "documentation": "Отримувач",
+      "allowNull": false
+    },
+    {
+      "name": "contrAccountID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_contrAccount",
+      "caption": "Р/р отримувача",
+      "description": "Р/р отримувача",
+      "documentation": "Р/р отримувача",
+      "allowNull": false
+    },
+    {
+      "name": "positionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_position",
+      "associationAttr": "mi_data_id",
+      "caption": "Штатна посада",
+      "description": "Штатна посада"
+    },
+    {
+      "name": "dictPositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPosition",
+      "caption": "Посада",
+      "description": "Посада"
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionSR",
+      "caption": "Працівник",
+      "description": "Працівник"
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник",
+      "description": "Працівник"
+    },
+    {
+      "name": "depName",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Підрозділ",
+      "description": "Підрозділ",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 dep.name from hr_department dep where dep.mi_data_id = {self}.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select dep.name from hr_department dep where dep.mi_data_id = {self}.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc LIMIT 1)"
+        }
+      ]
+    },
+    {
+      "name": "posName",
+      "dataType": "String",
+      "size": 2000,
+      "caption": "Посада",
+      "description": "Посада",
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(case when {self}.positionID IS NOT NULL then (select top 1 pos.name from hr_position pos where pos.mi_data_id = {self}.positionID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc) else (select dp.name from hr_dictPosition dp where dp.ID = {self}.dictPositionID) end) "
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(case when {self}.positionID IS NOT NULL then (select pos.name from hr_position pos where pos.mi_data_id = {self}.positionID and pos.state = 'ACTIVE' AND pos.mi_deleteDate >= '9999-12-31' order by pos.mi_dateTo desc LIMIT 1) else (select dp.name from hr_dictPosition dp where dp.ID = {self}.dictPositionID) end) "
+        }
+      ]
+    },
+    {
+      "name": "parentTreeDepName",
+      "dataType": "String",
+      "size": 300,
+      "caption": "Підпорядкування (назва)",
+      "description": "Підпорядкування (для пошуку посад)",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select top 1 d.caption from hr_department d WHERE (select top 1 dep.mi_treePath from hr_department dep where dep.mi_data_id = {self}.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc) like '%/' + CAST(d.mi_data_id as varchar) + '/%' and d.state = 'ACTIVE' and d.mi_data_id <> {self}.departmentID and  GETDATE() between d.mi_dateFrom and d.mi_dateTo and d.mi_deleteDate >= '9999-12-31')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select d.caption from hr_department d WHERE (select dep.mi_treePath from hr_department dep where dep.mi_data_id = {self}.departmentID and dep.state = 'ACTIVE' and dep.mi_deleteDate >= '9999-12-31' order by dep.mi_dateTo desc LIMIT 1) like '%/' || CAST(d.mi_data_id as varchar) || '/%' and d.state = 'ACTIVE' and d.mi_data_id <> {self}.departmentID and CURRENT_DATE between d.mi_dateFrom and d.mi_dateTo and d.mi_deleteDate >= '9999-12-31' LIMIT 1)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

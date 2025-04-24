@@ -1,0 +1,89 @@
+/* global Ext */
+
+exports.formDef = 'HR.orderRegistryVacationPElSel'
+
+Ext.define('HR.orderRegistryVacationPElSel', {
+  extend: 'Ext.form.Panel',
+  width: 800,
+  height: 100,
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  /**
+   * @cfg {UBS.UBReport} report
+   */
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        region: 'center',
+        layout: { type: 'vbox', align: 'stretch' },
+        defaults: {
+          labelWidth: 160,
+          width: 400
+        },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            name: 'payElID',
+            fieldLabel: UB.i18n('Вид оплати'),
+            allowBlank: false,
+            ubRequest: {
+              entity: 'hr_payEl',
+              fieldList: ['ID', 'description', 'methodID.code', 'codeSort'],
+              whereList: {
+                byVacation: { expression: '[methodID.code]', condition: 'in', values: { codes: ['13', '37', '142', '67'] } }
+              },
+              orderList: { orderBy: { expression: 'codeSort' } }
+            }
+          }
+        ]
+      },
+      {
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Продовжити'),
+            width: 110,
+            height: 30,
+            margin: '10 20 10 0',
+            handler: function (btn) {
+              if (me.isValid() && me.attr.payElID.getValue()) {
+                me.createDocument({
+                  payElID: me.attr.payElID.getValue(),
+                  isVacation: ['13', '67', '142'].includes(me.attr.payElID.getFieldValue('methodID.code')),
+                  methodCode: me.attr.payElID.getFieldValue('methodID.code')
+                })
+                me.up('window') ? me.up('window').close() : me.close()
+              }
+            }
+          }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        payElID: me.down('[name=payElID]')
+      }
+
+      const globalOrganization = appAC.globalOrganization()
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        let payElStore = me.attr.payElID.getStore()
+        if (response) {
+          AC.viewUtils.setFilterValue(me.attr.payElID, {
+            'methodID.code': ['13', '37', '142', '67'],
+            'dateTo': { value: response.dateFrom, condition: '>=' },
+            'dateFrom': { value: response.dateTo, condition: '<=' }
+          })
+        }
+        payElStore.load()
+      })
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

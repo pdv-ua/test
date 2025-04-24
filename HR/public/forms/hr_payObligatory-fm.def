@@ -1,0 +1,296 @@
+/* global UB */
+exports.formDef = {
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 140 },
+      region: 'north',
+      items: [
+        { attributeName: 'name', fieldLabel: UB.i18n('Назва') },
+        { attributeName: 'type', fieldLabel: UB.i18n('Тип платежу') },
+        { attributeName: 'organizationID', readOnly: true },
+        {
+          attributeName: 'orgAccountID',
+          fieldList: ['ID', 'description', 'currencyID', 'organizationID']
+        },
+        { attributeName: 'contractorID' },
+        {
+          attributeName: 'contrAccountID',
+          fieldList: ['ID', 'description', 'currencyID', 'organizationID']
+        }
+      ]
+    },
+    {
+      name: 'tabs',
+      xtype: 'tabpanel',
+      region: 'center',
+      margin: '8',
+      items: [
+        {
+          title: UB.i18n('Види оплати'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'label',
+              text: UB.i18n('У суму платежу включається сума видів оплати'),
+              cls: 'x-form-item-label',
+              margin: '8 0 0 0' // ,
+              // width: 10
+            },
+            {
+              xtype: 'ubdetailgrid',
+              autoScroll: true,
+              layout: 'fit',
+              flex: 1,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              cmdType: 'showList',
+
+              entity: 'hr_payElDepend',
+              masterFields: ['ID'],
+              detailFields: ['ownerID'],
+              cmdData: {
+                params: [{
+                  entity: 'hr_payElDepend',
+                  method: 'select',
+                  fieldList: [
+                    { name: 'payElID.name', description: UB.i18n('Вид оплати') },
+                    { name: 'dateFromEmpty', format: 'd.m.Y' },
+                    { name: 'dateToEmpty', format: 'd.m.Y' }
+                  ],
+                  orderList: {
+                    dateTo: {
+                      expression: '[dateTo]',
+                      order: 'desc'
+                    }
+                  }
+                }]
+              },
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.setPayElEntry(form, grid, 'hr_payElDepend')
+                          }
+                        })
+                      } else {
+                        form.setPayElEntry(form, grid, 'hr_payElDepend')
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.setPayElEntry(form, grid.ownerCt, 'hr_payElDepend')
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Нарахування на зарплату'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'label',
+              text: UB.i18n('У суму платежу включається сума нарахувань на зарплату'),
+              cls: 'x-form-item-label',
+              margin: '8 0 0 0'
+            },
+            {
+              xtype: 'ubdetailgrid',
+              autoScroll: true,
+              layout: 'fit',
+              flex: 1,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              cmdType: 'showList',
+              entity: 'hr_payFundDepend',
+              masterFields: ['ID'],
+              detailFields: ['ownerID'],
+              cmdData: {
+                params: [{
+                  entity: 'hr_payFundDepend',
+                  method: 'select',
+                  fieldList: [
+                    { name: 'fundID.description', description: UB.i18n('Назва') },
+                    { name: 'dateFromEmpty', format: 'd.m.Y' },
+                    { name: 'dateToEmpty', format: 'd.m.Y' }
+                  ],
+                  orderList: {
+                    dateTo: {
+                      expression: '[dateTo]',
+                      order: 'desc'
+                    }
+                  },
+                  whereList: {
+                    fundIDMiDelete: {
+                      expression: '[fundID.mi_deleteDate]',
+                      condition: '>=',
+                      value: '#maxdate'
+                    }
+                  }
+                }]
+              },
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.setPayFundEntry(form, grid, 'hr_payFundDepend')
+                          }
+                        })
+                      } else {
+                        form.setPayFundEntry(form, grid, 'hr_payFundDepend')
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.setPayFundEntry(form, grid.ownerCt, 'hr_payFundDepend')
+                }
+              }
+            }
+          ]
+        },
+        {
+          hidden: true,
+          name: 'tabOrgList',
+          title: UB.i18n('Організації'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'label',
+              text: UB.i18n('Підпорядковані організації, що мають такі самі реквізити платежу'),
+              cls: 'x-form-item-label',
+              margin: '8 0 0 0'
+            },
+            {
+              xtype: 'ubdetailgrid',
+              region: 'center',
+              name: 'organization',
+              autoScroll: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_payObligatoryOrg',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'orgID.description',
+                    description: UB.i18n('Організація'),
+                    simpleFilter: true
+                  }
+                ]
+              },
+              masterFields: ['ID'],
+              detailFields: ['payObligatoryID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    text: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      if (form.isNewInstance) {
+                        form.saveForm().then(result => {
+                          if (result !== -1) {
+                            form.selectOrgList(form, grid)
+                          }
+                        })
+                      } else {
+                        form.selectOrgList(form, grid)
+                      }
+                    }
+                  }
+                ],
+                onItemDblClick: function (grid) {
+                  const form = grid.up('form')
+                  form.selectOrgList(form, grid.ownerCt)
+                }
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Підрозділи'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'label',
+              text: UB.i18n('Отримувачі платежу, залежно від підрозділу'),
+              cls: 'x-form-item-label',
+              margin: '8 0 0 0'
+            },
+            {
+              xtype: 'ubdetailgrid',
+              autoScroll: true,
+              layout: 'fit',
+              flex: 1,
+              hideActions: ['newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+              cmdType: 'showList',
+              entity: 'hr_payObligatoryDep',
+              masterFields: ['ID'],
+              detailFields: ['payObligatoryID'],
+              cmdData: {
+                params: [{
+                  entity: 'hr_payObligatoryDep',
+                  method: 'select',
+                  fieldList: [
+                    { name: 'depName', description: UB.i18n('Підрозділ') },
+                    { name: 'parentTreeDepName', description: UB.i18n('Підпорядкування') },
+                    { name: 'dictPositionID.name', description: UB.i18n('Посада') },
+                    { name: 'posName', description: UB.i18n('Штатна посада') },
+                    { name: 'employeeNumberID.description', description: UB.i18n('Працівник'), simpleFilter: true },
+                    { name: 'contractorID.name', description: UB.i18n('Отримувач') },
+                    { name: 'contrAccountID.code', description: UB.i18n('Р/р отримувача') }
+                  ],
+                  orderList: {
+                    dateTo: {
+                      expression: '[departmentID.description]',
+                      order: 'asc'
+                    }
+                  }
+                }]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

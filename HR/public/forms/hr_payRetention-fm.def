@@ -1,0 +1,189 @@
+/* global AC UB */
+
+exports.formDef = {
+  requiredFields: ['employeeNumberID.employeeID', 'payElID.methodID.methodGroupID.code', 'payElID.methodID.code',
+    'contractorID.OKPOCode', 'employeeFamilyID.peopleID.birthDate', 'payElID.notReqReport', 'contrAccountID.organizationID', 'contrAccountID.organizationID.name'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' },
+    defaults: { labelWidth: 220 }
+  },
+  size: {
+    width: 1100,
+    height: 800
+  },
+  items: [
+    {
+      attributeName: 'employeeNumberID',
+      fieldList: ['ID', 'description', 'employeeID', 'dateFrom'],
+      hidden: true
+    },
+    {
+      attributeName: 'payElID',
+      fieldList: ['ID', 'description', 'methodID.code', 'methodID.methodGroupID.code', 'codeSort', 'notReqReport'],
+      orderList: { orderBy: { expression: 'codeSort' } },
+      hideEntityItemInContext: true,
+      disableModifyEntity: true,
+      whereList: {
+        groupTypeFirst: {
+          expression: '[methodID.methodGroupID.groupType]',
+          condition: 'in',
+          value: ['OFFTAKE', 'FORPAY']
+        },
+        groupTypeSecond: {
+          expression: '[methodID.code]',
+          condition: 'notEqual',
+          value: '43'
+        }
+      }
+    },
+    {
+      layout: { type: 'hbox' },
+      items: [
+        { attributeName: 'dateFrom', labelWidth: 220, flex: 1 },
+        { attributeName: 'dateToEmpty', labelWidth: 100, flex: 1 }
+      ]
+    },
+    {
+      attributeName: 'paymentMethod',
+      hidden: true
+    },
+    {
+      attributeName: 'payOutID',
+      fieldList: ['ID', 'name', 'organizationID'],
+      hidden: true
+    },
+    {
+      attributeName: 'employeeFamilyID',
+      fieldLabel: UB.i18n('Прізвище І.Б. дитини'),
+      fieldList: ['ID', 'description', 'employeeID', 'peopleID.birthDate'],
+      hidden: true
+    },
+    {
+      xtype: 'ubdatefield',
+      fieldLabel: UB.i18n('Дата народження дитини:'),
+      name: 'familyBirthDate',
+      hidden: true,
+      readOnly: true
+    },
+    {
+      layout: { type: 'hbox' },
+      items: [
+        { attributeName: 'maxRate', decimalPrecision: 2, labelWidth: 220, hidden: true, flex: 1 },
+        { attributeName: 'minRate', decimalPrecision: 2, fieldLabel: UB.i18n('Не менше % прожитк. мін.'), labelWidth: 200, hidden: true, flex: 1 }
+      ]
+    },
+    {
+      layout: { type: 'hbox' },
+      items: [
+        { attributeName: 'rate', decimalPrecision: 2, labelWidth: 220, hidden: true, flex: 1 },
+        { attributeName: 'baseSum', fieldLabel: UB.i18n('Сума'), labelWidth: 200, hidden: true, flex: 1 }
+      ]
+    },
+    {
+      layout: { type: 'hbox' },
+      items: [
+        { attributeName: 'debtSum', fieldLabel: UB.i18n('Заборгованість'), labelWidth: 220, hidden: true, flex: 1 },
+        { attributeName: 'remindSum', labelWidth: 200, hidden: true, flex: 1 }
+      ]
+    },
+    { attributeName: 'dateIdxFrom', hidden: true },
+    {
+      attributeName: 'bankID',
+      hidden: true
+    },
+    {
+      attributeName: 'contractorID',
+      fieldList: ['ID', 'description', 'OKPOCode', 'contrType'],
+      fieldLabel: UB.i18n('Отримувач'),
+      hidden: true
+    },
+    {
+      attributeName: 'personalAccount',
+      maskRe: AC.validators.maskRe('charset16Validator'),
+      width: '50%',
+      maxSize: 30,
+      hidden: true,
+      fieldLabel: UB.i18n('Номер о/р')
+    },
+    {
+      attributeName: 'personalSubAccount',
+      width: '50%',
+      hidden: true,
+      fieldLabel: UB.i18n('Субрахунок')
+    },
+    {
+      xtype: 'textfield',
+      name: 'taxNumber',
+      fieldLabel: UB.i18n('РНОКПП/ЄДРПОУ'),
+      labelWidth: 220,
+      width: '50%',
+      readOnly: true,
+      hidden: true
+    },
+    {
+      attributeName: 'contrAccountID',
+      fieldList: ['ID', 'descriptionContr', 'organizationID', 'organizationID.name'],
+      fieldLabel: UB.i18n('Р/рахунок для перерахування'),
+      hidden: true
+    },
+    {
+      xtype: 'label',
+      name: 'contractorName',
+      margin: '5 10 5 250'
+    },
+    {
+      xtype: 'panel',
+      title: UB.i18n('Експорт у систему Клієнт-банк'),
+      name: 'exportPanel',
+      collapsed: false,
+      hidden: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 220 },
+      items: [
+        { attributeName: 'exportMethodID' },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'branchCode', labelWidth: 220 },
+            { attributeName: 'projectCode', labelWidth: 220 }
+          ]
+        }
+      ]
+    },
+    {
+      layout: { type: 'hbox' },
+      items: [
+        {
+          attributeName: 'docDate',
+          fieldLabel: UB.i18n('Постанова Дата'),
+          hidden: true,
+          labelWidth: 220,
+          flex: 1
+        },
+        {
+          attributeName: 'docNumber',
+          fieldLabel: UB.i18n('Номер'),
+          hidden: true,
+          labelWidth: 200,
+          flex: 1
+        }
+      ]
+    },
+    {
+      attributeName: 'docExecutive',
+      labelWidth: 220,
+      hidden: true
+    },
+    {
+      attributeName: 'execNameDoc',
+      labelWidth: 220,
+      hidden: true
+    },
+    {
+      attributeName: 'namePay',
+      labelWidth: 220,
+      hidden: true
+    }
+  ]
+}

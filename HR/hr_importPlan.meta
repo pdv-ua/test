@@ -1,0 +1,172 @@
+{
+  "caption": "План імпорту",
+  "description": "План імпорту",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "documentation": "Організаційна одиниця",
+      "allowNull": false
+    },
+    {
+      "name": "entityName",
+      "dataType": "String",
+      "size": 50,
+      "caption": "Назва таблиці у БД",
+      "description": "Назва таблиці у БД",
+      "documentation": "Назва таблиці у БД"
+    },
+    {
+      "name": "impEntityName",
+      "dataType": "String",
+      "size": 50,
+      "caption": "Назва таблиці імпотру у БД",
+      "description": "Назва таблиці імпотру у БД",
+      "documentation": "Назва таблиці імпотру у БД"
+    },
+    {
+      "name": "entityDescription",
+      "dataType": "String",
+      "size": 256,
+      "caption": "Назва таблиці",
+      "description": "Назва таблиці",
+      "documentation": "Назва таблиці"
+    },
+    {
+      "name": "fileName",
+      "dataType": "String",
+      "size": 256,
+      "caption": "Назва вихідного файлу для імпорту",
+      "description": "Назва вихідного файлу для імпорту",
+      "documentation": "Назва вихідного файлу для імпорту"
+    },
+    {
+      "name": "entityType",
+      "dataType": "Enum",
+      "enumGroup": "HR_ENTITY_TYPE",
+      "caption": "Тип завантаження",
+      "description": "Тип завантаження",
+      "documentation": "Тип завантаження"
+    },
+    {
+      "name": "state",
+      "dataType": "Enum",
+      "enumGroup": "HR_IMPORT_STATE",
+      "caption": "Стан",
+      "description": "Стан",
+      "documentation": "Стан"
+    },
+    {
+      "name": "loadDataType",
+      "dataType": "Enum",
+      "enumGroup": "HR_LOAD_DATA_TYPE",
+      "caption": "Тип даних",
+      "description": "Тип даних",
+      "documentation": "Тип даних",
+      "defaultValue": "1"
+    },
+    {
+      "name": "makeImport",
+      "dataType": "Boolean",
+      "caption": "Включити в імпорт",
+      "description": "Включити в імпорт",
+      "documentation": "Включити в імпорт",
+      "defaultValue": "1"
+    },
+    {
+      "name": "sortOrder",
+      "dataType": "Int",
+      "caption": "Порядок відображення",
+      "description": "Порядок відображення",
+      "documentation": "Порядок відображення",
+      "defaultValue": "1",
+      "allowNull": false
+    },
+    {
+      "name": "startLoad",
+      "dataType": "DateTime",
+      "caption": "Початок завантаження файлу",
+      "description": "Початок завантаження файлу",
+      "documentation": "Початок завантаження файлу"
+    },
+    {
+      "name": "finishLoad",
+      "dataType": "DateTime",
+      "caption": "Закінчення завантаження файлу",
+      "description": "Закінчення завантаження файлу",
+      "documentation": "Закінчення завантаження файлу"
+    },
+    {
+      "name": "startImport",
+      "dataType": "DateTime",
+      "caption": "Початок імпорту",
+      "description": "Початок імпорту",
+      "documentation": "Початок імпорту"
+    },
+    {
+      "name": "finishImport",
+      "dataType": "DateTime",
+      "caption": "Закінчення імпорту",
+      "description": "Закінчення імпорту",
+      "documentation": "Закінчення імпорту"
+    },
+    {
+      "name": "appCode",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Додаток",
+      "description": "До якого додатку відносяться дані (null - зарплата, 'HR' - кадри)",
+      "documentation": "До якого додатку відносяться дані (null - зарплата, 'HR' - кадри)"
+    },
+    {
+      "name": "mapNullCount",
+      "dataType": "Int",
+      "caption": "Кількість пустих зписів в таблиці відповідності",
+      "description": "Кількість пустих зписів в таблиці відповідності",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select count(*) from hr_importMap where orgID = {self}.orgID and entityName = {self}.entityName and outputID is null)"
+        }
+      ]
+    },
+    {
+      "name": "logCount",
+      "dataType": "Int",
+      "caption": "Кількість зауважень",
+      "description": "Кількість зауважень",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select count(*) from hr_importLog where orgID = {self}.orgID and entityName = {self}.entityName)"
+        }
+      ]
+    },
+    {
+      "name": "attrList",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Спиок полів завантаження",
+      "description": "Спиок полів завантаження"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": false,
+      "safeDelete": false
+    },
+    "audit": {
+      "enabled": false
+    }
+  }
+}

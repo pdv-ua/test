@@ -1,0 +1,107 @@
+/* global UB */
+
+exports.formDef = {
+  requiredFields: ['organizationID', 'empOrderType'],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    defaults: { labelWidth: 200 }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      attributeName: 'empOrderType',
+      orderList: {
+        orderBy: { expression: 'name' }
+      },
+      editable: true
+    },
+    {
+      attributeName: 'positionType',
+      disableContextMenu: false,
+      hideEntityItemInContext: true
+    },
+    {
+      attributeName: 'dictStaffCatID',
+      hideEntityItemInContext: true
+    },
+    {
+      layout: { type: 'hbox' },
+      defaults: { labelWidth: 200 },
+      items: [
+        {
+          attributeName: 'dictTimeCostID',
+          whereList: {
+            byOrderClass: {
+              expression: '[orderClassID.entityName]',
+              condition: '=',
+              value: 'hr_empOrder'
+            }
+          },
+          flex: 1
+        },
+        { attributeName: 'canEditDictTimeCost', labelWidth: 240 }
+      ]
+    },
+    {
+      layout: { type: 'hbox' },
+      defaults: { labelWidth: 200 },
+      items: [
+        {
+          attributeName: 'dictTimeCost2ID',
+          whereList: {
+            byOrderClass: {
+              expression: '[orderClassID.entityName]',
+              condition: '=',
+              value: 'hr_empOrder'
+            }
+          },
+          flex: 1
+        },
+        { attributeName: 'canEditDictTimeCost2', labelWidth: 240 }
+      ]
+    },
+    {
+      layout: { type: 'hbox' },
+      defaults: { labelWidth: 200 },
+      items: [
+        {
+          attributeName: 'payElIDAccrual',
+          flex: 1
+        },
+        { attributeName: 'canEditPayElAccrual', labelWidth: 240 }
+      ]
+    },
+    {
+      layout: { type: 'hbox' },
+      defaults: { labelWidth: 200 },
+      items: [
+        { attributeName: 'payElIDMain', flex: 1 },
+        { attributeName: 'canEditPayElMain', labelWidth: 240 }
+      ]
+    },
+    {
+      layout: { type: 'hbox' },
+      defaults: { labelWidth: 200 },
+      items: [
+        { attributeName: 'payElIDAdd', flex: 1 },
+        { attributeName: 'canEditPayElAdd', labelWidth: 240 }
+      ]
+    },
+    {
+      layout: { type: 'hbox' },
+      defaults: { labelWidth: 200 },
+      items: [
+        { attributeName: 'payElIDReplacement', flex: 1 },
+        { attributeName: 'canEditPayElReplacement', labelWidth: 240 }
+      ]
+    },
+    { attributeName: 'comment' },
+    { attributeName: 'showTabNumInPrintForm' }
+  ]
+}

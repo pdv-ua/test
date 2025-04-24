@@ -1,0 +1,104 @@
+{
+  "caption": "Вид навчання",
+  "description": "Вид навчання",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "tabNum",
+      "dataType": "String",
+      "size": 15,
+      "caption": "Номер залікової книжки",
+      "description": "Номер залікової книжки",
+      "documentation": "Номер залікової книжки",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "typeStudy",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTypeStudy",
+      "caption": "Вид навчання",
+      "documentation": "Вид навчання",
+      "description": "Вид навчання",
+      "allowNull": false
+    },
+    {
+      "name": "formStudy",
+      "dataType": "Enum",
+      "enumGroup": "HR_EDUC_FORM",
+      "caption": "Форма навчання",
+      "documentation": "Форма навчання",
+      "description": "Форма навчання",
+      "allowNull": false
+    },
+    {
+      "name": "dictLevelID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictEducLevel",
+      "caption": "Освітній рівень",
+      "description": "Освітній рівень",
+      "documentation": "Освітній рівень"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

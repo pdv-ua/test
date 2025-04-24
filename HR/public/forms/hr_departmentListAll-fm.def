@@ -1,0 +1,117 @@
+/* global Ext AC appAC $App UB */
+
+exports.formDef = 'HR.departmentListAll'
+
+Ext.define('HR.departmentListAll', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.departmentListAll',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        layout: 'fit',
+        flex: 1,
+        hideActions: ['addNew', 'addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        stateful: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_departmentListAll_grid'),
+        cmdType: 'showList',
+        description: UB.i18n('Підрозділ'),
+        entity: 'hr_department',
+        cmdData: {
+          params: [{
+            entity: 'hr_department',
+            method: 'select',
+            fieldList: [
+              { name: 'code', description: UB.i18n('Код') },
+              { name: 'name', description: UB.i18n('Назва') },
+              { name: 'dictDepTypeID.name', description: UB.i18n('Тип підрозділу') },
+              { name: 'parentUnitID.name', description: UB.i18n('Підпорядкування') },
+              { name: 'state', description: UB.i18n('Стан') },
+              { name: 'mi_dateFrom', description: UB.i18n('Дата початку дії'), format: 'd.m.Y' },
+              { name: 'dateToEmpty', description: UB.i18n('Дата закінчення дії'), format: 'd.m.Y' },
+              { name: 'entryOrderID.description', description: UB.i18n('Наказ') },
+              { name: 'staffOrderID.description', description: UB.i18n('Штатний розпис') },
+              { name: 'description', description: UB.i18n('Опис'), visibility: false }
+            ],
+            __mip_recordhistory_all: true,
+            whereList: {
+              parentIsNull: {
+                expression: '[parentUnitID]',
+                condition: 'isNull'
+              },
+              parentDateFrom: {
+                expression: '[parentUnitID.mi_dateFrom]',
+                condition: 'lessEqual',
+                value: appAC.globalApplicationDate()
+              },
+              parentDateTo: {
+                expression: '[parentUnitID.mi_dateTo]',
+                condition: 'moreEqual',
+                value: appAC.globalApplicationDate()
+              },
+              parentState: {
+                expression: '[parentUnitID.state]',
+                condition: '=',
+                value: 'ACTIVE'
+              },
+              dateFrom: {
+                expression: '[mi_dateFrom]',
+                condition: 'lessEqual',
+                value: appAC.globalApplicationDate()
+              },
+              dateTo: {
+                expression: '[mi_dateTo]',
+                condition: 'moreEqual',
+                value: appAC.globalApplicationDate()
+              }
+            },
+            logicalPredicates: ['([parentIsNull] OR ([parentState] AND [parentDateFrom] AND [parentDateTo]))']
+          }]
+        },
+        cmpInitConfig: {
+          afterInit: function () {
+            AC.gridUtils.setGlobalOrganization(this, 'orgID')
+          }
+        }
+      }
+    ]
+  },
+
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+    me.changeGlobal = function () {
+      const store = me.down('ubdetailgrid').getStore()
+      const globalDate = appAC.globalApplicationDate()
+      store.ubRequest.whereList.parentDateFrom.value = globalDate
+      store.ubRequest.whereList.parentDateTo.value = globalDate
+      store.ubRequest.whereList.dateFrom.value = globalDate
+      store.ubRequest.whereList.dateTo.value = globalDate
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      $App.on('ac:app:operationDateChanged', me.changeGlobal)
+    }, me)
+    me.on('destroy', () => {
+      $App.un('ac:app:operationDateChanged', me.changeGlobal)
+    }, me)
+    me.callParent(arguments)
+  }
+})

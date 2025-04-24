@@ -1,0 +1,210 @@
+{
+  "caption": "Нарахування на зарплату (Фонди)",
+  "description": "Нарахування на зарплату (Фонди)",
+  "descriptionAttribute": "name",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 32,
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код",
+      "allowNull": false
+    },
+    {
+      "name": "codeSort",
+      "dataType": "Float",
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код"
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "payFundMethodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payFundMethod",
+      "caption": "Метод розрахунку",
+      "description": "Метод розрахунку",
+      "documentation": "Метод розрахунку"
+    },
+    {
+      "name": "typeTaxECBID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTypeTaxECB",
+      "caption": "Тип ставки страхового внеску",
+      "description": "Тип ставки страхового внеску",
+      "documentation": "Тип ставки страхового внеску"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "documentation": "Діє з",
+      "description": "Діє з",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "allowNull": false,
+      "defaultView": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "documentation": "Діє з",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "calcPeriod",
+      "dataType": "Enum",
+      "enumGroup": "HR_ACCPERIOD_TYPE",
+      "caption": "Розраховується",
+      "description": "Розраховується",
+      "documentation": "Розраховується",
+      "allowNull": false
+    },
+    {
+      "name": "sequence",
+      "dataType": "Int",
+      "caption": "Послідовність розрахунку",
+      "description": "Послідовність розрахунку",
+      "documentation": "Послідовність розрахунку"
+    },
+    {
+      "name": "isAutoCalc",
+      "dataType": "Boolean",
+      "caption": "Розраховувати автоматично",
+      "description": "Розраховувати автоматично",
+      "documentation": "Розраховувати автоматично",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "isRecalculate",
+      "dataType": "Boolean",
+      "caption": "Перераховувати",
+      "description": "Перераховувати",
+      "documentation": "Перераховувати",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "entryOperationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_entryOperation",
+      "caption": "Бухгалтерська проводка",
+      "description": "Бухгалтерська проводка",
+      "documentation": "Бухгалтерська проводка"
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_fundSource",
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування",
+      "documentation": "Джерело фінансування"
+    },
+    {
+      "name": "dictProgClassID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictProgClass",
+      "caption": "КПК",
+      "description": "Код програмної класифікації"
+    },
+    {
+      "name": "dictProjectID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictProject",
+      "caption": "Проєкт",
+      "description": "Проєкт"
+    },
+    {
+      "name": "excludeFundSource",
+      "dataType": "Boolean",
+      "caption": "Виключення",
+      "description": "Виключення джерел фінансування",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isRecSum",
+      "dataType": "Boolean",
+      "caption": "Сума не входить до нараховано/утримано",
+      "description": "Сума не входить до нараховано/утримано",
+      "defaultValue": "0"
+    },
+    {
+      "name": "addMinSum",
+      "dataType": "Boolean",
+      "caption": "Доплачувати до мінімальної бази нарахування",
+      "description": "Доплачувати до мінімальної бази нарахування",
+      "defaultValue": "0"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 152,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["code","name"],
+        "compositeSeparator": " "
+      }
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

@@ -1,0 +1,237 @@
+/* global Ext AC appAC appHR $App UB */
+
+exports.formDef = 'HR.orderRegistryList'
+
+Ext.define('HR.orderRegistryList', {
+  extend: 'Ext.panel.Panel',
+  height: 600,
+  width: 800,
+  layout: 'border',
+  alias: 'widget.orderRegistryList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        forceDataLoad: true,
+        disableAutoLoadStore: true,
+        layout: 'fit',
+        flex: 1,
+        hideActions: ['addNew', 'addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        stateful: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_orderRegistryList_grid'),
+        cmdType: 'showList',
+        entity: 'hr_orderRegistry',
+        cmdData: {
+          params: [{
+            entity: 'hr_orderRegistry',
+            method: 'search',
+            fieldList: [
+              { name: 'orderNumber', description: UB.i18n('Номер'), tooltip: UB.i18n('Номер реєстру') },
+              { name: 'orderDate', description: UB.i18n('Дата'), tooltip: UB.i18n('Дата') },
+              { name: 'periodDescription', description: UB.i18n('Період створення') },
+              { name: 'orderType', description: UB.i18n('Тип документів'), tooltip: UB.i18n('Тип документів реєстру') },
+              { name: 'name', description: UB.i18n('Назва'), tooltip: UB.i18n('Назва') },
+              { name: 'lineCount', description: UB.i18n('Кількість рядків'), tooltip: UB.i18n('Кількість рядків') },
+              { name: 'employeeList', description: UB.i18n('Список осіб'), tooltip: UB.i18n('Список осіб') },
+              { name: 'minDateOrderRegistryDt', description: UB.i18n('Найменша дата'), tooltip: UB.i18n('Найменша дата') },
+              { name: 'paySum', description: UB.i18n('Сума'), tooltip: UB.i18n('Сума') },
+              {
+                name: 'orderState',
+                description: UB.i18n('Стан'),
+                config: { align: 'center' }
+              },
+              { name: 'hasPosted', visibility: false },
+              { name: 'hasProject', visibility: false },
+              { name: 'hasCanceled', visibility: false },
+              { name: 'organizationID', visibility: false },
+              { name: 'mi_createDate', description: UB.i18n('Дата створення'), tooltip: UB.i18n('Дата створення') },
+              { name: 'createUser', description: UB.i18n('Користувач, що створив'), tooltip: UB.i18n('Користувач, що створив') },
+              { name: 'mi_modifyDate', description: UB.i18n('Дата останнього коригування'), tooltip: UB.i18n('Дата останнього коригування') },
+              { name: 'modifyUser', description: UB.i18n('Користувач, що останнім коригував'), tooltip: UB.i18n('Користувач, що останнім коригував') }
+            ],
+            orderList: { orderDate: { expression: 'orderDate', order: 'DESC' } }
+          }]
+        },
+        cmpInitConfig: {
+          disableAutoLoadStore: true,
+          getRowClass: function (row) {
+            return ((row.get('orderState') === 'POSTED' &&
+              ['hr_orderRegistryPremium', 'hr_orderRegistryAccrualPay', 'hr_orderRegistryExtraPay', 'hr_orderRegistryRequestEmp',
+                'hr_orderRegistryWorkShift', 'hr_orderRegistryReserve', 'hr_orderRegistryNetSum'].includes(row.get('orderType'))) ||
+              (!row.get('hasProject') && !row.get('hasCanceled') && row.get('hasPosted') || !row.get('hasProject') && row.get('hasCanceled') && !row.get('hasPosted')))
+              ? 'ub-row-green' : ((row.get('hasPosted') && (row.get('hasProject') || row.get('hasCanceled'))) ? 'ub-row-light-blue' : 'ub-row-lightgrey')
+          },
+          afterInit: function () {
+            const grid = this
+            function setFilters (grid, isLoad) {
+              const globalOrganization = appAC.globalOrganization()
+              let req = grid.store.ubRequest
+              const form = grid.up('orderRegistryList')
+              req.orgID = globalOrganization
+              req.periodID = form.attr.periodID.getValue()
+              if (form.cmdData || (form.commandConfig && form.commandConfig.cmpInitConfig)) {
+                let filterOrderType = (form.cmdData && form.cmdData.customParams && form.cmdData.customParams.orderTypes) || (form.commandConfig && form.commandConfig.cmpInitConfig && form.commandConfig.cmpInitConfig.customParams && form.commandConfig.cmpInitConfig.customParams.orderTypes) || null
+                if (filterOrderType) {
+                  if (!req.whereList) {
+                    req.whereList = {}
+                  }
+                  req.whereList.orderType = {
+                    expression: '[orderType]',
+                    condition: 'in',
+                    value: filterOrderType
+                  }
+                }
+              }
+              grid.store.load()
+            }
+            const dictPeriodFilter = Ext.create('Ext.panel.Panel',
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    xtype: 'label',
+                    text: UB.i18n('Період:'),
+                    cls: 'x-form-item-label',
+                    margin: '8 0 0 15',
+                    width: 80
+                  },
+                  {
+                    xtype: 'button',
+                    text: '<',
+                    margin: '2 0 0 0',
+                    tooltip: UB.i18n('Попередній період'),
+                    width: 30,
+                    handler: () => {
+                      const priorID = grid.up('orderRegistryList').attr.periodID.getFieldValue('priorPeriodID')
+                      if (priorID) {
+                        grid.up('orderRegistryList').attr.periodID.setValueById(priorID)
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'periodID',
+                    fieldLabel: '',
+                    labelWidth: 130,
+                    margin: '2 0 0 5',
+                    pageSize: 50,
+                    width: 300,
+                    hideEntityItemInContext: true,
+                    selectOnFocus: true,
+                    ubRequest: {
+                      entity: 'hr_dictPeriod',
+                      fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'isCurrent', 'isClosed',
+                        'priorPeriodID', 'nextPeriodID', 'priorPeriodID.isCurrent', 'nextPeriodID.isCurrent'],
+                      orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                    },
+                    listeners: {
+                      expand: appHR.periodExpand,
+                      change: function () {
+                        setFilters(grid)
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    text: '>',
+                    margin: '2 15 0 0',
+                    tooltip: UB.i18n('Наступний період'),
+                    width: 30,
+                    handler: () => {
+                      const nextID = grid.up('orderRegistryList').attr.periodID.getFieldValue('nextPeriodID')
+                      if (nextID) {
+                        grid.up('orderRegistryList').attr.periodID.setValueById(nextID)
+                      }
+                    }
+                  }
+                ]
+              }
+            )
+            grid.down('toolbar').insert(3, dictPeriodFilter)
+          },
+          onDeterminateForm: function (grid) {
+            const currentRowGrid = grid.store.count() ? grid.getSelectionModel().getSelection()[0] : null
+            return {
+              formCode: currentRowGrid.get('orderType')
+            }
+          },
+          customActions: [
+            {
+              text: UB.i18n('Додати'),
+              iconCls: 'u-icon-add',
+              scale: 'medium',
+              cls: 'add-new-action',
+              handler: function (btn) {
+                const grid = btn.up('[entityName=hr_orderRegistry]')
+                const form = btn.up('orderRegistryList')
+                let filterOrderType = (form.cmdData && form.cmdData.customParams && form.cmdData.customParams.orderTypes) || (form.commandConfig && form.commandConfig.cmpInitConfig && form.commandConfig.cmpInitConfig.customParams && form.commandConfig.cmpInitConfig.customParams.orderTypes) || null
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode: 'hr_orderRegistrySelect',
+                  sender: grid,
+                  store: grid.store,
+                  cmpInitConfig: {
+                    customParams: filterOrderType ? { orderType: filterOrderType } : null
+                  }
+                })
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+    me.globalOrganizationChange = () => {
+      const globalOrganization = appAC.globalOrganization()
+      if (!me.attr.grid.store.ubRequest.whereList) {
+        me.attr.grid.store.ubRequest.whereList = {}
+      }
+      me.attr.periodID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization }, [])
+      me.attr.periodID.store.sort('dateFrom', 'DESC')
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        me.attr.periodID.setValueById(response.ID)
+        me.currentPeriod = response
+      })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[entityName=hr_orderRegistry]'),
+        periodID: me.down('[name=periodID]')
+      }
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: appAC.globalOrganization() })
+      appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+        me.attr.periodID.setValueById(response.ID)
+        me.currentPeriod = response
+      })
+
+      me.attr.grid.store.on('load', () => {
+        appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+          if (response.ID !== me.currentPeriod.ID && me.currentPeriod.ID === me.attr.periodID.getValue()) {
+            me.attr.periodID.setValueById(response.ID)
+            me.currentPeriod = response
+          }
+        })
+      })
+    })
+    me.callParent(arguments)
+  }
+})

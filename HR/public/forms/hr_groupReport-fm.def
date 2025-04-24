@@ -1,0 +1,308 @@
+/* global UB */
+exports.formDef = {
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 800,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'vbox' },
+      defaults: { labelWidth: 140 },
+      items: [
+        { attributeName: 'code', width: 400 },
+        {
+          attributeName: 'shortName',
+          width: 400,
+          listeners: {
+            blur: function (ctrl) {
+              const me = ctrl.up('form')
+              if (ctrl.getValue() && !me.attr.name.getValue()) {
+                me.attr.name.setValue(ctrl.getValue())
+              }
+            }
+          }
+        },
+        { attributeName: 'name', width: 800 }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Звіт'),
+          layout: 'fit',
+          items: [
+            {
+              xtype: 'ubdetailgrid',
+              name: 'gridReport',
+              disableSearchBar: true,
+              pageSize: 10000,
+              rowEditing: true,
+              hideActions: ['showPreview', 'showDetail', 'audit', 'itemLink', 'addNewByCurrent', 'addNew'],
+              entityConfig: {
+                entity: 'hr_groupReportDt',
+                method: 'select',
+                fieldList: [
+                  { name: 'dictReportID', visibility: false },
+                  { name: 'dictReportID.name', description: UB.i18n('Звіт'), config: { width: 600 }, editor: { readOnly: true } },
+                  { name: 'orderN', editor: {}, config: { width: 200 } }
+                ],
+                orderList: { orderBy: { expression: 'orderN' } }
+              },
+              masterFields: ['ID'],
+              detailFields: ['groupReportID'],
+              cmpInitConfig: {
+                customActions: [
+                  {
+                    tooltip: UB.i18n('Редагувати'),
+                    iconCls: 'u-icon-edit-alt',
+                    cls: 'fill-action',
+                    handler: function (btn) {
+                      const grid = btn.up('grid')
+                      const form = grid.up('form')
+                      form.saveForm().then(result => {
+                        if (result !== -1) {
+                          form.setReportEntry(form, grid)
+                        }
+                      })
+                    }
+                  }
+                ],
+                onItemDblClick: function () {}
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Налаштування'),
+          xtype: 'panel',
+          layout: 'fit',
+          border: 2,
+          layoutConfig: {
+            collapsible: true,
+            collapsed: true
+          },
+          flex: 1,
+          items: [
+            {
+              xtype: 'panel',
+              hidden: true,
+              collapsed: false
+            },
+            {
+              xtype: 'panel',
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  xtype: 'panel',
+                  layout: 'fit',
+                  width: 300,
+                  items: [
+                    {
+                      xtype: 'grid',
+                      name: 'reportParamGrid',
+                      store: Ext.create('Ext.data.Store', {
+                        groupField: 'reportCode',
+                        columnName: 'reportName',
+                        fields: [
+                          { name: 'ID' },
+                          { name: 'reportName' },
+                          { name: 'reportCode' },
+                          { name: 'listParamID' },
+                          { name: 'listParamID.shortName' },
+                          { name: 'listParamID.code' },
+                          { name: 'listParamID.fullName' },
+                          { name: 'listParamID.tableName' },
+                          { name: 'dictReportID' },
+                          { name: 'reportParamID' },
+                          { name: 'empty' }
+                        ],
+                        data: []
+                      }),
+                      features: [{
+                        id: 'group',
+                        ftype: 'grouping',
+                        groupHeaderTpl: ['<span  style="color: blue; ">{[values.rows[0].data.reportName]}</span>', {}],
+                        enableGroupingMenu: false,
+                        hideGroupHeader: false
+                      }],
+                      listeners: {
+                        select: function (grid, record) {
+                          const me = grid.view.up('form')
+                          me.onParamSelect(record)
+                        }
+                      },
+                      autoScroll: true,
+                      flex: 1,
+                      region: 'west',
+                      columnLines: true,
+                      columns: [
+                        {
+                          header: '',
+                          dataIndex: 'empty',
+                          width: 20
+                        },
+                        {
+                          header: UB.i18n('Звіт / Налаштування'),
+                          dataIndex: 'listParamID.shortName',
+                          flex: 1
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  xtype: 'panel',
+                  layout: 'fit',
+                  flex: 1,
+                  items: [
+                    {
+                      xtype: 'panel',
+                      hidden: false,
+                      name: 'reportValuesPanel',
+                      layout: 'border',
+                      bodyStyle: { backgroundColor: 'white' },
+                      items: [
+                        {
+                          xtype: 'textfield',
+                          name: 'currentParamFld',
+                          disabled: true,
+                          region: 'north'
+                        },
+                        {
+                          xtype: 'panel',
+                          layout: 'fit',
+                          padding: '0 15 0 15',
+                          region: 'center',
+                          items: [
+                            {
+                              xtype: 'entitygridpanel',
+                              name: 'reportValuesGrid',
+                              flex: 1,
+                              rowEditing: false,
+                              cmdType: 'showList',
+                              entityConfig: {
+                                entity: 'hr_idParam',
+                                method: 'select',
+                                fieldList: [
+                                  {
+                                    name: 'descriptionID',
+                                    visibility: false
+                                  },
+                                  {
+                                    name: 'descriptionID.description',
+                                    description: UB.i18n('Вибрані значення'),
+                                    editor: {
+                                      width: 800,
+                                      maxWidth: 800,
+                                      allowBlank: false,
+                                      enableKeyEvents: true,
+                                      disableContextMenu: true,
+                                      fieldList: ['ID', 'description']
+                                    },
+                                    config: {
+                                      width: 800,
+                                      maxWidth: 800,
+                                      resizable: false
+                                    },
+                                    sortable: false,
+                                    filterable: false
+                                  }
+                                ],
+                                whereList: {
+                                  byParam: {
+                                    expression: '[listParamID]',
+                                    condition: 'isNull'
+                                  },
+                                  byOrg: {
+                                    expression: '[orgID]',
+                                    condition: 'isNull'
+                                  }
+                                },
+                                orderList: {
+                                  byOrderN: { expression: '[orderN]' }
+                                }
+                              },
+                              disableSearchBar: true,
+                              hideMenuAllActions: true,
+                              menuAllActionsActionList: [],
+                              toolbarActionList: ['addNew', 'del'],
+                              customActions: [{
+                                name: 'valuesList',
+                                text: UB.i18n('Додати списком'),
+                                actionId: 'addByList',
+                                iconCls: 'fas fa-edit',
+                                scale: 'medium',
+                                cls: 'fill-action',
+                                handler: function (btn) {
+                                  const me = btn.up('form')
+                                  me.addByList()
+                                }
+                              }],
+                              detailFields: ['listParamID', 'orgID'], // we need this for parentContext to work
+                              onBeforeEdit: (editor, context) => {
+                                const me = context.grid.up('form')
+                                const combo = context.grid.columns.find((item) => item.dataIndex === 'descriptionID.description').field
+                                combo.store.ubRequest.entity = context.grid.store.ubRequest.tableNameForMapping
+                                const filterByOrgLists = ['hr_position', 'hr_employeeNumber']
+                                if (filterByOrgLists.indexOf(context.grid.store.ubRequest.tableNameForMapping) >= 0) {
+                                  if (!combo.store.ubRequest.whereList) {
+                                    combo.store.ubRequest.whereList = {}
+                                  }
+                                  combo.store.ubRequest.whereList.byOrg = {
+                                    expression: '[orgID]',
+                                    condition: 'equal',
+                                    values: { orgID: me.reportValuesGrid.parentContext.orgID }
+                                  }
+                                } else {
+                                  if (combo.store.ubRequest.whereList) {
+                                    delete combo.store.ubRequest.whereList.byOrg
+                                  }
+                                }
+                                UB.Repository('hr_idParam')
+                                  .where('[listParamID]', '=', me.reportValuesGrid.parentContext.listParamID)
+                                  .where('[orgID]', '=', me.reportValuesGrid.parentContext.orgID)
+                                  .attrs(['descriptionID', 'valuesID'])
+                                  .selectAsObject()
+                                  .then(result => {
+                                    const value = result
+                                      .filter(o => o.descriptionID !== context.record.data.descriptionID)
+                                      .map(o => o.valuesID)
+
+                                    if (value.length) {
+                                      if (!combo.store.ubRequest.whereList) {
+                                        combo.store.ubRequest.whereList = {}
+                                      }
+                                      combo.store.ubRequest.whereList.ID = {
+                                        expression: '[ID]',
+                                        condition: 'notIn',
+                                        value
+                                      }
+                                    }
+                                  })
+                              },
+                              afterInit: function () {
+                                this.plugins.filter(p => p.alias.indexOf('plugin.rowediting') >= 0).forEach(p => { p.clicksToEdit = 2 })
+                              },
+                              onItemContextMenu: function () {}
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

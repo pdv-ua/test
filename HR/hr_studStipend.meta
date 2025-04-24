@@ -1,0 +1,115 @@
+{
+  "caption": "Стипендія",
+  "description": "Стипендія",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Призначення",
+      "description": "Призначення",
+      "documentation": "Призначення",
+      "defaultView": false,
+      "allowNull": true
+    },
+    {
+      "name": "employeeAccrualID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeAccrual",
+      "caption": "Постійне нарахування",
+      "description": "Постійне нарахування",
+      "documentation": "Постійне нарахування",
+      "defaultView": false,
+      "allowNull": true
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "averageScore",
+      "dataType": "Float",
+      "caption": "Середній балл",
+      "documentation": "Середній балл",
+      "description": "Середній балл",
+      "defaultValue": "0",
+      "allowNull": true
+    },
+    {
+      "name": "typeStipend",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTypeStipend",
+      "caption": "Тип стипендії",
+      "documentation": "Тип стипендії",
+      "description": "Тип стипендії",
+      "allowNull": true
+    },
+    {
+      "name": "sumStipend",
+      "dataType": "Currency",
+      "caption": "Сума стипендії",
+      "description": "Сума стипендії",
+      "documentation": "Сума стипендії",
+      "defaultValue": "0"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

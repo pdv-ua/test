@@ -1,0 +1,234 @@
+/* global $App AC HR UB */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'empOrderType', 'organizationID', 'isGroup', 'organizationID.mi_data_id',
+    'employeeNumberID', 'errorText'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  defaults: {
+    layout: 'fit'
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+  ],
+  items: [{
+    xtype: 'tabpanel',
+    region: 'center',
+    items: [{
+      title: UB.i18n('Загальне'),
+      ubID: 'tabMain',
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [{
+        layout: {
+          type: 'hbox',
+          align: 'stretch'
+        },
+        padding: '10 0 0 0',
+        items: [{
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          padding: '10 0 0 0',
+          flex: 1,
+          defaults: {
+            labelWidth: 180
+          },
+          items: [
+            {
+              attributeName: 'employeePositionID',
+              fieldList: ['ID', 'description', 'employeeNumberID', 'workPlace', 'positionID', 'organizationID', 'vacancyDateFrom', 'vacancyDateTo'],
+              orderList: {
+                orderBy: {
+                  expression: 'employeeNumberID.tabNumSort'
+                }
+              },
+              addWorkPlace: true,
+              xtype: 'empPositionCombobox'
+            },
+            {
+              attributeName: 'grantOrderParaID',
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'positionID', 'employeeNumberID', 'orderID.description', 'dayCount'],
+              valueField: 'ID',
+              displayField: 'orderID.description',
+              gridFieldList: ['orderID.description'],
+              fieldLabel: UB.i18n('Наказ, за яким працівник відсутній'),
+              disabledIf: (ctrl, form) => !form.record.get('employeePositionID'),
+              whereList: {
+                empOrderType: {
+                  expression: '[empOrderType]',
+                  condition: 'in',
+                  value: ['MISSION', 'MISSION_TRAINING', 'DOWNTIME', 'TRAINING', 'CHANGEMISSION']
+                },
+                employeeNumberID: {
+                  expression: '[employeeNumberID]',
+                  condition: '=',
+                  value: 0
+                },
+                orderState: {
+                  expression: '[orderID.orderState]',
+                  condition: 'in',
+                  value: ['POSTED', 'PROCESSED']
+                }
+              },
+              orderList: {
+                orderBy: { 'expression': '[dateFrom]', 'order': 'desc' }
+              }
+            },
+            {
+              layout: { type: 'hbox', align: 'top' },
+              flex: 1,
+              items: [
+                {
+                  attributeName: 'reason',
+                  fieldLabel: UB.i18n('Причина'),
+                  flex: 1,
+                  labelWidth: 180
+                },
+                {
+                  xtype: 'button',
+                  cls: 'list-icon',
+                  name: 'reasonButton',
+                  tooltip: UB.i18n('Вибрати'),
+                  width: 35,
+                  height: 35,
+                  margin: '0 2 0 -45',
+                  handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+                }
+              ]
+            },
+            {
+              xtype: 'label',
+              name: 'orderInfo',
+              text: '',
+              cls: 'x-form-item-label field-label-blue',
+              margin: '10 10 5 15'
+            }
+          ]
+        }]
+      },
+      {
+        name: 'errorText',
+        xtype: 'label',
+        cls: 'x-form-item-label field-label-red',
+        margin: '10 10 5 15'
+      },
+      {
+        xtype: 'tabpanel',
+        region: 'center',
+        layout: 'fit',
+        ubID: 'tpDetail',
+        flex: 1,
+        items: [{
+          title: UB.i18n('Періоди відкликання'),
+          name: 'empOrderRecallListDet',
+          xtype: 'ubdetailgrid',
+          paraGrid: true,
+          autoScroll: true,
+          notWriteChanges: true,
+          hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit',
+            'history', 'showDetail'],
+          flex: 1,
+          rowEditing: true,
+          pageSize: 10000,
+          entityConfig: {
+            entity: 'hr_empOrderRecallListDet',
+            method: 'select',
+            fieldList: [
+              { name: 'dateFrom' },
+              { name: 'dateTo' },
+              {
+                name: 'dayCount',
+                readOnly: true,
+                config: { align: 'center', config: { width: 80 } },
+                editor: { readOnly: true, allowBlank: true }
+              },
+              { name: 'paraID', visibility: false },
+              { name: 'orderID', visibility: false }
+            ]
+          },
+          masterFields: ['ID', 'orderID'],
+          detailFields: ['paraID', 'orderID'],
+          onValidateEdit: (editor, context) => {
+            const me = editor.editor.up('form')
+            const orderDateFrom = AC.dateService.truncTimeToUtcNull(me.attr.grantOrderParaID.getFieldValue('dateFrom'))
+            const orderDateTo = AC.dateService.truncTimeToUtcNull(me.attr.grantOrderParaID.getFieldValue('dateTo'))
+            const periodFrom = AC.dateService.truncTimeToUtcNull(editor.editor.form.findField('dateFrom').getValue())
+            const periodTo = AC.dateService.truncTimeToUtcNull(editor.editor.form.findField('dateTo').getValue())
+            if (periodFrom < orderDateFrom) {
+              const errorMessage = UB.i18n('Не може бути менше ніж "дата початку"')
+              editor.editor.form.findField('dateFrom').markInvalid(errorMessage)
+              $App.dialogInfo(errorMessage)
+              editor.editor.form.findField('dateFrom').setValue(orderDateFrom)
+              return false
+            }
+            if (orderDateTo && periodTo > orderDateTo) {
+              const errorMessage = UB.i18n('Не може бути більше ніж "дата закінчення"')
+              editor.editor.form.findField('dateTo').markInvalid(errorMessage)
+              $App.dialogInfo(errorMessage)
+              editor.editor.form.findField('dateTo').setValue(orderDateTo)
+            }
+
+            const store = context.grid.getStore()
+            if (store.getCount() > 0) {
+              let hasError = false
+              store.each(record => {
+                if (context.record.data.ID === record.get('ID')) return
+                const recordDateFrom = AC.dateService.truncTimeToUtcNull(record.get('dateFrom'))
+                const recordDateTo = AC.dateService.truncTimeToUtcNull(record.get('dateTo'))
+                if (!(periodTo < recordDateFrom || periodFrom > recordDateTo)) {
+                  hasError = true
+                }
+              })
+              if (hasError) {
+                const errorMessage = UB.i18n(`Періоди перетинаються`)
+                $App.dialogInfo(errorMessage)
+                return false
+              }
+            }
+            editor.editor.form.findField('dayCount').setValue(AC.dateService.dayDiff(periodFrom, periodTo))
+            context.record.set('dayCount', AC.dateService.dayDiff(periodFrom, periodTo))
+            return true
+          },
+          onBeforeEdit: (rowEditor, context) => {
+            const me = context.grid.up('form')
+            const editor = rowEditor.editor
+            const dateFromCtrl = editor.query(`[name=dateFrom]`)[0]
+            dateFromCtrl.setMinValue(me.attr.grantOrderParaID.getFieldValue('dateFrom'))
+            dateFromCtrl.setMaxValue(me.attr.grantOrderParaID.getFieldValue('dateTo'))
+            const dateToCtrl = editor.query(`[name=dateTo]`)[0]
+            dateToCtrl.setMinValue(me.attr.grantOrderParaID.getFieldValue('dateFrom'))
+            dateToCtrl.setMaxValue(me.attr.grantOrderParaID.getFieldValue('dateTo'))
+            if (context.record.phantom) {
+              const reco = context.record
+              reco.set('orderID', me.record.get('orderID'))
+              reco.set('paraID', me.instanceID)
+            }
+          },
+          cmpInitConfig: {
+            onItemDblClick: function () { },
+            customInit: function () {
+              let grid = this
+              AC.gridUtils.tuneGridColumns(grid, {})
+              grid.on('changeData', (grd) => {
+                const me = grd.up('form')
+                HR.orderManager.setIsDirty(me, true)
+              })
+            }
+          }
+        }]
+      }
+      ]
+    }]
+  }]
+}

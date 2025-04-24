@@ -1,0 +1,3959 @@
+/* global UB Ext AC _ appAC appHR Blob $App */
+exports.formDef = 'HR.constructorReport'
+Ext.define('HR.constructorReport', {
+  extend: 'Ext.form.Panel',
+  requires: [
+    'UBS.UBReport',
+    'UB.ux.PDFComponent'
+  ],
+  layout: { type: 'vbox', align: 'stretch' },
+  width: 1100,
+  height: 600,
+  items: [{}],
+
+  actionId: {
+    refresh: 'refresh'
+  },
+  eventId: {
+    refresh: 'refresh'
+  },
+  hotKeys: {
+    refresh: {
+      key: Ext.EventObject.R,
+      ctrl: true,
+      shift: false,
+      text: ' (Ctrl+R)'
+    }
+  },
+
+  initComponent: function () {
+    const me = this
+    me.record = {}
+    me.attr = {}
+    me.requiredAttr = []
+    me.reportType = 'html'
+
+    let container
+    let control
+    let items
+    let tabs = []
+
+    const { reportCode, reportOptions, reportColum } = me.commandData
+
+    me.changeGlobal = () => {
+      const globalOrganization = appAC.globalOrganization()
+      me.down('[name=employeeList]') && loadDataReportGrid()
+      me.down('[name=subDepList]') && loadDataStatementGrid(me.down('[name=joinReport]'))
+      const headEmployeePosition = me.down('[name=headEmployeePositionID]')
+      const organization = me.down('[name=organization]')
+      headEmployeePosition && !organization && loadSavedDataEmployee(headEmployeePosition, globalOrganization)
+      if (organization) {
+        AC.viewUtils.setWhereListProperty(organization, [['mi_treePath', 'like', `%/${globalOrganization}/%`], ['state', 'equal', 'ACTIVE']], null, ['clearWhereList', 'clearStore'])
+        organization.setValueById(globalOrganization)
+      }
+      if (me.attr.periodFromID && me.attr.periodFromID.getValue() && me.attr.periodToID && me.attr.periodToID.getValue()) {
+        appHR.getCurrentPeriod(globalOrganization).then(({ ID }) => {
+          me.attr.periodFromID.setValueById(ID)
+          me.attr.periodToID.setValueById(ID)
+        })
+      }
+      if (me.attr.periodID && me.attr.periodID.getValue()) {
+        appHR.getCurrentPeriod(globalOrganization).then(({ ID }) => {
+          me.attr.periodID.setValueById(ID)
+        })
+      }
+      me.clearPrintForm()
+      me.attr.organizationID = globalOrganization
+    }
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', me.changeGlobal)
+    }, me)
+    me.on('afterrender', () => {
+      const me = this
+      $App.on('ac:app:organizationChanged', me.changeGlobal)
+      me.attr = {
+        periodToID: me.down('[name=periodToID]'),
+        periodFromID: me.down('[name=periodFromID]'),
+        dictProgClassID: me.down('[name=dictProgClassID]'),
+        issueDate: me.down('[name=issueDate]'),
+        positionCategory: me.down('[name=positionCategory]'),
+        dictFundSourceID: me.down('[name=dictFundSourceID]'),
+        dictExperienceID: me.down('[name=dictExperienceID]'),
+        workPlaceType: me.down('[name=workPlaceType]'),
+        tarificationType: me.down('[name=tarificationType]'),
+        joinReport: me.down('[name=joinReport]'),
+        subDivision: me.down('[name=subDivision]'),
+        headEmployeePositionID: me.down('[name=headEmployeePositionID]'),
+        periodID: me.down('[name=periodID]'),
+        organization: me.down('[name=organization]'),
+        tradeUnionCommitteeID: me.down('[name=tradeUnionCommitteeID]'),
+        leaderDepartment: me.down('[name=leaderDepartment]'),
+        headTradeUnionCommittee: me.down('[name=headTradeUnionCommittee]'),
+        payElListParams: me.down('[name=payElListParams]'),
+        reportParamGrid: me.queryById('reportParamGrid'),
+        reportValuesPanel: me.queryById('reportValuesPanel'),
+        reportValuesGrid: me.queryById('reportValuesGrid'),
+        currentParamFld: me.queryById('currentParamFld'),
+        valuesListBtn: me.queryById('valuesList')
+      }
+    })
+
+    me.validateFields = function () {
+      let isValid = true
+
+      me.requiredAttr.forEach(field => {
+        isValid = isValid && field.validate()
+      })
+      return isValid
+    }
+    function getSavedSettings (orgID, reportCode) {
+      const result = UB.Repository('trf_constructorReportsSetting')
+        .attrs(['params'])
+        .where('organizationID', '=', orgID)
+        .where('reportCode', '=', reportCode)
+        .selectSingle()
+      return result
+    }
+    async function loadSavedDataEmployee (ctrl, globalOrganization) {
+      if (!me.savedSettings) {
+        me.savedSettings = await getSavedSettings(appAC.globalOrganization(), me.commandConfig.cmdData.reportCode)
+      }
+      if (!me.savedSettings) {
+        switch (ctrl.name) {
+          case 'headEmployeePositionID':
+            UB.Repository('hr_employeeNumber')
+              .attrs(['employeeID.shortFIO', 'empWorkPlace', 'mainEmpNumberID', 'ID', 'mainEmpNumberID.empWorkPlace', 'tabNum'])
+              .where('orgID', '=', globalOrganization)
+              .where('empDictPositionID.positionCategory', '=', '1')
+              .where('mainEmpNumberID.empWorkPlace', '=', '1')
+              .where('dateFrom', '<=', AC.dateService.currentDate())
+              .where('dateTo', '>=', AC.dateService.currentDate())
+              .selectAsObject().then(res => {
+                if (res && res.length) {
+                  ctrl.setValue(res[0]['employeeID.shortFIO'])
+                } else {
+                  ctrl.setValue()
+                }
+              })
+            break
+          case 'leaderDepartment':
+            const orgRespPerson = await UB.Repository('ac_orgRespPerson')
+              .attrs(['ID', 'emponstaffID.employeeID.shortFIO'])
+              .where('organizationID', '=', appAC.globalOrganization())
+              .where('dateFrom', '<=', AC.dateService.currentDate())
+              .where('dateTo', '>=', AC.dateService.currentDate(), 'dateTo')
+              .where('dateTo', 'isNull', undefined, 'dateToIsNull')
+              .logic('(([dateTo]) or ([dateToIsNull]))')
+              .selectAsObject({ 'emponstaffID.employeeID.shortFIO': 'shortFIO' })
+            if (orgRespPerson[0]) {
+              ctrl.setValue(orgRespPerson[0]['shortFIO'])
+            }
+            break
+        }
+      } else {
+        switch (ctrl.name) {
+          case 'headEmployeePositionID':
+            ctrl.setValue(me.savedSettings.params.headEmployeePositionShortFIO)
+            break
+          case 'leaderDepartment':
+            ctrl.setValue(me.savedSettings.params.leaderDepartmentShortFIO)
+            break
+          case 'tradeUnionCommitteeID':
+            const tradeUnionCommitteeID = me.savedSettings.params.tradeUnionCommitteeID
+            if (tradeUnionCommitteeID && tradeUnionCommitteeID.length) {
+              ctrl.setValue(tradeUnionCommitteeID)
+            }
+            break
+          case 'headTradeUnionCommittee':
+            const headEmployeePositionShortFIO = me.savedSettings.params.headTradeUnionCommittee
+            if (headEmployeePositionShortFIO && headEmployeePositionShortFIO.length) {
+              ctrl.setValue(headEmployeePositionShortFIO)
+            }
+            break
+        }
+      }
+    }
+
+    function getReportTab (title = UB.i18n('Звіт')) {
+      return {
+        itemId: 'tabReport',
+        title,
+        autoScroll: true,
+        margin: '5, 0, 0, 0',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            flex: 1,
+            autoScroll: true,
+            layout: {
+              type: 'vbox',
+              pack: 'center',
+              align: 'stretch'
+            },
+            bodyCls: 'ub-panel-gray',
+            items: [control]
+          }
+        ]
+      }
+    }
+
+    function getReportDateCtrl () {
+      return {
+        xtype: 'datefield',
+        name: 'issueDate',
+        width: 250,
+        fieldLabel: UB.i18n('Дата'),
+        listeners: {
+          change: function (fld) {
+            me.record.issueDate = fld.getValue() || appAC.globalApplicationDate()
+            me.clearPrintForm()
+          }
+        }
+      }
+    }
+
+    function setSubDivision (labelWidth = 130) {
+      return {
+        xtype: 'ubboxselect',
+        name: 'subDivision',
+        fieldLabel: UB.i18n('Підрозділ'),
+        labelWidth,
+        disableContextMenu: true,
+        pageSize: 50,
+        displayField: 'name',
+        valueField: 'mi_data_id',
+        ubRequest: {
+          entity: 'hr_department',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['mi_data_id', 'name', 'orgID', 'description', 'mi_treePath'],
+          whereList: {
+            state: {
+              expression: '[state]',
+              condition: '=',
+              values: {
+                state: 'ACTIVE'
+              }
+            },
+            parentUnitID: {
+              expression: '[parentUnitID]',
+              condition: 'equal',
+              value: me.attr.orgID ? me.attr.orgID.getValue() : appAC.globalOrganization()
+            }
+          }
+        },
+        listeners: {
+          change: function (fld) {
+            me.record.subDivision = fld.getValue()
+            me.clearPrintForm()
+          },
+          afterrender: function (ctrl) {
+            ctrl.store.ubRequest.orgID = appAC.globalOrganization()
+            me.record.subDivision = ''
+          }
+        }
+      }
+    }
+    function setOrganization (labelWidth = 130) {
+      return {
+        xtype: 'ubcombobox',
+        name: 'organization',
+        fieldLabel: UB.i18n('Організація'),
+        labelWidth,
+        disableContextMenu: true,
+        pageSize: 50,
+        displayField: 'name',
+        valueField: 'mi_data_id',
+        ubRequest: {
+          entity: 'hr_organization',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['mi_data_id', 'name'],
+          whereList: {
+            state: {
+              expression: '[state]',
+              condition: '=',
+              values: {
+                state: 'ACTIVE'
+              }
+            },
+            mi_data_id: {
+              expression: '[mi_treePath]',
+              condition: 'like',
+              value: `%/${appAC.globalOrganization()}/%`
+            }
+          }
+        },
+        listeners: {
+          change: function (fld, newVal, oldVal) {
+            me.attr.organization.setValueById(fld.getValue())
+            if ((oldVal !== newVal)) {
+              if (me.attr.headEmployeePositionID) {
+                loadSavedDataEmployee(me.attr.headEmployeePositionID, fld.getValue())
+              }
+              if (me.attr.leaderDepartment) {
+                const store = me.attr.leaderDepartment.getStore()
+                me.attr.leaderDepartment.store.ubRequest.organizationID = fld.getValue()
+                store.load()
+              }
+            }
+            me.clearPrintForm()
+          },
+          afterrender: function (ctrl) {
+            ctrl.setValueById(appAC.globalOrganization())
+            me.record.organization = appAC.globalOrganization()
+          }
+        }
+      }
+    }
+    function setTarificationType (labelWidth = 130, width = 340) {
+      return Ext.create('UB.ux.form.field.UBComboBox', {
+        name: 'tarificationType',
+        fieldLabel: UB.i18n('Тип тарифікації'),
+        labelWidth,
+        width,
+        disableContextMenu: true,
+        defaultValue: 100,
+        pageSize: 50,
+        valueField: 'code',
+        displayField: 'name',
+        allowBlank: false,
+        ubRequest: {
+          entity: 'ubm_enum',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['code', 'name', 'eGroup'],
+          whereList: {
+            eGroup: {
+              expression: '[eGroup]',
+              condition: 'equal',
+              values: { eGroup: 'HR_DOCUMENT_TYPE' }
+            }
+          }
+        },
+        listeners: {
+          change: function (fld) {
+            me.clearPrintForm()
+            const grid = me.down('[name=employeeList]')
+            if (grid) loadDataReportGrid()
+            me.record.tarificationType = fld.getValue()
+          }
+        }
+      })
+    }
+    function setFundSourse (labelWidth = 130, width = 340) {
+      return {
+        xtype: 'ubboxselect',
+        name: 'dictFundSourceID',
+        fieldLabel: UB.i18n('Джерело фінансування'),
+        labelWidth,
+        width,
+        displayField: 'name',
+        valueField: 'ID',
+        ubRequest: {
+          entity: 'ac_fundSource',
+          method: 'selectByOrg',
+          fieldList: ['ID', 'name']
+        },
+        listeners: {
+          change: (fld) => {
+            me.clearPrintForm()
+            const grid = me.down('[name=employeeList]')
+            if (grid) loadDataReportGrid()
+          },
+          afterrender: function (ctrl) {
+            ctrl.store.ubRequest.orgID = appAC.globalOrganization()
+            ctrl.store.ubRequest.emptyValue = true
+          }
+        }
+      }
+    }
+    function setPositionCategory (labelWidth = 130, width = 340) {
+      return {
+        xtype: 'ubboxselect',
+        name: 'positionCategory',
+        fieldLabel: UB.i18n('Категорії посад'),
+        labelWidth,
+        width,
+        valueField: 'code',
+        displayField: 'name',
+        ubRequest: {
+          entity: 'ubm_enum',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['code', 'name', 'eGroup'],
+          whereList: {
+            eGroup: {
+              expression: '[eGroup]',
+              condition: 'equal',
+              values: { eGroup: 'HR_POSITION_CATEGORY' }
+            }
+          }
+        },
+        listeners: {
+          change: () => {
+            me.clearPrintForm()
+            const grid = me.down('[name=employeeList]')
+            if (grid) loadDataReportGrid()
+          }
+        }
+      }
+    }
+
+    function getDictExperienceCtrl (labelWidth = 130, width = 340, allowBlank = true) {
+      return {
+        xtype: 'ubboxselect',
+        name: 'dictExperienceID',
+        fieldLabel: UB.i18n('Стаж'),
+        labelWidth,
+        width,
+        allowBlank,
+        valueField: 'ID',
+        displayField: 'name',
+        ubRequest: {
+          entity: 'hr_dictExperience',
+          fieldList: ['ID', 'name', 'code']
+        },
+        listeners: {
+          change: function (fld) {
+            me.clearPrintForm()
+            const grid = me.down('[name=employeeList]')
+            if (grid) loadDataReportGrid()
+          }
+        }
+      }
+    }
+    function setWorkPlaceType (labelWidth = 130, width = 340) {
+      return Ext.create('UB.ux.form.field.UBComboBox', {
+        name: 'workPlaceType',
+        fieldLabel: UB.i18n('Робочі місця'),
+        labelWidth,
+        width,
+        displayField: 'name',
+        valueField: 'code',
+        listeners: {
+          change: function (fld) {
+            me.clearPrintForm()
+            const grid = me.down('[name=employeeList]')
+            if (grid) loadDataReportGrid()
+          }
+        },
+        ubRequest: {
+          entity: 'ubm_enum',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['code', 'name', 'eGroup'],
+          whereList: {
+            eGroup: {
+              expression: '[eGroup]',
+              condition: 'equal',
+              values: { eGroup: 'TRF_REPORTS_WORKPLACE' }
+            }
+          }
+        }
+      })
+    }
+
+    function getPeriodFromToCtrl (labelWidth = 130) {
+      return {
+        layout: { type: 'hbox' },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            allowBlank: false,
+            name: 'periodFromID',
+            fieldLabel: 'Період звіту:',
+            labelWidth,
+            pageSize: 50,
+            width: labelWidth + 222,
+            hideEntityItemInContext: true,
+            disableContextMenu: true,
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'hr_dictPeriod',
+              fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'priorPeriodID', 'nextPeriodID', 'name'],
+              orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+            },
+            listeners: {
+              beforeQuerySend: function () {
+                this.store.ubRequest.whereList = {
+                  orgID: {
+                    expression: '[orgID]',
+                    condition: 'equal',
+                    value: appAC.globalOrganization()
+                  }
+                }
+                if (!this.whereListIsSet) this.whereListIsSet = true
+                else this.store.reload()
+              },
+              change: function (fld) {
+                me.record.periodFromRaw = fld.getFieldValue('name')
+                me.record.periodFromID = fld.getValue()
+                const rec = AC.gridUtils.getCurrentRecord(fld)
+                me.record.periodFromDateFrom = rec ? rec.get('dateFrom') : null
+                me.record.periodFromDateTo = rec ? rec.get('dateTo') : null
+
+                if (!me.record.periodToID) {
+                  me.attr.periodToID.setValueById(fld.getValue())
+                } else if (me.record.periodFromID && ((me.record.periodToDateFrom.getFullYear() < me.record.periodFromDateFrom.getFullYear()) || (me.record.periodToDateFrom.getFullYear() > me.record.periodFromDateFrom.getFullYear()))) {
+                  me.attr.periodToID.setValue()
+                }
+                me.clearPrintForm()
+              },
+              expand: appHR.periodExpand
+            }
+          },
+          {
+            xtype: 'label',
+            text: UB.i18n('-'),
+            cls: 'x-form-item-label',
+            margin: '8 15 0 20',
+            width: 10
+          },
+          {
+            xtype: 'ubcombobox',
+            allowBlank: false,
+            name: 'periodToID',
+            fieldLabel: '',
+            width: 222,
+            hideEntityItemInContext: true,
+            disableContextMenu: true,
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'hr_dictPeriod',
+              fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'priorPeriodID', 'nextPeriodID', 'name'],
+              orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+            },
+            listeners: {
+              beforeQuerySend: function () {
+                this.store.ubRequest.whereList = {
+                  orgID: {
+                    expression: '[orgID]',
+                    condition: 'equal',
+                    value: appAC.globalOrganization()
+                  },
+                  pYear: {
+                    expression: '[pYear]',
+                    condition: '=',
+                    value: me.record.periodFromDateFrom.getFullYear()
+                  }
+                }
+                if (!this.whereListIsSet) this.whereListIsSet = true
+                else this.store.reload()
+              },
+              change: function (fld) {
+                me.record.periodToRaw = fld.getFieldValue('name')
+                me.record.periodToID = fld.getValue()
+                const rec = AC.gridUtils.getCurrentRecord(fld)
+                me.record.periodToDateFrom = rec ? rec.get('dateFrom') : null
+                me.record.periodToDateTo = rec ? rec.get('dateTo') : null
+
+                if (!me.record.periodFromID) {
+                  me.attr.periodFromID.setValueById(fld.getValue())
+                } else if (me.record.periodToID && me.record.periodToDateFrom < me.record.periodFromDateFrom) {
+                  me.attr.periodFromID.setValue()
+                }
+
+                me.clearPrintForm()
+              },
+              expand: appHR.periodExpand
+            }
+          }
+        ]
+      }
+    }
+    function setPeriodCtrl (labelWidth = 140, width = 350) {
+      return {
+        xtype: 'ubcombobox',
+        allowBlank: false,
+        name: 'periodID',
+        fieldLabel: UB.i18n('Період звіту'),
+        labelWidth,
+        width,
+        selectOnFocus: true,
+        ubRequest: {
+          entity: 'hr_dictPeriod',
+          fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'name'],
+          orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+        },
+        pageSize: 50,
+        listeners: {
+          afterrender: function (ctrl) {
+            appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+              ctrl.setValueById(response.ID)
+              me.record.periodID = response.ID
+              me.record.periodName = response.name
+              me.record.periodFrom = response.dateFrom
+              me.record.periodTo = response.dateTo
+            })
+          },
+          beforeQuerySend: function (ctrl) {
+            this.store.ubRequest.whereList = {
+              orgID: {
+                expression: '[orgID]',
+                condition: 'equal',
+                value: appAC.globalOrganization()
+              }
+            }
+            if (!this.whereListIsSet) this.whereListIsSet = true
+            else this.store.reload()
+            me.record.periodID = ctrl.combo.getValue()
+          },
+          change: function (fld) {
+            me.record.periodID = fld.getValue()
+            me.record.periodName = fld.getFieldValue('name')
+            me.record.periodFrom = fld.getFieldValue('dateFrom')
+            me.record.periodTo = fld.getFieldValue('dateTo')
+            me.clearPrintForm()
+          },
+          expand: appHR.periodExpand
+        }
+      }
+    }
+
+    function getPeriodCtrl (labelWidth = 115, cfg) {
+      cfg = cfg || {}
+      return {
+        layout: { type: 'hbox' },
+        items: [
+          {
+            xtype: 'label',
+            text: cfg.label || UB.i18n('Період:'),
+            cls: 'x-form-item-label',
+            margin: '8 0 0 15',
+            width: labelWidth
+          },
+          {
+            xtype: 'button',
+            text: '<',
+            margin: '2 0 0 0',
+            tooltip: UB.i18n('Попередній період'),
+            width: 30,
+            handler: () => {
+              const priorID = me.attr.periodID.getFieldValue('priorPeriodID')
+              if (priorID) {
+                me.attr.periodID.setValueById(priorID)
+              }
+            },
+            hidden: cfg.hidePriorBtn
+          },
+          {
+            xtype: 'ubcombobox',
+            allowBlank: false,
+            name: 'periodID',
+            fieldLabel: '',
+            labelWidth: 130,
+            margin: '2 0 0 5',
+            pageSize: 50,
+            width: cfg.width || 300,
+            hideEntityItemInContext: true,
+            disableContextMenu: true,
+            selectOnFocus: true,
+            ubRequest: {
+              entity: 'hr_dictPeriod',
+              fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'priorPeriodID', 'nextPeriodID', 'name'],
+              orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+            },
+            listeners: {
+              beforeQuerySend: function () {
+                this.store.ubRequest.whereList = {
+                  orgID: {
+                    expression: '[orgID]',
+                    condition: 'equal',
+                    value: appAC.globalOrganization()
+                  }
+                }
+                if (!this.whereListIsSet) this.whereListIsSet = true
+                else this.store.reload()
+              },
+              change: function (fld) {
+                me.record.periodRaw = fld.getFieldValue('name')
+                me.record.periodID = fld.getValue()
+                const rec = AC.gridUtils.getCurrentRecord(fld)
+                me.record.periodFrom = rec ? rec.get('dateFrom') : null
+                me.record.periodTo = rec ? rec.get('dateTo') : null
+
+                me.clearPrintForm()
+              },
+              expand: appHR.periodExpand
+            }
+          },
+          {
+            xtype: 'button',
+            text: '>',
+            margin: '2 15 0 0',
+            tooltip: UB.i18n('Наступний період'),
+            width: 30,
+            handler: () => {
+              const nextID = me.attr.periodID.getFieldValue('nextPeriodID')
+              if (nextID) {
+                me.attr.periodID.setValueById(nextID)
+              }
+            },
+            hidden: cfg.hideNextBtn
+          }
+        ]
+      }
+    }
+    function setDictProgClass (labelWidth = 130, width = 340, allowBlank = true) {
+      return {
+        xtype: 'ubboxselect',
+        name: 'dictProgClassID',
+        fieldLabel: UB.i18n('КПК'),
+        labelWidth,
+        width,
+        allowBlank,
+        valueField: 'ID',
+        displayField: 'description',
+        ubRequest: {
+          entity: 'ac_dictProgClass',
+          method: 'selectWithTrfAccrual',
+          fieldList: ['ID', 'description']
+        },
+        listeners: {
+          afterRender: function () {
+            this.store.ubRequest.organizationID = appAC.globalOrganization()
+          },
+          focus: function () {
+            this.store.ubRequest.organizationID = appAC.globalOrganization()
+            //add pdv 26.11.24
+            this.store.ubRequest.periodFrom = me.record.periodFrom
+            if (me.attr.joinReport && me.attr.joinReport.getValue()) {
+              const grid = me.down('[name=subDepList]')
+              this.store.ubRequest.joinReport = true
+              this.store.ubRequest.organizationList = JSON.stringify(grid.getCheckedRow().map(o => o.data.mi_data_id))
+            } else {
+              this.store.ubRequest.joinReport = false
+            }
+          },
+          change: function (fld) {
+            me.clearPrintForm()
+            const grid = me.down('[name=employeeList]')
+            me.record.dictProgClassID = fld.getValue()
+            if (grid) loadDataReportGrid()
+          }
+        }
+      }
+    }
+
+    function setRoundSum (labelWidth = 130, width = 340) {
+      return {
+        xtype: 'ubcombobox',
+        fieldLabel: UB.i18n('Округлювати суму:'),
+        labelWidth,
+        width,
+        name: 'roundUpTo',
+        hideEntityItemInContext: true,
+        valueField: 'code',
+        ubRequest: {
+          entity: 'ubm_enum',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['ID', 'name', 'code', 'eGroup'],
+          whereList: {
+            enumGroupFilter: {
+              expression: '[eGroup]',
+              condition: 'equal',
+              values: {
+                val: 'TRF_ROUND'
+              }
+            }
+          },
+          orderList: {
+            orderBy: { expression: 'code', order: 'asc' }
+          }
+        },
+        listeners: {
+          change: function (crtl, value) {
+            me.record.roundUpTo = crtl.getValue()
+            me.clearPrintForm()
+          }
+        }
+      }
+    }
+
+    function setPerfomer (labelWidth = 130, width = 340) {
+      return {
+        xtype: 'ubcombobox',
+        fieldLabel: UB.i18n('Виконавець'),
+        labelWidth,
+        width,
+        name: 'perfomerID',
+        valueField: 'ID',
+        displayField: 'description',
+        ubRequest: {
+          entity: 'hr_employeePositionS',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['ID', 'description'],
+          whereList: {
+            organizationID: {
+              expression: '[organizationID]',
+              condition: 'equal',
+              value: appAC.globalOrganization()
+            }
+          }
+        }
+      }
+    }
+    function dateReport (labelWidth = 100) {
+      return {
+        xtype: 'datefield',
+        name: 'dateReport',
+        width: 240,
+        labelWidth,
+        allowBlank: false,
+        fieldLabel: UB.i18n('Дата звіту'),
+        listeners: {
+          afterrender: function (crtl) {
+            crtl.setValue(appAC.globalApplicationDate())
+            me.record.dateReport = crtl.getValue()
+          },
+          change: function (crtl) {
+            if (crtl.getValue() && crtl.isValid()) {
+              me.clearPrintForm()
+              const form = crtl.up('form')
+              const accountantID = form.down('[name=accountantID]')
+              if (accountantID) {
+                const reportDate = AC.dateService.shiftDate(crtl.getValue())
+                const whereList = [
+                  ['dateFrom', '<=', reportDate || appAC.globalApplicationDate()],
+                  ['dateTo', '>=', reportDate || appAC.globalApplicationDate()],
+                  ['organizationID', '=', appAC.globalOrganization()]
+                ]
+                AC.viewUtils.setWhereListProperty(accountantID, whereList, null, ['clearStore', 'clearWhereList', 'clearValue'])
+                accountantID.store.isChange = false
+                me.record.dateReport = crtl.getValue()
+              } else {
+                me.record.dateReport = crtl.getValue()
+              }
+            }
+          }
+        }
+      }
+    }
+    function setChiefBooker (labelWidth = 140) {
+      return {
+        xtype: 'ubcombobox',
+        name: 'accountantID',
+        fieldLabel: UB.i18n('Головний бухгалтер'),
+        labelWidth,
+        valueField: 'ID',
+        displayField: 'description',
+        ubRequest: {
+          entity: 'hr_employeePositionS',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['ID', 'description', 'positionID', 'employeeID.shortFIO', 'positionID.dictPositionID.name', 'dictPositionID.name', 'factPosition'],
+          orderList: { name: { expression: 'description', order: 'ASC' } }
+        },
+        listeners: {
+          render: function (ctrl) {
+            ctrl.store.on('load', () => {
+              if (!ctrl.store.isChange) {
+                UB.Repository('hr_orgRespPosition').attrs(['positionID'])
+                  .where('organizationID', '=', appAC.globalOrganization())
+                  .where('mi_deleteDate', '>=', '#maxdate')
+                  .where('dateFrom', '<=', AC.dateService.currentDate())
+                  .where('dateTo', '>=', AC.dateService.currentDate())
+                  .where('respPosition', '=', 'accountantChief')
+                  .selectSingle().then(response => {
+                    if (response && response.positionID && ctrl.store && ctrl.store.data && ctrl.store.data.items && ctrl.store.data.items.length > 0) {
+                      const filterEmpOfPos = ctrl.store.data.items.filter(emp => emp.data.positionID === response.positionID)
+                      ctrl.setValueById(response.positionID)
+                      const useActualPositionName = AC.settings.get('hrOrderActualPositionName', appAC.globalOrganization()) === true
+                      me.record.fullFIO = filterEmpOfPos[0].data['employeeID.fullFIO']
+                      me.record.dictPosition = useActualPositionName
+                        ? filterEmpOfPos[0].data['factPosition']
+                        : filterEmpOfPos[0].data['positionID.dictPositionID.name']
+                    }
+                  })
+              }
+            })
+          },
+          change: function (crtl) {
+            const useActualPositionName = AC.settings.get('hrOrderActualPositionName', appAC.globalOrganization()) === true
+            me.record.shortFIO = crtl.getFieldValue('employeeID.shortFIO')
+            me.record.dictPosition = useActualPositionName
+              ? crtl.getFieldValue('factPosition')
+              : crtl.getFieldValue('positionID.dictPositionID.name') || crtl.getFieldValue('dictPositionID.name')
+            me.clearPrintForm()
+          }
+        }
+      }
+    }
+    function getHeadEmployeePositionCtrl (fieldLabel = UB.i18n('Керівник організації')) {
+      return Ext.create('HR.controls.empPositionCombobox', {
+        name: 'headEmployeePositionID',
+        fieldLabel,
+        disableModifyEntity: true,
+        disableContextMenu: true,
+        labelWidth: 140,
+        valueField: 'ID',
+        displayField: 'employeeID.shortFIO',
+        ubRequest: {
+          entity: 'hr_employeeNumber',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['ID', 'employeeID.shortFIO', 'empWorkPlace', 'mainEmpNumberID', 'mainEmpNumberID.empWorkPlace'],
+          whereList: {
+            organizationID: {
+              expression: '[orgID]',
+              condition: 'equal',
+              value: appAC.globalOrganization()
+            },
+            empWorkPlace: {
+              expression: '[mainEmpNumberID.empWorkPlace]',
+              condition: 'equal',
+              value: '1'
+            },
+            empWorkPlaceIsNull: {
+              expression: '[mainEmpNumberID.empWorkPlace]',
+              condition: 'isNull'
+            },
+            positionCategory: {
+              expression: '[empDictPositionID.positionCategory]',
+              condition: 'equal',
+              value: '1'
+            }
+          },
+          logicalPredicates: ['([empWorkPlace] OR [empWorkPlaceIsNull])'],
+          orderList: { orderBy: { expression: 'employeeID.shortFIO' } }
+        },
+        listeners: {
+          change: function (fld, value) {
+            me.clearPrintForm()
+          }
+        }
+      })
+    }
+    function getResponsiblePositionCtrl (fieldLabel = UB.i18n('Відповідальний за ведення табелю'), labelWidth = 160) {
+      return Ext.create('HR.controls.empPositionCombobox', {
+        name: 'responsiblePositionID',
+        fieldLabel,
+        disableModifyEntity: true,
+        disableContextMenu: true,
+        labelWidth,
+        valueField: 'ID',
+        displayField: 'employeeID.shortFIO',
+        ubRequest: {
+          entity: 'hr_employeePositionS',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['ID', 'employeeID.shortFIO', 'positionID', 'employeeNumberID.empWorkPlace'],
+          whereList: {
+            organizationID: {
+              expression: '[organizationID]',
+              condition: 'equal',
+              value: appAC.globalOrganization()
+            },
+            dateFrom: {
+              expression: '[dateFrom]',
+              condition: '<=',
+              value: AC.dateService.currentDate()
+            },
+            dateTo: {
+              expression: '[dateTo]',
+              condition: '>=',
+              value: AC.dateService.currentDate()
+            },
+            workPlace: {
+              expression: '[workPlace]',
+              condition: 'equal',
+              value: '1'
+            },
+            empWorkPlaceIsNull: {
+              expression: '[workPlace]',
+              condition: 'isNull'
+            }
+          },
+          logicalPredicates: ['([workPlace] OR [empWorkPlaceIsNull])'],
+          orderList: { orderBy: { expression: 'employeeID.shortFIO' } }
+        },
+        listeners: {
+          change: function (fld, value) {
+            if (value) {
+              me.record.responsiblePositionID = fld.getValue()
+              me.record.responsiblePositionShortFIO = fld.getFieldValue('employeeID.shortFIO')
+            }
+            me.clearPrintForm()
+          }
+        }
+      })
+    }
+    function addAccountantChiefPosition (orgID) {
+      return appHR.getAccountantChiefPosition(orgID, AC.dateService.currentDate())
+    }
+    function setLeaderDepartment (labelWidth = 140, fieldLabel = UB.i18n('Начальник управління')) {
+      return Ext.create('HR.controls.empPositionCombobox', {
+        fieldLabel,
+        labelWidth,
+        disableModifyEntity: true,
+        disableContextMenu: true,
+        name: 'leaderDepartment',
+        valueField: 'ID',
+        displayField: 'description',
+        ubRequest: {
+          entity: 'trf_constructorReports',
+          method: 'getLeaderDepartmentEmpl',
+          fieldList: ['ID', 'description', 'shortFIO']
+        },
+        listeners: {
+          afterRender: function (fld) {
+            fld.store.ubRequest.currentDate = AC.dateService.currentDate()
+            loadSavedDataEmployee(fld, appAC.globalOrganization())
+          },
+          change: function (fld, value) {
+            me.clearPrintForm()
+          }
+        }
+      })
+    }
+
+    function setTradeUnionCommittee (labelWidth = 140, fieldLabel = UB.i18n('Профспілковий комітет')) {
+      return {
+        xtype: 'textfield',
+        name: 'tradeUnionCommitteeID',
+        labelWidth: labelWidth,
+        fieldLabel,
+        listeners: {
+          change: function (fld) {
+            me.record.tradeUnionCommitteeID = fld.getValue()
+          },
+          afterRender: function (fld) {
+            loadSavedDataEmployee(fld, appAC.globalOrganization())
+          }
+        }
+      }
+    }
+    function setHeadTradeUnionCommittee (labelWidth = 140, fieldLabel = UB.i18n('Голова ПК')) {
+      return {
+        xtype: 'textfield',
+        name: 'headTradeUnionCommittee',
+        labelWidth: labelWidth,
+        fieldLabel,
+        listeners: {
+          change: function (fld) {
+            me.record.headTradeUnionCommittee = fld.getValue()
+          },
+          afterRender: function (fld) {
+            loadSavedDataEmployee(fld, appAC.globalOrganization())
+          }
+        }
+      }
+    }
+    function setChecking (labelWidth = 130, width = 340) {
+      return {
+        xtype: 'ubcombobox',
+        fieldLabel: UB.i18n('Перевірив'),
+        labelWidth,
+        width,
+        name: 'checkingID',
+        valueField: 'ID',
+        displayField: 'description',
+        ubRequest: {
+          entity: 'hr_employeePositionS',
+          method: UB.core.UBCommand.methodName.SELECT,
+          fieldList: ['ID', 'description'],
+          whereList: {
+            organizationID: {
+              expression: '[organizationID]',
+              condition: 'equal',
+              value: appAC.globalOrganization()
+            }
+          }
+        }
+      }
+    }
+
+    function getLessAccrual (labelWidth = 180) {
+      return {
+        xtype: 'checkbox',
+        fieldLabel: UB.i18n('Звіт без нарахувань'),
+        labelWidth,
+        name: 'lessAccrual',
+        listeners: {
+          change: function (crtl, fld) {
+            me.record.lessAccrual = crtl.getValue()
+            me.clearPrintForm()
+          }
+        }
+      }
+    }
+
+    function getPrintAbsences (labelWidth = 130) {
+      return {
+        xtype: 'checkbox',
+        fieldLabel: UB.i18n('Друкувати неявки'),
+        labelWidth,
+        name: 'printAbsences',
+        checked: true,
+        listeners: {
+          change: function (crtl, fld) {
+            me.record.printAbsences = crtl.getValue()
+            me.clearPrintForm()
+          },
+          afterRender: function () {
+            me.record.printAbsences = true
+          }
+        }
+      }
+    }
+    function getPrintConditionalDesignations (labelWidth = 270) {
+      return {
+        xtype: 'checkbox',
+        fieldLabel: UB.i18n('Друкувати таблицю умовних позначень'),
+        labelWidth,
+        name: 'printConditionalDesignations',
+        checked: true,
+        hidden: false,
+        listeners: {
+          change: function (crtl, fld) {
+            me.record.printConditionalDesignations = crtl.getValue()
+            me.clearPrintForm()
+          },
+          afterRender: function () {
+            me.record.printConditionalDesignations = true
+          }
+        }
+      }
+    }
+    function getOrganizationCtrl (hidden = true) {
+      return {
+        xtype: 'textfield',
+        name: 'organizationID',
+        hidden,
+        width: 640,
+        listeners: {
+          afterRender: function () {
+            const parentOrdID = AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization())
+            if (parentOrdID) {
+              me.record.organizationID = parentOrdID
+            } else {
+              me.record.organizationID = appAC.globalOrganization()
+            }
+          }
+        }
+      }
+    }
+    function setDictPart (labelWidth = 180, allowBlank = false) {
+      return {
+        xtype: 'ubboxselect',
+        name: 'dictPartID',
+        flex: 1,
+        labelWidth,
+        fieldLabel: UB.i18n('Розділ тарифікації'),
+        selectOnFocus: true,
+        displayField: 'name',
+        valueField: 'ID',
+        allowBlank,
+        ubRequest: {
+          entity: 'trf_dictPart',
+          fieldList: ['ID', 'name', 'code'],
+          orderList: { orderBy: { expression: 'code' } }
+        },
+        listeners: {
+          change: function (crtl, fld) {
+            me.record.dictPartID = crtl.getValue()
+            me.clearPrintForm()
+          },
+          render: ctrl => {
+            ctrl.store.on('load', () => {
+              if (!ctrl.store.isLoaded) {
+                const storeItems = ctrl.store.data.items
+                const selItem = _.find(storeItems, { data: { code: '1' } })
+                if (allowBlank) {
+                  ctrl.setValue(null)
+                  me.record.dictPartID = ctrl.getValue()
+                } else {
+                  if (selItem) ctrl.setValue(selItem.data.ID)
+                }
+                ctrl.store.isLoaded = true
+              }
+            })
+            ctrl.store.load()
+          }
+        }
+      }
+    }
+    function setDictStaffSubCatCtrl (labelWidth = 140) {
+      return {
+        xtype: 'ubcombobox',
+        name: 'dictStaffSubCatID',
+        fieldLabel: UB.i18n('Підкатегорія персоналу (спеціалісти)'),
+        labelWidth,
+        valueField: 'ID',
+        displayField: 'name',
+        ubRequest: {
+          entity: 'hr_dictStaffSubCat',
+          fieldList: ['ID', 'name']
+        },
+        listeners: {
+          change: function (fld) {
+            me.record.dictStaffSubCatID = fld.getValue()
+            me.record.dictStaffSubCatName = fld.getRawValue()
+            me.clearPrintForm()
+          }
+        }
+      }
+    }
+    // ReportSetting
+    function setDictStaffCatUbBoxCtrl (labelWidth = 180, allowBlank = true) {
+      return {
+        xtype: 'ubboxselect',
+        name: 'dictStaffSubCatID',
+        fieldLabel: UB.i18n('Підкатегорія персоналу'),
+        labelWidth,
+        allowBlank,
+        valueField: 'ID',
+        displayField: 'description',
+        ubRequest: {
+          entity: 'hr_dictStaffSubCat',
+          fieldList: ['ID', 'description'],
+          orderList: { orderBy: { expression: 'code', order: 'asc' } }
+        },
+        listeners: {
+          change: function (fld) {
+            me.record.dictStaffSubCatID = fld.getValue()
+            me.clearPrintForm()
+          },
+          afterRender: (fld) => {
+            me.record.dictStaffSubCatID = fld.getValue()
+          }
+        }
+      }
+    }
+    function getReportSalaryCostsSetting (title = UB.i18n('Налаштування звіту')) {
+      return {
+        title,
+        xtype: 'panel',
+        layout: 'fit',
+        align: 'stretch',
+        border: 2,
+        layoutConfig: {
+          collapsible: true,
+          collapsed: true
+        },
+        flex: 1,
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true,
+            collapsed: false
+          },
+          {
+            xtype: 'reportparamcontrol',
+            collapsed: false,
+            readOnly: !AC.entityUtils.verifyRightsMethod('hr_listParam', 'canVisibleUpdateValues'),
+            toolBarReadOnly: !AC.entityUtils.verifyRightsMethod('hr_listParam', 'canVisibleUpdateValues'),
+            reportCode: 'SalaryCosts'
+          }
+        ]
+      }
+    }
+    function loadDataReportGrid () {
+      me.setLoading(true)
+      me.clearPrintForm()
+      const orgID = appAC.globalOrganization()
+      const getEmployees = UB.Repository('trf_position')
+        .attrs(['workPlaceID.employeeNumberID', 'workPlaceID.employeeNumberID.tabNum', 'workPlaceID.employeeNumberID.employeeID.fullFIO', 'workPlaceID.description', 'workPlaceID.position', 'workPlaceID.depName', 'workPlaceID.dateFrom', 'workPlaceID.dictPositionID.name', 'dictFundSourceID.name', 'workPlaceID.employeeNumberID.depID', 'workPlaceID.employeeNumberID.employeePositionID.payElID', 'workPlaceID.employeeNumberID.employeeID', 'dictPositionID.positionCategory', 'dictFundSourceID'])
+        .whereIf(!me.commandData.cmpInitConfig || (me.commandData.cmpInitConfig && me.commandData.cmpInitConfig.reportParams.showPostedWorkPlace), 'workPlaceID.state', '=', 'POSTED')
+        .whereIf(!me.commandData.cmpInitConfig || (me.commandData.cmpInitConfig && (me.commandData.cmpInitConfig.reportParams.tarificationType === 'FACT')), 'workPlaceID.documentID.type', '=', 'FACT')
+        .where('workPlaceID.documentID.orgID', '=', orgID)
+        .where('mi_deleteDate', '>=', '#maxdate')
+        .where('workPlaceID.mi_deleteDate', '>=', '#maxdate')
+        .where('workPlaceID.dateFrom', '<=', AC.dateService.shiftDate(me.attr.issueDate ? me.attr.issueDate.getValue() : AC.dateService.currentDate()))
+        .where('workPlaceID.dateTo', '>=', AC.dateService.shiftDate(me.attr.issueDate ? me.attr.issueDate.getValue() : AC.dateService.currentDate()))
+      if (me.commandData.cmpInitConfig && me.commandData.cmpInitConfig.reportParams.employeeNumberID) {
+        getEmployees.where('workPlaceID.employeeNumberID', '=', me.commandData.cmpInitConfig.reportParams.employeeNumberID)
+      }
+      if (me.commandData.cmpInitConfig && me.commandData.cmpInitConfig.reportParams.documentID) {
+        getEmployees.where('workPlaceID.documentID', '=', me.commandData.cmpInitConfig.reportParams.documentID)
+      }
+      if (me.attr.subDivision && me.attr.subDivision.getValue()) {
+        const depIDs = me.attr.subDivision.getValue().split(',')
+        getEmployees.where('workPlaceID.employeeNumberID.depID', 'in', depIDs)
+      }
+      if (me.attr.positionCategory && me.attr.positionCategory.getValue()) {
+        const positionCategorys = me.attr.positionCategory.value
+        getEmployees.where('dictPositionID.positionCategory', 'in', positionCategorys)
+      }
+      if (me.attr.dictFundSourceID && me.attr.dictFundSourceID.getValue()) {
+        const dictFundSourceIDs = me.attr.dictFundSourceID.getValue().split(',')
+        getEmployees.where('dictFundSourceID', 'in', dictFundSourceIDs)
+      }
+      if (me.attr.dictProgClassID && me.attr.dictProgClassID.getValue()) {
+        const dictProgClassIDs = me.attr.dictProgClassID.getValue().split(',')
+        getEmployees.where('dictProgClassID', 'in', dictProgClassIDs)
+      }
+      if (me.attr.tarificationType && me.attr.tarificationType.getValue()) {
+        getEmployees.where('workPlaceID.documentID.type', '=', me.attr.tarificationType.getValue())
+      }
+      if (me.attr.workPlaceType && (me.attr.workPlaceType.getValue() === '3')) {
+        getEmployees.where('workPlaceID.employeeNumberID', 'isNull')
+      }
+      if (me.attr.workPlaceType && (me.attr.workPlaceType.getValue() === '2')) {
+        getEmployees.where('workPlaceID.employeeNumberID', '!==', null)
+      }
+      getEmployees.selectAsObject(
+        { 'workPlaceID.employeeNumberID.employeeID': 'ID' }
+      ).then(data => {
+        if (me.attr.dictExperienceID.getValue()) {
+          const employeers = data.filter(o => o.ID !== null).map(o => { return { employeeNumberID: o['workPlaceID.employeeNumberID'], onDate: AC.dateService.shiftDate(o['workPlaceID.dateFrom']), employee: o } })
+          $App.connection.run({
+            entity: 'trf_constructorReports',
+            method: 'calcEmployeeExperience',
+            params: JSON.stringify(employeers)
+          }).then((mParams) => {
+            const empArr = []
+            const employeers = JSON.parse(mParams.employeeExperience)
+            employeers.forEach(o => {
+              const dictExperienceIDs = me.attr.dictExperienceID.getValue().split(',')
+              const expList = JSON.parse(o.employeeExperience)
+              const params = o.employee
+              if (expList && expList.length && dictExperienceIDs.some(o => expList.find(k => Number(o) === k.ID))) empArr.push(params)
+              const claerEmpArr = isMaxDateFrom(empArr).map(o => {
+                return { ...o, 'workPlaceID.dateFrom': AC.dateService.shiftDate(o['workPlaceID.dateFrom']) }
+              })
+              me.down('acGrid').getStore().loadData(claerEmpArr)
+              me.down('acGrid').checkedRow()
+              me.setLoading(false)
+            })
+          }, (err) => {
+            me.setLoading(false)
+            throw err
+          })
+        } else {
+          data.forEach(o => { if (!o['workPlaceID.employeeNumberID']) o['workPlaceID.employeeNumberID.employeeID.fullFIO'] = 'Вакансія' })
+          const claerData = isMaxDateFrom(data)
+          me.down('acGrid').getStore().loadData(claerData)
+          me.down('acGrid').checkedRow()
+          me.setLoading(false)
+        }
+      })
+
+      function isMaxDateFrom (array) {
+        return array.reduce((o, i) => {
+          if (!o.find(v => v.ID === i.ID)) {
+            const findDuplicatePos = array.filter(v => (v.ID === i.ID))
+            if (findDuplicatePos.length > 1) {
+              const empMaxDateFrom = findDuplicatePos.reduce((prev, cur) => {
+                if (prev['workPlaceID.dateFrom'] > cur['workPlaceID.dateFrom']) return prev
+                return cur
+              })
+              o.push(empMaxDateFrom)
+            } else {
+              o.push(...findDuplicatePos)
+            }
+          }
+          return o
+        }, [])
+      }
+    }
+    function getReportSetting (title = UB.i18n('Вибір працівників')) {
+      return {
+        itemId: 'tabSetting',
+        title,
+        autoScroll: true,
+        margin: '5, 0, 0, 0',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            region: 'north',
+            autoScroll: true,
+            split: false,
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  setTarificationType(),
+                  setDictProgClass(),
+                  setPositionCategory()
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  setWorkPlaceType(),
+                  getDictExperienceCtrl(),
+                  setFundSourse()
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'acGrid',
+            name: 'employeeList',
+            region: 'center',
+            flex: 1,
+            autoScroll: true,
+            notWriteChanges: true,
+            storeType: 'local',
+            showToolBar: true,
+            disablePaging: true,
+            loadMaskMessage: UB.i18n('Завантаження даних...'),
+            stripeRows: true,
+            ignoreAttr: ['posName', 'depName', 'depCaption'],
+            hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+            checkColumn: {},
+            viewConfig: {
+              markDirty: false
+            },
+            pagerConfig: {
+              pageSize: 10
+            },
+            customToolBarActions: [
+              {
+                xtype: 'textfield',
+                name: 'searchBox',
+                skipSetReadOnly: true,
+                labelWidth: 60,
+                fieldLabel: UB.i18n('filter'),
+                listeners: {
+                  change: function (ctrl, value) {
+                    const store = ctrl.up('acGrid').getStore()
+                    store.clearFilter()
+                    if (value === '') {
+                      return
+                    }
+                    if (store.sorters.items.length) {
+                      store.sorters.removeAll()
+                    }
+                    store.filter(row => {
+                      return (row.get('workPlaceID.employeeNumberID.description') && row.get('workPlaceID.employeeNumberID.description').toUpperCase().includes(value.toUpperCase())) ||
+                        (row.get('workPlaceID.dictPositionID.name') && row.get('workPlaceID.dictPositionID.name').toUpperCase().includes(value.toUpperCase())) ||
+                        (row.get('workPlaceID.employeeNumberID.employeeID.fullFIO') && row.get('workPlaceID.employeeNumberID.employeeID.fullFIO').toUpperCase().includes(value.toUpperCase())) ||
+                        (row.get('workPlaceID.depName') && row.get('workPlaceID.depName').toUpperCase().includes(value.toUpperCase())) ||
+                        (row.get('workPlaceID.employeeNumberID.tabNum') && row.get('workPlaceID.employeeNumberID.tabNum').toUpperCase().includes(value.toUpperCase())) ||
+                        (row.get('dictFundSourceID.name') && row.get('dictFundSourceID.name').toUpperCase().includes(value.toUpperCase()))
+                    })
+                  }
+                }
+              }
+            ],
+            fields: [
+              { name: 'workPlaceID.employeeNumberID.employeePositionID.payElID' },
+              { name: 'ID' },
+              { name: 'workPlaceID.employeeNumberID.depID' },
+              { name: 'dictFundSourceID' },
+              {
+                name: 'workPlaceID.employeeNumberID.tabNum',
+                columnConfig: {
+                  text: UB.i18n('Таб. №'),
+                  sortBy: 'Number',
+                  width: 80
+                }
+              },
+              {
+                name: 'workPlaceID.employeeNumberID.employeeID.fullFIO',
+                columnConfig: {
+                  text: UB.i18n('Працівник'),
+                  flex: 1
+                }
+              },
+              {
+                name: 'workPlaceID.dictPositionID.name',
+                columnConfig: {
+                  text: UB.i18n('Посада'),
+                  flex: 1
+                }
+              },
+              {
+                name: 'workPlaceID.depName',
+                columnConfig: {
+                  text: UB.i18n('Підрозділ'),
+                  flex: 1
+                }
+              },
+              {
+                name: 'dictFundSourceID.name',
+                columnConfig: {
+                  text: UB.i18n('Джерело фінансування'),
+                  flex: 1
+                }
+              },
+              {
+                name: 'workPlaceID.dateFrom',
+                columnConfig: {
+                  text: UB.i18n('Дата початку'),
+                  sortBy: 'Date',
+                  flex: 1,
+                  renderer: (value) => {
+                    if (_.isDate(value)) {
+                      if (AC.dateService.shiftDate(value) < AC.dateService.maxDate()) {
+                        return AC.dateService.formatDate(value)
+                      } else {
+                        return ''
+                      }
+                    } else {
+                      return value
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+    function getJoinReport (labelWidth = 150) {
+      return {
+        xtype: 'checkbox',
+        fieldLabel: UB.i18n('Консолідований звіт'),
+        labelWidth,
+        name: 'joinReport',
+        value: 0,
+        listeners: {
+          change: function (crtl, fld) {
+            const tabReport = me.down('[itemId=tabReport]')
+            const cmpTabPanel = me.down('[itemId=cmpTabPanel]')
+            const subDepList = me.down('[name=subDepList]')
+            const tabSettings = me.down('[itemId=tabSettings]')
+            const dictProgClassID = me.down('[name=dictProgClassID]')
+            fld && subDepList.show()
+            !fld && subDepList.hide()
+            fld && tabSettings.tab.show()
+            !fld && tabSettings.tab.hide()
+            !fld && cmpTabPanel.setActiveTab(tabReport)
+            fld && cmpTabPanel.setActiveTab(tabSettings)
+            if (!fld && dictProgClassID) dictProgClassID.clearValue()
+            me.clearPrintForm()
+          },
+          afterRender: function () {
+            me.down('[itemId=tabSettings]').tab.hide()
+            me.down('[name=subDepList]').hide()
+            me.setLoading(true)
+            me.clearPrintForm()
+          },
+          render: function (crtl) {
+            loadDataStatementGrid(crtl)
+          }
+        }
+      }
+    }
+    async function getOrganigation (parentUnitID) {
+      let org = await UB.Repository('hr_organization')
+        .attrs(['name', 'mi_data_id', 'EDRPOUCode', 'code', 'mi_dateFrom'])
+        .where('state', '=', 'ACTIVE')
+        .where('parentUnitID', 'in', parentUnitID)
+        .selectAsObject()
+      if (org) return org
+    }
+    async function loadDataStatementGrid (crtl) {
+      me.setLoading(true)
+      const orgID = appAC.globalOrganization()
+      if (!crtl) { crtl = me.down('[name=joinReport]') }
+      const data = await getOrganigation(orgID)
+      const tabReport = me.down('[itemId=tabReport]')
+      const cmpTabPanel = me.down('[itemId=cmpTabPanel]')
+      const subDepList = me.down('[name=subDepList]')
+      const tabSettings = me.down('[itemId=tabSettings]')
+      if (data.length) {
+        crtl.show()
+        subDepList.getStore().loadData(data)
+      } else {
+        crtl.hide()
+        crtl.setValue()
+      }
+      !crtl.hidden && crtl.getValue() ? subDepList.show() : subDepList.hide()
+      !crtl.hidden && crtl.getValue() ? tabSettings.tab.show() : tabSettings.tab.hide()
+      crtl.hidden && cmpTabPanel.setActiveTab(tabReport)
+      me.setLoading(false)
+    }
+
+    function getOrgSetting () {
+      return {
+        itemId: 'tabSettings',
+        title: UB.i18n('Організації'),
+        autoScroll: true,
+        margin: '5,0,0,0',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            xtype: 'acGrid',
+            name: 'subDepList',
+            region: 'center',
+            flex: 1,
+            loadMaskMessage: UB.i18n('Завантаження даних...'),
+            autoScroll: true,
+            notWriteChanges: true,
+            storeType: 'local',
+            showToolBar: true,
+            disablePaging: true,
+            stripeRows: true,
+            hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+            checkColumn: {},
+            pagerConfig: {
+              pageSize: 20
+            },
+            viewConfig: {
+              markDirty: false
+            },
+            entityConfig: {
+              entity: 'hr_organization',
+              method: 'select',
+              fieldList: ['mi_data_id', 'code', 'name', 'EDRPOUCode', 'mi_dateFrom'],
+              customParams: {
+                mi_treePath: appAC.globalOrganization(),
+                state: 'ACTIVE'
+              }
+            },
+            customToolBarActions: [
+              {
+                xtype: 'textfield',
+                name: 'searchBox',
+                skipSetReadOnly: true,
+                labelWidth: 60,
+                fieldLabel: UB.i18n('filter'),
+                listeners: {
+                  change: function (ctrl, value) {
+                    const store = ctrl.up('acGrid').getStore()
+                    store.clearFilter()
+                    if (value === '') {
+                      return
+                    }
+                    if (store.sorters.items.length) {
+                      store.sorters.removeAll()
+                    }
+                    store.filter(row => {
+                      return (row.get('name') && row.get('name').toUpperCase().includes(value.toUpperCase())) ||
+                        (row.get('EDRPOUCode') && row.get('EDRPOUCode').toUpperCase().includes(value.toUpperCase())) ||
+                        (row.get('staffOrderID.description') && row.get('staffOrderID.description').toUpperCase().includes(value.toUpperCase())) ||
+                        (row.get('code') && row.get('code').toUpperCase().includes(value.toUpperCase()))
+                    })
+                  }
+                }
+              }
+            ],
+            fields: [
+              { name: 'mi_data_id' },
+              {
+                name: 'code',
+                columnConfig: {
+                  text: UB.i18n('Код організації'),
+                  align: 'center',
+                  flex: 1
+                }
+              },
+              {
+                name: 'name',
+                columnConfig: {
+                  text: UB.i18n('Назва організації'),
+                  align: 'center',
+                  flex: 2
+                }
+              },
+              {
+                name: 'EDRPOUCode',
+                columnConfig: {
+                  text: UB.i18n('ЄДРПОУ'),
+                  align: 'center',
+                  width: 120
+                }
+              },
+              {
+                name: 'mi_dateFrom',
+                columnConfig: {
+                  text: UB.i18n('Дата початку дії'),
+                  align: 'center',
+                  width: 150,
+                  sortBy: 'Date',
+                  renderer: (value) => {
+                    return AC.dateService.formatDate(value)
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+    function getListParamTabs (currTabs, tabListToAdd, fieldList = [], formCode, formListCode = null, enablePayElOrderN = true, btAddListName = UB.i18n('Додати списком'), isEditable = false, otherParams = {}) {
+      if (!me.listParamTabs) me.listParamTabs = {}
+      const tabsCode = tabListToAdd.map(tab => tab.code)
+      UB.Repository('hr_listParam')
+        .attrs('ID', 'code')
+        .where('code', 'in', tabsCode)
+        .selectAsObject().then(res => {
+          res.forEach(item => {
+            me.listParamTabs[item.code] = item.ID
+          })
+        })
+      const parentOrgID = !otherParams.byUser ? AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization()) : null
+      tabListToAdd.forEach(({ code, title, hidden = false }) => {
+        currTabs.push({
+          itemId: code,
+          title: title,
+          hidden: hidden,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              xtype: 'entitygridpanel',
+              cmdType: 'showList',
+              autoScroll: true,
+              pageSize: 10000,
+              flex: 1,
+              name: 'sortAccrGrid',
+              hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'detail', !isEditable ? 'edit' : '', formListCode ? 'addNew' : ''],
+              openForm: function () { },
+              entityConfig: {
+                entity: 'hr_idParam',
+                method: 'select',
+                fieldList,
+                whereList: {
+                  byTab: {
+                    expression: '[listParamID.code]',
+                    condition: 'equal',
+                    values: { code: code }
+                  },
+                  byOrgID: {
+                    expression: '[orgID]',
+                    condition: 'equal',
+                    values: { orgID: Number(parentOrgID || appAC.globalOrganization()) }
+                  }
+                }
+              },
+              onAddNew: function () {
+                const grid = this
+                const parentOrgID = !otherParams.byUser ? AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization()) : null
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode,
+                  entity: 'hr_idParam',
+                  initialFieldValues: {
+                    listParamID: me.listParamTabs[code],
+                    orgID: Number(parentOrgID || appAC.globalOrganization())
+                  },
+                  cmpInitConfig: {
+                    tabsCode
+                  },
+                  store: grid.getStore()
+                })
+              },
+              onEdit: function () {
+                const grid = this
+                const record = AC.gridUtils.getCurrentRecord(grid)
+
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  formCode,
+                  entity: 'hr_idParam',
+                  instanceID: record.get('ID'),
+                  cmpInitConfig: {
+                    tabsCode,
+                    editFld: 'dopName'
+                  },
+                  store: grid.getStore(),
+                  sender: grid
+                })
+              },
+              onItemDblClick: function (grid, record) {
+                if (!formListCode) {
+                  const item = this
+                  $App.doCommand({
+                    cmdType: 'showForm',
+                    formCode,
+                    entity: 'hr_idParam',
+                    instanceID: record.get('ID'),
+                    cmpInitConfig: {
+                      tabsCode,
+                      byUser: otherParams.byUser
+                    },
+                    store: grid.getStore(),
+                    sender: item
+                  })
+                }
+              },
+              customActions: [
+                {
+                  itemId: 'addList',
+                  text: btAddListName,
+                  actionId: 'addByList',
+                  iconCls: 'u-icon-edit-alt',
+                  scale: 'medium',
+                  cls: 'fill-action',
+                  hidden: !formListCode,
+                  handler: function (btn) {
+                    const grid = btn.up('entitygridpanel')
+                    const sourceData = (grid.getStore().snapshot || grid.getStore().data).items.map(o => o.getData())
+                    const selectData = sourceData.map(o => o.valuesID)
+                    const sourceAttr = formListCode === 'hr_payElSelect' ? 'valuesID' : null
+                    const parentOrgID = !otherParams.byUser ? AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization()) : null
+                    $App.doCommand({
+                      cmdType: 'showForm',
+                      formCode: formListCode,
+                      entity: 'hr_idParam',
+                      cmpInitConfig: {
+                        selectData,
+                        sourceData,
+                        sourceAttr,
+                        byUser: otherParams.byUser,
+                        exclude: ['OTHER'],
+                        isAutoCalc: otherParams.isAutoCalc && otherParams.isAutoCalc === 1 ? 1 : null,
+                        methodGroupCode: otherParams.methodGroupCode || null,
+                        methodCode: otherParams.methodCode || null,
+                        payElEntryType: ['PAYMENT'],
+                        listParamID: me.listParamTabs[code],
+                        tabsCode,
+                        orgID: Number(parentOrgID || appAC.globalOrganization()),
+                        enableOrderN: enablePayElOrderN,
+                        onSelectData: (data) => {
+                          if (data.remove.length || data.add.length || data.update.length) {
+                            $App.connection.run({
+                              entity: 'hr_idParam',
+                              method: 'updateValuesIDs',
+                              listParamID: me.listParamTabs[code],
+                              orgID: Number(parentOrgID || appAC.globalOrganization()),
+                              byUser: otherParams.byUser,
+                              userID: $App.connection.userData().userID,
+                              data: JSON.stringify(data)
+                            }).then(() => {
+                              grid.getStore().load()
+                              me.clearPrintForm()
+                            })
+                          }
+                        }
+                      },
+                      store: grid.getStore()
+                    })
+                  }
+                },
+                {
+                  itemId: 'deleteAll',
+                  text: UB.i18n('Видалити все'),
+                  actionId: 'deleteAll',
+                  iconCls: 'fa fa-eraser',
+                  cls: 'add-list-action',
+                  hidden: !!formListCode,
+                  handler: function (btn) {
+                    const grid = btn.up('entitygridpanel')
+                    const parentOrgID = !otherParams.byUser ? AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization()) : null
+                    grid.store.data.items.length && $App.dialogYesNo('Попередження', UB.i18n('Видалити всі записи?'))
+                      .then(res => {
+                        if (res) {
+                          $App.connection.run({
+                            entity: 'hr_idParam',
+                            method: 'deleteRecordsByCode',
+                            execParams: {
+                              code,
+                              orgID: Number(parentOrgID || appAC.globalOrganization()),
+                              byUser: otherParams.byUser,
+                              userID: $App.connection.userData().userID
+                            }
+                          }).then(() => {
+                            grid.onRefresh()
+                          })
+                        }
+                      })
+                  }
+                }
+              ],
+              afterInit: function () {
+                if (otherParams.byUser) {
+                  const userID = $App.connection.userData().userID
+                  this.store.ubRequest.whereList.byUserID = {
+                    expression: '[userID]',
+                    condition: 'equal',
+                    value: userID
+                  }
+                  me.record.sortAccrGrid = code
+                  me.record.userID = userID
+                }
+                me.record.sortAccrGrid = code
+              },
+              listeners: {
+                refresh: function () {
+                  if (!otherParams.byUser) {
+                    const parentOrgID = AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization())
+                    this.store.ubRequest.whereList.byOrgID.values.orgID = Number(parentOrgID || appAC.globalOrganization())
+                  } else {
+                    this.store.ubRequest.whereList.byOrgID.values.orgID = appAC.globalOrganization()
+                    this.store.ubRequest.whereList.byUserID = {
+                      expression: '[userID]',
+                      condition: 'equal',
+                      value: $App.connection.userData().userID
+                    }
+                  }
+                },
+                beforeQuerySend: function () {
+                  if (!otherParams.byUser) {
+                    const parentOrgID = AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization())
+                    this.store.ubRequest.whereList.byOrgID.values.orgID = Number(parentOrgID || appAC.globalOrganization())
+                  } else {
+                    this.store.ubRequest.whereList.byOrgID.values.orgID = appAC.globalOrganization()
+                    this.store.ubRequest.whereList.byUserID = {
+                      expression: '[userID]',
+                      condition: 'equal',
+                      value: $App.connection.userData().userID
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        })
+      })
+    }
+    function getListParamPos (currTabs, tabListToAdd, fieldList = [], formCode, formListCode = null, enablePayElOrderN = false, btAddListName = UB.i18n('Додати списком'), isEditable = false, otherParams = {}) {
+      if (!me.listParamTabs) me.listParamTabs = {}
+      const tabsCode = tabListToAdd.map(tab => tab.code)
+      UB.Repository('hr_listParam')
+        .attrs('ID', 'code')
+        .where('code', 'in', tabsCode)
+        .selectAsObject().then(res => {
+          res.forEach(item => {
+            me.listParamTabs[item.code] = item.ID
+          })
+        })
+      const parentOrgID = !otherParams.byUser ? AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization()) : null
+      tabListToAdd.forEach(({ code, title, hidden = false }) => {
+        currTabs.push({
+          itemId: code,
+          title: title,
+          hidden: hidden,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [
+            {
+              xtype: 'entitygridpanel',
+              cmdType: 'showList',
+              autoScroll: true,
+              pageSize: 10000,
+              flex: 1,
+              name: 'dictPositionGrid',
+              hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'detail', !isEditable ? 'edit' : '', formListCode ? 'addNew' : ''],
+              openForm: function () { },
+              entityConfig: {
+                entity: 'hr_idParam',
+                method: 'select',
+                fieldList,
+                whereList: {
+                  byTab: {
+                    expression: '[listParamID.code]',
+                    condition: 'equal',
+                    values: { code }
+                  },
+                  byOrgID: {
+                    expression: '[orgID]',
+                    condition: 'equal',
+                    values: { orgID: Number(parentOrgID || appAC.globalOrganization()) }
+                  }
+                }
+              },
+              customActions: [
+                {
+                  itemId: 'addList',
+                  text: btAddListName,
+                  actionId: 'addByList',
+                  iconCls: 'u-icon-edit-alt',
+                  scale: 'medium',
+                  cls: 'fill-action',
+                  hidden: !formListCode,
+                  handler: function (btn) {
+                    const grid = btn.up('entitygridpanel')
+                    const sourceData = (grid.getStore().snapshot || grid.getStore().data).items.map(o => o.getData())
+                    const selectData = sourceData.map(o => o.valuesID)
+                    const sourceAttr = 'valuesID'
+                    const parentOrgID = !otherParams.byUser ? AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization()) : null
+                    $App.doCommand({
+                      cmdType: 'showForm',
+                      formCode: formListCode,
+                      entity: 'hr_idParam',
+                      cmpInitConfig: {
+                        selectData,
+                        sourceData,
+                        sourceAttr,
+                        byUser: otherParams.byUser,
+                        listParamID: me.listParamTabs[code],
+                        tabsCode,
+                        orgID: Number(parentOrgID || appAC.globalOrganization()),
+                        enableOrderN: enablePayElOrderN,
+                        onSelectData: (data) => {
+                          if (data.remove.length || data.add.length || data.update.length) {
+                            $App.connection.run({
+                              entity: 'hr_idParam',
+                              method: 'updateValuesIDs',
+                              listParamID: me.listParamTabs[code],
+                              orgID: Number(parentOrgID || appAC.globalOrganization()),
+                              byUser: otherParams.byUser,
+                              userID: $App.connection.userData().userID,
+                              data: JSON.stringify(data)
+                            }).then(() => {
+                              grid.getStore().load()
+                              me.clearPrintForm()
+                            })
+                          }
+                        }
+                      },
+                      store: grid.getStore()
+                    })
+                  }
+                },
+                {
+                  itemId: 'deleteAll',
+                  text: UB.i18n('Видалити все'),
+                  actionId: 'deleteAll',
+                  iconCls: 'fa fa-eraser',
+                  cls: 'add-list-action',
+                  hidden: !!formListCode,
+                  handler: function (btn) {
+                    const grid = btn.up('entitygridpanel')
+                    const parentOrgID = !otherParams.byUser ? AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization()) : null
+                    grid.store.data.items.length && $App.dialogYesNo('Попередження', UB.i18n('Видалити всі записи?'))
+                      .then(res => {
+                        if (res) {
+                          $App.connection.run({
+                            entity: 'hr_idParam',
+                            method: 'deleteRecordsByCode',
+                            execParams: {
+                              code,
+                              orgID: Number(parentOrgID || appAC.globalOrganization()),
+                              byUser: otherParams.byUser,
+                              userID: $App.connection.userData().userID
+                            }
+                          }).then(() => {
+                            grid.onRefresh()
+                          })
+                        }
+                      })
+                  }
+                }
+              ],
+              afterInit: function () {
+                if (otherParams.byUser) {
+                  const userID = $App.connection.userData().userID
+                  this.store.ubRequest.whereList.byUserID = {
+                    expression: '[userID]',
+                    condition: 'equal',
+                    value: userID
+                  }
+                  me.record.dictPositionGrid = code
+                  me.record.userID = userID
+                }
+                me.record.dictPositionGrid = code
+              },
+              listeners: {
+                refresh: function () {
+                  if (!otherParams.byUser) {
+                    const parentOrgID = AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization())
+                    this.store.ubRequest.whereList.byOrgID.values.orgID = Number(parentOrgID || appAC.globalOrganization())
+                  } else {
+                    this.store.ubRequest.whereList.byOrgID.values.orgID = appAC.globalOrganization()
+                    this.store.ubRequest.whereList.byUserID = {
+                      expression: '[userID]',
+                      condition: 'equal',
+                      value: $App.connection.userData().userID
+                    }
+                  }
+                },
+                beforeQuerySend: function () {
+                  if (!otherParams.byUser) {
+                    const parentOrgID = AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization())
+                    this.store.ubRequest.whereList.byOrgID.values.orgID = Number(parentOrgID || appAC.globalOrganization())
+                  } else {
+                    this.store.ubRequest.whereList.byOrgID.values.orgID = appAC.globalOrganization()
+                    this.store.ubRequest.whereList.byUserID = {
+                      expression: '[userID]',
+                      condition: 'equal',
+                      value: $App.connection.userData().userID
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        })
+      })
+    }
+    function getannexMemorialOrderSetting (title = UB.i18n('Налаштування звіту')) {
+      return {
+        title,
+        xtype: 'panel',
+        layout: 'fit',
+        align: 'stretch',
+        border: 2,
+        layoutConfig: {
+          collapsible: true,
+          collapsed: true
+        },
+        flex: 1,
+        items: [
+          {
+            xtype: 'reportparamcontrol',
+            readOnly: true,
+            toolBarReadOnly: !AC.entityUtils.verifyRightsMethod('hr_listParam', 'canVisibleUpdateValues'),
+            collapsed: false,
+            reportCode: 'fifthMemorialOrder'
+          }
+        ]
+      }
+    }
+
+    function getPayrollEducationSetting (title = UB.i18n('Налаштування звіту')) {
+      return {
+        title,
+        xtype: 'panel',
+        layout: 'fit',
+        align: 'stretch',
+        border: 2,
+        layoutConfig: {
+          collapsible: true,
+          collapsed: true
+        },
+        flex: 1,
+        items: [
+          {
+            xtype: 'reportparamcontrol',
+            readOnly: true,
+            toolBarReadOnly: !AC.entityUtils.verifyRightsMethod('hr_listParam', 'canVisibleUpdateValues'),
+            collapsed: false,
+            reportCode: 'payrollEducation'
+          }
+        ]
+      }
+    }
+
+    function getSignatoryEmpl (title = UB.i18n('Підписанти')) {
+      return {
+        itemId: 'tabSettings',
+        title,
+        autoScroll: true,
+        margin: '5,0,0,0',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            region: 'north',
+            autoScroll: true,
+            split: false,
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  {
+                    xtype: 'panel',
+                    region: 'south',
+                    items: [
+                      {
+                        xtype: 'button',
+                        name: 'btnSave',
+                        tooltip: UB.i18n('Зберегти підписантів'),
+                        iconCls: 'u-icon-save',
+                        cls: 'save-action',
+                        margin: '0 0 0 5',
+                        handler: function (ctrl) {
+                          const me = ctrl.up('form')
+                          const tradeUnionCommitteeID = me.attr.tradeUnionCommitteeID && me.attr.tradeUnionCommitteeID.getValue() ? me.attr.tradeUnionCommitteeID.getValue() : null
+                          const headTradeUnionCommittee = me.attr.headTradeUnionCommittee && me.attr.headTradeUnionCommittee.getValue() ? me.attr.headTradeUnionCommittee.getValue() : null
+                          const orgID = me.attr.organization && me.attr.organization.getValue() ? me.attr.organization.getValue() : appAC.globalOrganization()
+                          const report = me.commandData.reportCode
+                          const headEmployeePositionShortFIO = me.attr.headEmployeePositionID && me.attr.headEmployeePositionID.getRawValue() ? me.attr.headEmployeePositionID.getRawValue() : null
+                          const leaderDepartmentShortFIO = me.attr.leaderDepartment && me.attr.leaderDepartment.getRawValue() ? me.attr.leaderDepartment.getRawValue() : null
+                          me.setLoading(true)
+                          $App.connection.run({
+                            entity: 'trf_constructorReportsSetting',
+                            method: 'saveSetting',
+                            orgID,
+                            report,
+                            execParams: JSON.stringify({
+                              tradeUnionCommitteeID,
+                              headTradeUnionCommittee,
+                              orgID,
+                              report,
+                              headEmployeePositionShortFIO,
+                              leaderDepartmentShortFIO
+                            })
+                          }).then((res, reg) => {
+                            me.setLoading(false)
+                          })
+                        }
+                      }
+                    ]
+                  },
+                  getHeadEmployeePositionCtrl(),
+                  setLeaderDepartment(),
+                  setTradeUnionCommittee(),
+                  setHeadTradeUnionCommittee()
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: []
+              }
+            ]
+          }
+        ]
+      }
+    }
+    function onParamSelect (selectedRow) {
+      const store = me.attr.reportValuesGrid.getStore()
+      let orgID = appAC.globalOrganization()
+      const parentOrdID = AC.settings.get('hrUseReportSettingsParentOrg', orgID)
+      if (parentOrdID) {
+        orgID = Number(parentOrdID)
+      }
+      if (!selectedRow || !selectedRow.get('ID')) {
+        me.attr.currentParamFld.setValue('')
+        me.attr.reportValuesGrid.parentContext = {
+          listParamID: null,
+          orgID: null
+        }
+        store.ubRequest.tableNameForMapping = null
+        store.ubRequest.whereList.byParam = {
+          expression: '[listParamID]',
+          condition: 'isNull'
+        }
+        store.ubRequest.whereList.byOrg = {
+          expression: '[orgID]',
+          condition: 'isNull'
+        }
+        me.attr.reportValuesPanel.hide()
+      } else {
+        me.attr.currentParamFld.setValue(selectedRow.get('listParamID.fullName'))
+        me.attr.reportValuesGrid.parentContext = {
+          listParamID: selectedRow.get('listParamID'),
+          listParamCode: selectedRow.get('listParamID.code'),
+          orgID: orgID
+        }
+        store.ubRequest.tableNameForMapping = selectedRow.get('listParamID.tableName')
+        store.ubRequest.whereList.byParam = {
+          expression: '[listParamID]',
+          condition: 'equal',
+          values: { paramID: me.attr.reportValuesGrid.parentContext.listParamID }
+        }
+        store.ubRequest.whereList.byOrg = {
+          expression: '[orgID]',
+          condition: 'equal',
+          values: { orgID: me.attr.reportValuesGrid.parentContext.orgID }
+        }
+        me.attr.reportValuesPanel.show()
+      }
+      me.attr.reportValuesGrid.onRefresh()
+    }
+    function getPayElGroupListParamTabs (me, currTabs, title) {
+      currTabs.push(
+        {
+          title,
+          xtype: 'panel',
+          layout: 'fit',
+          align: 'stretch',
+          border: 2,
+          layoutConfig: {
+            collapsible: true,
+            collapsed: true
+          },
+          flex: 1,
+          items: [
+            {
+              xtype: 'panel',
+              layout: { type: 'hbox', align: 'stretch' },
+              items: [
+                {
+                  xtype: 'panel',
+                  layout: 'fit',
+                  width: 300,
+                  items: [
+                    {
+                      xtype: 'entitygridpanel',
+                      itemId: 'reportParamGrid',
+                      cmdType: 'showList',
+                      formCode: 'hr_groupParamConsol',
+                      entityConfig: {
+                        entity: 'hr_reportParam',
+                        method: 'select',
+                        fieldList: [
+                          {
+                            name: 'listParamID',
+                            visibility: false
+                          },
+                          {
+                            name: 'listParamID.shortName',
+                            description: UB.i18n('Назва показника'),
+                            editor: {
+                              maxWidth: 300,
+                              width: 300,
+                              whereList: {
+                                byTable: {
+                                  expression: '[tableName]',
+                                  condition: 'isNotNull'
+                                }
+                              }
+                            },
+                            config: {
+                              width: 300,
+                              maxWidth: 300,
+                              resizable: false
+                            }
+                          },
+                          {
+                            name: 'listParamID.fullName',
+                            visibility: false
+                          },
+                          {
+                            name: 'listParamID.code',
+                            visibility: false
+                          },
+                          {
+                            name: 'listParamID.tableName',
+                            visibility: false
+                          }
+                        ],
+                        whereList: {
+                          byActualParam: {
+                            expression: '[listParamID.mi_deleteUser]',
+                            condition: 'isNull'
+                          },
+                          byReport: {
+                            expression: '[reportCode]',
+                            condition: 'equal',
+                            value: 'consolidatedStatement'
+                          }
+                        }
+                      },
+                      parentContext: {
+                        reportCode: me.reportCode
+                      },
+                      detailFields: ['reportCode'],
+                      disableSearchBar: true,
+                      hideMenuAllActions: true,
+                      menuAllActionsActionList: [],
+                      toolbarActionList: ['addNew', 'del'],
+                      afterInit: function () {
+                        this.plugins.filter(p => p.alias.indexOf('plugin.rowediting') >= 0).forEach(p => { p.clicksToEdit = 2 })
+                      },
+                      listeners: {
+                        afterRender: (grid) => {
+                          me.attr.reportParamGrid.on('selectionchange', (selectionModel, selected) => {
+                            onParamSelect(selected && selected[0])
+                          })
+                          me.attr.reportParamGrid.store.on('load', () => {
+                            if (!me.attr.reportParamGrid.getSelectionModel().getSelection().length && me.attr.reportParamGrid.store.count()) {
+                              onParamSelect(me.attr.reportParamGrid.store.getAt(0))
+                            }
+                          })
+                      
+                          me.attr.reportParamGrid.on('changeData', () => {
+                            me.attr.reportParamGrid.store.reload()
+                          })
+                        }
+                      },
+                      onItemDblClick: function (grid, record) {
+                        $App.doCommand({
+                          cmdType: 'showForm',
+                          entity: 'hr_listParam',
+                          formCode: 'hr_groupParamConsol',
+                          instanceID: record.get('listParamID'),
+                          sender: me.attr.reportParamGrid,
+                          cmpInitConfig: {
+                            currTabs
+                          },
+                          store: grid.getStore()
+                        })
+                      },
+                      onAddNew: function () {
+                        $App.doCommand({
+                          cmdType: 'showForm',
+                          entity: 'hr_listParam',
+                          formCode: 'hr_groupParamConsol',
+                          sender: me.attr.reportParamGrid,
+                          cmpInitConfig: {
+                            bindToReport: 'consolidatedStatement',
+                            hideEntityRow: true,
+                            hideCodeRow: true
+                          }
+                        })
+                      },
+                      onItemContextMenu: function () {}
+                    }
+                  ]
+                },
+                {
+                  xtype: 'panel',
+                  layout: 'fit',
+                  flex: 1,
+                  items: [
+                    {
+                      xtype: 'panel',
+                      itemId: 'reportValuesPanel',
+                      layout: 'border',
+                      bodyStyle: { backgroundColor: 'white' },
+                      items: [
+                        {
+                          xtype: 'textfield',
+                          itemId: 'currentParamFld',
+                          disabled: true,
+                          region: 'north'
+                        },
+                        {
+                          xtype: 'panel',
+                          layout: 'fit',
+                          padding: '0 15 0 15',
+                          region: 'center',
+                          items: [
+                            {
+                              xtype: 'entitygridpanel',
+                              itemId: 'reportValuesGrid',
+                              flex: 1,
+                              rowEditing: true,
+                              cmdType: 'showList',
+                              entityConfig: {
+                                entity: 'hr_idParam',
+                                method: 'select',
+                                fieldList: [
+                                  {
+                                    name: 'entryOperationID',
+                                    visibility: false
+                                  },
+                                  {
+                                    name: 'entryOperationID.code',
+                                    description: UB.i18n('Код'),
+                                    config: {
+                                      align: 'center'
+                                    }
+                                  },
+                                  {
+                                    name: 'entryOperationID.name',
+                                    description: UB.i18n('Назва'),
+                                    config: {
+                                      align: 'center'
+                                    }
+                                  }
+                                ],
+                                whereList: {
+                                  byParam: {
+                                    expression: '[listParamID]',
+                                    condition: 'isNull'
+                                  },
+                                  byOrg: {
+                                    expression: '[orgID]',
+                                    condition: '=',
+                                    value: AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization()) || appAC.globalOrganization()
+                                  }
+                                },
+                                orderList: {
+                                  byOrderN: { expression: '[orderN]' }
+                                }
+                              },
+                              disableSearchBar: true,
+                              hideMenuAllActions: true,
+                              menuAllActionsActionList: [],
+                              toolbarActionList: ['refresh'],
+                              customActions: [{
+                                itemId: 'valuesList',
+                                text: UB.i18n('Додати списком'),
+                                actionId: 'addByList',
+                                iconCls: 'fas fa-edit',
+                                scale: 'medium',
+                                cls: 'fill-action',
+                                handler: function (btn) {
+                                  let payElEntryType = ['PAYMENT']
+                                  if (me.attr.reportValuesGrid.parentContext.listParamCode.indexOf('_TaxPaid') > 0 || me.attr.reportValuesGrid.parentContext.listParamCode.indexOf('_PaySum') > 0) {
+                                    payElEntryType = ['PAYMENT', 'OFFTAKE', 'FORPAY']
+                                  }
+                                  UB.Repository('hr_idParam')
+                                    .where('[listParamID]', '=', me.attr.reportValuesGrid.parentContext.listParamID)
+                                    .where('[orgID]', '=', me.attr.reportValuesGrid.parentContext.orgID)
+                                    .attrs(['listParamID', 'valuesID', 'ID'])
+                                    .selectAsObject()
+                                    .then(result => {
+                                      $App.doCommand({
+                                        cmdType: 'showForm',
+                                        formCode: 'hr_entryOperationList',
+                                        cmpInitConfig: {
+                                          withPeriod: true,
+                                          enableOrderN: true,
+                                          payElEntryType: payElEntryType,
+                                          selectData: result.map(o => o.valuesID),
+                                          sourceData: result,
+                                          sourceAttr: 'valuesID',
+                                          listParamID: me.attr.reportValuesGrid.parentContext.listParamID,
+                                          orgID: me.attr.reportValuesGrid.parentContext.orgID,
+                                          onSelectData: (data) => {
+                                            if ((data.remove && data.remove.length) || (data.add && data.add.length)) {
+                                              $App.connection.run({
+                                                entity: 'hr_idParam',
+                                                method: 'updateEntryOperationIDs',
+                                                listParamID: me.attr.reportValuesGrid.parentContext.listParamID,
+                                                orgID: me.attr.reportValuesGrid.parentContext.orgID,
+                                                data: JSON.stringify(data)
+                                              }).then(() => {
+                                                me.attr.reportValuesGrid.getStore().load()
+                                              })
+                                            }
+                                          }
+                                        }
+                                      })
+                                    })
+                                }
+                              }],
+                              detailFields: ['listParamID', 'orgID'],
+                              afterInit: function () {
+                                this.plugins.filter(p => p.alias.indexOf('plugin.rowediting') >= 0).forEach(p => { p.clicksToEdit = 2 })
+                              },
+                              onItemContextMenu: function () {}
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        })
+    }
+
+    control = Ext.create('Ext.Component', {
+      flex: 1,
+      margin: 0,
+      autoEl: {
+        tag: 'iframe'
+      }
+    })
+    switch (reportCode) {
+      case 'trf_reportEmpList':
+        const allowBlankDictPart = me.commandConfig.cmdData.cmpInitConfig && me.commandConfig.cmdData.cmpInitConfig.reportParams && me.commandConfig.cmdData.cmpInitConfig.reportParams.allowBlank
+        items = [
+          {
+            region: 'north',
+            autoScroll: true,
+            split: false,
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                defaults: { labelWidth: 115 },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    defaults: { labelWidth: 140, width: 260 },
+                    flex: 1,
+                    items: [
+                      getReportDateCtrl(),
+                      getLessAccrual()
+                    ]
+                  },
+                  setTarificationType(140),
+                  setOrganization(140),
+                  setDictPart(140, allowBlankDictPart)
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  setSubDivision(),
+                  setPositionCategory(),
+                  getDictExperienceCtrl(),
+                  setWorkPlaceType(),
+                  setFundSourse()
+                ]
+              }
+            ]
+          }
+        ]
+        break
+      case 'trf_reportEmpDNZList':
+        const allowBlankDictPart1 = me.commandConfig.cmdData.cmpInitConfig && me.commandConfig.cmdData.cmpInitConfig.reportParams && me.commandConfig.cmdData.cmpInitConfig.reportParams.allowBlank
+        items = [
+          {
+            region: 'north',
+            autoScroll: true,
+            split: false,
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                defaults: { labelWidth: 115 },
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    defaults: { labelWidth: 140, width: 260 },
+                    flex: 1,
+                    items: [
+                      getReportDateCtrl(),
+                      getLessAccrual()
+                    ]
+                  },
+                  setTarificationType(140),
+                  setOrganization(140),
+                  setDictPart(140, allowBlankDictPart1)
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  setSubDivision(),
+                  setPositionCategory(),
+                  getDictExperienceCtrl(),
+                  setWorkPlaceType(),
+                  setFundSourse()
+                ]
+              }
+            ]
+          }
+        ]
+        break
+      case 'trf_reportListOneColum':
+        items = [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            items: [
+              {
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    defaults: { labelWidth: 80, width: 200 },
+                    items: [
+                      getReportDateCtrl()
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+
+        ]
+        break
+      case 'trf_reportList':
+        items = [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            items: [
+              {
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    defaults: { labelWidth: 80, width: 200 },
+                    items: [
+                      getReportDateCtrl()
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+        break
+      case 'trf_reportSummaryStatementRates':
+        items = [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: { width: 220 },
+            items: [
+              {
+                items: [
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    defaults: { labelWidth: 100 },
+                    items: [
+                      getPeriodFromToCtrl(),
+                      getOrganizationCtrl()
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            region: 'north',
+            autoScroll: true,
+            split: false,
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                defaults: { labelWidth: 115 },
+                items: [
+                  setSubDivision(),
+                  setFundSourse(),
+                  getJoinReport()
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  setDictProgClass(),
+                  setRoundSum()
+                ]
+              }
+            ]
+          }
+        ]
+        break
+      case 'trf_statement':
+        items = [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: { width: 220 },
+            items: [
+              {
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        defaults: { labelWidth: 140 },
+                        flex: 1,
+                        items: [
+                          getReportDateCtrl(),
+                          getJoinReport()
+                        ]
+                      },
+                      {
+                        layout: { type: 'vbox', align: 'stretch' },
+                        flex: 1,
+                        items: [
+                          setPositionCategory()
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            region: 'north',
+            autoScroll: true,
+            split: false,
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  setTarificationType(140),
+                  getHeadEmployeePositionCtrl(),
+                  setWorkPlaceType(140)
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  setDictProgClass(),
+                  getDictExperienceCtrl(),
+                  setFundSourse()
+                ]
+              }
+            ]
+          }
+        ]
+        break
+      case 'trf_wholeSchoolIndicators':
+        items = [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: { width: 220 },
+            items: [
+              {
+                items: [
+                  {
+                    layout: { type: 'hbox' },
+                    defaults: { labelWidth: 80, width: 120 },
+                    items: [
+                      getReportDateCtrl()
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                defaults: { labelWidth: 130, width: 460 },
+                items: [
+                  setSubDivision(80)
+                ]
+              }
+            ]
+          }
+        ]
+        break
+      case 'trf_salaryCosts':
+        items = [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: { width: 220 },
+            items: [
+              {
+                items: [
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    defaults: { labelWidth: 100 },
+                    items: [
+                      getPeriodFromToCtrl(),
+                      getOrganizationCtrl()
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            region: 'north',
+            autoScroll: true,
+            split: false,
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                defaults: { labelWidth: 115 },
+                items: [
+                  setSubDivision(),
+                  setFundSourse(),
+                  getJoinReport()
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  setDictProgClass(),
+                  setRoundSum()
+                ]
+              }
+            ]
+          }
+        ]
+        break
+      case 'trf_annexMemorialOrder':
+        items = [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: { width: 220 },
+            items: [
+              {
+                region: 'north',
+                autoScroll: true,
+                split: false,
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      setPeriodCtrl(160),
+                      getOrganizationCtrl()
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      dateReport()
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            region: 'north',
+            autoScroll: true,
+            split: false,
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  setDictStaffSubCatCtrl(160),
+                  setChiefBooker(160),
+                  getJoinReport()
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  setFundSourse(),
+                  setDictProgClass()
+                ]
+              }
+            ]
+          }
+        ]
+        break
+      case 'trf_payrollEducation':
+        items = [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: { width: 220 },
+            items: [
+              {
+                region: 'north',
+                autoScroll: true,
+                split: false,
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      getPeriodCtrl(),
+                      getOrganizationCtrl()
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    flex: 1,
+                    items: [
+                      setOrganization()
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            region: 'north',
+            autoScroll: true,
+            split: false,
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  getJoinReport()
+                ]
+              }
+            ]
+          }
+        ]
+        break
+      case 'trf_consolidatedStatementDictProgClass':
+      case 'trf_consolidatedStatementDepartment':
+      case 'trf_consolidatedStatementDeductions':
+        items = [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: { width: 220 },
+            items: [
+              {
+                region: 'north',
+                autoScroll: true,
+                split: false,
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      setPeriodCtrl(160, 400),
+                      getOrganizationCtrl()
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      dateReport()
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            region: 'north',
+            autoScroll: true,
+            split: false,
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  setFundSourse(160),
+                  getJoinReport(160)
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  setDictProgClass(60)
+                ]
+              }
+            ]
+          }
+        ]
+        break
+      case 'trf_reportsTimesheet':
+        items = [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: { width: 220 },
+            items: [
+              {
+                region: 'north',
+                autoScroll: true,
+                split: false,
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      setPeriodCtrl(140)
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      dateReport()
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      getPrintAbsences()
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      getPrintConditionalDesignations()
+                    ]
+                  }
+                ]
+              },
+              {
+                region: 'north',
+                autoScroll: true,
+                split: false,
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    flex: 1,
+                    items: [
+                      setOrganization(140)
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    flex: 1,
+                    items: [
+                      getResponsiblePositionCtrl(UB.i18n('Відповідальний за ведення табелю'), 180)
+                    ]
+                  }
+                ]
+              },
+              {
+                region: 'north',
+                autoScroll: true,
+                split: false,
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    flex: 1,
+                    items: [
+                      getHeadEmployeePositionCtrl(UB.i18n('Керівник установи'))
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    flex: 1,
+                    items: [
+                      setDictStaffCatUbBoxCtrl(180)
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+        break
+      case 'trf_reportsTimesheetTechnicalStaff':
+        items = [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: { width: 220 },
+            items: [
+              {
+                region: 'north',
+                autoScroll: true,
+                split: false,
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      setPeriodCtrl(140)
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      dateReport()
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      getPrintAbsences()
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      getPrintConditionalDesignations()
+                    ]
+                  }
+                ]
+              },
+              {
+                region: 'north',
+                autoScroll: true,
+                split: false,
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    flex: 1,
+                    items: [
+                      setOrganization(140)
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    flex: 1,
+                    items: [
+                      getResponsiblePositionCtrl(UB.i18n('Відповідальний за ведення табелю'), 180)
+                    ]
+                  }
+                ]
+              },
+              {
+                region: 'north',
+                autoScroll: true,
+                split: false,
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    flex: 1,
+                    items: [
+                      getHeadEmployeePositionCtrl(UB.i18n('Керівник установи'))
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    flex: 1,
+                    items: [
+                      setDictStaffCatUbBoxCtrl(180)
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+        break
+      default:
+        items = []
+        break
+    }
+
+    switch (reportCode) {
+      case 'trf_reportEmpList':
+        tabs = [
+          getReportTab(),
+          getSignatoryEmpl()
+        ]
+        break
+        case 'trf_reportEmpDNZList':
+        tabs = [
+          getReportTab(),
+          getSignatoryEmpl()
+        ]
+        break
+      case 'trf_reportListOneColum':
+        tabs = [
+          getReportSetting(),
+          getReportTab()
+        ]
+        break
+      case 'trf_reportList':
+        tabs = [
+          getReportSetting(),
+          getReportTab()
+        ]
+        break
+      case 'trf_salaryCosts':
+        tabs = [
+          getReportTab(),
+          getReportSalaryCostsSetting(),
+          getOrgSetting()
+        ]
+        break
+      case 'trf_statement':
+        tabs = [
+          getReportTab()
+        ]
+        getListParamPos(tabs, [{ code: 'ReportStatement', title: UB.i18n('Перелік посад') }],
+          [
+            {
+              name: 'listParamID',
+              visibility: false
+            },
+            {
+              name: 'orgID',
+              visibility: false
+            },
+            {
+              name: 'valuesID',
+              visibility: false
+            },
+            {
+              name: 'dictPositionID.name',
+              description: UB.i18n('Посада'),
+              config: {
+                flex: 1
+              }
+            },
+            {
+              name: 'orderN',
+              config: {
+                flex: 0.5,
+                align: 'center'
+              }
+            },
+            {
+              name: 'dictPositionID.positionCategory',
+              description: UB.i18n('Категорія посади'),
+              config: {
+                flex: 0.5,
+                align: 'center'
+              }
+            },
+            {
+              name: 'dictPositionID.dictStaffSubCatID.name',
+              description: UB.i18n('Підкатегорія персоналу'),
+              config: {
+                flex: 0.5,
+                align: 'center'
+              }
+            }
+          ],
+          'hr_idParam-dictPosition',
+          'hr_posReportSelect',
+          true,
+          UB.i18n('Редагувати список'),
+          false,
+          { byUser: false }
+        )
+        tabs.push(getOrgSetting())
+        break
+      case 'trf_reportSummaryStatementRates':
+        tabs = [
+          getReportTab(),
+          getOrgSetting()
+        ]
+        break
+      case 'trf_payrollEducation':
+        tabs = [
+          getReportTab(),
+          getPayrollEducationSetting(),
+          getOrgSetting()
+        ]
+        break
+      case 'trf_annexMemorialOrder':
+        tabs = [
+          getReportTab(),
+          getannexMemorialOrderSetting(),
+          getOrgSetting()
+        ]
+        break
+      case 'trf_consolidatedStatementDeductions':
+      case 'trf_consolidatedStatementDictProgClass':
+      case 'trf_consolidatedStatementDepartment':
+        tabs = [
+          getReportTab()
+        ]
+        getListParamTabs(tabs, [{ code: 'ReportСSD', title: UB.i18n('Види оплат') }],
+          [
+            {
+              name: 'listParamID',
+              visibility: false
+            },
+            {
+              name: 'orgID',
+              visibility: false
+            },
+            {
+              name: 'valuesID',
+              visibility: false
+            },
+            {
+              name: 'payElID.name',
+              description: UB.i18n('Вид оплати'),
+              config: {
+                flex: 1
+              }
+            },
+            {
+              name: 'orderN',
+              config: {
+                flex: 0.5,
+                align: 'center'
+              }
+            },
+            {
+              name: 'payElID.methodID.methodGroupID.groupType',
+              description: UB.i18n('Тип'),
+              config: {
+                flex: 1
+              }
+            },
+            {
+              name: 'payElID.methodID.methodGroupID.name',
+              description: UB.i18n('Група'),
+              config: {
+                flex: 1
+              }
+            }
+          ],
+          'hr_idParam-payEl',
+          'hr_payElSelect',
+          true,
+          UB.i18n('Редагувати список'),
+          false,
+          { byUser: false }
+        )
+        getPayElGroupListParamTabs(me, tabs, UB.i18n('Групи для нарахування на заробітню плату'))
+        tabs.push(getOrgSetting())
+        break
+      default:
+        tabs = [
+          getReportTab()
+        ]
+        break
+    }
+
+    const buttons = [
+      {
+        xtype: 'button',
+        scale: 'medium',
+        tooltip: UB.i18n('Сформувати звіт'),
+        iconCls: 'fas fa-calculator',
+        cls: 'green-action',
+        handler: function () {
+          if (me.down('acGrid') && (me.down('acGrid').name === 'employeeList') && !me.down('acGrid').getCheckedRow().length) {
+            me.clearPrintForm()
+            return $App.dialogInfo(UB.i18n('Не обрано жодного працівника для створення звіту'), UB.i18n('Увага'))
+          }
+          me.onButtonRefresh(me)
+        }
+      },
+      {
+        tooltip: UB.i18n('Друкувати'),
+        iconCls: 'fas fa-print',
+        cls: 'blue-action',
+        handler: function () {
+          const iFrame = me.reportControl.getEl()
+          if (!iFrame) {
+            $App.dialogInfo(UB.i18n('Необхідно спочатку сформувати звіт.'))
+            return
+          }
+          iFrame.dom.contentWindow.print()
+        }
+      },
+      {
+        tooltip: UB.i18n('Редагувати'),
+        iconCls: 'u-icon-edit-alt',
+        scale: 'medium',
+        cls: 'fill-action',
+        handler: function () {
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'ac_documentEdit',
+            caption: UB.i18n('Редагування друкованої форми'),
+            cmpInitConfig: {
+              reportData: me.report ? me.report.reportOptions.html : null,
+              reportOptions: me.report ? me.report.reportOptions : null,
+              hiddenActions: ['actionPDF']
+            },
+            tabId: 'printDocumentEdit' + (new Date()).getTime(),
+            description: me.initialConfig.commandConfig.description,
+            target: $App.getViewport().centralPanel
+          })
+        }
+      },
+      {
+        tooltip: 'XLSX',
+        iconCls: 'fas fa-file-excel',
+        cls: 'green-action',
+        hidden: !(reportOptions && reportOptions.allowExportToExcel),
+        handler: item => {
+          me.validateFields() && me.makeHtmlReport('xlsx')
+        }
+      }
+    ]
+    container = Ext.create('Ext.panel.Panel', {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      flex: 1,
+      items: [
+        {
+          xtype: 'toolbar',
+          items: buttons
+        },
+        {
+          xtype: 'panel',
+          layout: { type: 'vbox', align: 'stretch' },
+          items
+        },
+        {
+          xtype: 'tabpanel',
+          itemId: 'cmpTabPanel',
+          flex: 1,
+          minWidth: 250,
+          margin: '10 10 10 10',
+          plain: true,
+          items: tabs
+        }
+      ]
+    })
+    me.items = [
+      container
+    ]
+    me.reportControl = control
+
+    const reportMethod = {
+      trf_reportEmpList: 'getBaseReport',
+      trf_reportEmpDNZList: 'getBaseReport',
+      trf_reportList: 'getReportList',
+      trf_reportSummaryStatementRates: 'getSammaryRates',
+      trf_statement: 'getStatement',
+      trf_wholeSchoolIndicators: 'getWholeSchoolIndicators',
+      trf_salaryCosts: 'getSalaryCosts',
+      trf_annexMemorialOrder: 'getAnnexMemorialOrder5',
+      trf_consolidatedStatementDeductions: 'getConsolidatedStatementDeductions',
+      trf_consolidatedStatementDictProgClass: 'getConsolidatedStatementDictProgClass',
+      trf_consolidatedStatementDepartment: 'getConsolidatedStatementDepartment',
+      trf_reportsTimesheet: 'getTimesheet',
+      trf_reportsTimesheetTechnicalStaff: 'getTimesheet',
+      trf_payrollEducation: 'getPayrollEducation'
+    }
+    const reportEntity = {
+      getBaseReport: 'trf_constructorReports',
+      getReportList: 'trf_constructorReports',
+      getConsolidatedStatementDepartment: 'trf_constructorReports',
+      getSammaryRates: 'trf_constructorReports',
+      getStatement: 'trf_constructorReports',
+      getWholeSchoolIndicators: 'trf_constructorReports',
+      getSalaryCosts: 'trf_constructorReports',
+      getConsolidatedStatementDeductions: 'trf_constructorReports',
+      getConsolidatedStatementDictProgClass: 'trf_constructorReports',
+      getAnnexMemorialOrder5: 'hr_memorialOrder5',
+      getTimesheet: 'trf_constructorReports',
+      getTimesheetTechnicalStaff: 'trf_constructorReports',
+      getPayrollEducation: 'trf_constructorReports'
+    }
+
+    function makeHtmlData (grid, addData) {
+      const gridStore = grid.getStore()
+
+      const resultData = Object.assign({
+        accrual: [],
+        allSum: {},
+        notes: []
+      }, addData)
+
+      resultData.accrual = gridStore && gridStore.data && gridStore.data.items && gridStore.data.items.length > 0 ? gridStore.data.items.map(item => item.data) : null
+
+      if (grid.summary) {
+        for (const prop in grid.summary) {
+          resultData.allSum[prop] = 0
+        }
+      }
+
+      if (resultData.accrual) {
+        resultData.accrual.forEach((item, i) => {
+          item.num = i + 1
+          for (const prop in resultData.allSum) {
+            item[prop] = item[prop] ? AC.currencyService.round(item[prop], 2) : 0 // round
+            resultData.allSum[prop] = AC.currencyService.round(resultData.allSum[prop] += item[prop], 2)
+          }
+        })
+      }
+
+      const filter = grid.getStore().filters
+      filter.items.forEach(filt => {
+        const curFilter = grid.extendedFieldList.find(el => el.name === filt.property)
+        resultData.notes.push({ filterName: `${curFilter.description}:`, value: filt.value })
+      })
+
+      if (gridStore.sorters.items[0]) {
+        resultData.sorter = gridStore.sorters.items[0].property
+      }
+
+      return resultData
+    }
+
+    function makeReport (type, grid = false) {
+      function createReport (type, reportCode, params) {
+        me.report = Ext.create('UBS.UBReport', {
+          code: reportCode,
+          type,
+          params,
+          language: $App.connection.userLang()
+        })
+        if (type === 'xlsx') {
+          me.report.makeReport().then(function (data) {
+            const blobData = new Blob(
+              [data.reportData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            const repName = reportCode.split('-').slice(-1)
+            const fileName = `${repName}.xlsx`
+            window.saveAs(blobData, fileName)
+            me.setLoading(false)
+
+            me.reportType = 'html'
+          })
+        } else {
+          me.report
+            .init()
+            .then(function () {
+              return me.report.makeReport()
+            })
+            .then(function (data) {
+              if (data && data.reportData) {
+                if (data.reportData.length > 10000000) {
+                  data = null
+                  me.report = Ext.create('UBS.UBReport', {
+                    code: reportCode,
+                    type: 'xlsx',
+                    params,
+                    language: $App.connection.userLang()
+                  })
+                  me.report.makeReport().then(function (xlsxData) {
+                    const blobData = new Blob(
+                      [xlsxData.reportData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+                    const repName = reportCode.split('-').slice(-1)
+                    const fileName = `${repName}.xlsx`
+                    window.saveAs(blobData, fileName)
+                    me.setLoading(false)
+                  })
+                } else {
+                  me.showReport(data.reportData)
+                  me.setLoading(false)
+                }
+              }
+              me.setLoading(false)
+              me.reportDone = true
+            })
+        }
+      }
+      const headEmployeePositionShortFIO = me.attr.headEmployeePositionID && me.attr.headEmployeePositionID.getValue() ? me.attr.headEmployeePositionID.getRawValue() : me.savedSettings && me.savedSettings.params && me.savedSettings.params.headEmployeePositionShortFIO ? me.savedSettings.params.headEmployeePositionShortFIO : ''
+
+      const leaderDepartmentShortFIO = me.attr.leaderDepartment && me.attr.leaderDepartment.getValue() ? me.attr.leaderDepartment.getRawValue() : me.savedSettings && me.savedSettings.params && me.savedSettings.params.leaderDepartmentShortFIO ? me.savedSettings.params.leaderDepartmentShortFIO : ''
+
+      const headTradeUnionCommitteeShortFIO = me.attr.headTradeUnionCommittee && me.attr.headTradeUnionCommittee.getValue() ? me.attr.headTradeUnionCommittee.getRawValue() : me.savedSettings && me.savedSettings.params && me.savedSettings.params.headTradeUnionCommittee ? me.savedSettings.params.headTradeUnionCommittee : ''
+
+      const tradeUnionCommitteeShortFIO = me.record.tradeUnionCommitteeID && me.record.tradeUnionCommitteeID.length ? me.record.tradeUnionCommitteeID : me.savedSettings && me.savedSettings.params && me.savedSettings.params.tradeUnionCommitteeID ? me.savedSettings.params.tradeUnionCommitteeID : ''
+      $App.connection.run({
+        entity: reportEntity[reportMethod[reportCode]],
+        method: reportMethod[reportCode],
+        orgID: appAC.globalOrganization(),
+        periodID: me.record.periodID,
+        dictFundSourceID: me.attr.dictFundSourceID ? me.attr.dictFundSourceID.getValue() : '',
+        isIncludeEmpty: false,
+        execParams: Object.assign({
+          reportParams: me.commandData.cmpInitConfig ? me.commandData.cmpInitConfig.reportParams : null,
+          reportCode,
+          reportType: type,
+          reportColum,
+          tarificationType: me.attr.tarificationType ? me.attr.tarificationType.getValue() : 'FACT',
+          currDate: appAC.globalApplicationDate(),
+          orgID: appAC.globalOrganization(),
+          orgName: appAC.globalOrganizationName(),
+          organizationName: me.attr.organization ? me.attr.organization.getRawValue() : null,
+          dictFundSourceID: me.attr.dictFundSourceID ? me.attr.dictFundSourceID.getValue() : null,
+          dictFundSourceName: me.attr.dictFundSourceID ? me.attr.dictFundSourceID.getRawValue() : '',
+          positionCategory: me.attr.positionCategory ? me.attr.positionCategory.value : null,
+          workPlaceType: me.attr.workPlaceType ? me.attr.workPlaceType.getValue() : '1',
+          dictExperienceID: me.attr.dictExperienceID ? me.attr.dictExperienceID.getValue() : null,
+          orgIDs: me.down('[name=subDepList]') ? JSON.stringify(me.down('[name=subDepList]').getCheckedRow().map(o => o.data.mi_data_id)) : null,
+          empGrid: me.down('[name=employeeList]') ? JSON.stringify(me.down('[name=employeeList]').getCheckedRow().map(o => o.data.ID)) : null,
+          dictProgClassID: me.attr.dictProgClassID ? me.attr.dictProgClassID.getValue() : null,
+          joinReport: me.attr.joinReport ? me.attr.joinReport.getValue() : null,
+          showJoinReport: me.attr.joinReport ? me.attr.joinReport.hidden : null,
+          headEmployeePositionShortFIO,
+          leaderDepartmentShortFIO,
+          tradeUnionCommitteeShortFIO,
+          headTradeUnionCommitteeShortFIO
+        }, me.record)
+      }).then(mParams => {
+        let resultData = JSON.parse(mParams.resultData)
+        type = me.reportType
+
+        if (grid) {
+          resultData = makeHtmlData(grid, resultData)
+          type = me.reportType
+        }
+        createReport(type, reportCode, resultData)
+      }, e => {
+        me.setLoading(false)
+        throw e
+      })
+    }
+
+    me.makeHtmlReport_OLD = function (type = 'html') {
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'trf_constructorReports',
+        method: reportMethod[reportCode],
+        execParams: Object.assign({
+          reportCode,
+          orgID: appAC.globalOrganization(),
+          currDate: appAC.globalApplicationDate()
+        }, me.record)
+      }).then(mParams => {
+        let resultData = JSON.parse(mParams.resultData)
+        const listUbdetailgrid = me.listUbdetailgrid
+        if (listUbdetailgrid) {
+          resultData = makeHtmlData(listUbdetailgrid, resultData)
+        }
+
+        me.report = Ext.create('UBS.UBReport', {
+          code: reportCode,
+          type,
+          params: resultData,
+          language: $App.connection.userLang()
+        })
+
+        const listGrid = me.queryById('listGrid')
+        if (listGrid) {
+          listGrid.setLocalStoreData(resultData.accrual)
+        }
+
+        if (type === 'xlsx') {
+          me.report.makeReport().then(function (data) {
+            const blobData = new Blob(
+              [data.reportData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+            const repName = reportCode.split('-').slice(-1)
+            const fileName = `${repName}.xlsx`
+            window.saveAs(blobData, fileName)
+            me.setLoading(false)
+          })
+        } else {
+          me.report
+            .init()
+            .then(function () {
+              return me.report.makeReport()
+            })
+            .then(function (data) {
+              if (data && data.reportData) {
+                if (data.reportData.length > 10000000) {
+                  data = null
+                  me.report = Ext.create('UBS.UBReport', {
+                    code: reportCode,
+                    type: 'xlsx',
+                    params: resultData,
+                    language: $App.connection.userLang()
+                  })
+                  me.report.makeReport().then(function (xlsxData) {
+                    const blobData = new Blob(
+                      [xlsxData.reportData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+                    const repName = reportCode.split('-').slice(-1)
+                    const fileName = `${repName}.xlsx`
+                    window.saveAs(blobData, fileName)
+                    me.setLoading(false)
+                  })
+                } else {
+                  me.showReport(data.reportData)
+                  me.setLoading(false)
+                }
+              } else {
+                me.setLoading(false)
+                me.reportDone = true
+              }
+            })
+        }
+      })
+    }
+
+    me.makeHtmlReport = function (type = 'html') {
+      me.reportType = type
+
+      me.setLoading(true)
+      const tabReport = me.queryById('tabReport')
+      const cmpTabPanel = me.queryById('cmpTabPanel')
+      cmpTabPanel.setActiveTab(tabReport)
+
+      const listUbdetailgrid = me.listUbdetailgrid
+      if (listUbdetailgrid) {
+        const store = listUbdetailgrid.getStore()
+        let req = store.ubRequest
+        const objParam = Object.assign({
+          reportCode,
+          orgID: appAC.globalOrganization(),
+          currDate: appAC.globalApplicationDate()
+        }, me.record)
+        req = Object.assign(req, objParam)
+        store.load({ start: 0, limit: 10000, page: 1 })
+        me.setLoading(false)
+      } else {
+        makeReport(type)
+      }
+    }
+
+    me.clearPrintForm = function () {
+      if (me.report && me.reportControl) {
+        const iFrame = me.reportControl.getEl().dom
+        const iFrameDoc = iFrame.contentDocument
+        iFrameDoc.body.innerHTML = ''
+      }
+      const listUbdetailgrid = me.listUbdetailgrid
+      if (listUbdetailgrid && listUbdetailgrid.store && listUbdetailgrid.store.data) {
+        const ubgStore = listUbdetailgrid.getStore()
+        ubgStore.data.items = []
+        listUbdetailgrid.view.refresh()
+
+        listUbdetailgrid.GridSummary.items.each(function (item) {
+          let el
+          if (item.baseColumn.summaryType) {
+            el = item.getEl()
+            el.setHTML('')
+          }
+        })
+      }
+    }
+
+    me.callParent(arguments)
+  },
+  onSaveTemplate: function (me, reportCode, saveAs) {
+    const params = {}
+    if (me.templateAttrs[reportCode]) {
+      me.templateAttrs[reportCode].forEach(attrName => {
+        const ctrl = me.down(`[name=${attrName}]`)
+        if (ctrl) {
+          params[attrName] = ctrl.getGridValue ? ctrl.getGridValue(ctrl) : ctrl.getValue()
+        }
+      })
+    }
+    if (!me.down(`[name=reportTemplate]`).getValue() || saveAs) {
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: 'ac_reportTemplates',
+        entity: 'ac_reportTemplates',
+        cmpInitConfig: {
+          reportCode,
+          organizationID: appAC.globalOrganization(),
+          params,
+          onSave: (ID) => {
+            me.down(`[name=reportTemplate]`).setValueById(ID)
+          }
+        }
+      })
+    } else {
+      AC.reportService.updateReportTemplate({ ID: me.down(`[name=reportTemplate]`).getValue(), params })
+    }
+  },
+  onButtonRefresh: function (me) {
+    me.validateFields() && me.makeHtmlReport()
+  },
+  showReport: function (data) {
+    const me = this
+    const HTML_PAGEBREAK_RE = new RegExp('<!-- pagebreak -->', 'gi')
+    const HTML_PAGEBREAK_EL = '<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="mce-pagebreak"/>'
+    const iFrame = me.reportControl.getEl().dom
+    const iFrameDoc = iFrame.contentDocument
+    const style = [getStyle()]
+    const orientation = me.report.reportOptions.pageOrientation
+    if (orientation === 'landscape') {
+      style.push('@page{size: landscape;}')
+    } else if (orientation === 'portrait') {
+      style.push('@page{size: portrait;}')
+    }
+    const styleText = `<style type="text/css"> ${style.join('\n')} </style>`
+    me.report.reportOptions.html = data
+    iFrameDoc.body.innerHTML = data.replace(HTML_PAGEBREAK_RE, HTML_PAGEBREAK_EL)
+    iFrameDoc.head.innerHTML = styleText
+    me.setLoading(false)
+  },
+  afterRender: function () {
+    const me = this
+    me.callParent()
+    const titleByReport = {
+      trf_reportList: UB.i18n('Тарифікаційний листок'),
+      trf_reportListOneColum: UB.i18n('Тарифікаційний листок'),
+      trf_reportEmpList: UB.i18n('Тарифікаційний список працівників'),
+      trf_reportEmpDNZList: UB.i18n('Тарифікаційний список працівників ДНЗ'),
+      trf_reportSummaryStatementRates: UB.i18n('Зведена відомість фактично зайнятих ставок'),
+      trf_statement: UB.i18n('Зведена тарифікаційна відомість'),
+      trf_wholeSchoolIndicators: UB.i18n('Загальношкільні показники'),
+      trf_salaryCosts: UB.i18n('Зведена відомість фактичних витрат на заробітну плату працівникам освіти'),
+      trf_annexMemorialOrder: UB.i18n('Додаток до меморіального ордеру №5'),
+      trf_consolidatedStatementDeductions: UB.i18n('Зведена відомість нарахувань та утримань (Організації та КПК)'),
+      trf_consolidatedStatementDictProgClass: UB.i18n('Зведена відомість нарахувань та утримань (КПК)'),
+      trf_consolidatedStatementDepartment: UB.i18n('Зведена відомість нарахувань та утримань (Підрозділи)'),
+      trf_reportsTimesheet: UB.i18n('Табель обліку використання робочого часу (педперсонал)'),
+      trf_reportsTimesheetTechnicalStaff: UB.i18n('Табель обліку використання робочого часу (сади та тех.персонал шкіл)'),
+      trf_payrollEducation: UB.i18n('Розрахункова відомість (освіта)')
+    }
+    me.templateAttrs = {
+      'trf_consolidatedStatementDeductions': ['payElListParams'],
+      'trf_consolidatedStatementDictProgClass': ['payElListParams'],
+      'trf_consolidatedStatementDepartment': ['payElListParams']
+    }
+    me.setTitle(titleByReport[me.commandData.reportCode])
+
+    const fieldsAfterrender = {
+      periodID: fld => {
+        appHR.getCurrentPeriod(appAC.globalOrganization()).then(res => {
+          fld.setValueById(res.ID)
+        })
+      },
+      periodFromID: fld => {
+        if (me.commandData.cmpInitConfig && me.commandData.cmpInitConfig.reportParams && me.commandData.cmpInitConfig.reportParams.periodFrom) {
+          appHR.getPeriodOnDate(appAC.globalOrganization(), me.commandData.cmpInitConfig.reportParams.periodFrom).then(res => {
+            if (res && res.ID) {
+              me.record.reportDate = res.ID
+              fld.setValueById(res.ID)
+            }
+          })
+        } else {
+          appHR.getCurrentPeriod(appAC.globalOrganization()).then(res => {
+            if (res && res.ID) {
+              me.record.reportDate = res.ID
+              fld.setValueById(res.ID)
+            }
+          })
+        }
+      },
+      periodToID: fld => {
+        if (me.commandData.cmpInitConfig && me.commandData.cmpInitConfig.reportParams && me.commandData.cmpInitConfig.reportParams.periodFrom) {
+          appHR.getPeriodOnDate(appAC.globalOrganization(), me.commandData.cmpInitConfig.reportParams.periodFrom).then(res => {
+            if (res && res.ID) {
+              me.record.reportDate = res.ID
+              fld.setValueById(res.ID)
+            }
+          })
+        } else {
+          appHR.getCurrentPeriod(appAC.globalOrganization()).then(res => {
+            if (res && res.ID) {
+              me.record.reportDate = res.ID
+              fld.setValueById(res.ID)
+            }
+          })
+        }
+      },
+      reportDate: fld => {
+        if (me.commandData.cmpInitConfig && me.commandData.cmpInitConfig.reportParams && me.commandData.cmpInitConfig.reportParams.dateReport) {
+          fld.setValue(me.commandData.cmpInitConfig.reportParams.dateReport)
+          me.record.reportDate = me.commandData.cmpInitConfig.reportParams.dateReport
+        } else {
+          fld.setValue(appAC.globalApplicationDate())
+          me.record.reportDate = appAC.globalApplicationDate()
+        }
+      },
+      issueDate: fld => {
+        if (me.commandData.cmpInitConfig && me.commandData.cmpInitConfig.reportParams && me.commandData.cmpInitConfig.reportParams.dateReport) {
+          fld.setValue(me.commandData.cmpInitConfig.reportParams.dateReport)
+          me.record.issueDate = me.commandData.cmpInitConfig.reportParams.dateReport
+        } else {
+          fld.setValue(appAC.globalApplicationDate())
+          me.record.issueDate = appAC.globalApplicationDate()
+        }
+      },
+      tarificationType: fld => {
+        if (me.commandData.cmpInitConfig && me.commandData.cmpInitConfig.reportParams && me.commandData.cmpInitConfig.reportParams.tarificationType) {
+          fld.setValueById(me.commandData.cmpInitConfig.reportParams.tarificationType)
+          me.record.tarificationType = me.commandData.cmpInitConfig.reportParams.tarificationType
+        } else {
+          fld.setValueById('FACT')
+          me.record.tarificationType = 'FACT'
+        }
+      }
+    }
+    me.listUbdetailgrid = me.queryById('listUbdetailgrid')
+    me.getForm().getFields().getRange().forEach(item => {
+      me.attr[item.name] = item
+      !item.allowBlank && !item.hidden && me.requiredAttr.push(item)
+    })
+
+    Object.keys(fieldsAfterrender).forEach(item => {
+      me.attr[item] && fieldsAfterrender[item](me.attr[item])
+    })
+
+    me.actionsKeyMap = {}
+    me.actionsKeyMap[me.actionId.refresh] = new Ext.util.KeyMap({
+      target: me.getEl(),
+      binding: [{
+        key: me.hotKeys[me.actionId.refresh].key,
+        ctrl: me.hotKeys[me.actionId.refresh].ctrl,
+        shift: me.hotKeys[me.actionId.refresh].shift,
+        fn: function (keyCode, e) {
+          e.stopEvent()
+          me.onButtonRefresh(me)
+        }
+      }]
+    })
+  }
+})
+
+function getStyle () {
+  return `
+    body {
+      background-color: #FFFFFF;
+      color: #000000;
+      font-family: Times New Roman, Verdana, Arial, Helvetica, sans-serif;
+      font-size: 11pt;
+      line-height: 1.3;
+    }
+    .word-wrap {
+      word-wrap: break-word;
+      hyphens: auto
+    }
+    td {
+      padding: 0 2px 0 2px;
+    }
+    .mce-pagebreak {
+      cursor: default;
+      display: block;
+      border: 0;
+      width: 100%;
+      height: 5px;
+      margin-top: 15px;
+      page-break-before: always
+    }
+    table.layout-portrait {
+      width:750px;
+    }
+    table.layout-landscape {
+      width:1100px !important;
+    }
+    @media print {
+      .mce-pagebreak {
+        border: 0
+      }
+      a {
+        text-decoration: none
+      }
+      table.layout-landscape {
+        width:1300px;
+      }
+    }
+  `
+}

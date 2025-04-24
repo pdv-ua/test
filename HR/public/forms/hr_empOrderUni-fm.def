@@ -1,0 +1,217 @@
+/* global appHR */
+
+exports.formDef = {
+  requiredFields: ['orderState', 'description', 'employeeNumberID', 'employeeID'],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [
+      {
+        orderId: 4,
+        actionId: 'postingAction'
+      },
+      {
+        orderId: 5,
+        actionId: 'cancelPostingAction'
+      }
+    ]
+  }],
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: { type: 'vbox', align: 'stretch' },
+          items: [
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  flex: 1,
+                  layout: { type: 'vbox', align: 'stretch' },
+                  items: [
+
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        {
+                          attributeName: 'orderNumber',
+                          flex: 1,
+                          allowBlank: true
+                        },
+                        {
+                          attributeName: 'orderDate'
+                        }
+                      ]
+                    },
+                    {
+                      attributeName: 'organizationID',
+                      hidden: true,
+                      readOnly: true,
+                      fieldList: ['mi_data_id', 'description'],
+                      valueField: 'mi_data_id',
+                      displayField: 'description',
+                      whereList: {
+                        state: {
+                          expression: '[state]',
+                          condition: '=',
+                          values: {
+                            state: 'ACTIVE'
+                          }
+                        }
+                      }
+                    },
+                    {
+                      attributeName: 'employeePositionID',
+                      fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'organizationID', 'employeeNumberID', 'employeeID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+                      orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                      addWorkPlace: true,
+                      xtype: 'empPositionCombobox'
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        { attributeName: 'dateFrom' },
+                        {
+                          attributeName: 'dateTo',
+                          labelWidth: 40,
+                          fieldLabel: UB.i18n('по')
+                        }
+                      ]
+                    },
+                    {
+                      attributeName: 'dictTimeCostID',
+                      fieldList: ['nameSmall', 'name'],
+                      displayField: 'nameSmall',
+                      toolTipField: 'name',
+                      listeners: {
+                        render: function (ctrl) {
+                          ctrl.on('focus', el => ctrl.getEl() && el.getEl().set({ 'data-qtip': el.getFieldValue('name') }))
+                          ctrl.on('change', el => ctrl.getEl() && el.getEl().set({ 'data-qtip': el.getFieldValue('name') }))
+                        }
+                      },
+                      whereList: {
+                        isClose: {
+                          expression: '[isClose]',
+                          condition: 'equal',
+                          value: 0
+                        },
+                        dictTimeCost: {
+                          expression: '[orderClassID.numCode]',
+                          condition: 'equal',
+                          value: '901'
+                        }
+                      }
+                    },
+                    {
+                      attributeName: 'payElID',
+                      hideEntityItemInContext: true,
+                      disableModifyEntity: true,
+                      hidden: true
+                    },
+                    {
+                      layout: { type: 'hbox' },
+                      items: [
+                        {
+                          attributeName: 'isFullDay',
+                          hidden: true
+                        },
+                        {
+                          minWidth: 200,
+                          maxWidth: 200,
+                          attributeName: 'hourDay',
+                          readOnly: true,
+                          hidden: true
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  flex: 1,
+                  layout: { type: 'vbox' },
+                  defaults: {
+                    labelWidth: 180
+                  },
+                  items: [
+                    {
+                      attributeName: 'periodID',
+                      pageSize: 50,
+                      orderList: {
+                        orderBy: {
+                          expression: 'dateFrom',
+                          order: 'desc'
+                        }
+                      },
+                      listeners: {
+                        expand: appHR.periodExpand
+                      },
+                      width: 400,
+                      disabled: true
+                    },
+                    {
+                      attributeName: 'docDate',
+                      disabled: true
+                    },
+                    {
+                      attributeName: 'typeRstSick',
+                      hidden: true
+                    },
+                    {
+                      attributeName: 'avgSum',
+                      hidden: true
+                    },
+                    {
+                      xtype: 'ubtextfield',
+                      name: 'calcDaysHours',
+                      hidden: true,
+                      fieldLabel: UB.i18n('Дні/години до сплати')
+                    }
+                  ]
+                }
+
+              ]
+            },
+            {
+              attributeName: 'note'
+            }
+
+          ]
+
+        },
+        {
+          title: UB.i18n('Додатки'),
+          autoScroll: true,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          flex: 1,
+          items: [{
+            xtype: 'docAttachment',
+            entity: 'hr_orderAttachment',
+            detailFields: 'documentID',
+            masterFields: 'ID',
+            showOriginal: true,
+            minHeight: 55,
+            maxHeight: 140,
+            height: 95
+          }]
+        }
+      ]
+    }
+
+  ]
+}

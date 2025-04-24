@@ -1,0 +1,45 @@
+exports.formDef = {
+  requiredFields: ['organizationID', 'positionType'],
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 100 },
+      items: [
+        { attributeName: 'positionType' },
+        { attributeName: 'dictStaffCatID' },
+        { attributeName: 'positionCategory' },
+        { attributeName: 'contractType' },
+        { attributeName: 'dictContractKindID' },
+        { attributeName: 'workPlace' },
+        { attributeName: 'workerType' },
+        { attributeName: 'workScheduleID' },
+        { attributeName: 'paymentType' },
+        { attributeName: 'payElID',
+          fieldList: ['ID', 'description', 'codeSort'],
+          orderList: { orderBy: { expression: 'codeSort' } } },
+        { attributeName: 'canEditPayElAccrual' },
+        { attributeName: 'dictFundSourceID' },
+        {
+          attributeName: 'organizationID',
+          fieldList: ['mi_data_id', 'name', 'state'],
+          valueField: 'mi_data_id',
+          displayField: 'name',
+          hidden: true,
+          whereList: {
+            state: {
+              expression: '[state]',
+              condition: '=',
+              values: {
+                state: 'ACTIVE'
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

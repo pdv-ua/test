@@ -1,0 +1,340 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+
+/* global $App AC HR */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'empOrderType', 'organizationID', 'description', 'title', 'paraID', 'dateFrom', 'employeeID',
+      'lastNameOld', 'firstNameOld', 'middleNameOld', 'genNameOld', 'datNameOld', 'accusativeNameOld', 'insNameOld',
+      'locNameOld', 'vocNameOld', 'shortFIOOld', 'fullFIOOld', 'orderID.orderNumber', 'orderID.orderDate', 'employeeNumberID'
+    ],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    defaults: {
+      layout: 'fit'
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      listeners: {
+        tabchange: function (tp, t) {
+        }
+      },
+      items: [{
+        title: UB.i18n('Загальне'),
+        ubID: 'tabMain',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [{
+          layout: {
+            type: 'hbox',
+            align: 'middle'
+          },
+          items: [
+            {
+              flex: 2,
+              attributeName: 'employeePositionID',
+              xtype: 'empPositionCombobox',
+              allowBlank: false,
+              addWorkPlace: true,
+              fieldList: ['ID', 'description', 'employeeID', 'employeeNumberID', 'workPlace', 'organizationID', 'vacancyDateFrom', 'vacancyDateTo'],
+              orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } }
+            },
+            {
+              flex: 2,
+              attributeName: 'posDescriptionOld',
+              allowBlank: false,
+              xtype: 'textfield',
+              hidden: true
+            },
+            {
+              flex: 1,
+              attributeName: 'employeeID.taxCode',
+              readOnly: true
+            }
+          ]
+        },
+        {
+          layout: {
+            type: 'hbox'
+          },
+          title: UB.i18n('Змінені дані'),
+          items: [{
+            flex: 1,
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            items: [{
+              attributeName: 'lastName',
+              allowBlank: false
+            },
+            {
+              attributeName: 'firstName',
+              allowBlank: false
+            },
+            {
+              attributeName: 'middleName'
+            },
+            {
+              attributeName: 'fullFIO'
+            },
+            {
+              attributeName: 'shortFIO'
+            },
+              {
+                layout: {
+                  type: 'hbox',
+                  align: 'top'
+                },
+                flex: 1,
+                name: 'reasonDocPanel',
+                hidden: true,
+                items: [{
+                  fieldLabel: UB.i18n('Підстава (до пункту наказу)'),
+                  attributeName: 'reason',
+                  flex: 1
+                },
+                  {
+                    xtype: 'button',
+                    cls: 'list-icon',
+                    name: 'reasonButton',
+                    tooltip: UB.i18n('Вибрати'),
+                    width: 35,
+                    height: 35,
+                    margin: '0 2 0 -45',
+                    handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+                  }
+                ]
+              }
+            ]
+          },
+          { // Права частина
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            flex: 1,
+            items: [AC.viewUtils.getCollapsiblePanel(
+              (() => {
+                /**
+                 * Generates function which will take the content string as a param
+                 *
+                 * @param {string} tagName Tag name
+                 * @param {array<string>} styles Array of styles without semicolon
+                 * @return {function(string): string}
+                 */
+                const createHtmlEl = (tagName, styles) => {
+                  return (content) => `
+                            <${tagName}
+                              style="${styles.join('; ')}"
+                            >
+                              ${content}
+                            </${tagName}>
+                          `
+                }
+                /**
+                 * Generates html condition by field name
+                 *
+                 * @param {string} field Field name
+                 * @return {string}
+                 */
+                const buildCondition = (field) => 'get("' + field + '") === ""'
+                const fields = ['genName', 'datName', 'accusativeName', 'insName', 'locName', 'vocName']
+                const container = createHtmlEl('div', ['white-space: normal', 'color: #818181'])
+                const isEmpty = fields.map(buildCondition).join(' && ')
+                // eslint-disable-next-line no-template-curly-in-string
+                const emptyText = '<div style="${' + isEmpty + ' ? "" : "display: none"}">${UB.i18n("Відмінки")}</div>'
+                const rows = fields.map((field) => {
+                  const row = createHtmlEl('div', ['${' + buildCondition(field) + ' ? "display: none;" : ""}'])
+                  const labelContent = '${UB.i18n("hr_employee.' + field + '")}'
+                  const label = createHtmlEl('span', ['color: rgba(33, 150, 243, 0.8)', ' padding-left: 15px'])(labelContent)
+                  const value = '${' + field + '}'
+
+                  return row(label + value)
+                }).join('')
+                return container(rows + emptyText)
+              })(),
+              {
+                expandTitle: UB.i18n('Відмінки'),
+                margin: '5 15 5 15',
+                layout: {
+                  type: 'hbox'
+                },
+                items: [{
+                  flex: 1,
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  items: [{
+                    attributeName: 'genName',
+                    xtype: 'textfield',
+                    caseName: 'gen'
+                  },
+                  {
+                    attributeName: 'datName',
+                    xtype: 'textfield',
+                    caseName: 'dat'
+                  },
+                  {
+                    attributeName: 'accusativeName',
+                    xtype: 'textfield',
+                    caseName: 'acc'
+                  },
+                  {
+                    attributeName: 'insName',
+                    xtype: 'textfield',
+                    caseName: 'ins'
+                  },
+                  {
+                    attributeName: 'locName',
+                    xtype: 'textfield',
+                    caseName: 'loc'
+                  },
+                  {
+                    attributeName: 'vocName',
+                    xtype: 'textfield',
+                    caseName: 'voc'
+                  },
+                  {
+                    xtype: 'button',
+                    text: UB.i18n('Заповнити'),
+                    handler: btn => {
+                      const me = btn.up('form')
+                      const surname = me.getField('lastName')
+                      const name = me.getField('firstName')
+                      const lastname = me.getField('middleName')
+                      let gender = me.record.get('sexType')
+                      gender = gender === 'W' ? 'female' : gender === 'M' ? 'male' : null
+                      HR.nameCase.getNameCase(surname.getValue(), name.getValue(), lastname.getValue(), gender).then(nc => {
+                        me.query('[caseName]').forEach(item => {
+                          const value = nc.getSurName(item.caseName) + ' ' + nc.getName(item.caseName) + ' ' + nc.getLastName(item.caseName)
+                          item.setValue(value)
+                        })
+                      })
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    text: UB.i18n('Налаштування'),
+                    hidden: !$App.connection.userData().roles.toUpperCase().split(',').includes('ADMIN'),
+                    handler: btn => {
+                      const me = btn.up('form')
+                      const surname = me.getField('lastName')
+                      const name = me.getField('firstName')
+                      const lastname = me.getField('middleName')
+                      $App.doCommand({
+                        cmdType: 'showForm',
+                        formCode: 'hr_namecase-list',
+                        entity: 'hr_namecase',
+                        cmpInitConfig: {
+                          checkNames: {
+                            surname: surname.getValue(),
+                            name: name.getValue(),
+                            lastname: lastname.getValue()
+                          }
+                        }
+                      })
+                    }
+                  }]
+                }
+                ]
+              }
+            )]
+          }]
+        },
+        {
+          xtype: 'tabpanel',
+          region: 'center',
+          layout: 'fit',
+          flex: 1,
+          items: [{
+            title: UB.i18n('Додані документи:'),
+            name: 'hr_empOrderDocs',
+            xtype: 'ubdetailgrid',
+            autoScroll: true,
+            flex: 1,
+            entityConfig: {
+              entity: 'hr_empOrderDocs',
+              method: 'select',
+              fieldList: [{
+                'name': 'dictDocKindID',
+                'description': UB.i18n('Вид документа')
+              }, {
+                'name': 'docSeries',
+                'description': UB.i18n('Серія')
+              }, {
+                'name': 'docNumber',
+                'description': UB.i18n('№ документа')
+              }, {
+                'name': 'docIssued',
+                'description': UB.i18n('Ким видано')
+              }, {
+                'name': 'docIssuedDate',
+                'description': UB.i18n('Дата видачі')
+              }, {
+                'name': 'docValidUntil',
+                'description': UB.i18n('Дiйсний до')
+              }, {
+                'name': 'state',
+                'description': UB.i18n('Стан документа')
+              }, {
+                'name': 'comment',
+                'description': UB.i18n('Примітки')
+              }]
+            },
+            masterFields: ['ID', 'orderID'],
+            detailFields: ['paraID', 'orderID'],
+            listeners: {
+              changeData: function (grid, action) {
+                // let me = grid.up('form')
+                // me.setIsDirty(true)
+              },
+              afterrender: grid => {}
+            },
+            cmpInitConfig: {
+              customInit: function () {
+                let grid = this
+                let newOnDel = function () {
+                  let me = grid.up('form')
+                  if (me.record.get('orderState') === 'POSTED') {
+                    AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Неможливо видалити запис з проведеного наказу'))
+                    return
+                  }
+                  let reco = AC.gridUtils.getCurrentRecord('grid')
+                  reco && $App.connection.run({
+                    entity: reco.get('mi_unityEntity'),
+                    method: 'delete',
+                    execParams: {
+                      ID: reco.get('ID')
+                    }
+                  }).then(() => {
+                    grid.onRefresh()
+                  })
+                }
+                AC.gridUtils.replaceListener(grid, 'del', grid.onDel, newOnDel)
+                let _doOnEdit = grid.doOnEdit
+                AC.gridUtils.tuneGridColumns(grid, {})
+                grid.doOnEdit = function () {
+                  grid.isEditMode = true
+                  _doOnEdit.call(grid)
+                }
+              }
+            }
+          }]
+        }]
+      }]
+    }]
+  }
+}())

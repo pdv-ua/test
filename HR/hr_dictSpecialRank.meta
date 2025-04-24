@@ -1,0 +1,134 @@
+{
+  "caption": "Спеціальне звання",
+  "description": "Спеціальне звання",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 50,
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код",
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "infoText",
+      "dataType": "String",
+      "size": 200,
+      "caption": "В текст",
+      "description": "В текст",
+      "documentation": "В текст",
+      "allowNull": true
+    },
+    {
+      "name": "printName",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Назва для друку",
+      "description": "Назва для друку",
+      "documentation": "Назва для друку",
+      "allowNull": true
+    },
+    {
+      "name": "printNameGen",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Назва для друку (родовий)",
+      "description": "Назва для друку в родовому відмінку",
+      "documentation": "Назва для друку в родовому відмінку",
+      "allowNull": true
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["name"],
+        "compositeSeparator": " "
+      }
+    },
+    {
+      "name": "rankType",
+      "dataType": "Enum",
+      "enumGroup": "HR_SPECIALRANK_TYPE",
+      "caption": "Тип звання",
+      "documentation": "Тип спеціального звання",
+      "description": "Тип спеціального звання",
+      "allowNull": false
+     },
+    {
+      "name": "isActive",
+      "dataType": "Boolean",
+      "caption": "Ознака дії",
+      "description": "Ознака дії",
+      "documentation": "Ознака дії",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": true
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+   	{
+      "name": "dictSpecialRankNextID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictSpecialRank",
+      "caption": "Наступне звання",
+      "description": "Наступне звання",
+      "documentation": "Наступне звання",
+      "allowNull": true
+    },
+    {
+      "name": "nextRankMonth",
+      "dataType": "Int",
+      "caption": "Наступне присвоєння (міс.)",
+      "description": "Наступне присвоєння (міс.)",
+      "documentation": "Наступне присвоєння (міс.)"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

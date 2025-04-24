@@ -1,0 +1,221 @@
+/* global $App AC appAC UB */
+exports.formDef = {
+  requiredFields: ['organizationID', 'taskState'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'sendToExecution'
+        }
+      ]
+    }
+  ],
+  items: [{
+    xtype: 'tabpanel',
+    region: 'center',
+    listeners: {
+      tabchange: function (tp, t) {
+
+      }
+    },
+    items: [{
+      title: UB.i18n('Зміст завдання'),
+      ubID: 'tabMain',
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      defaults: { labelWidth: 120 },
+      items: [
+        { attributeName: 'taskType' },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'taskNumber', readOnly: true, labelWidth: 120, width: 240 },
+            { attributeName: 'taskDate', labelWidth: 130, width: 250, allowBlank: false },
+            { attributeName: 'taskDateSent', readOnly: true, labelWidth: 140, width: 260 }
+          ]
+        },
+        { attributeName: 'taskDescription' },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'dateFrom', labelWidth: 120, width: 240 },
+            { attributeName: 'dateTo', labelWidth: 130, width: 250 }
+          ]
+        },
+        {
+          xtype: 'tabpanel',
+          region: 'center',
+          layout: 'fit',
+          flex: 1,
+          items: [
+            {
+              title: UB.i18n('Працівники'),
+              name: 'employeeTaskDt',
+              stateful: true,
+              stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_employeeTask_employeeTaskDt'),
+              xtype: 'ubdetailgrid',
+              pageSize: 10000,
+              forceDataLoad: true,
+              rowEditing: true,
+              notWriteChanges: true,
+              disableSearchBar: true,
+              hidePagingBar: true,
+              sortableColumns: false,
+              enableColumnHide: false,
+              hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_employeeTaskDt',
+                method: 'select',
+                fieldList: [
+                  {
+                    name: 'employeeNumberID.description',
+                    description: UB.i18n('Працівник'),
+                    config: { width: 500 },
+                    editor: {
+                      fieldList: ['ID', 'description'],
+                      gridFieldList: ['description'],
+                      allowBlank: false,
+                      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                    }
+                  },
+                  {
+                    name: 'taskDtState',
+                    config: { width: 120 },
+                    editor: { readOnly: true }
+                  },
+                  {
+                    name: 'executionDate',
+                    config: { width: 140 },
+                    editor: { readOnly: true }
+                  },
+                  {
+                    name: 'answer',
+                    config: { width: 120 },
+                    editor: { readOnly: true }
+                  },
+                  {
+                    name: 'commentDt',
+                    config: { width: 300 },
+                    editor: { readOnly: true }
+                  },
+                  {
+                    name: 'hasAttachment',
+                    config: { align: 'center', width: 100 },
+                    editor: { readOnly: true }
+                  }
+                ]
+              },
+              masterFields: ['ID'],
+              detailFields: ['employeeTaskID'],
+              cmpInitConfig: {
+                afterInit: function () {
+                  const me = this
+                  me.on('itemdblclick', me.onItemDblClick, me)
+                },
+                onItemDblClick: function (grid, record) {
+                  if (record.get('taskDtState') !== 'NEW') {
+                    $App.doCommand({
+                      cmdType: 'showForm',
+                      formCode: 'hr_employeeTaskDt',
+                      entity: 'hr_employeeTaskDt',
+                      title: UB.i18n('Відповідь на завдання'),
+                      isModal: true,
+                      sender: grid,
+                      instanceID: record.get('ID')
+                    })
+                  }
+                }
+              },
+              onBeforeEdit: function (editor, context) {
+                const me = context.grid.up('form')
+                const taskDtState = context.record.get('taskDtState')
+                if (taskDtState && taskDtState !== 'NEW') {
+                  return false
+                }
+
+                me.setIsDirty(true)
+                let onDate = appAC.globalApplicationDate()
+                AC.viewUtils.setWhereListProperty(editor.editor.query(`[name=employeeNumberID.description]`)[0], [
+                  ['orgID', '=', appAC.globalOrganization()],
+                  ['dateFrom', '<=', onDate],
+                  ['dateTo', '>=', onDate]
+                ])
+                if (taskDtState === null) {
+                  context.record.set('taskDtState', 'NEW')
+                }
+                return true
+              },
+              optimizeColumnWidth: function () {
+
+              },
+              customActions: [{
+                iconCls: 'fas fa-angle-double-down',
+                cls: 'fill-action',
+                text: UB.i18n('Вибрати працівників'),
+                ubID: 'btnAddEmp',
+                handler: async function (btn) {
+                  const me = btn.up('form')
+                  if (await me.saveForm() === -1) {
+                    return
+                  }
+                  const gridEmp = me.down('[name=employeeTaskDt]')
+                  const store = gridEmp.getStore()
+                  HR.orderManager.empOrderEmployeeSearch({
+                    selected: store.data.items.map(o => o.get('employeePositionID')),
+                    orgID: me.record.get('organizationID'),
+                    dateFrom: AC.dateService.truncTimeToUtcNull(me.record.get('dateFrom')),
+                    dateTo: AC.dateService.truncTimeToUtcNull(me.record.get('dateTo')),
+                    onDate: AC.dateService.truncTimeToUtcNull(me.record.get('dateFrom')),
+                    entityID: me.instanceID,
+                    uniqueEmployeeNumbers: true,
+                    onSelectData: function (data, isDelete) {
+                      me.loadEmployeers(data, isDelete)
+                    }
+                  })
+                }
+              }],
+            }
+          ]
+        }
+      ]
+    },
+    {
+      title: UB.i18n('Додатки'),
+      autoScroll: true,
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      flex: 1,
+      items: [{
+        xtype: 'docAttachment',
+        entity: 'hr_attachDoc',
+        detailFields: 'entityID',
+        fieldList: ['ID', 'caption', 'description', 'sheetsQuantity', 'document', 'mi_createDate',
+          'mi_modifyDate', 'entityID'],
+        masterFields: 'ID',
+        showOriginal: true,
+        minHeight: 55,
+        maxHeight: 140,
+        height: 95
+      }]
+    }
+    ]
+  }]
+}

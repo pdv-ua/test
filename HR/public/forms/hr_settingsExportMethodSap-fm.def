@@ -1,0 +1,223 @@
+/* global Ext AC appAC $App UB saveAs Blob */
+
+exports.formDef = 'HR.settingsExportMethodSap'
+
+Ext.define('HR.settingsExportMethodSap', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    const accMainReportsSubOrg = AC.entityUtils.verifyRightsMethod('ac_service', 'subOrg')
+    const me = this
+    me.items = [
+      {
+        region: 'north',
+        autoScroll: true,
+        split: true,
+        layout: { type: 'hbox' },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            name: 'orgID',
+            readOnly: !accMainReportsSubOrg,
+            flex: 1,
+            fieldLabel: UB.i18n('Організація'),
+            displayField: 'description',
+            valueField: 'mi_data_id',
+            ubRequest: {
+              entity: 'hr_organization',
+              fieldList: ['mi_data_id', 'description', 'mi_treePath'],
+              whereList: {
+                state: {
+                  expression: '[state]',
+                  condition: 'equal',
+                  value: 'ACTIVE'
+                },
+                path: {
+                  expression: accMainReportsSubOrg ? '[mi_treePath]' : '[mi_data_id]',
+                  condition: accMainReportsSubOrg ? 'like' : '=',
+                  value: accMainReportsSubOrg ? `/${appAC.globalOrganization()}/` : appAC.globalOrganization()
+                }
+              },
+              orderList: { orderBy: { expression: 'mi_data_id' } },
+              __mip_ondate: appAC.globalApplicationDate()
+            }
+          },
+          {
+            xtype: 'checkboxfield',
+            name: 'childOrg',
+            fieldLabel: UB.i18n('з підлеглими'),
+            labelWidth: 100
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        region: 'center',
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            name: 'exportMethod',
+            cmdType: 'showList',
+            entity: 'hr_exportMethod',
+            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+            cmdData: {
+              params: [
+                {
+                  entity: 'hr_exportMethod',
+                  method: 'select',
+                  fieldList: [
+                    { name: 'ID', visibility: false },
+                    { name: 'shortName', visibility: false },
+                    { name: 'nameFile', visibility: false },
+                    { name: 'typeFile', visibility: false },
+                    { name: 'isActive', visibility: false },
+                    { name: 'orgID', visibility: false },
+                    { name: 'name', description: UB.i18n('Оберіть файли для експорту') }
+                  ],
+                  whereList: {
+                    orgID: {
+                      expression: '[orgID]',
+                      condition: 'equal',
+                      value: appAC.globalOrganization()
+                    },
+                    isActive: {
+                      expression: '[isActive]',
+                      condition: 'equal',
+                      value: 1
+                    },
+                    typeFile: {
+                      expression: '[typeFile]',
+                      condition: 'equal',
+                      value: 'fileSAP'
+                    }
+                  }
+                }
+              ]
+            },
+            cmpInitConfig: {
+              selModel: {
+                selectionMode: 'MULTI',
+                showHeaderCheckbox: true,
+                checkOnly: false,
+                selType: 'checkboxmodel'
+              },
+              onDeterminateForm: function (grid) {
+                return {
+                  entityName: 'hr_exportMethod',
+                  formCode: 'hr_exportMethodFileSap'
+                }
+              },
+              customActions: [
+                {
+                  text: UB.i18n(`Експорт`),
+                  iconCls: 'u-icon-file-export',
+                  cls: 'green-action',
+                  handler: function () {
+                    const selection = me.attr.exportMethod.getSelectionModel().selected.items
+                    if (!selection.length) {
+                      AC.viewUtils.showToast(UB.i18n('Необхідно вибрати хоча б один запис'))
+                      return
+                    }
+
+                    me.setLoading(true)
+                    $App.connection.run({
+                      entity: 'hr_paySummary',
+                      method: 'exportSap',
+                      childOrg: me.attr.childOrg.getValue(),
+                      periodID: me.periodID,
+                      orgID: me.attr.orgID.getValue(),
+                      params: {
+                        methodIDs: selection.map(o => o.get('ID'))
+                      }
+                    }).then(response => {
+                      me.setLoading(false)
+                      const exportMethods = JSON.parse(response.exportMethods)
+                      exportMethods.forEach(exportMethods => {
+                        for (let i = 1; i <= 2; i++) {
+                          const data = i === 1 ? exportMethods.data : exportMethods.dataNegative
+                          if (i === 1 || data.length) {
+                            const wb = new window.XLSX.XLSXWorkbook()
+                            wb.useSharedString = true
+                            const stl = wb.style
+                            const defFont = stl.fonts.add({ code: 'def', name: 'Calibri', fontSize: 11, scheme: 'minor' })
+                            stl.fonts.add({ code: 'defBold', name: 'Calibri', fontSize: 11, scheme: 'minor', bold: true })
+                            const borderFull = stl.borders.add({
+                              left: { style: 'thin' },
+                              right: { style: 'thin' },
+                              top: { style: 'thin' },
+                              bottom: { style: 'thin' }
+                            })
+                            stl.alignments.add({ code: 'Hright', horizontal: 'right' })
+                            stl.alignments.add({ code: 'Hcenter', horizontal: 'center', wrapText: '1' })
+                            stl.alignments.add({
+                              code: 'HVcenter',
+                              horizontal: 'center',
+                              vertical: 'center',
+                              wrapText: '1'
+                            })
+                            stl.alignments.add({ code: 'wrapText', wrapText: '1' })
+                            const styleCol = stl.getStyle({ font: defFont, border: borderFull })
+                            const rowHeaderStyle = stl.getStyle({
+                              font: stl.fonts.named.defBold,
+                              fill: 'EBEDED',
+                              border: borderFull,
+                              alignment: stl.alignments.named.HVcenter
+                            })
+                            const nameFile = `${exportMethods.nameFile || ''}${exportMethods.mvvCode || ''}${exportMethods.perionMonth}`
+                            const ws = wb.addWorkSheet({ caption: nameFile || '', name: nameFile || '' })
+                            const colsProperties = []
+                            const headerRow = []
+                            const fields = exportMethods.fields.filter(field => !field.code || field.code.indexOf('tText') < 0 || field.code === 'tText' || !exportMethods.fields.find(o => o.code === 'tText'))
+                            fields.forEach((field, idx) => {
+                              colsProperties.push({ column: idx, width: 20 })
+                              headerRow.push({ column: idx, value: field.name, style: rowHeaderStyle })
+                            })
+                            ws.setColsProperties(colsProperties)
+                            ws.addRow(headerRow, null, { height: 30 })
+                            data.forEach(row => {
+                              const newRow = []
+                              fields.forEach((field, idx) => {
+                                const newCell = {
+                                  column: idx,
+                                  value: field.uCode ? row[field.uCode] : field.code ? row[field.code] : field.fixValue,
+                                  style: styleCol
+                                }
+                                newRow.push(newCell)
+                              })
+                              ws.addRow(newRow)
+                            })
+                            const rData = wb.render()
+                            const dBlob = new Blob([rData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+                            saveAs(dBlob, `${nameFile}${i === 2 ? `_${UB.i18n('відємні')}_` : ''}.xlsx`)
+                          }
+                        }
+                      })
+                    }, err => {
+                      me.setLoading(false)
+                      throw err
+                    })
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+    me.loadData = async function () {
+
+    }
+    me.on('afterrender', async function () {
+      me.attr = {
+        orgID: me.down('[name=orgID]'),
+        exportMethod: me.down('[name=exportMethod]'),
+        childOrg: me.down('[name=childOrg]')
+      }
+      me.attr.orgID.setValueById(appAC.globalOrganization())
+      me.loadData()
+    })
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,207 @@
+/* global Ext AC $App _ UB */
+
+exports.formDef = 'HR.trfDocumentList'
+
+Ext.define('HR.trfDocumentList', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.trfDocumentList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        autoScroll: true,
+        layout: 'fit',
+        flex: 1,
+        forceDataLoad: true,
+        disableAutoLoadStore: true,
+        hideActions: ['showPreview', 'showDetail', 'audit', 'itemLink', 'edit', 'addNewByCurrent', 'addNew'],
+        cmdType: 'showList',
+        entity: 'trf_document',
+        cmdData: {
+          params: [{
+            entity: 'trf_document',
+            method: 'select',
+            fieldList: [
+              { name: 'docDate', format: 'd.m.Y', description: UB.i18n('Дата'), visibility: false },
+              { name: 'docNumber', description: UB.i18n('Номер') },
+              { name: 'dateFrom', format: 'd.m.Y', description: UB.i18n('Дата') },
+              { name: 'type', description: UB.i18n('Тип') },
+              { name: 'name', description: UB.i18n('Назва') },
+              { name: 'orgID', description: UB.i18n('Організація'), visibility: false },
+              { name: 'docState', description: UB.i18n('Стан'), config: { hidden: true } },
+              { name: 'dateTo', format: 'd.m.Y', description: UB.i18n('Кінець'), visibility: false },
+              { name: 'dateToEmpty', format: 'd.m.Y', description: UB.i18n('Кінець'), visibility: false },
+              { name: 'workPlaces', description: UB.i18n('Робочих місць') },
+              { name: 'positionPlaces', description: UB.i18n('Посадових місць'), config: { hidden: true } },
+              { name: 'positionVacants', description: UB.i18n('Вакансій'), config: { hidden: true } },
+              { name: 'accrualSum', description: UB.i18n('Сума'), format: '0.00' },
+              { name: 'description', description: UB.i18n('Опис'), visibility: false },
+              { name: 'orderNumber', description: UB.i18n('Наказ №'), visibility: false },
+              { name: 'orderDate', description: UB.i18n('Дата'), visibility: false },
+              { name: 'hasPosted', visibility: false },
+              { name: 'hasProject', visibility: false }
+            ],
+            orderList: { orderBy: { expression: 'dateFrom', order: 'asc' } }
+          }]
+        },
+        cmpInitConfig: {
+          afterInit: function () {
+            AC.gridUtils.setGlobalOrganization(this, ['orgID'])
+            this.getStore().load()
+          },
+          getRowClass: function (row) {
+            return row.get('docState') === 'POSTED' || (!row.get('hasProject') && row.get('hasPosted')) ? 'ub-row-green' : (row.get('hasPosted') && row.get('hasProject')) ? 'ub-row-light-blue' : 'ub-row-lightgrey'
+          },
+          customInit: function () {
+            AC.gridUtils.tuneGridColumns(this, {
+              workPlaces: {
+                renderer: function (value) {
+                  return (value === 0 ? '' : value)
+                }
+              },
+              positionPlaces: {
+                renderer: function (value) {
+                  return (value === 0 ? '' : value)
+                }
+              },
+              positionVacants: {
+                renderer: function (value) {
+                  return (value === 0 ? '' : value)
+                }
+              },
+              accrualSum: {
+                renderer: function (value) {
+                  return _.isNumber(value) && value !== 0 ? Ext.util.Format.currency(value, '', 2) : ''
+                }
+              }
+            })
+          },
+          customActions: [
+            {
+              text: UB.i18n('Додати'),
+              iconCls: 'fas fa-plus',
+              scale: 'medium',
+              cls: 'fill-action',
+              actionId: 'addBtn',
+              handler: function (btn) {
+                const grid = btn.up('[entityName=trf_document]')
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  entity: 'trf_document',
+                  formCode: 'trf_document',
+                  instanceID: null,
+                  tabId: 'trf_document' + Date.now(),
+                  target: $App.getViewport().centralPanel,
+                  sender: grid,
+                  cmpInitConfig: {
+                    sourceGrid: grid
+                  }
+                })
+              }
+            },
+            {
+              text: UB.i18n('Додати як'),
+              iconCls: 'far fa-copy',
+              actionId: 'copyBtn',
+              cls: 'blue-action',
+              disabled: true,
+              handler: function (btn) {
+                const grid = btn.up('[entityName=trf_document]')
+                const record = AC.gridUtils.getCurrentRecord(grid)
+                $App.connection.run({
+                  entity: 'trf_document',
+                  method: 'copyRecord',
+                  ID: record.data.ID,
+                  dateTo: record.getData().dateTo
+                })
+                  .then((mParams) => {
+                    grid.getStore().load().then(
+                      $App.doCommand({
+                        cmdType: 'showForm',
+                        entity: 'trf_document',
+                        formCode: 'trf_document',
+                        instanceID: mParams.newID,
+                        tabId: 'trf_document' + Date.now(),
+                        target: $App.getViewport().centralPanel,
+                        sender: grid
+                      })
+                    )
+                  })
+              }
+            }
+          ],
+          onSelectionChange: function (selectionModel, selected) {
+            const grid = this
+            AC.gridUtils.enableCustomAction(grid, 'copyBtn', !!selected.length)
+            if (selected[0]) {
+              const state = selected[0].data.docState === 'POSTED'
+              grid.actions['del'].setDisabled(state)
+            }
+          },
+          onItemDblClick: function (grid, record) {
+            if (record.get('ID')) {
+              $App.doCommand({
+                cmdType: 'showForm',
+                formCode: 'trf_document',
+                entity: 'trf_document',
+                title: record.get('name') ? record.get('name') : UB.i18n('Документ тарифікації'),
+                isModal: false,
+                instanceID: record.get('ID'),
+                tabId: `trf_document-${record.get('ID')}`,
+                target: $App.getViewport().centralPanel,
+                store: grid.store,
+                sender: grid,
+                cmpInitConfig: {
+                  sourceGrid: grid
+                }
+              })
+            }
+          }
+        }
+      }
+    ]
+  },
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+
+    /* me.globalOrganizationChange = () => {
+      const globalOrganization = appAC.globalOrganization()
+      if (!me.attr.grid.store.ubRequest.whereList) {
+        me.attr.grid.store.ubRequest.whereList = {}
+      }
+      me.attr.periodID.store.clearFilter()
+      AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: globalOrganization }, [])
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        me.attr.periodID.setValueById(response.ID)
+      })
+    } */
+    me.on('afterrender', () => {
+      /* const me = this
+     * me.attr = {
+         grid: me.down('[entityName=hr_payRoll]'),
+         periodID: me.down('[name=periodID]')
+       }
+       AC.viewUtils.setFilterValue(me.attr.periodID, { orgID: appAC.globalOrganization() })
+       appHR.getCurrentPeriod(appAC.globalOrganization()).then(response => {
+         me.attr.periodID.setValueById(response.ID)
+       }) */
+    })
+    me.callParent(arguments)
+  }
+})

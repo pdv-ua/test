@@ -1,0 +1,61 @@
+module.exports = [
+  {
+    entity: 'hr_dictRateTaxECB',
+    identifier: ['dictTypeTaxECBID'],
+    notUpdate: true,
+    notDelete: true,
+    modifyWhere: (conn) => {
+      return !conn.Repository('hr_dictRateTaxECB').attrs(['ID']).misc({ __allowSelectSafeDeleted: true }).limit(1).selectScalar()
+    },
+    attrsConfig: {
+      dictTypeTaxECBID: { associatedEntity: 'hr_dictTypeTaxECB', codeAttr: 'code' }
+    },
+    attrs: ['dictTypeTaxECBID', 'dateFromEmpty', 'rate'],
+    items: [
+      ['1', '2016-01-01T00:00:00Z', 22],
+      ['2', null, 8.41],
+      ['3', '2016-01-01T00:00:00Z', 22],
+      ['10', '2016-01-01T00:00:00Z', 22],
+      ['11', '2016-01-01T00:00:00Z', 22],
+      ['12', '2016-01-01T00:00:00Z', 22],
+      ['13', '2016-01-01T00:00:00Z', 22],
+      ['14', '2016-01-01T00:00:00Z', 22],
+      ['18', '2016-01-01T00:00:00Z', 22],
+      ['20', '2016-01-01T00:00:00Z', 22],
+      ['23', '2016-01-01T00:00:00Z', 22],
+      ['25', '2016-01-01T00:00:00Z', 22],
+      ['26', '2016-01-01T00:00:00Z', 22],
+      ['27', null, 5.3],
+      ['28', null, 5.3],
+      ['29', '2016-01-01T00:00:00Z', 22],
+      ['30', null, 5.3],
+      ['31', '2016-01-01T00:00:00Z', 22],
+      ['32', null, 8.41],
+      ['36', null, 8.41],
+      ['37', null, 5.3],
+      ['38', null, 5.3],
+      ['39', null, 5, 5],
+      ['41', null, 5.3],
+      ['42', '2016-01-01T00:00:00Z', 22],
+      ['43', null, 8.41],
+      ['44', null, 5.3],
+      ['45', null, 5.5],
+      ['47', '2016-01-01T00:00:00Z', 22],
+      ['50', null, 22],
+      ['51', null, 22],
+      ['52', null, 22],
+      ['53', null, 22],
+      ['54', null, 22],
+      ['55', null, 22],
+      ['56', null, 22],
+      ['57', null, 22],
+      ['58', null, 22],
+      ['59', null, 22],
+      ['60', null, 22],
+      ['61', null, 22],
+      ['62', null, 22],
+      ['63', null, 22],
+      ['66', null, 8.41]
+    ]
+  }
+]

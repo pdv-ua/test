@@ -1,0 +1,445 @@
+/* global Ext appAC $App AC UB */
+
+exports.formDef = 'HR.employeeList'
+
+Ext.define('HR.employeeList', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.employeeList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'ubdetailgrid',
+        name: 'employeeGrid',
+        stateful: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_employeeList_employeeGrid'),
+        autoScroll: true,
+        region: 'center',
+        flex: 1,
+        hideActions: ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        cmdType: 'showList',
+        description: UB.i18n('Особи'),
+        entity: 'hr_employee',
+        cmdData: {
+          params: [{
+            entity: 'hr_employee',
+            method: 'select',
+            fieldList: [
+              { name: 'isLock', description: ' ', config: { align: 'center', width: 20, text: '' }, filterable: false, sortable: false },
+              { name: 'fullFIO', description: UB.i18n('ПIБ') },
+              { name: 'sexType', description: UB.i18n('Стать') },
+              { name: 'taxCode', description: UB.i18n('РНОКПП') },
+              { name: 'birthDate', description: UB.i18n('Дата народження') },
+              { name: 'age', description: UB.i18n('Вік') },
+              { name: 'citizenshipID.name', description: UB.i18n('Громадянство') }
+            ],
+            whereList: {
+              exists: {
+                expression: '',
+                condition: 'subquery',
+                subQueryType: 'Exists',
+                value: {
+                  entity: 'ac_employeeOrg',
+                  fieldList: [],
+                  method: 'select',
+                  whereList: {
+                    cond: {
+                      expression: '[employeeID]=[{master}.ID]',
+                      condition: 'custom'
+                    },
+                    orgID: {
+                      condition: 'equal',
+                      expression: '[organizationID]',
+                      value: appAC.globalOrganization()
+                    },
+                    mi_deleteDate: {
+                      condition: 'equal',
+                      expression: '[employeeID.mi_deleteDate]',
+                      value: '#maxdate'
+                    },
+                    mi_deleteDateOrg: {
+                      condition: 'equal',
+                      expression: '[mi_deleteDate]',
+                      value: '#maxdate'
+                    }
+                  }
+                }
+              }
+            }
+          }]
+        },
+        cmpInitConfig: {
+          afterInit: function () {
+            const grid = this
+            const checkEdit = AC.settings.get('onlyOwnerCanEditEmployee', null, null)
+            if (checkEdit) {
+              const curDate = AC.dateService.currentDate()
+              const gridStore = grid.getStore()
+              gridStore.on('load', (store, data) => {
+                me.empData.length = 0
+                const employeeIDs = []
+                data.forEach(item => {
+                  employeeIDs.push(item.get('ID'))
+                })
+                if (employeeIDs.length) {
+                  me.setLoading(true)
+                  const firedOrg = UB.Repository('hr_employeeNumberS')
+                    .attrs(['employeeID', 'MAX([dateTo])'])
+                    .where('employeeID', 'in', employeeIDs)
+                    .where('orgID', '=', appAC.globalOrganization())
+                    .groupBy('employeeID')
+                    .selectAsObject({
+                      'MAX([dateTo])': 'firedDate'
+                    })
+                  const firedOther = UB.Repository('hr_employeeNumberS')
+                    .attrs(['employeeID', 'MAX([dateTo])'])
+                    .where('employeeID', 'in', employeeIDs)
+                    .where('orgID', '!=', appAC.globalOrganization())
+                    .groupBy('employeeID')
+                    .selectAsObject({
+                      'MAX([dateTo])': 'firedDateOther'
+                    })
+                  Promise.all([firedOrg, firedOther]).then(([firedOrgList, firedOtherList]) => {
+                    if (firedOrgList) {
+                      me.empData.push(...firedOrgList)
+                    }
+                    if (firedOtherList && Array.isArray(firedOtherList)) {
+                      firedOtherList.forEach(item => {
+                        const emp = me.empData.find(o => o.employeeID === item.employeeID)
+                        if (emp) emp.firedDateOther = item.firedDateOther
+                        else {
+                          me.empData.push(item)
+                        }
+                      })
+                    }
+                    me.setLoading(false)
+                    const grid = me.down('[name=employeeGrid]')
+                    grid.getView().refresh()
+                  })
+                }
+              })
+              AC.gridUtils.tuneGridColumns(this, {
+                isLock: {
+                  renderer: function (value, meta, record) {
+                    if (!record || !record.get) return ''
+                    let allowEdit = true
+                    const empID = record.get('ID')
+                    const row = me.empData.find(o => o.employeeID === empID)
+                    if (row) {
+                      if (row.firedDate && AC.dateService.shiftDate(row.firedDate) < curDate) allowEdit = false
+                      if (!row.firedDate && row.firedDateOther && AC.dateService.shiftDate(row.firedDateOther) > curDate) allowEdit = false
+                    }
+                    return allowEdit ? '' : '<i class="fa fa-lock"></i>'
+                  }
+                }
+              })
+            }
+            grid.down('toolbar').insert(2,
+              Ext.create('Ext.Button', {
+                tooltip: UB.i18n('Завантажити осіб'),
+                text: UB.i18n('&nbsp;Завантажити осіб'),
+                scale: 'medium',
+                iconCls: 'fas fa-cloud-download-alt',
+                cls: 'fill-action',
+                hidden: AC.entityUtils.verifyRightsMethod('hr_employee', 'viewMilitary') && !AC.entityUtils.isAdmin(),
+                handler: function () {
+                  me.doImport(me)
+                }
+              })
+            )
+            grid.down('toolbar').insert(3,
+              Ext.create('Ext.Button', {
+                tooltip: UB.i18n('Вивантажити шаблони'),
+                text: UB.i18n('&nbsp;Вивантажити шаблони'),
+                scale: 'medium',
+                iconCls: 'fas fa-cloud-upload-alt',
+                cls: 'blue-action',
+                // hidden: AC.entityUtils.verifyRightsMethod('hr_employee', 'viewMilitary') && !AC.entityUtils.isAdmin(),
+                handler: function () {
+                  me.doExport(me)
+                }
+              })
+            )
+          }
+        }
+      }
+    ]
+
+    const changeGlobal = () => {
+      const grid = me.down('[name=employeeGrid]')
+      grid.getStore().ubRequest.whereList.exists.value.whereList.orgID.value = appAC.globalOrganization()
+      grid.getStore().load()
+    }
+    me.on('afterrender', () => {
+      $App.on('ac:app:organizationChanged', changeGlobal)
+      $App.on('ac:app:operationDateChanged', changeGlobal)
+    }, me)
+
+    me.on('destroy', () => {
+      $App.un('ac:app:organizationChanged', changeGlobal)
+      $App.un('ac:app:operationDateChanged', changeGlobal)
+    }, me)
+    me.empData = []
+
+    me.doImport = async function (form) {
+      const me = this
+      Ext.create('AC.controls.acUploadFileAjax', {
+        scope: me,
+        width: 800,
+        height: 700,
+        customArea: {
+          xtype: 'panel',
+          region: 'center',
+          height: 640,
+          items: [
+            {
+              xtype: 'combobox',
+              width: 250,
+              editable: false,
+              name: 'encoding',
+              fieldLabel: UB.i18n('Кодування'),
+              allowBlank: false,
+              store: Ext.create('Ext.data.Store', {
+                fields: ['text', 'value'],
+                data: [
+                  {
+                    text: 'utf8',
+                    value: 'utf8'
+                  },
+                  {
+                    text: 'win1251',
+                    value: 'win1251'
+                  }
+                ]
+              })
+            },
+            {
+              xtype: 'acGrid',
+              name: 'employeeList',
+              region: 'center',
+              flex: 1,
+              autoScroll: true,
+              notWriteChanges: true,
+              storeType: 'local',
+              showToolBar: true,
+              disablePaging: true,
+              exportExcel: {
+                fileName: UB.i18n(`Завантаження даних`)
+              },
+              loadMaskMessage: UB.i18n('Завантаження даних...'),
+              stripeRows: true,
+              hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+              pagerConfig: {
+                pageSize: 10
+              },
+              customToolBarActions: [
+                {
+                  xtype: 'textfield',
+                  name: 'searchBox',
+                  skipSetReadOnly: true,
+                  fieldLabel: UB.i18n('filter'),
+                  listeners: {
+                    change: function (ctrl, value) {
+                      const store = ctrl.up('acGrid').getStore()
+                      store.clearFilter()
+                      if (value === '') {
+                        return
+                      }
+                      if (store.sorters.items.length) {
+                        store.sorters.removeAll()
+                      }
+                      store.filter(row => {
+                        return (row.get('taxCode') && row.get('taxCode').toUpperCase().includes(value.toUpperCase())) ||
+                          (row.get('firstName') && row.get('firstName').toUpperCase().includes(value.toUpperCase())) ||
+                          (row.get('fullFIO') && row.get('fullFIO').toUpperCase().includes(value.toUpperCase())) ||
+                          (row.get('dictMaritalStatusKindID.name') && row.get('dictMaritalStatusKindID.name').toUpperCase().includes(value.toUpperCase())) ||
+                          (row.get('citizenshipID.name') && row.get('citizenshipID.name').toUpperCase().includes(value.toUpperCase()))
+                      })
+                    }
+                  }
+                }
+              ],
+              fields: [
+                {
+                  name: 'taxCode',
+                  columnConfig: {
+                    text: UB.i18n('РНОКПП'),
+                    sortBy: 'Number',
+                    width: 120
+                  }
+                },
+                {
+                  name: 'firstName',
+                  columnConfig: {
+                    text: UB.i18n("Ім'я"),
+                    width: 80,
+                    hidden: true
+                  }
+                },
+                {
+                  name: 'lastName',
+                  columnConfig: {
+                    text: UB.i18n('Прізвище'),
+                    width: 80,
+                    hidden: true
+                  }
+                },
+                {
+                  name: 'middleName',
+                  columnConfig: {
+                    text: UB.i18n('По батькові'),
+                    width: 80,
+                    hidden: true
+                  }
+                },
+                {
+                  name: 'fullFIO',
+                  columnConfig: {
+                    text: UB.i18n('Працівник'),
+                    flex: 1
+                  }
+                },
+                {
+                  name: 'sexType',
+                  columnConfig: {
+                    text: UB.i18n('Стать'),
+                    flex: 1,
+                    hidden: true
+                  }
+                },
+                {
+                  name: 'dictMaritalStatusKindID.name',
+                  columnConfig: {
+                    text: UB.i18n('Сімейний стан'),
+                    flex: 1,
+                    hidden: true
+                  }
+                },
+                {
+                  name: 'citizenshipID.name',
+                  columnConfig: {
+                    text: UB.i18n('Громадянство'),
+                    flex: 1,
+                    hidden: true
+                  }
+                },
+                {
+                  name: 'birthPlace',
+                  columnConfig: {
+                    text: UB.i18n('Місце народження'),
+                    flex: 1,
+                    hidden: true
+                  }
+                },
+                {
+                  name: 'phoneMobile',
+                  columnConfig: {
+                    text: UB.i18n('Телефон мобільний'),
+                    flex: 1,
+                    hidden: true
+                  }
+                },
+                {
+                  name: 'phoneWorking',
+                  columnConfig: {
+                    text: UB.i18n('Телефон робочий'),
+                    flex: 1,
+                    hidden: true
+                  }
+                },
+                {
+                  name: 'phoneHome',
+                  columnConfig: {
+                    text: UB.i18n('Телефон домашній'),
+                    flex: 1,
+                    hidden: true
+                  }
+                },
+                {
+                  name: 'dayBirthDate',
+                  columnConfig: {
+                    text: UB.i18n('Дата народження'),
+                    sortBy: 'Date',
+                    flex: 1,
+                    hidden: true
+                  }
+                },
+                {
+                  name: 'state',
+                  columnConfig: {
+                    text: UB.i18n('Стан'),
+                    flex: 1
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        listeners: {
+          afterrender: function (cmp) {
+            this.fieldFile.fileInputEl.set({
+              accept: '.csv'
+            })
+            const encodingCtrl = this.down('[name=encoding]')
+            encodingCtrl.setValue('utf8')
+          }
+        },
+        upLoad: function (btn) {
+          const me = this
+          const inputDom = me.fieldFile.fileInputEl.dom
+          if (inputDom.files.length === 0) {
+            return
+          }
+          const file = inputDom.files[0]
+          const encodingCtrl = me.down('[name=encoding]')
+          UB.connection.post('loadImportEmployeeData', file, {
+            params: {
+              orgID: appAC.globalOrganization(),
+              encoding: (encodingCtrl ? encodingCtrl.getValue() : null) || 'utf8',
+              fileName: file.name
+            },
+            headers: { 'Content-Type': 'application/octet-stream' }
+          }).then((response) => {
+            const grid = me.down('[name=employeeList]')
+            grid.getStore().loadData([...grid.getData(), ...JSON.parse(response.data.empl)])
+            if (response.data && typeof response.data === 'object' && response.data.error) {
+              $App.dialogError(response.data.error)
+            }
+          }, (err) => {
+            if (err.config && err.config.timeout) {
+              $App.dialogInfo(UB.i18n(err.error))
+            } else {
+              throw err
+            }
+          })
+        }
+      })
+    }
+
+    me.doExport = async function (form) {
+      const fields = ['ІНН', 'Прізвище', `Ім'я`, 'По батькові', 'Стать', 'Сімейний стан', 'Дата народження',
+        'Громадянство', 'Місце народження', 'Телефон мобільний', 'Телефон робочий', 'Телефон домашній']
+
+      const content = fields.reduce((res, item, index, arr) => {
+        res += index !== arr.length - 1 ? `${item};` : item
+        return res
+      }, '')
+      $App.connection.run({
+        entity: 'ac_service',
+        method: 'exportCsv',
+        content
+      }).then(({ result }) => {
+        AC.filesService.saveAsByBase64Buffer(result, `Шаблон персоналу.csv`, { type: 'text/plain' })
+      })
+    }
+
+    me.callParent(arguments)
+  }
+})

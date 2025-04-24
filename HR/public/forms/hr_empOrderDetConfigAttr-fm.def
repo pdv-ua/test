@@ -1,0 +1,246 @@
+// @isModal true
+/* global UB Ext UB $App _ */
+
+exports.formDef = 'HR.empOrderDetConfigAttr'
+
+Ext.define('HR.empOrderDetConfigAttr', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.empOrderDetConfigAttr',
+  initComponent: function () {
+    const me = this
+    let gridAttrs
+    const queryDelay = 500
+    const attrList = ['dictTimeCostID', 'dictTimeCost2ID', 'payElIDAccrual', 'payElIDMain', 'payElIDAdd', 'payElIDReplacement']
+
+    const storeAttrs = Ext.create('Ext.data.Store', {
+      fields: [
+        { name: 'empOrderType' },
+        { name: 'name' },
+        { name: 'dictTimeCostID' },
+        { name: 'dictTimeCost2ID' },
+        { name: 'payElIDAccrual' },
+        { name: 'payElIDMain' },
+        { name: 'payElIDAdd' },
+        { name: 'payElIDReplacement' }
+      ],
+      data: []
+    })
+
+    function setFilter () {
+      storeAttrs.filter({
+        id: 'searchTask',
+        property: 'name',
+        condition: UB.core.UBCommand.condition.sqlecLike,
+        value: searchCtrl.getValue(),
+        anyMatch: true,
+        caseSensitive: false
+      })
+    }
+    function clearFilter () {
+      storeAttrs.filters.removeAtKey('searchTask')
+      storeAttrs.clearFilter()
+    }
+    let doQueryTask = new Ext.util.DelayedTask(function () {
+      const value = searchCtrl.getValue()
+      if (value === '') {
+        clearFilter()
+      } else {
+        setFilter()
+      }
+    }, me)
+    let searchCtrl = Ext.widget('textfield', {
+      labelWidth: 60,
+      fieldLabel: UB.i18n('filter'),
+      width: 400
+    })
+    searchCtrl.on('change', function () {
+      doQueryTask.delay(queryDelay)
+    })
+
+    me.items = [
+      gridAttrs = Ext.create('Ext.grid.Panel', {
+        xtype: 'grid',
+        store: storeAttrs,
+        viewConfig: {
+          markDirty: false
+        },
+        autoScroll: true,
+        flex: 1,
+        region: 'center',
+        columnLines: true,
+        plugins: [Ext.create('Ext.grid.plugin.CellEditing', {
+          clicksToEdit: 1
+        })],
+        tbar: Ext.create('Ext.toolbar.Toolbar', {
+          height: 40,
+          items: [
+            {
+              xtype: 'button',
+              scale: 'medium',
+              iconCls: 'u-icon-refresh',
+              tooltip: UB.i18n('refresh'),
+              handler: () => {
+                me.loadData()
+              }
+            },
+            {
+              xtype: 'button',
+              scale: 'medium',
+              name: 'saveAndCloseBtn',
+              iconCls: 'u-icon-save-and-close',
+              tooltip: UB.i18n('saveAndClose'),
+              cls: 'save-action',
+              handler: () => {
+                me.saveData(true)
+              }
+            },
+            {
+              xtype: 'button',
+              scale: 'medium',
+              name: 'saveBtn',
+              iconCls: 'u-icon-save',
+              tooltip: UB.i18n('save'),
+              cls: 'save-action',
+              handler: () => {
+                me.saveData(false)
+              }
+            },
+            searchCtrl
+          ]
+        }),
+        columns: [
+          { header: UB.i18n('Тип наказу'), dataIndex: 'name', width: 400 },
+          { dataIndex: 'empOrderType', hidden: true },
+          { xtype: 'checkcolumn', dataIndex: 'dictTimeCostID', flex: 1, header: UB.i18n('Елемент обліку робочого часу') },
+          { xtype: 'checkcolumn', dataIndex: 'dictTimeCost2ID', flex: 1, header: UB.i18n('Елемент обліку робочого часу (додатково)') },
+          { xtype: 'checkcolumn', dataIndex: 'payElIDAccrual', flex: 1, header: UB.i18n('Система оплати') },
+          { xtype: 'checkcolumn', dataIndex: 'payElIDMain', flex: 1, header: UB.i18n('Вид оплати (основний)') },
+          { xtype: 'checkcolumn', dataIndex: 'payElIDAdd', flex: 1, header: UB.i18n('Вид оплати (додатково, мат.допомога)') },
+          { xtype: 'checkcolumn', dataIndex: 'payElIDReplacement', flex: 1, header: UB.i18n('Вид оплати за ТВО') }
+        ]
+      })
+    ]
+    me.bbar = [
+      '->'
+    ]
+
+    me.isDirty = false
+
+    me.loadData = function () {
+      me.setLoading(true)
+      const records = []
+      UB.Repository('hr_dictOrderRef')
+        .attrs(['empOrderItemType'])
+        .selectAsObject().then(data => {
+          const empOrderTypeList = _.uniq(data.map(o => o.empOrderItemType))
+          UB.core.UBEnumManager.getArrayStore('HR_EMPORDRETYPE').data.items.forEach(item => {
+            if (empOrderTypeList.includes(item.get('code'))) {
+              records.push({
+                empOrderType: item.get('code'),
+                name: item.get('name'),
+                dictTimeCostID: false,
+                dictTimeCost2ID: false,
+                payElIDAccrual: false,
+                payElIDMain: false,
+                payElIDAdd: false,
+                payElIDReplacement: false
+              })
+            }
+          })
+          clearFilter()
+          storeAttrs.removeAll()
+          storeAttrs.loadData(records)
+          storeAttrs.sort('name', 'asc')
+          UB.Repository('hr_empOrderDetConfigAttr')
+            .attrs(['empOrderType', 'attrName'])
+            .selectAsObject().then(data => {
+              data.forEach(row => {
+                const rec = storeAttrs.findRecord('empOrderType', row.empOrderType, 0, false, true, true)
+                if (rec) rec.set(row.attrName, true)
+              })
+              me.setLoading(false)
+              gridAttrs.getView().refreshView()
+              me.setDirty(false)
+              if (searchCtrl.getValue()) {
+                setFilter()
+              }
+            })
+        })
+    }
+
+    me.setDirty = function (isDirty) {
+      me.isDirty = isDirty
+      me.down('[name=saveAndCloseBtn]').setDisabled(!isDirty)
+      me.down('[name=saveBtn]').setDisabled(!isDirty)
+    }
+
+    me.saveData = function (isClose) {
+      const data = gridAttrs.getStore().snapshot || gridAttrs.getStore().data
+      const result = []
+      data.items.forEach(row => {
+        attrList.forEach(attr => {
+          if (row.get(attr)) {
+            result.push({
+              empOrderType: row.get('empOrderType'),
+              attrName: attr
+            })
+          }
+        })
+      })
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_empOrderDetConfigAttr',
+        method: 'updateAttrEntry',
+        data: JSON.stringify(result)
+      }).then(() => {
+        me.setLoading(false)
+        if (isClose) {
+          me.isDirty = false
+          me.doClose()
+        } else {
+          me.loadData()
+        }
+      })
+    }
+
+    me.on('beforeclose', () => {
+      if (me.isDirty) {
+        Ext.Msg.confirm({
+          buttons: Ext.MessageBox.YESNOCANCEL,
+          icon: Ext.MessageBox.WARNING,
+          buttonText: {
+            yes: UB.i18n('save'),
+            no: UB.i18n('doNotSave'),
+            cancel: UB.i18n('cancel')
+          },
+          minWidth: 320,
+          title: UB.i18n('unsavedData'),
+          msg: UB.i18n('confirmSave'),
+          fn: function (btn) {
+            if (btn === 'yes') {
+              me.saveData(true)
+            }
+            if (btn === 'no') {
+              me.isDirty = false
+              me.doClose(true)
+            }
+          }
+        })
+        return false
+      }
+      return true
+    })
+
+    me.on('afterrender', () => {
+      const me = this
+      me.grid = gridAttrs
+      storeAttrs.on('update', () => { me.setDirty(true) }, me)
+      me.loadData()
+      $App.dialogError(UB.i18n('Налаштування цього довідника можуть призвести до некоректної роботи наказів всієї системи. Будь-які зміни необхідно погоджувати із Особами, відповідальними за працездатність системи. Зміни може здійснювати лише сертифіковний адміністратор системи!'), UB.i18n('Увага!'))
+    })
+    me.callParent(arguments)
+  }
+})

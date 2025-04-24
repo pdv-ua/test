@@ -1,0 +1,322 @@
+// @isModal true
+/* global Ext  UB AC $App */
+
+exports.formDef = 'HR.importSelectExisting'
+
+Ext.define(exports.formDef, {
+  extend: 'Ext.panel.Panel',
+  layout: {
+    type: 'vbox',
+    align: 'stretch'
+  },
+  width: 100,
+  height: 100,
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    ubID: 'mainToolbar',
+    enableOverflow: true,
+    items: [/* {
+      xtype: 'label',
+      text: UB.i18n('Не оновлювати існуючі ')
+    }, */
+      {
+        xtype: 'checkbox',
+        value: true,
+        labelWidth: 180,
+        width: 200,
+        fieldLabel: UB.i18n('Не оновлювати існуючі '),
+        name: 'impIsNotUpdateExisting'
+      },
+      {
+        actionId: 'search',
+        text: UB.i18n('Встановити для всіх'),
+        iconCls: 'fas fa-running',
+        cls: 'blue-action',
+        handler: btn => {
+          const me = btn.up('[formCode]')
+          const impIsNotUpdateExisting = me.down('[name=impIsNotUpdateExisting]')
+          $App.dialogYesNo('Попередження', UB.i18n(`{0}  ознаку "Не оновлювати існуючі" для всіх осіб?`, impIsNotUpdateExisting.getValue() ? 'Увімкнути' : 'Вимкнути'))
+            .then(function (isYes) {
+              if (isYes) {
+                const filter = UB.ux.data.proxy.UBProxy.ubFilterToWhereList(me.dataGrid.store.filters.getRange(), 'hr_employee')
+                const filterParams = []
+                Object.keys(filter).forEach(key => {
+                  filterParams.push(filter[key])
+                })
+                me.setLoading(true)
+                let employee
+                if (me.customParams.data) {
+                  employee = JSON.stringify(JSON.parse(me.customParams.data).map(o => o.ID))
+                }
+
+                $App.connection.run({
+                  entity: 'hr_import',
+                  method: 'setNotUpdateExisting',
+                  filterParams: JSON.stringify(filterParams),
+                  employee: employee || false,
+                  impIsNotUpdateExisting: impIsNotUpdateExisting.getValue()
+                }).then(mParams => {
+                  me.setLoading(false)
+                  AC.viewUtils.showToast(mParams.message)
+                  me.dataGrid.getStore().load()
+                })
+              }
+            })
+        }
+      }
+    ]
+  }],
+  _bbar: {
+    layout: {
+      pack: 'center'
+    },
+    frame: true,
+    padding: '0 0 10 0',
+    items: [{
+      xtype: 'button',
+      text: 'Ok',
+      width: 80,
+      minWidth: 80,
+      margin: '0 10 0 0',
+      iconCls: 'iconApprove',
+      event: 'generate',
+      handler: function (btn) {
+        let me = btn.up('[onSelectNodeHandler]')
+        if (me) {
+          me.onSelectNodeHandler(me.staffTreeControl).then(() => {
+            me.up('window').close()
+          })
+        }
+      }
+    },
+    {
+      xtype: 'button',
+      text: UB.i18n('cancel'),
+      width: 100,
+      minWidth: 100,
+      iconCls: 'iconReject',
+      event: 'reject',
+      handler: function () {
+        let
+          parentWindow = this.up('window')
+        parentWindow.close()
+      }
+    }
+    ]
+  },
+  initComponent: function () {
+    let me = this
+    let data = me.customParams.data
+    let whereList = {}
+    let fieldList = [{
+      name: 'ID',
+      visibility: false
+    },
+    {
+      name: 'impIsNotUpdateExisting',
+      description: UB.i18n('Не оновлювати існуючі записи'),
+      config: {
+        width: 200,
+        maxWidth: 200,
+        resizable: false
+      }
+    },
+    {
+      name: 'taxCode',
+      editor: {
+        readOnly: true
+      },
+      config: {
+        width: 100,
+        maxWidth: 100,
+        resizable: false
+      }
+    },
+    {
+      name: 'fullFIO',
+      editor: {
+        readOnly: true
+      },
+      config: {
+        width: 300,
+        maxWidth: 300,
+        resizable: false
+      }
+    },
+    {
+      name: 'birthDate',
+      editor: {
+        readOnly: true
+      },
+      config: {
+        width: 100,
+        maxWidth: 100,
+        resizable: false
+      }
+
+    },
+    {
+      name: 'mi_modifyDate',
+      visibility: false
+    }
+    ]
+    if (data) {
+      fieldList = fieldList.concat([{
+        name: 'impFullFIO',
+        editor: {
+          readOnly: true
+        },
+        config: {
+          width: 300,
+          maxWidth: 300,
+          resizable: false
+        }
+      },
+      {
+        name: 'impBirthDate',
+        editor: {
+          readOnly: true
+        },
+        config: {
+          width: 100,
+          maxWidth: 100,
+          resizable: false
+        }
+      }
+      ])
+    } else {
+      fieldList = fieldList.concat([{
+        name: 'currentOrganization',
+        editor: {
+          readOnly: true
+        },
+        config: {
+          width: 300,
+          maxWidth: 300,
+          resizable: false
+        }
+      }
+      ])
+
+      whereList = {
+        /* impIsNotUpdateExisting: {
+          expression: '[impIsNotUpdateExisting]',
+          condition: 'equal',
+          value: '1'
+        } */
+      }
+    }
+    if (me.customParams.organizationID) {
+      whereList.impSourceID = {
+        expression: '[impSourceID]',
+        condition: 'equal',
+        value: me.customParams.organizationID
+      }
+    } else {
+      /* whereList.impSourceID = {
+        expression: '[impSourceID]',
+        condition: 'isNotNull'
+      } */
+    }
+    me.dataGrid = Ext.widget('entitygridpanel', {
+      xtype: 'entitygridpanel',
+      itemId: 'dataGrid',
+      rowEditing: true, // !!data,
+      cmdType: 'showList',
+      entityConfig: {
+        entity: 'hr_employee',
+        method: data ? 'importSelect' : 'select',
+        options: {
+          totalRequired: true
+        },
+        data: me.customParams.data,
+        fieldList: fieldList,
+        whereList: whereList
+      },
+      sortableColumns: !data,
+      disableSearchBar: !!data,
+      hideMenuAllActions: true,
+      menuAllActionsActionList: [],
+      hideActions: ['addNew', 'del', 'addNewByCurrent', 'refresh'],
+      // toolbarActionList: [],
+      cls: 'multiLineHeaderGrid',
+      flex: 1,
+      listeners: {
+        render: (grid) => {
+          grid.menu.removeAll()
+          grid.menu.add([{
+            text: UB.i18n('Відкрити картку'),
+            handler: item => {
+              let reco = AC.gridUtils.getCurrentRecord(grid) || grid.menu.record
+              if (reco) {
+                $App.doCommand({
+                  cmdType: 'showForm',
+                  instanceID: reco.get('ID'),
+                  entity: grid.entityName,
+                  cmpInitConfig: {
+                    listeners: {
+                      render: form => {
+                        form.on('recordloaded', () => {
+                          AC.viewUtils.setFormReadOnly(form, true, [], true)
+                        })
+                      }
+                    }
+                  }
+                })
+              }
+            }
+          }])
+        }
+      },
+      afterInit: function () {
+        this.plugins.filter(p => p.alias.indexOf('plugin.rowediting') >= 0).forEach(p => {
+          p.clicksToEdit = 1
+        })
+      },
+      onItemDblClick: function (grid, record) {
+        let reco = record
+        if (reco) {
+          $App.doCommand({
+            cmdType: 'showForm',
+            instanceID: reco.get('ID'),
+            entity: 'hr_employee',
+            cmpInitConfig: {
+              listeners: {
+                render: form => {
+                  form.on('recordloaded', () => {
+                    AC.viewUtils.setFormReadOnly(form, true, [], true)
+                  })
+                }
+              }
+            }
+          })
+        }
+      },
+
+      onItemContextMenu: function (grid, record, item, index, event) {
+        this.menu.record = record
+        this.menu.showAt(event.getXY())
+        // event.stopEvent()
+      }
+    })
+    me.items = [
+      me.dataGrid
+    ]
+    me.on('afterrender', () => {
+      let win = me.window
+      if (win) {
+        if (!win.height) {
+          win.height = 600
+        }
+        if (!win.width) {
+          win.width = 800
+        }
+      }
+    }, me)
+
+    me.on('destroy', () => {}, me)
+
+    me.callParent(arguments)
+  }
+})

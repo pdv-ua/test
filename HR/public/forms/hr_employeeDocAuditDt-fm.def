@@ -1,0 +1,188 @@
+exports.formDef = {
+  requiredFields: ['employeeID', 'employeeDocAuditID', 'organizationAuditID.contractorID.name', 'organizationAuditName', 'organizationAuditID'],
+  dockedItems: [
+  ],
+  parentConfig: {
+    postOnlySimpleAttributes: true
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'ubcombobox',
+              name: 'organizationAuditName',
+              fieldLabel: UB.i18n('Організація (орган перевірки)'),
+              displayField: 'contractorID.name',
+              valueField: 'ID',
+              gridFieldList: ['contractorID.name', 'auditType'],
+              flex: 1,
+              labelWidth: 130,
+              maxLength: 300,
+              ubRequest: {
+                entity: 'hr_dictAuditOrg',
+                fieldList: ['ID', 'contractorID.name', 'auditType'],
+                orderList: { orderBy: { expression: 'contractorID.name', order: 'asc' } }
+              },
+              isFormField: true,
+              allowCustomText: true,
+              triggerCls: 'hr-list-trigger',
+              listeners: {
+                blur: ctrl => {
+                  const form = ctrl.up('form')
+                  form.setAuditOrg(ctrl)
+                },
+                focus: ctrl => {
+                  ctrl.inputEl.dom.setAttribute('maxlength', 300)
+                },
+                select: ctrl => {
+                  const form = ctrl.up('form')
+                  form.setAuditOrg(ctrl)
+                }
+              }
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              margin: '0 17 0 10',
+              items: [
+                { xtype: 'fieldset',
+                  title: UB.i18n('Інформація про реєстрацію запиту'),
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      layout: { type: 'vbox', align: 'stretch' },
+
+                      items: [
+                        {
+                          xtype: 'label',
+                          text: UB.i18n('Дата'),
+                          margin: '25 35 15 18',
+                          style: {
+                            'float': 'left',
+                            'color': '#818181',
+                            'font-weight': 600
+                          }
+                        },
+                        {
+                          xtype: 'label',
+                          text: UB.i18n('Номер:'),
+                          margin: '10 35 12 18',
+                          style: {
+                            'float': 'left',
+                            'color': '#818181',
+                            'font-weight': 600
+                          }
+                        },
+                        {
+                          xtype: 'label',
+                          forId: 'myFieldId',
+                          text: UB.i18n('Коментар'),
+                          margin: '15 35 15 18',
+                          style: {
+                            'float': 'left',
+                            'color': '#818181',
+                            'font-weight': 600
+                          }
+                        }
+                      ]
+                    },
+
+                    {
+                      xtype: 'fieldset',
+                      title: UB.i18n('Вихідний з організації'),
+                      flex: 1,
+                      margin: '10 0 10 10',
+                      layout: { type: 'vbox', align: 'stretch' },
+                      items: [
+                        {
+                          attributeName: 'outgoingDate',
+                          fieldLabel: '',
+                          margin: '0 0 5 0'
+                        },
+                        {
+                          attributeName: 'outgoingNumber',
+                          fieldLabel: '',
+                          margin: '0 0 5 0'
+                        },
+                        {
+                          attributeName: 'outgoingComment',
+                          fieldLabel: '',
+                          margin: '0 0 5 0'
+                        }
+                      ]
+                    },
+                    {
+                      xtype: 'fieldset',
+                      title: UB.i18n('Вхідний у органі перевірки'),
+                      flex: 1,
+                      margin: '10 0 10 0',
+                      layout: { type: 'vbox', align: 'stretch' },
+                      items: [
+                        {
+                          attributeName: 'ingoingDate',
+                          fieldLabel: '',
+                          margin: '0 0 5 0'
+                        },
+                        {
+                          attributeName: 'ingoingNumber',
+                          fieldLabel: '',
+                          margin: '0 0 5 0'
+                        },
+                        {
+                          attributeName: 'ingoingComment',
+                          fieldLabel: '',
+                          margin: '0 0 5 0'
+                        }
+                      ]
+                    }
+
+                  ]
+                }]
+            },
+            { attributeName: 'controlDate', labelWidth: 130 },
+            { xtype: 'fieldset',
+              title: UB.i18n('Результат'),
+              margin: '0 17 0 10',
+              layout: { type: 'vbox', align: 'stretch' },
+              items: [
+                { attributeName: 'resultFactID', labelWidth: 110 },
+                { attributeName: 'resultComment', labelWidth: 110 },
+                { attributeName: 'resultDate', labelWidth: 110, margin: '0 15 10 15' }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Документи'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'docAttachment',
+              entity: 'hr_attachDoc',
+              detailFields: 'entityID',
+              fieldList: ['ID', 'caption', 'description', 'sheetsQuantity', 'document', 'mi_createDate',
+                'mi_modifyDate', 'entityID'],
+              masterFields: 'ID',
+              showOriginal: true,
+              minHeight: 55,
+              maxHeight: 140,
+              height: 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

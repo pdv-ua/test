@@ -1,0 +1,41 @@
+exports.formDef = {
+  requiredFields: ['baseAccrual', 'dateFromEmpty'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 800,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'vbox' },
+      defaults: { labelWidth: 140 },
+      items: [
+        { attributeName: 'code', width: 400 },
+        { attributeName: 'name', width: 400 },
+        { attributeName: 'koef', width: 400 },
+        { attributeName: 'dateFrom' },
+        { attributeName: 'dateToEmpty' }
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      name: 'gridPeriod',
+      disableSearchBar: true,
+      entityConfig: {
+        entity: 'hr_dictTarifCoeffDet',
+        method: 'select',
+        fieldList: [
+          { name: 'dateFrom', config: { align: 'center', width: 130 } },
+          { name: 'dateToEmpty', config: { align: 'center', width: 140 } },
+          { name: 'accrualSum' }
+        ],
+        orderList: { orderBy: { expression: 'dateFrom' } }
+      },
+      masterFields: ['ID'],
+      detailFields: ['dictTarifCoeffID']
+    }
+  ]
+}

@@ -1,0 +1,190 @@
+{
+  "caption": "Універсальний документ",
+  "description": "Універсальний документ",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер наказу",
+      "description": "Номер наказу",
+      "documentation": "Номер наказу",
+      "allowNull": false
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу",
+      "description": "Дата наказу",
+      "documentation": "Дата наказу",
+      "allowNull": false
+    },
+    {
+      "name": "docDate",
+      "dataType": "Date",
+      "caption": "Дата внесення",
+      "description": "Дата внесення",
+      "documentation": "Дата внесення",
+      "allowNull": false
+    },
+    {
+      "name": "typeRstSick",
+      "dataType": "Enum",
+      "enumGroup": "HR_CALC_TYPE",
+      "caption": "Тип розрахунку",
+      "description": "Тип розрахунку",
+      "documentation": "Тип розрахунку",
+      "defaultView": false,
+      "allowNull": true
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "AC_DOC_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultValue": "PROJECT",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Опис",
+      "description": "Опис наказу",
+      "documentation": "Опис наказу",
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["orderNumber", "orderDate"],
+        "compositeSeparator": " від "
+      }
+    },
+    {
+      "name": "periodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Період розрахунку",
+      "description": "Період розрахунку",
+      "documentation": "Період розрахунку",
+      "allowNull": false
+    },
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": true
+    },
+    {
+      "name": "employeePositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeePositionS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "defaultView": false,
+      "allowNull": false
+    },
+
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Таб.номер працівника",
+      "description": "Таб.номер працівника",
+      "documentation": "Таб.номер працівника",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Період з",
+      "description": "Період з",
+      "documentation": "Період з",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Період по",
+      "description": "Період по",
+      "documentation": "Період по",
+      "allowNull": false
+    },
+    {
+      "name": "dictTimeCostID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTimeCost",
+      "caption": "Вид табелювання",
+      "description": "Вид табелювання",
+      "documentation": "Вид табелювання",
+      "allowNull": false
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати",
+      "description": "Вид оплати",
+      "documentation": "Вид оплати. Якщо вказано, то заноситься у нарахування",
+      "allowNull": true
+    },
+    {
+      "name": "isFullDay",
+      "dataType": "Boolean",
+      "caption": "Повний робочий день",
+      "description": "Повний робочий день",
+      "documentation": "Повний робочий день",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "hourDay",
+      "dataType": "Float",
+      "caption": "Облікових годин на день",
+      "description": "Облікових годин на день",
+      "documentation": "Облікових годин на день"
+    },
+    {
+      "name": "avgSum",
+      "dataType": "Float",
+      "caption": "Сума для розрахунку",
+      "description": "Сума для розрахунку",
+      "documentation": "Сума для розрахунку"
+    },
+    {
+      "name": "note",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Підстава",
+      "description": "Підстава",
+      "documentation": "Підстава"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "rls": {
+      "func": "RLS.byOrganization"
+    }
+  }
+}

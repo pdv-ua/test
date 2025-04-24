@@ -1,0 +1,144 @@
+/* global appAC Ext AC $App HR UB */
+
+exports.formDef = 'HR.accessStaffRequestList'
+
+Ext.define('HR.accessStaffRequestList', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.accessStaffRequestList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'ubdetailgrid',
+        stateful: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_accessStaffRequest_accessStaffRequest'),
+        autoScroll: true,
+        cmdType: 'showList',
+        entity: 'hr_accessStaffRequest',
+        cmdData: {
+          params: [{
+            entity: 'hr_accessStaffRequest',
+            method: 'select',
+            fieldList: [
+              { name: 'docNum' },
+              { name: 'mi_createDate', config: { align: 'center' }, description: UB.i18n('Дата створення') },
+              { name: 'taxCode' },
+              { name: 'lastName' },
+              { name: 'firstName' },
+              { name: 'middleName' },
+              { name: 'birthDate' },
+              { name: 'organizationID.name', description: UB.i18n('Организация - відправник') },
+              { name: 'organizationOwnerID.name', description: UB.i18n('Організація - власник') },
+              { name: 'requestState' },
+              { name: 'reason' },
+              { name: 'comment' },
+              { name: 'userID.name', description: UB.i18n('Уповноважений ') },
+              { name: 'employeeID', visibility: false }
+            ],
+            whereList: {
+              orgDateFrom: {
+                expression: '[organizationID.mi_dateFrom]',
+                condition: 'lessEqual',
+                value: appAC.globalApplicationDate()
+              },
+              orgDateTo: {
+                expression: '[organizationID.mi_dateTo]',
+                condition: 'moreEqual',
+                value: appAC.globalApplicationDate()
+              },
+              orgState: {
+                expression: '[organizationID.state]',
+                condition: '=',
+                value: 'ACTIVE'
+              },
+              orgOwnerDateFrom: {
+                expression: '[organizationOwnerID.mi_dateFrom]',
+                condition: 'lessEqual',
+                value: appAC.globalApplicationDate()
+              },
+              orgOwnerDateTo: {
+                expression: '[organizationOwnerID.mi_dateTo]',
+                condition: 'moreEqual',
+                value: appAC.globalApplicationDate()
+              },
+              orgOwnerState: {
+                expression: '[organizationOwnerID.state]',
+                condition: '=',
+                value: 'ACTIVE'
+              }
+            }
+          }]
+        },
+        listeners: {
+          render: (grid) => {
+            grid.menu.removeAll()
+            grid.menu.add([HR.employeeTabs.getEmpCardMenu(grid, true)])
+          }
+        },
+        cmpInitConfig: {
+          disableAutoLoadStore: true,
+          getRowClass: function (row) {
+            return row.get('requestState') === 'SENDED' ? 'ub-row-yellow'
+              : row.get('requestState') === 'REJECTED' ? 'ub-row-red'
+                : row.get('requestState') === 'AGREED' ? 'ub-row-blue'
+                  : row.get('requestState') === 'COMPLITED' ? 'ub-row-green' : 'ub-row-lightgrey'
+          }
+        }
+      }
+    ]
+  },
+  initComponent: function () {
+    const me = this
+    me.items = [
+      me.mainPanel
+    ]
+    me.changeGlobal = function () {
+      const store = me.down('ubdetailgrid').getStore()
+      const globalDate = appAC.globalApplicationDate()
+      store.ubRequest.whereList.orgDateFrom.value = globalDate
+      store.ubRequest.whereList.orgDateTo.value = globalDate
+      store.ubRequest.whereList.orgOwnerDateFrom.value = globalDate
+      store.ubRequest.whereList.orgOwnerDateTo.value = globalDate
+      store.load()
+    }
+
+    me.on('afterrender', () => {
+      const grid = me.down('ubdetailgrid')
+      const customParams = me.commandData.customParams
+      if (customParams.type === 'REQUEST') {
+        AC.gridUtils.setGlobalOrganization(grid, 'organizationID')
+      }
+      if (customParams.type === 'GRANT') {
+        AC.gridUtils.setGlobalOrganization(grid, 'organizationOwnerID')
+        const hiddenActions = ['del', 'addNewByCurrent', 'addNew']
+        hiddenActions.forEach((action) => grid.hideAction(action, true))
+      }
+      if (customParams.requestState) {
+        grid.getStore().ubRequest.whereList.requestState = {
+          expression: '[requestState]',
+          condition: 'equal',
+          value: customParams.requestState
+        }
+      }
+      if (customParams.caption) {
+        me.setTitle(UB.i18n(customParams.caption))
+      }
+      $App.on('ac:app:operationDateChanged', me.changeGlobal)
+    }, me)
+    me.on('destroy', () => {
+      $App.un('ac:app:operationDateChanged', me.changeGlobal)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

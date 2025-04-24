@@ -1,0 +1,244 @@
+{
+  "caption": "Родичі",
+  "description": "Родичі",
+  "descriptionAttribute": "fullFIO",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "firstName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Ім'я",
+      "description": "Ім'я",
+      "documentation": "Ім'я",
+      "allowNull": false
+    },
+    {
+      "name": "lastName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Прізвище",
+      "description": "Прізвище",
+      "documentation": "Прізвище",
+      "allowNull": false
+    },
+    {
+      "name": "middleName",
+      "dataType": "String",
+      "size": 30,
+      "caption": "По батькові",
+      "description": "По батькові",
+      "documentation": "По батькові"
+    },
+    {
+      "name": "shortFIO",
+      "dataType": "String",
+      "size": 100,
+      "caption": "ПІБ",
+      "description": "ПІБ",
+      "documentation": "ПІБ",
+      "allowNull": false
+    },
+    {
+      "name": "fullFIO",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Повне ім'я",
+      "description": "Повне ім'я",
+      "documentation": "Повне ім'я",
+      "allowNull": false
+    },
+    {
+      "name": "sexType",
+      "dataType": "Enum",
+      "enumGroup": "HR_SEX_TYPE",
+      "caption": "Стать",
+      "documentation": "Стать",
+      "description": "Стать"
+    },
+    {
+      "name": "birthDate",
+      "dataType": "Date",
+      "caption": "Дата народження",
+      "description": "Дата народження",
+      "documentation": "Дата народження"
+    },
+    {
+      "name": "age",
+      "dataType": "Int",
+      "caption": "Вік",
+      "description": "Вік",
+      "documentation": "Вік",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select DATEDIFF(yy, {self}.birthDate, GETDATE()) - CASE WHEN MONTH(GETDATE()) < MONTH({self}.birthDate) THEN 1 WHEN MONTH(GETDATE()) > MONTH({self}.birthDate) THEN 0 WHEN DAY(GETDATE()) < DAY({self}.birthDate) THEN 1 ELSE 0 END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select date_part('years', AGE(CURRENT_DATE, {self}.birthDate)))"
+        }
+      ]
+    },
+    {
+      "name": "taxCode",
+      "dataType": "String",
+      "size": 20,
+      "caption": "РНОКПП",
+      "description": "РНОКПП",
+      "documentation": "РНОКПП"
+    },
+    {
+      "name": "citizenshipID",
+      "dataType": "Entity",
+      "associatedEntity": "cdn_country",
+      "caption": "Громадянство",
+      "description": "Громадянство",
+      "documentation": "Громадянство"
+    },
+    {
+      "name": "dictEducationLevelID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictEducationLevel",
+      "caption": "Освіта",
+      "description": "Освіта",
+      "documentation": "Освіта"
+    },
+    {
+      "name": "phoneMobile",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Телефон мобільний",
+      "description": "Телефон мобільний",
+      "documentation": "Телефон мобільний"
+    },
+    {
+      "name": "phoneWorking",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Телефон робочій",
+      "description": "Телефон робочій",
+      "documentation": "Телефон робочій"
+    },
+    {
+      "name": "phoneHome",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Телефон домашній",
+      "description": "Телефон домашній",
+      "documentation": "Телефон домашній"
+    },
+    {
+      "name": "email",
+      "dataType": "String",
+      "size": 40,
+      "caption": "email",
+      "description": "email",
+      "documentation": "email"
+    },
+    {
+      "name": "dictDocKindID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictDocKind",
+      "caption": "Вид документа",
+      "description": "Вид документа",
+      "documentation": "Вид документа"
+    },
+    {
+      "name": "docSeries",
+      "dataType": "String",
+      "size": 10,
+      "caption": "Серія",
+      "description": "Серія",
+      "documentation": "Серія"
+    },
+    {
+      "name": "docNumber",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Номер",
+      "description": "Номер",
+      "documentation": "Номер"
+    },
+    {
+      "name": "docIssued",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Ким виданий",
+      "description": "Ким виданий",
+      "documentation": "Ким виданий"
+    },
+    {
+      "name": "docIssuedDate",
+      "dataType": "Date",
+      "caption": "Коли виданий",
+      "description": "Коли виданий",
+      "documentation": "Коли виданий"
+    },
+    {
+      "name": "docValidUntil",
+      "dataType": "Date",
+      "caption": "Дiйсний до",
+      "description": "Дiйсний до",
+      "documentation": "Дiйсний до"
+    },
+    {
+      "name": "other",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Інші відомості",
+      "description": "Інші відомості",
+      "documentation": "Інші відомості"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 290,
+      "caption": "ПІБ",
+      "description": "ПІБ",
+      "documentation": "ПІБ",
+      "customSettings": {
+        "compositeFields": [
+          "fullFIO",
+          "docSeries",
+          "docNumber"
+        ],
+        "compositeSeparator": " "
+      }
+    },
+    {
+      "name": "impEmployeeID",
+      "dataType": "Bigint",
+      "caption": "Зовнішній ID співробітника",
+      "description": "Зовнішній ID співробітника при імпорті, для якого добавляється родич",
+      "documentation": "Використовується тільки при імпорті"
+    },
+    {
+      "name": "linkEmployeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

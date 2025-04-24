@@ -1,0 +1,734 @@
+/* global appHR $App UB AC */
+exports.formDef = {
+  requiredFields: ['orderNumber', 'orderState', 'orderDate', 'periodID.name', 'description', 'totalPaySum', 'orgID', 'description'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'printAction'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      attributeName: 'orderNumber',
+                      fieldLabel: UB.i18n('Номер'),
+                      labelWidth: 100,
+                      width: 200,
+                      allowBlank: false,
+                      listeners: {
+                        change: ctrl => {
+                          const me = ctrl.up('form')
+                          me.setDescription(me)
+                        }
+                      }
+                    },
+                    {
+                      attributeName: 'orderDate',
+                      fieldLabel: UB.i18n('від'),
+                      labelWidth: 40,
+                      width: 160,
+                      listeners: {
+                        change: ctrl => {
+                          const me = ctrl.up('form')
+                          me.setDescription(me)
+                        }
+                      }
+                    },
+                    {
+                      attributeName: 'periodID',
+                      width: 300,
+                      labelWidth: 80,
+                      pageSize: 50,
+                      fieldLabel: UB.i18n('За період'),
+                      fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID', 'dictMonthID.code', 'pYear'],
+                      orderList: {
+                        orderBy: {
+                          expression: 'dateFrom',
+                          order: 'desc'
+                        }
+                      },
+                      listeners: {
+                        expand: appHR.periodExpand
+                      }
+                    }
+                  ]
+                },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      attributeName: 'dictMultiGroupID',
+                      fieldList: ['ID', 'name', 'orgID'],
+                      labelWidth: 100,
+                      width: 390,
+                      whereList: {
+                        isClose: {
+                          expression: '[isClose]',
+                          condition: '=',
+                          value: false
+                        }
+                      }
+                    },
+                    {
+                      attributeName: 'includeSubDepGroup'
+                    }
+                  ]
+                },
+                {
+                  layout: { type: 'hbox' },
+                  items: [
+                    {
+                      attributeName: 'departmentID',
+                      labelWidth: 100,
+                      width: 390,
+                      fieldList: ['mi_data_id', 'description', 'mi_treePath', 'name'],
+                      valueField: 'mi_data_id',
+                      displayField: 'description',
+                      whereList: {
+                        state: {
+                          expression: '[state]',
+                          condition: '=',
+                          value: 'ACTIVE'
+                        }
+                      }
+                    },
+                    {
+                      attributeName: 'includeSubDep'
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              items: [
+                {
+                  attributeName: 'dictFssReqID',
+                  fieldLabel: UB.i18n('Тип'),
+                  flex: 1,
+                  labelWidth: 70
+                },
+                {
+                  layout: { type: 'hbox' },
+                  name: 'includeSubOrgPanel',
+                  defaults: { labelWidth: 300 },
+                  items: [
+                    {
+                      attributeName: 'includeSubOrg'
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          name: 'payRollPanel',
+          hidden: true,
+          defaults: { labelWidth: 170 },
+          items: [
+            {
+              xtype: 'displayfield',
+              name: 'payRollNameAndPeriod',
+              fieldLabel: UB.i18n('Платіжна відомість'),
+              labelWidth: 140,
+              flex: 1,
+              fieldStyle: 'color: #2f7c94; cursor:pointer',
+              // labelStyle: 'color: #2f7c94; cursor:pointer',
+              readOnly: true,
+              listeners: {
+                afterrender: function (component) {
+                  const me = component.up('form')
+                  component.getEl().on('click', function (btn) {
+                    UB.Repository('hr_RollRequis')
+                      .attrs(['payRollID', 'payRollID.orderType'])
+                      .where('sicknessRequisID', '=', me.instanceID)
+                      .selectAsObject().then(res => {
+                        if (res && res.length) {
+                          $App.doCommand({
+                            cmdType: 'showForm',
+                            formCode: res[0]['payRollID.orderType'],
+                            entity: 'hr_payRoll',
+                            tabId: 'hr_sicknessRequisPayRoll',
+                            target: $App.getViewport().centralPanel,
+                            instanceID: res[0]['payRollID']
+                          })
+                        }
+                      })
+                  })
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      width: '100%',
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [
+        {
+          xtype: 'tabpanel',
+          name: 'tabs',
+          flex: 1,
+          region: 'center',
+          items: [
+            {
+              title: UB.i18n('Нарахування'),
+              name: 'tabAccruals',
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 220 },
+              items: [
+                {
+                  xtype: 'acGrid',
+                  name: 'sicknessRequisDt',
+                  stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_sicknessRequis_sicknessRequisDt'),
+                  region: 'center',
+                  flex: 1,
+                  autoScroll: true,
+                  cellEditing: true,
+                  notWriteChanges: true,
+                  storeType: 'local',
+                  showToolBar: true,
+                  disablePaging: true,
+                  loadMaskMessage: UB.i18n('Завантаження даних...'),
+                  summary: { 'paySum': 'sum' },
+                  summaryDataOnClient: true,
+                  ignoreAttr: ['employeeNumberID.tabNum', 'employeeNumberID.employeeID.fullFIO', 'payElID.name'],
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit'],
+                  includeCustomReadOnly: ['refreshBtn', 'calcBtn', 'clearBtn'],
+                  includeContextMenuReadOnly: ['itemDelete'],
+                  enableMultifilter: true,
+                  onBeforeEdit: (control, context) => {
+                    const me = context.grid.up('form')
+                    return me.beforeGridEdit(me, context)
+                  },
+                  edit: (control, context) => {
+                    const me = context.grid.up('form')
+                    return me.onGridEdit(me, context)
+                  },
+                  onItemDoubleClick: function (row, record) {
+                    const me = this.up('form')
+                    $App.doCommand({
+                      cmdType: 'showForm',
+                      formCode: 'hr_rl',
+                      entity: 'hr_rl',
+                      cmpInitConfig: {
+                        defaultValues: {
+                          employeeNumberID: record.get('employeeNumberID'),
+                          periodID: me.attr.periodID.getValue()
+                        }
+                      },
+                      tabId: `hr_rl${record.get('employeeNumberID')}`,
+                      target: $App.getViewport().centralPanel
+                    })
+                  },
+                  onAfterRender: (grid) => {
+                    const me = grid.up('form')
+                    grid.menu.removeAll()
+                    grid.menu.add([
+                      {
+                        text: UB.i18n('Розрахунковий лист'),
+                        iconCls: 'el-icon-tickets',
+                        ubID: 'itemShowRl',
+                        handler: function (context) {
+                          const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                          if (record) {
+                            appHR.showRl(record.get('employeeNumberID'), me.attr.periodID.getValue())
+                          }
+                        }
+                      },
+                      {
+                        text: UB.i18n('Особовий рахунок'),
+                        iconCls: 'el-icon-s-custom',
+                        ubID: 'itemShowEmployee',
+                        handler: function (context) {
+                          const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                          if (record) {
+                            appHR.showEmployeeNumber(record.get('employeeNumberID'))
+                          }
+                        }
+                      },
+                      {
+                        text: UB.i18n('Аналітика'),
+                        iconCls: 'el-icon-notebook-2',
+                        cls: 'blue-action',
+                        handler: (context) => {
+                          const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                          if (record) {
+                            appHR.showDimensin(me.record.get('orgID'), record.get('accrualDt'))
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'menuseparator'
+                      },
+                      {
+                        text: UB.i18n('Видалити запис'),
+                        iconCls: 'fa fa-trash-o',
+                        ubID: 'itemDelete',
+                        handler: function (context) {
+                          const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                          if (record) {
+                            $App.dialogYesNo(UB.i18n('Попередження!'), UB.i18n('Видалити запис?'))
+                              .then(res => {
+                                if (res) {
+                                  grid.getStore().remove(record)
+                                  grid.getStore().removed = grid.getStore().removed.concat(record.getData())
+                                  grid.GridSummary.dataBind()
+                                  me.setIsDirty(true)
+                                }
+                              })
+                          }
+                        }
+                      }
+                    ])
+                  },
+                  customToolBarActions: [
+                    {
+                      xtype: 'button',
+                      tooltip: UB.i18n('Оновити дані за документами'),
+                      iconCls: 'fas fa-calculator',
+                      cls: 'fill-action',
+                      name: 'refreshBtn',
+                      handler: function (btn) {
+                        const me = btn.up('form')
+                        if (me.attr.sicknessRequisDt.getStore().count()) {
+                          $App.dialogYesNo('Попередження', UB.i18n('Дані будуть оновлені. Продовжити?'))
+                            .then(res => {
+                              if (res) {
+                                if (me.record.dirty) {
+                                  me.saveForm().then(result => {
+                                    if (result !== -1) {
+                                      me.setOrderList(me)
+                                    }
+                                  })
+                                } else {
+                                  me.setOrderList(me)
+                                }
+                              }
+                            })
+                        }
+                      }
+                    },
+                    {
+                      xtype: 'button',
+                      tooltip: UB.i18n('Сформувати список документів'),
+                      iconCls: 'fas fa-angle-double-down',
+                      cls: 'fill-action',
+                      name: 'calcBtn',
+                      handler: function (btn) {
+                        const me = btn.up('form')
+                        if (me.attr.sicknessRequisDt.getStore().count()) {
+                          $App.dialogYesNo('Попередження', UB.i18n('Внесені у заяву документи будуть видалені. Продовжити?'))
+                            .then(res => {
+                              if (res) {
+                                if (me.record.dirty) {
+                                  me.saveForm().then(result => {
+                                    if (result !== -1) {
+                                      me.setOrderList(me)
+                                    }
+                                  })
+                                } else {
+                                  me.setOrderList(me)
+                                }
+                              }
+                            })
+                        } else {
+                          me.setOrderList(me)
+                        }
+                      }
+                    },
+                    {
+                      xtype: 'button',
+                      tooltip: UB.i18n('Очистити список документів'),
+                      iconCls: 'far fa-trash-alt',
+                      cls: 'fill-action',
+                      name: 'clearBtn',
+                      handler: function (btn) {
+                        const me = btn.up('form')
+                        if (me.attr.sicknessRequisDt.getStore().count()) {
+                          $App.dialogYesNo('Попередження', UB.i18n('Видалити всі документи?'))
+                            .then(res => {
+                              if (res) {
+                                me.attr.sicknessRequisDt.removeAll()
+                                me.attr.sicknessRequisDt.GridSummary.dataBind()
+                                me.setIsDirty(true)
+                              }
+                            })
+                        }
+                      }
+                    }
+                  ],
+                  fields: [
+                    { name: 'ID' },
+                    { name: 'employeeNumberID' },
+                    { name: 'mi_modifyDate' },
+                    { name: 'orderID' },
+                    { name: 'payElID' },
+                    { name: 'find.employeeSickLimitID' },
+                    { name: 'employeeNumberID.employeeID' },
+                    { name: 'dateFirst' },
+                    {
+                      name: 'payDays',
+                      columnConfig: {
+                        text: UB.i18n('Дні СС'),
+                        width: 100,
+                        filterBy: 'int'
+                      }
+                    },
+                    {
+                      name: 'payDaysAll',
+                      columnConfig: {
+                        text: UB.i18n('Дні всього'),
+                        width: 100,
+                        filterBy: 'int'
+                      }
+                    },
+                    { name: 'paySumAll' },
+                    { name: 'accrualDt' },
+                    { name: 'sourceID' },
+                    {
+                      name: 'employeeNumberID.tabNum',
+                      columnConfig: {
+                        text: UB.i18n('Таб.№'),
+                        width: 100,
+                        sortBy: 'Number',
+                        filterBy: 'int'
+                      }
+                    },
+                    {
+                      name: 'employeeNumberID.employeeID.fullFIO',
+                      columnConfig: {
+                        text: UB.i18n('ПІБ'),
+                        flex: 1,
+                        filterBy: 'string'
+                      }
+                    },
+                    {
+                      name: 'payElID.name',
+                      columnConfig: {
+                        text: UB.i18n('Вид оплати'),
+                        width: 200,
+                        filterBy: 'string'
+                      }
+                    },
+                    {
+                      name: 'paySum',
+                      columnConfig: {
+                        text: UB.i18n('Сума СС'),
+                        width: 100,
+                        align: 'right',
+                        floatFormat: 2,
+                        sortBy: 'Number',
+                        filterBy: 'float',
+                        editor: {
+                          dataType: 'Currency',
+                          decimalPrecision: 2,
+                          minValue: 0
+                        }
+                      }
+                    },
+                    {
+                      name: 'paySumAll',
+                      columnConfig: {
+                        text: UB.i18n('Сума всього'),
+                        width: 100,
+                        align: 'right',
+                        floatFormat: 2,
+                        sortBy: 'Number',
+                        filterBy: 'float'
+                      }
+                    },
+                    {
+                      name: 'orderName',
+                      columnConfig: {
+                        text: UB.i18n('Документ-підстава'),
+                        flex: 1,
+                        filterBy: 'string'
+                      }
+                    },
+                    {
+                      name: 'seria',
+                      columnConfig: {
+                        text: UB.i18n('Серія'),
+                        editor: {
+                          dataType: 'String',
+                          maxLength: 20
+                        },
+                        filterBy: 'string'
+                      }
+                    },
+                    {
+                      name: 'number',
+                      columnConfig: {
+                        text: '№',
+                        editor: {
+                          dataType: 'String',
+                          maxLength: 255
+                        },
+                        filterBy: 'string'
+                      }
+                    },
+                    {
+                      name: 'orderDate',
+                      columnConfig: {
+                        text: UB.i18n('Дата документу'),
+                        dataType: 'Date',
+                        dateFormat: 'd.m.Y',
+                        editor: {
+                          dataType: 'Date'
+                        },
+                        filterBy: 'date'
+                      }
+                    },
+                    {
+                      name: 'dictSicknessCauseID.name',
+                      columnConfig: {
+                        text: UB.i18n('Причина розбіжності суми'),
+                        flex: 1,
+                        editor: {
+                          dataType: 'Entity',
+                          hideEntityItemInContext: true,
+                          associatedEntity: 'hr_dictSicknessCause',
+                          storeAttributeValueField: 'dictSicknessCauseID',
+                          fieldList: ['ID', 'name', 'isOther']
+                        },
+                        filterBy: 'string'
+                      }
+                    },
+                    { name: 'dictSicknessCauseID' },
+                    { name: 'dictSicknessCauseID.isOther' },
+                    {
+                      name: 'sicknessCauseText',
+                      columnConfig: {
+                        text: UB.i18n('Причина розбіжності суми (інше)'),
+                        flex: 1,
+                        editor: {
+                          dataType: 'String',
+                          maxLength: 1024
+                        },
+                        filterBy: 'string'
+                      }
+                    },
+                    { name: 'payDaysChNPP',
+                      columnConfig: {
+                        text: UB.i18n('Дні ЧАЕС'),
+                        width: 100,
+                        align: 'right',
+                        sortBy: 'Number',
+                        dataType: 'Int',
+                        editor: {
+                          dataType: 'Int',
+                          minValue: 0
+                        },
+                        filterBy: 'int'
+                      }
+                    },
+                    {
+                      name: 'paySumChNPP',
+                      columnConfig: {
+                        text: UB.i18n('Сума ЧАЕС'),
+                        width: 150,
+                        floatFormat: 2,
+                        align: 'right',
+                        sortBy: 'Number',
+                        editor: {
+                          dataType: 'Currency',
+                          decimalPrecision: 2
+                        },
+                        filterBy: 'float'
+                      }
+                    },
+                    {
+                      name: 'orderPrim',
+                      columnConfig: {
+                        text: UB.i18n('Примітки'),
+                        flex: 1,
+                        editor: {
+                          dataType: 'String',
+                          maxLength: 255
+                        },
+                        filterBy: 'string'
+                      }
+                    },
+                    {
+                      name: 'employeeSickLimitID.dictSickLimitID.name',
+                      columnConfig: {
+                        text: UB.i18n('Пільга'),
+                        width: 100,
+                        hidden: true,
+                        editor: {
+                          dataType: 'Entity',
+                          hideEntityItemInContext: true,
+                          associatedEntity: 'hr_employeeSickLimit',
+                          storeAttributeValueField: 'dictSickLimitID',
+                          fieldList: ['ID', 'dictSickLimitID.name'],
+                          orderList: {
+                            orderBy: {
+                              expression: 'dateFrom',
+                              order: 'desc'
+                            }
+                          }
+                        },
+                        filterBy: 'string'
+                      }
+                    },
+                    {
+                      name: 'employeeSickLimitID'
+                    },
+                    {
+                      name: 'msekDateTo',
+                      columnConfig: {
+                        text: UB.i18n('Дата МСЕК'),
+                        dataType: 'Date',
+                        dateFormat: 'd.m.Y',
+                        filterBy: 'date',
+                        hidden: true
+                      }
+                    },
+                    {
+                      name: 'employeeDocID.description',
+                      columnConfig: {
+                        text: UB.i18n('№ посвідчення ЧАЕС'),
+                        width: 100,
+                        hidden: true,
+                        editor: {
+                          dataType: 'Entity',
+                          hideEntityItemInContext: true,
+                          associatedEntity: 'hr_employeeDocs',
+                          storeAttributeValueField: 'employeeDocID',
+                          fieldList: ['ID', 'description'],
+                          orderList: {
+                            orderBy: {
+                              expression: 'dateFrom',
+                              order: 'desc'
+                            }
+                          }
+                        },
+                        filterBy: 'string'
+                      }
+                    },
+                    {
+                      name: 'employeeDocID'
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Організації'),
+              name: 'tabOrgList',
+              hidden: true,
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 220 },
+              items: [
+                {
+                  xtype: 'ubdetailgrid',
+                  region: 'center',
+                  name: 'organization',
+                  autoScroll: true,
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'newVersion', 'del', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_sicknessRequisOrg',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'subOrgID.description',
+                        description: UB.i18n('Організація'),
+                        simpleFilter: true
+                      }
+                    ],
+                    whereList: {
+                      subOrgID: {
+                        expression: '[subOrgID.state]',
+                        condition: 'equal',
+                        value: 'ACTIVE'
+                      }
+                    }
+                  },
+                  masterFields: ['orgID'],
+                  detailFields: ['orgID'],
+                  cmpInitConfig: {
+                    customActions: [
+                      {
+                        text: UB.i18n('Редагувати'),
+                        iconCls: 'u-icon-edit-alt',
+                        scale: 'medium',
+                        cls: 'fill-action',
+                        handler: function (btn) {
+                          const grid = btn.up('grid')
+                          const form = grid.up('form')
+                          if (form.isNewInstance) {
+                            form.saveForm().then(result => {
+                              if (result !== -1) {
+                                form.selectOrgList(form, grid)
+                              }
+                            })
+                          } else {
+                            form.selectOrgList(form, grid)
+                          }
+                        }
+                      }
+                    ],
+                    onItemDblClick: function (grid) {
+                      const form = grid.up('form')
+                      form.selectOrgList(form, grid.ownerCt)
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,227 @@
+{
+  "caption": "Протокол комісії з соціального страхування (рядки)",
+  "description": "Протокол комісії з соціального страхування (рядки)",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "sicknessMeetingID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_sicknessMeeting",
+      "caption": "Протокол засідання",
+      "description": "Протокол засідання",
+      "documentation": "Протокол засідання",
+      "allowNull": false
+    },
+    {
+      "name": "empOrderSicknessID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderSickness",
+      "caption": "Лікарняний лист",
+      "description": "Лікарняний лист",
+      "documentation": "Лікарняний лист"
+    },
+    {
+      "name": "empOrderFuneralID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderFuneral",
+      "caption": "Посилання на допомогу",
+      "description": "Посилання на допомогу",
+      "documentation": "Посилання на допомогу"
+    },
+    {
+      "name": "refusal",
+      "dataType": "String",
+      "size": 500,
+      "caption": "Причина відмови",
+      "description": "Причина відмови",
+      "documentation": "Причина відмови"
+    },
+    {
+      "name": "dateFromStop",
+      "dataType": "Date",
+      "caption": "Дата припинення виплати",
+      "description": "Дата припинення виплати",
+      "documentation": "Дата припинення виплати"
+    },
+    {
+      "name": "isPay",
+      "dataType": "Boolean",
+      "caption": "Сплачувати",
+      "description": "Сплачувати",
+      "documentation": "Сплачувати",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dayPay",
+      "dataType": "Int",
+      "caption": "Оплачувані дні",
+      "description": "Оплачувані дні",
+      "documentation": "Оплачувані дні"
+    },
+    {
+      "name": "dayFSSU",
+      "dataType": "Int",
+      "caption": "у т.ч. за рахунок СС",
+      "description": "у т.ч. за рахунок СС",
+      "documentation": "у т.ч. за рахунок СС"
+    },
+    {
+      "name": "dayNotPay",
+      "dataType": "Int",
+      "caption": "Не оплачується",
+      "description": "Не оплачується",
+      "documentation": "Не оплачується"
+    },
+    {
+      "name": "fullFIO",
+      "dataType": "String",
+      "size": 64,
+      "caption": "ПІБ працівника",
+      "description": "ПІБ працівника",
+      "documentation": "ПІБ працівника",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select e.fullFIO from hr_empOrderSickness os inner join hr_employee e on e.ID = os.employeeID where os.ID = {self}.empOrderSicknessID)"
+        }
+      ]
+    },
+    {
+      "name": "empNumDescription",
+      "dataType": "String",
+      "size": 100,
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select e.description from hr_empOrderSickness os inner join hr_employeeNumber e on e.ID = os.employeeNumberID where os.ID = {self}.empOrderSicknessID)"
+        }
+      ]
+    },
+    {
+      "name": "illnessReason",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Причина непрацездатності",
+      "description": "Причина непрацездатності",
+      "documentation": "Причина непрацездатності",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select ir.name from hr_empOrderSickness os inner join hr_dictIllnessReason ir on ir.ID = os.illnessReasonID where os.ID = {self}.empOrderSicknessID)"
+        }
+      ]
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "BigInt",
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select os.employeeNumberID from hr_empOrderSickness os where os.ID = {self}.empOrderSicknessID)"
+        }
+      ]
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select os.dateFrom from hr_empOrderSickness os where os.ID = {self}.empOrderSicknessID)"
+        }
+      ]
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select os.dateTo from hr_empOrderSickness os where os.ID = {self}.empOrderSicknessID)"
+        }
+      ]
+    },
+    {
+      "name": "parent",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(select IIF(os.parentID is null, 'Первинний', 'Продовжений') from hr_empOrderSickness os where os.ID = {self}.empOrderSicknessID)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(select CASE WHEN os.parentID is null THEN 'Первинний' ELSE 'Продовжений' END from hr_empOrderSickness os where os.ID = {self}.empOrderSicknessID)"
+        }
+      ]
+    },
+    {
+      "name": "dead",
+      "dataType": "String",
+      "size":200,
+      "caption": "Померлий",
+      "description": "Померлий",
+      "documentation": "Померлий",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select t.dead from hr_empOrderFuneral t where t.ID = {self}.empOrderFuneralID)"
+        }
+      ]
+    },
+    {
+      "name": "addDoc",
+      "dataType": "String",
+      "size":500,
+      "caption": "Додаткові документи",
+      "description": "Додаткові документи",
+      "documentation": "Додаткові документи",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(select t.addDoc from hr_empOrderFuneral t where t.ID = {self}.empOrderFuneralID)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

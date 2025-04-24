@@ -1,0 +1,373 @@
+{
+    "caption": "Норми тривалості робочого часу",
+    "description": "Норми тривалості робочого часу",
+    "descriptionAttribute": "code",
+    "cacheType": "None",
+    "attributes": [
+        {
+            "name": "code",
+            "dataType": "String",
+            "size": 32,
+            "caption": "Код",
+            "description": "Код"
+        },
+        {
+            "name": "name",
+            "dataType": "String",
+            "size": 400,
+            "caption": "Назва",
+            "description": "Назва"
+        },
+        {
+            "name": "scheduleType",
+            "dataType": "Enum",
+            "enumGroup": "SCHEDULE_TYPE",
+            "caption": "Тип графіка роботи",
+            "description": "Тип графіка роботи"
+        },
+        {
+            "name": "weekHours",
+            "dataType": "Currency",
+            "caption": "Тижнева норма",
+            "description": "Тижнева норма",
+            "allowNull": false
+        },
+        {
+            "name": "dateFrom",
+            "dataType": "Date",
+            "caption": "Дата початку дії",
+            "description": "Дата початку дії",
+            "defaultView": false
+        },
+        {
+            "name": "dateTo",
+            "dataType": "Date",
+            "caption": "Дата закінчення дії",
+            "description": "Дата закінчення дії",
+            "defaultView": false
+        },
+        {
+            "name": "dateFromEmpty",
+            "dataType": "Date",
+            "caption": "Діє з",
+            "description": "Дата початку дії",
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+                }
+            ]
+        },
+        {
+            "name": "dateToEmpty",
+            "dataType": "Date",
+            "caption": "Діє по",
+            "description": "Дата закінчення дії",
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+                }
+            ]
+        }
+        /*,
+        {
+            "name": "avg",
+            "dataType": "Currency",
+            "caption": "Середньомісячна",
+            "description": "Середньомісячна",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.avg) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.avg) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "m1",
+            "dataType": "Currency",
+            "caption": "Січень",
+            "description": "Січень",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m1) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m1) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "m2",
+            "dataType": "Currency",
+            "caption": "Лютий",
+            "description": "Лютий",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m2) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m2) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "m3",
+            "dataType": "Currency",
+            "caption": "Березень",
+            "description": "Березень",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m3) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m3) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "m4",
+            "dataType": "Currency",
+            "caption": "Квітень",
+            "description": "Квітень",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m4) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m4) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "m5",
+            "dataType": "Currency",
+            "caption": "Травень",
+            "description": "Травень",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m5) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m5) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "m6",
+            "dataType": "Currency",
+            "caption": "Червень",
+            "description": "Червень",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m6) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m6) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "m7",
+            "dataType": "Currency",
+            "caption": "Липень",
+            "description": "Липень",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m7) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m7) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "m8",
+            "dataType": "Currency",
+            "caption": "Серпень",
+            "description": "Серпень",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m8) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m8) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "m9",
+            "dataType": "Currency",
+            "caption": "Вересень",
+            "description": "Вересень",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m9) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m9) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "m10",
+            "dataType": "Currency",
+            "caption": "Жовтень",
+            "description": "Жовтень",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m10) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m10) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "m11",
+            "dataType": "Currency",
+            "caption": "Листопад",
+            "description": "Листопад",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m11) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m11) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "m12",
+            "dataType": "Currency",
+            "caption": "Грудень",
+            "description": "Грудень",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m12) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m12) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        },
+        {
+            "name": "total",
+            "dataType": "Currency",
+            "caption": "Річна",
+            "description": "Річна",
+            "allowNull": true,
+            "defaultView": false,
+            "mapping": [
+                {
+                    "name": "MSSQL2012",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m1 + d1.m2 + d1.m3 + d1.m4 + d1.m5 + d1.m6 + d1.m7 + d1.m8 + d1.m9 + d1.m10 + d1.m11 + d1.m12) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = YEAR(GETDATE()))"
+                },
+                {
+                    "name": "PostgreSQL",
+                    "expressionType": "Expression",
+                    "expression": "(select sum(d1.m1 + d1.m2 + d1.m3 + d1.m4 + d1.m5 + d1.m6 + d1.m7 + d1.m8 + d1.m9 + d1.m10 + d1.m11 + d1.m12) from trf_workNormDt d1 where d1.workNormID = {self}.ID and d1.mi_deleteDate >= '9999-12-31' and d1.year = date_part('year', CURRENT_DATE))"
+                }
+            ]
+        }*/
+    ],
+    "mixins": {
+        "mStorage": {
+            "simpleAudit": true,
+            "safeDelete": true
+        }
+    }
+}

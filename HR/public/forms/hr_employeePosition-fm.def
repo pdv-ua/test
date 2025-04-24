@@ -1,0 +1,390 @@
+/* global AC UB HR appAC */
+
+exports.formDef = {
+  requiredFields: ['workScheduleID.name', 'dictContractKindID.name',
+    'dictTarifCoeffID.name', 'orderID', 'orderID.description', 'orderID.empOrderType', 'closeOrderID', 'closeOrderID.description',
+    'closeOrderID.empOrderType', 'dictPositionID.description', 'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9',
+    'd0Value', 'd1Value', 'd2Value', 'd3Value', 'd4Value', 'd5Value', 'd6Value', 'd7Value', 'd8Value', 'd9Value',
+    'accountID.code', 'accountID' ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1400,
+    height: 620
+  },
+  items: [
+    {
+      region: 'center',
+      autoScroll: true,
+      split: true,
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      // defaults: {
+      //   labelWidth: 170
+      // },
+      flex: 1,
+      items: [
+        {
+          layout: {
+            type: 'hbox'
+          },
+          items: [
+            {
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              flex: 1,
+              defaults: {
+                flex: 1
+              },
+              items: [
+                { attributeName: 'employeeID', labelWidth: 150, height: 45, hidden: true },
+                { attributeName: 'employeeNumberID', labelWidth: 150, height: 45, hidden: true },
+
+                {
+                  xtype: 'ubfieldset',
+                  border: true,
+                  default: {
+                    minWidth: 150
+                  },
+                  layout: {
+                    type: 'vbox',
+                    align: 'stretch'
+                  },
+                  autoScroll: true,
+                  margins: {
+                    left: 5,
+                    right: 5
+                  },
+                  items: [
+                    { name: 'orgName', labelWidth: 145, height: 45, readOnly: true, xtype: 'ubtextfield', fieldLabel: UB.i18n('Організація') },
+                    { name: 'depNameActual', labelWidth: 145, height: 45, readOnly: true, xtype: 'ubtextfield', fieldLabel: UB.i18n('Підрозділ') },
+                    {
+                      name: 'posStaffNameActual',
+                      labelWidth: 145,
+                      height: 45,
+                      readOnly: true,
+                      xtype: 'textarea',
+                      fieldStyle: 'font-weight: bold',
+                      fieldLabel: UB.i18n('Штатна посада')
+                    },
+                    {
+                      attributeName: 'dictPositionID.description',
+                      labelWidth: 145,
+                      height: 45,
+                      readOnly: true,
+                      fieldLabel: UB.i18n('Посада'),
+                      xtype: 'textarea'
+                    },
+                    {
+                      attributeName: 'posNameAddition',
+                      labelWidth: 145,
+                      height: 45,
+                      hidden: true,
+                      readOnly: true
+                    },
+                    {
+                      layout: {
+                        type: 'hbox',
+                        align: 'stretch'
+                      },
+                      autoScroll: true,
+                      flex: 1,
+                      items: [
+                        { attributeName: 'dateFrom', labelWidth: 145, readOnly: true, minWidth: 100 },
+                        { attributeName: 'dateToEmpty', fieldLabel: UB.i18n('по'), labelWidth: 50, readOnly: true, minWidth: 100 }
+                      ]
+                    }
+                  ]
+                },
+
+                { name: 'positionTypeName', labelWidth: 150, readOnly: true, xtype: 'ubtextfield', fieldLabel: UB.i18n('Тип посади') },
+                { attributeName: 'workScheduleID', labelWidth: 150, readOnly: true },
+                { attributeName: 'workPlace', labelWidth: 150, readOnly: true },
+                { attributeName: 'workerType', labelWidth: 150, readOnly: true },
+                { attributeName: 'mtCount', labelWidth: 150, readOnly: true, decimalPrecision: 2 },
+                { attributeName: 'dictStaffCatID', labelWidth: 150, hidden: false, readOnly: true },
+                { attributeName: 'dictCategoryECBID', labelWidth: 150, readOnly: true },
+                { attributeName: 'dictRankID', labelWidth: 150, readOnly: true },
+                {
+                  items: [
+                    {
+                      layout: {
+                        type: 'hbox'
+                      },
+                      ubID: 'orderPanel',
+                      items: [
+                        { attributeName: 'orderID.empOrderID.orderNumberFullView', fieldLabel: UB.i18n('Наказ на створення №'), labelWidth: 150, width: 270, readOnly: true, hidden: true },
+                        { attributeName: 'orderID.orderDate', fieldLabel: UB.i18n('від'), labelWidth: 50, readOnly: true, hidden: true },
+                        {
+                          fieldLabel: UB.i18n('Наказ на створення'),
+                          xtype: 'textarea',
+                          name: 'openingOrder',
+                          labelWidth: 150,
+                          width: 550,
+                          height: 45,
+                          fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+                          readOnly: true,
+                          flex: 1
+                        }
+                      ]
+                    },
+                    {
+                      layout: {
+                        type: 'hbox'
+                      },
+                      ubID: 'changeOrderPanel',
+                      items: [
+                        { attributeName: 'closeOrderID.orderNumberFullView', fieldLabel: UB.i18n('Наказ на закриття №'), labelWidth: 150, width: 270, readOnly: true, hidden: true },
+                        { attributeName: 'closeOrderID.orderDate', fieldLabel: UB.i18n('від'), labelWidth: 50, readOnly: true, hidden: true },
+                        {
+                          fieldLabel: UB.i18n('Наказ на закриття'),
+                          xtype: 'textarea',
+                          name: 'closingOrder',
+                          height: 45,
+                          labelWidth: 150,
+                          width: 550,
+                          fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+                          readOnly: true,
+                          flex: 1
+                        }
+                      ]
+                    },
+                    {
+                      layout: {
+                        type: 'vbox',
+                        align: 'stretch'
+                      },
+                      defaults: {
+                        labelWidth: 150
+                      },
+                      ubID: 'orderEditPanel',
+                      hidden: true,
+                      items: [
+                        {
+                          fieldLabel: UB.i18n('Наказ на створення'),
+                          attributeName: 'orderID',
+                          hideEntityItemInContext: true,
+                          readOnly: true,
+                          width: 550,
+                          flex: 1
+                        },
+                        {
+                          fieldLabel: UB.i18n('Наказ на закриття'),
+                          attributeName: 'changeOrderID',
+                          hideEntityItemInContext: true,
+                          readOnly: true,
+                          width: 550,
+                          flex: 1
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  xtype: 'panel',
+                  layout: {
+                    type: 'vbox'
+                  },
+                  margin: '5 15 5 15',
+                  padding: '0 0 0 0',
+                  cls: 'x-fieldset',
+                  name: 'fundSourcePanel',
+                  items: [
+                    {
+                      xtype: 'acGrid',
+                      name: 'positionFundSourceDt',
+                      height: 190,
+                      autoScroll: true,
+                      hideActions: ['addNewByCurrent', 'newVersion'],
+                      flex: 1,
+                      storeType: 'local',
+                      disablePaging: true,
+                      showToolBar: true,
+                      cellEditing: true,
+                      pageSize: 10000,
+                      hidePagingBar: true,
+                      summary: { mtCount: 'sum' },
+                      summaryDataOnClient: true,
+                      onBeforeEdit: function (control, context) {
+                        const me = context.grid.up('form')
+                        if (context.column.dataIndex === 'dictFundSourceID.description') {
+                          context.column.field.store.ubRequest.method = 'selectByOrg'
+                          context.column.field.store.ubRequest.orgID = me.record.get('organizationID') || appAC.globalOrganization()
+                        }
+                        if (!context.record.get('employeeNumberID')) context.record.set('employeeNumberID', me.record.get('employeeNumberID'))
+                      },
+                      fields: [
+                        { name: 'ID' },
+                        { name: 'dictFundSourceID' },
+                        { name: 'employeeNumberID' },
+                        { name: 'mi_modifyDate' },
+                        { name: 'dictFundSourceID.mi_deleteUser' },
+                        {
+                          name: 'dictFundSourceID.description',
+                          columnConfig: {
+                            text: UB.i18n('Джерело фінансування'),
+                            flex: 3,
+                            renderer: (value, meta, record) => {
+                              if (record.get('dictFundSourceID.mi_deleteUser')) {
+                                meta.tdCls = 'grd-line-through'
+                                meta.tdAttr = 'data-qtip="' + 'Джерело фінансування видалене' + '"'
+                              }
+                              return value
+                            },
+                            editor: {
+                              dataType: 'Entity',
+                              hideEntityItemInContext: true,
+                              associatedEntity: 'ac_fundSource',
+                              allowBlank: false,
+                              disableContextMenu: true,
+                              storeAttributeValueField: 'dictFundSourceID',
+                              fieldList: ['ID', 'description']
+                            }
+                          }
+                        },
+                        {
+                          name: 'mtCount',
+                          columnConfig: {
+                            text: UB.i18n('Кількість ставок'),
+                            flex: 1,
+                            summaryType: 'sum',
+                            floatFormat: 2,
+                            editor: {
+                              dataType: 'Float',
+                              decimalPrecision: 2,
+                              minValue: 0,
+                              allowBlank: false
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              flex: 1,
+              // defaults: {
+              //   labelWidth: 150
+              // },
+              items: [
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  flex: 1,
+                  autoScroll: true,
+                  items: [
+                    {
+                      attributeName: 'dictTrialPeriodID',
+                      fieldLabel: UB.i18n('Випробувальний строк'),
+                      labelWidth: 150,
+                      readOnly: true,
+                      minWidth: 100
+                    },
+                    {
+                      attributeName: 'dateTrialEnd',
+                      fieldLabel: UB.i18n('По'),
+                      labelWidth: 30,
+                      readOnly: true,
+                      minWidth: 30
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'hbox',
+                    align: 'middle'
+                  },
+                  items: [
+
+                    {
+                      attributeName: 'contractType', labelWidth: 150, flex: 1, readOnly: true
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  flex: 1,
+                  autoScroll: true,
+                  items: [
+                    {
+                      attributeName: 'dictContractKindID',
+                      disableModifyEntity: !AC.entityUtils.verifyRightsMethod('hr_dictContractKind', 'addnew'),
+                      labelWidth: 150,
+                      minWidth: 100,
+                      readOnly: true
+                    },
+                    {
+                      attributeName: 'planDateTo',
+                      xtype: 'ubdatefield',
+                      fieldLabel: UB.i18n('Дата закінчення тимчасових змін'),
+                      labelWidth: 120,
+                      minWidth: 100,
+                      readOnly: true
+                    }
+                  ]
+                },
+                { attributeName: 'dictEmpCategoryID', labelWidth: 150, readOnly: true },
+                { attributeName: 'dictTarifCoeffID', labelWidth: 150, readOnly: true },
+                { attributeName: 'isResponsible', labelWidth: 150, readOnly: true },
+                {
+                  layout: {
+                    type: 'hbox',
+                    align: 'stretch'
+                  },
+                  flex: 1,
+                  autoScroll: true,
+                  items: [
+                    { attributeName: 'raiseSalary', labelWidth: 150, readOnly: true, minWidth: 100 },
+                    { attributeName: 'dateNew', labelWidth: 200, readOnly: true, minWidth: 100 }
+                  ]
+                },
+                { attributeName: 'isIndex', labelWidth: 300 },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    { attributeName: 'planHours', labelWidth: 150, readOnly: true, decimalPrecision: 2, width: 300 }
+                  ]
+                },
+                { attributeName: 'payElID', labelWidth: 150, readOnly: true },
+                { attributeName: 'accrualSum', labelWidth: 150, readOnly: true },
+                { attributeName: 'dictFundSourceID', labelWidth: 150, readOnly: true },
+                { attributeName: 'dictProgClassID', labelWidth: 150, readOnly: true },
+                {
+                  xtype: 'accountDimensionsControl',
+                  name: 'dimControl',
+                  fieldLabel: UB.i18n('Рахунок витрат'),
+                  accountDisplayField: 'description',
+                  allowBlank: true,
+                  allowBlankDims: true,
+                  readOnly: true,
+                  labelWidth: 150,
+                  getDefaultDimension: HR.accrualService.getDefaultDimension
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

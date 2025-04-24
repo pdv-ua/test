@@ -1,0 +1,103 @@
+/* global UB appAC AC */
+exports.formDef = {
+  size: {
+    width: 500,
+    height: 300
+  },
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  items: [{
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    items: [
+      {
+        attributeName: 'stageKind',
+        width: 500,
+        fieldList: ['ID', 'name', 'code'],
+        whereList: {
+          code: {
+            expression: '[code]',
+            condition: 'notIn',
+            values: { 'code': ['INFO', 'ACQUAINTANCELIST_SIGN'] }
+          }
+        }
+      }
+    ]
+  },
+  {
+    flex: 1,
+    // xtype: 'tabpanel',
+    xtype: 'panel',
+    layout: 'fit',
+    items: [
+      {
+        // title: 'Етапи',
+        xtype: 'ubdetailgrid',
+        name: 'orderRegistryDt',
+        autoScroll: true,
+        disableSearchBar: true,
+        disableMenuItemDetails: true,
+        hideActions: ['addNewByCurrent'],
+        flex: 1,
+        entityConfig: {
+          entity: 'hr_recparticipant',
+          method: 'select',
+          fieldList: [{
+            name: 'ID',
+            visibility: false
+          },
+          {
+            name: 'employeePosition.description',
+            description: UB.i18n('Виконавець')
+          },
+          {
+            name: 'executionTerm',
+            description: UB.i18n('Термін')
+          },
+          {
+            name: 'resolution',
+            description: UB.i18n('Виконання')
+          },
+          {
+            name: 'resolutionText',
+            description: UB.i18n('Зміст резолюції')
+          },
+          {
+            name: 'employeePosition.organizationID.name',
+            description: UB.i18n('Організація')
+          }
+          ]
+        },
+        masterFields: ['ID'],
+        detailFields: ['recStageID'],
+        cmpInitConfig: {
+          afterInit: function () {
+            const onDate = appAC.globalApplicationDate()
+            AC.viewUtils.setWhereListProperty(this, [
+              ['employeePosition.organizationID.mi_dateFrom', 'lessEqual', onDate],
+              ['employeePosition.organizationID.mi_dateTo', 'moreEqual', onDate],
+              ['employeePosition.organizationID.state', 'equal', 'ACTIVE'],
+              ['employeePosition.organizationID.mi_deleteDate', 'equal', '#maxdate']
+            ])
+          },
+          onDeterminateForm: function (grid) {
+            const me = grid.up('form')
+            if (me.record.get('recstageTemplateID')) {
+              return {
+                formCode: 'hr_recparticipant-template',
+                description: UB.i18n('Візуючі')
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+  ]
+}

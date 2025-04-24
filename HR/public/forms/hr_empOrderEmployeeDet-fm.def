@@ -1,0 +1,100 @@
+/* global AC HR UB */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'organizationID', 'empOrderType', 'isExternal', 'paraID'],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      }
+    },
+    defaults: {
+      layout: 'fit'
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [
+      {
+        attributeName: 'employeePositionID',
+        hidden: true,
+        margin: '5 15 5 15',
+        labelWidth: 100,
+        gridFieldList: ['description'],
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+        fieldLabel: UB.i18n('Працівник'),
+        fieldList: ['ID', 'description', 'employeeID.firstName', 'employeeID.lastName', 'employeeID.middleName', 'employeeID',
+          'employeeNumberID', 'employeeNumberID.dateFrom', 'departmentID', 'organizationID', 'workPlace', 'dictStaffCatID',
+          'positionType', 'vacancyDateFrom', 'vacancyDateTo'],
+        xtype: 'empPositionCombobox',
+        addWorkPlace: true,
+        showIf: (ctrl, form) => !form.record.get('isExternal'),
+        requiredIf: (ctrl, form) => !form.record.get('isExternal'),
+        listeners: {
+          select: ctrl => {
+            let reco = AC.gridUtils.getCurrentRecord(ctrl)
+            let me = ctrl.up('form')
+            if (reco) {
+              me.record.set('firstName', reco.get('employeeID.firstName'))
+              me.record.set('lastName', reco.get('employeeID.lastName'))
+              me.record.set('middleName', reco.get('employeeID.middleName'))
+            } else {
+              me.record.set('firstName', null)
+              me.record.set('lastName', null)
+              me.record.set('middleName', null)
+            }
+            me.setWarning()
+          }
+        }
+      },
+      {
+        xtype: 'fieldset',
+        title: UB.i18n('Оплата'),
+        margin: '5 10 10 10',
+        padding: '0 0 5 0',
+        hidden: true,
+        ubID: 'payTimeBox',
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            attributeName: 'dictTimeCostID',
+            fieldList: ['ID', 'code', 'name', 'nameSmall'],
+            displayField: 'nameSmall',
+            valueField: 'ID',
+            fieldLabel: UB.i18n('Елемент обліку робочого часу'),
+            labelWidth: 250,
+            flex: 1
+          },
+          { attributeName: 'payElID', flex: 1, labelWidth: 120 }
+        ]
+      },
+      {
+        attributeName: 'isEmpAgreed',
+        hidden: true,
+        labelWidth: 200,
+        showIf: (ctrl, form) => form.isSenderEntity('hr_empOrderMissionDet')
+      },
+      {
+        xtype: 'label',
+        name: 'warnings',
+        cls: 'field-label-red',
+        margin: '5 15 10 15',
+        hidden: true
+      },
+      {
+        layout: 'fit',
+        flex: 1,
+        items: [
+          HR.orderManager.getActingParaGrid('hr_empOrderEmployeeDet', {
+            title: UB.i18n('Виконуючі обов\'язки'),
+            hidden: false,
+            flex: 1,
+            hrTypePayElActing: true
+          })
+        ]
+      }
+    ]
+  }
+})()

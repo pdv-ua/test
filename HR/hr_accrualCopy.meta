@@ -1,0 +1,588 @@
+{
+  "caption": "Розрахунок нарахувань (Копії)",
+  "description": "Розрахунок нарахувань (Копії)",
+  "descriptionAttribute": "employeeNumberID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "periodCalcID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Розрахунковий період",
+      "description": "Розрахунковий період",
+      "documentation": "Розрахунковий період",
+      "allowNull": false
+    },
+    {
+      "name": "periodSalaryID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Обліковий період",
+      "description": "Обліковий період",
+      "documentation": "Обліковий період",
+      "allowNull": false
+    },
+    {
+      "name": "periodCalc",
+      "dataType": "Date",
+      "caption": "Дата розрахункового періоду",
+      "description": "Дата розрахункового періоду",
+      "documentation": "Дата розрахункового періоду",
+      "allowNull": false
+    },
+    {
+      "name": "periodSalary",
+      "dataType": "Date",
+      "caption": "Дата облікового періоду",
+      "description": "Дата облікового періоду",
+      "documentation": "Дата облікового періоду",
+      "allowNull": false
+    },
+    {
+      "name": "orgID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "documentation": "Організаційна одиниця",
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "allowNull": false
+    },
+    {
+      "name": "employeeNumberPartID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник (сумісник)",
+      "description": "Працівник (сумісник)",
+      "documentation": "Працівник (сумісник)"
+    },
+    {
+      "name": "payElID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати",
+      "description": "Вид оплати",
+      "documentation": "Вид оплати",
+      "allowNull": false
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ підстава",
+      "description": "Наказ підстава",
+      "documentation": "Наказ підстава"
+    },
+    {
+      "name": "orderDtID",
+      "dataType": "BigInt",
+      "caption": "Наказ деталь",
+      "description": "Наказ деталь",
+      "documentation": "Наказ деталь"
+    },
+    {
+      "name": "empOrderID",
+      "dataType": "BigInt",
+      "caption": "Кадровий наказ",
+      "description": "Кадровий наказ",
+      "documentation": "Кадровий наказ"
+    },
+    {
+      "name": "timeSheetID",
+      "dataType": "BigInt",
+      "caption": "Наказ табеля",
+      "description": "Наказ табеля",
+      "documentation": "Наказ табеля"
+    },
+    {
+      "name": "flagsRec",
+      "dataType": "BigInt",
+      "caption": "Маска ознаки запису",
+      "description": "Маска ознаки запису",
+      "documentation": "Маска ознаки запису",
+      "allowNull": false
+    },
+    {
+      "name": "flagsRecSum",
+      "dataType": "BigInt",
+      "caption": "Сума не входить до нараховано/утримано",
+      "description": "Сума не входить до нараховано/утримано",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "({self}.flagsRec & 8192)"
+        }
+      ]
+    },
+    {
+      "name": "flagsRecReversal",
+      "dataType": "BigInt",
+      "caption": "Сторно",
+      "description": "Сторно",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "({self}.flagsRec & 512)"
+        }
+      ]
+    },
+    {
+      "name": "flagsFix",
+      "dataType": "BigInt",
+      "caption": "Маска ознаки фіксації розрахованих полів",
+      "description": "Маска ознаки фіксації розрахованих полів",
+      "documentation": "Маска ознаки фіксації розрахованих полів"
+    },
+    {
+      "name": "planHours",
+      "dataType": "Float",
+      "caption": "Планова кількість годин",
+      "description": "Планова кількість годин",
+      "documentation": "Планова кількість годин"
+    },
+    {
+      "name": "planDays",
+      "dataType": "Currency",
+      "caption": "Планова кількість днів",
+      "description": "Планова кількість днів",
+      "documentation": "Планова кількість днів"
+    },
+    {
+      "name": "baseSum",
+      "dataType": "Float",
+      "caption": "Планова сума",
+      "description": "Планова сума",
+      "documentation": "Планова сума"
+    },
+    {
+      "name": "rate",
+      "dataType": "Float",
+      "caption": "Відсоток нарахування",
+      "description": "Відсоток нарахування",
+      "documentation": "Відсоток нарахування"
+    },
+    {
+      "name": "days",
+      "dataType": "Currency",
+      "caption": "Фактична кількість днів",
+      "description": "Фактична кількість днів",
+      "documentation": "Фактична кількість днів"
+    },
+    {
+      "name": "hours",
+      "dataType": "Float",
+      "caption": "Фактична кількість годин",
+      "description": "Фактична кількість годин",
+      "documentation": "Фактична кількість годин"
+    },
+    {
+      "name": "mask",
+      "dataType": "BigInt",
+      "caption": "Маска оплачуваних днів",
+      "description": "Маска оплачуваних днів",
+      "documentation": "Маска оплачуваних днів",
+      "defaultValue": "0",
+      "allowNull": false
+    },
+    {
+      "name": "maskAdd",
+      "dataType": "BigInt",
+      "caption": "Маска неоплачуваних днів",
+      "description": "Маска неоплачуваних днів",
+      "documentation": "Маска неоплачуваних днів"
+    },
+    {
+      "name": "mtCount",
+      "dataType": "Float",
+      "caption": "Кількість ставок",
+      "description": "Кількість ставок",
+      "documentation": "Кількість ставок"
+    },
+    {
+      "name": "paySum",
+      "dataType": "Currency",
+      "caption": "Фактична (розрахована) сума",
+      "description": "Фактична (розрахована) сума",
+      "documentation": "Фактична (розрахована) сума",
+      "allowNull": false
+    },
+    {
+      "name": "minSalarySum",
+      "dataType": "Currency",
+      "caption": "Мінімальна заробітна плата",
+      "description": "Мінімальна заробітна плата",
+      "documentation": "Мінімальна заробітна плата"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата кінця",
+      "description": "Дата кінця",
+      "documentation": "Дата кінця",
+      "allowNull": false
+    },
+    {
+      "name": "orderDateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "documentation": "Дата початку"
+    },
+    {
+      "name": "orderDateTo",
+      "dataType": "Date",
+      "caption": "Дата кінця",
+      "description": "Дата кінця",
+      "documentation": "Дата кінця"
+    },
+    {
+      "name": "avgCalcType",
+      "dataType": "Enum",
+      "enumGroup": "HR_AVGCALC_TYPE",
+      "caption": "Тип розрахунку"
+    },
+    {
+      "name": "dateFromAvg",
+      "dataType": "Date",
+      "caption": "Період для розрахунку з",
+      "description": "Період для розрахунку з",
+      "documentation": "Період для розрахунку з"
+    },
+    {
+      "name": "dateToAvg",
+      "dataType": "Date",
+      "caption": "Період для розрахунку по",
+      "description": "Період для розрахунку по",
+      "documentation": "Період для розрахунку по"
+    },
+    {
+      "name": "sumAvg",
+      "dataType": "Float",
+      "caption": "Середньоденна",
+      "description": "Середньоденна",
+      "documentation": "Середньоденна"
+    },
+    {
+      "name": "avgDays",
+      "dataType": "Float",
+      "caption": "Середня кількість днів",
+      "description": "Середня кількість днів",
+      "documentation": "Середня кількість днів"
+    },
+    {
+      "name": "planSumAvg",
+      "dataType": "Float",
+      "caption": "Плановий заробіток",
+      "description": "Плановий заробіток",
+      "documentation": "Плановий заробіток"
+    },
+    {
+      "name": "koef",
+      "dataType": "Float",
+      "caption": "Коефіцієнт індексації",
+      "description": "Коефіцієнт індексації",
+      "documentation": "Коефіцієнт індексації"
+    },
+    {
+      "name": "calculateDate",
+      "dataType": "DateTime",
+      "caption": "Дата створення запису",
+      "description": "Дата створення запису",
+      "documentation": "Дата створення запису"
+    },
+    {
+      "name": "createUserID",
+      "dataType": "Entity",
+      "associatedEntity": "uba_user",
+      "caption": "Користувач що створив запис",
+      "description": "Користувач що створив запис",
+      "documentation": "Користувач що створив запис"
+    },
+    {
+      "name": "linkToParentID",
+      "dataType": "BigInt",
+      "caption": "Батьківський запис",
+      "description": "Батьківський запис",
+      "documentation": "Батьківський запис"
+    },
+    {
+      "name": "linkToChildID",
+      "dataType": "BigInt",
+      "caption": "Дочірній запис",
+      "description": "Дочірній запис",
+      "documentation": "Дочірній запис"
+    },
+    {
+      "name": "source",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Сутніть джерела",
+      "description": "Сутніть джерела",
+      "documentation": "Сутніть джерела"
+    },
+    {
+      "name": "sourceID",
+      "dataType": "BigInt",
+      "caption": "ID джерела",
+      "description": "ID джерела",
+      "documentation": "ID джерела"
+    },
+    {
+      "name": "paymentID",
+      "dataType": "BigInt",
+      "caption": "ID системи оплати",
+      "description": "ID системи оплати",
+      "documentation": "ID системи оплати"
+    },
+    {
+      "name": "incomingDebtSum",
+      "dataType": "Currency",
+      "caption": "Заборгованість",
+      "description": "Заборгованість",
+      "documentation": "Заборгованість"
+    },
+    {
+      "name": "repaymentDebtSum",
+      "dataType": "Currency",
+      "caption": "Погашення заборгованості",
+      "description": "Погашення заборгованості",
+      "documentation": "Погашення заборгованості"
+    },
+    {
+      "name": "calculatedSum",
+      "dataType": "Currency",
+      "caption": "Розраховано за місяць",
+      "description": "Розраховано за місяць",
+      "documentation": "Розраховано за місяць"
+    },
+    {
+      "name": "repaymentSum",
+      "dataType": "Currency",
+      "caption": "Погашено за місяць",
+      "description": "Погашено за місяць",
+      "documentation": "Погашено за місяць"
+    },
+    {
+      "name": "hoursByDays",
+      "dataType": "Json",
+      "caption": "Години роботи",
+      "description": "Години роботи",
+      "documentation": "Години роботи"
+    },
+    {
+      "name": "planHoursByDays",
+      "dataType": "Json",
+      "caption": "Планові години роботи",
+      "description": "Планові години роботи",
+      "documentation": "Планові години роботи"
+    },
+    {
+      "name": "leadingHoursByDays",
+      "dataType": "Json",
+      "caption": "Години роботи провідної системи оплати",
+      "description": "Години роботи провідної системи оплати",
+      "documentation": "Години роботи провідної системи оплати"
+    },
+    {
+      "name": "isAvg",
+      "dataType": "Boolean",
+      "caption": "Ознака розрахунку за середнім",
+      "description": "Ознака розрахунку за середнім",
+      "documentation": "Ознака розрахунку за середнім",
+      "defaultValue": "0"
+    },
+    {
+      "name": "extraRate",
+      "dataType": "Float",
+      "caption": "Додатковий відсоток",
+      "description": "Додатковий відсоток",
+      "documentation": "Додатковий відсоток"
+    },
+    {
+      "name": "basePayment",
+      "dataType": "Currency",
+      "caption": "Сума нарахування з суми Доход",
+      "description": "Сума нарахування з суми Доход",
+      "documentation": "Сума нарахування з суми Доход"
+    },
+    {
+      "name": "missingEmployeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberS",
+      "caption": "Працівник, що заміщується",
+      "description": "Працівник, що заміщується",
+      "documentation": "Працівник, що заміщується"
+    },
+    {
+      "name": "baseDate",
+      "dataType": "Date",
+      "caption": "Базовий місяць",
+      "description": "Базовий місяць",
+      "documentation": "Базовий місяць"
+    },
+    {
+      "name": "dictIllnessReasonID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictIllnessReason",
+      "caption": "Причина непрацездатності",
+      "description": "Причина непрацездатності",
+      "documentation": "Причина непрацездатності"
+    },
+    {
+      "name": "standingYearMonth",
+      "dataType": "Int",
+      "caption": "Стаж страховий за попередній рік (міс.)",
+      "description": "Стаж страховий за попередній рік (міс.)",
+      "documentation": "Стаж страховий за попередній рік (міс.)"
+    },
+    {
+      "name": "standingAll",
+      "dataType": "Int",
+      "caption": "Стаж страховий загальний (місяців)",
+      "description": "Стаж страховий загальний (місяців)",
+      "documentation": "Стаж страховий загальний (місяців)"
+    },
+    {
+      "name": "calendarDays",
+      "dataType": "Float",
+      "caption": "Календарні дні",
+      "description": "Календарні дні",
+      "documentation": "Календарні дні"
+    },
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер наказу",
+      "description": "Номер наказу",
+      "documentation": "Номер наказу"
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу",
+      "description": "Дата наказу"
+    },
+    {
+      "name": "workScheduleID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_workSchedule",
+      "caption": "Графік роботи",
+      "description": "Графік роботи"
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_fundSource",
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування"
+    },
+    {
+      "name": "dictProgClassID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictProgClass",
+      "caption": "КПК",
+      "description": "Код програмної класифікації"
+    },
+    {
+      "name": "dictProjectID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictProject",
+      "caption": "Проєкт",
+      "description": "Проєкт"
+    },
+    {
+      "name": "dictPositionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPosition",
+      "caption": "Посада",
+      "description": "Посада",
+      "documentation": "Посада"
+    },
+    {
+      "name": "calcEarnings",
+      "dataType": "Enum",
+      "enumGroup": "HR_CALC_EARNINGS_TYPE",
+      "caption": "Розрахунок від заробітку",
+      "description": "Розрахунок від заробітку"
+    },
+    {
+      "name": "paySumAccrual",
+      "dataType": "Currency",
+      "caption": "Сума нарахування",
+      "description": "Сума нарахування"
+    },
+    {
+      "name": "paySumOff",
+      "dataType": "Currency",
+      "caption": "Сума зняття",
+      "description": "Сума зняття"
+    },
+    {
+      "name": "rateOff",
+      "dataType": "Float",
+      "caption": "% зняття",
+      "description": "% зняття"
+    },
+    {
+      "name": "workNormID",
+      "dataType": "Entity",
+      "associatedEntity": "trf_workNorm",
+      "caption": "Норма тривалості робочого часу",
+      "description": "Норма тривалості робочого часу"
+    },
+    {
+      "name": "loadHours",
+      "dataType": "Float",
+      "caption": "Години навантаження",
+      "description": "Години навантаження"
+    },
+    {
+      "name": "calcParams",
+      "dataType": "Json",
+      "caption": "Параметри розрахунку",
+      "description": "Параметри розрахунку"
+    },
+    {
+      "name": "copyDate",
+      "dataType": "DateTime",
+      "caption": "Дата копії",
+      "description": "Дата копії",
+      "documentation": "Дата копії"
+    }
+  ],
+  "mapping":[{
+    "name": "AnsiSQL",
+    "selectName": "hr_accrualCopy",
+    "execName": "hr_accrualCopy",
+    "pkGenerator": "S_HR_ACCRUALCOPY"
+  }],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": false,
+      "safeDelete": false
+    },
+    "audit": {
+      "enabled": false
+    }
+  }
+}

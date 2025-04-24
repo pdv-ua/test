@@ -1,0 +1,72 @@
+/* global Ext AC UB appAC $App appHR */
+
+exports.formDef = 'HR.hr_importPremiumLog'
+
+Ext.define('HR.hr_importPremiumLog', {
+  extend: 'Ext.panel.Panel',
+  width: 400,
+  height: 400,
+  layout: 'border',
+  alias: 'widget.hr_importPremiumLog',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'displayfield',
+            name: 'rowCount',
+            fieldLabel: UB.i18n('Всього записів у файлі'),
+            labelWidth: 300,
+            width: 400
+          },
+          {
+            xtype: 'displayfield',
+            name: 'recordCount',
+            fieldLabel: UB.i18n('Завантажено записів'),
+            labelWidth: 300,
+            width: 400
+          },
+          {
+            xtype: 'displayfield',
+            name: 'rowWithError',
+            fieldLabel: UB.i18n('Не завантажено через помилки'),
+            labelWidth: 300,
+            width: 400
+          },
+          {
+            xtype: 'displayfield',
+            name: 'totalError',
+            fieldLabel: UB.i18n('Всього помилок'),
+            labelWidth: 300,
+            width: 400
+          }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      me.attr = {
+        rowCount: me.down('[name=rowCount]'),
+        recordCount: me.down('[name=recordCount]'),
+        rowWithError: me.down('[name=rowWithError]'),
+        totalError: me.down('[name=totalError]')
+      }
+      me.attr.rowCount.setValue(me.customParams.rowCount)
+      me.attr.recordCount.setValue(me.customParams.recordCount)
+      me.attr.rowWithError.setValue(me.customParams.rowWithError)
+      me.attr.totalError.setValue(me.customParams.totalError)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

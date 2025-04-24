@@ -1,0 +1,64 @@
+/* global Ext AC */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'organizationID', 'empOrderType', 'firstName', 'lastName', 'middleName', 'condition'],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      defaults: { labelWidth: 160 }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [
+      {
+        attributeName: 'employeePositionID',
+        fieldLabel: UB.i18n('Виконучий обов\'язки'),
+        fieldList: ['ID', 'description', 'employeeID.firstName', 'workPlace', 'employeeID.lastName', 'employeeID.middleName', 'employeeID',
+          'employeeNumberID', 'departmentID', 'organizationID', 'vacancyDateFrom', 'vacancyDateTo'],
+        xtype: 'empPositionCombobox',
+        addWorkPlace: true,
+        listeners: {
+          select: ctrl => {
+            let reco = AC.gridUtils.getCurrentRecord(ctrl)
+            let me = ctrl.up('form')
+            if (reco) {
+              me.record.set('firstName', reco.get('employeeID.firstName'))
+              me.record.set('lastName', reco.get('employeeID.lastName'))
+              me.record.set('middleName', reco.get('employeeID.middleName'))
+            } else {
+              me.record.set('firstName', null)
+              me.record.set('lastName', null)
+              me.record.set('middleName', null)
+            }
+          }
+        }
+      },
+      { attributeName: 'dateFrom' },
+      { attributeName: 'dateTo' },
+      {
+        xtype: 'ubcombobox',
+        gridFieldList: ['name'],
+        name: 'condition',
+        fieldLabel: UB.i18n('Умова закінчення'),
+        store: Ext.create('Ext.data.Store', { fields: ['ID', 'name'],
+          data: [{ ID: 1, name: UB.i18n('до виходу на роботу') }, { ID: 2, name: UB.i18n('до призначення на посаду') }]
+        }),
+        isFormField: true,
+        valueField: 'name',
+        displayField: 'name',
+        allowCustomText: true,
+        triggerCls: 'hr-list-trigger',
+        listeners: {
+          select: ctrl => {
+            ctrl.setValue(ctrl.rawValue)
+            ctrl.up('form').record.set('condition', ctrl.rawValue)
+          }
+        }
+      }
+    ]
+  }
+})()

@@ -1,0 +1,116 @@
+[
+  {
+    "name": "Черга перерахунку ЗП",
+    "schedulingCondition": "App.serverConfig.application.customSettings && App.serverConfig.application.customSettings.schedulers && App.serverConfig.application.customSettings.schedulers.runQueue",
+    "cron": "*/5 * * * * *",
+    "description": "Черга перерахунку ЗП",
+    "command": "hr_accrual.runQueue",
+    "singleton": true,
+    "runAs": "admin",
+    "logSuccessful": false
+  },
+  {
+    "name": "Черга перерахунку ЗП (багатопоточний режим)",
+    "schedulingCondition": "App.serverConfig.application.customSettings && App.serverConfig.application.customSettings.schedulers && App.serverConfig.application.customSettings.schedulers.runQueueMulti",
+    "cron": "*/3 * * * * *",
+    "description": "Черга перерахунку ЗП(багатопоточний режим)",
+    "command": "hr_accrual.runQueue",
+    "singleton": false,
+    "runAs": "admin",
+    "logSuccessful": false
+  },
+  {
+    "name": "Черга формування розкладу роботи",
+    "schedulingCondition": "App.serverConfig.application.customSettings && App.serverConfig.application.customSettings.schedulers && App.serverConfig.application.customSettings.schedulers.runPlanQueue",
+    "cron": "*/5 * * * * *",
+    "description": "Черга формування розкладу роботи",
+    "command": "tim_plan.runQueue",
+    "singleton": true,
+    "runAs": "admin",
+    "logSuccessful": false
+  },
+  {
+    "name": "Черга формування табеля",
+    "schedulingCondition": "App.serverConfig.application.customSettings && App.serverConfig.application.customSettings.schedulers && App.serverConfig.application.customSettings.schedulers.runTimeSheetQueue",
+    "cron": "*/5 * * * * *",
+    "description": "Черга формування табеля",
+    "command": "tim_timeSheet.runQueue",
+    "singleton": true,
+    "runAs": "admin",
+    "logSuccessful": false
+  },
+  {
+    "name": "Шедулер Публічного порталу",
+    "schedulingCondition": "App.serverConfig.application.customSettings && App.serverConfig.application.customSettings.schedulers && App.serverConfig.application.customSettings.schedulers.schedulerUploadPublicData",
+    "cron": "0 30 2 */1 * *",
+    "cronTmpMin": "* * * * * *",
+    "cronTmpOrig": "0 30 2 */1 * *",
+    "description": "Шедулер, за яким автоматично оновлюються дані на Публічному порталі",
+    "command": "hr_export.schedulerUploadPublicData",
+    "singleton": true,
+    "runAs": "admin",
+    "logSuccessful": true
+  },
+  {
+    "name": "Портал вакансій (АРІ) запит стан посади",
+    "schedulingCondition": "App.serverConfig.application.customSettings && App.serverConfig.application.customSettings.schedulers && App.serverConfig.application.customSettings.schedulers.schedulerRequestPosContest",
+    "cron": "0 0 3 */1 * *",
+    "cronTmpMin": "* * * * * *",
+    "cronTmpOrig": "0 0 3 */1 * *",
+    "description": "Портал вакансій (АРІ) запит на метод API про стан посади",
+    "command": "hr_export.schedulerRequestPosContest",
+    "singleton": true,
+    "runAs": "admin",
+    "logSuccessful": false
+  },
+  {
+    "name": "Створення періодів права на відпустку",
+    "schedulingCondition": "App.serverConfig.application.customSettings && App.serverConfig.application.customSettings.schedulers && App.serverConfig.application.customSettings.schedulers.autoAddPeriods",
+    "cron": "0 0 4 */7 * *",
+    "description": "Створення періодів права на відпустку",
+    "command": "hr_empVacationPlan.autoAddPeriods",
+    "singleton": true,
+    "runAs": "admin",
+    "logSuccessful": true
+  },
+  {
+    "name": "Створення призначень при тимчасовій зміні",
+    "schedulingCondition": "App.serverConfig.application.customSettings && App.serverConfig.application.customSettings.schedulers && App.serverConfig.application.customSettings.schedulers.restoreTempPositions",
+    "cron": "0 0 */3 * * *",
+    "description": "Створення призначень при тимчасовій зміні",
+    "command": "hr_employeePosition.restoreTemporaryPositions",
+    "singleton": true,
+    "runAs": "admin",
+    "logSuccessful": true
+  },
+  {
+    "name": "Фіксація відпусток",
+    "schedulingCondition": "App.serverConfig.application.customSettings && App.serverConfig.application.customSettings.schedulers && App.serverConfig.application.customSettings.schedulers.fixVacations",
+    "cron": "0 0 2 * * *",
+    "description": "Фіксація відпусток",
+    "command": "hr_empVacationPlan.fixVacations",
+    "singleton": true,
+    "runAs": "admin",
+    "logSuccessful": true
+  },
+  {
+    "name": "Фіксація відпусток. Сповіщення",
+    "schedulingCondition": "App.serverConfig.application.customSettings && App.serverConfig.application.customSettings.schedulers && App.serverConfig.application.customSettings.schedulers.mailVocationEventScheduler",
+    "cron": "0 0 10 */1 * *",
+    "description": "Фіксація відпусток. Сповіщення",
+    "command": "hr_dictMailTmplByEvents.mailVocationEventScheduler",
+    "singleton": true,
+    "runAs": "admin",
+    "logSuccessful": true
+  },
+  {
+    "name": "Щомісячне нагадування про стажі. Сповіщення",
+    "schedulingCondition": "App.serverConfig.application.customSettings && App.serverConfig.application.customSettings.schedulers && App.serverConfig.application.customSettings.schedulers.mailExpReminderScheduler",
+    "cron": "0 0 9 1 */1 *",
+    "description": "Щомісячне нагадування про стажі. Сповіщення",
+    "command": "hr_dictMailTmplByEvents.mailExpReminderScheduler",
+    "singleton": true,
+    "runAs": "admin",
+    "logSuccessful": true
+  }
+]

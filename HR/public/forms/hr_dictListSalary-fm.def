@@ -1,0 +1,149 @@
+/* global Ext UB $App _ */
+exports.formDef = 'HR.dictListSalary'
+
+Ext.define('HR.dictListSalary', {
+  extend: 'Ext.Panel',
+  layout: { type: 'vbox', align: 'stretch' },
+  initComponent: function () {
+    const me = this
+    me.reportControl = Ext.create('Ext.Component', {
+      flex: 1,
+      autoEl: { tag: 'iframe' }
+    })
+    me.items = me.reportControl
+    me.on('afterrender', () => me.showDesktop())
+    me.callParent(arguments)
+  },
+  showDesktop: async function () {
+    const me = this
+    const iFrameDoc = me.reportControl.getEl().dom.contentDocument
+    let shTemplate = ''
+    let por = 0
+    const shortcutData = await me.prepareShortcut()
+    while (shortcutData[por]) { // Blocks
+      for (let r = 0, l = _.max([shortcutData[por].length, (shortcutData[por + 1] || []).length]); r < l; r++) { // Rows
+        shTemplate += '<tr>'
+        for (let i = 0; i <= 1; i++) { // Columns
+          const row = (shortcutData[por + i] || [])[r] || { ID: '', isHeader: false, caption: '' }
+          shTemplate += `
+            <td style="
+              width:50%;
+              height:24px;
+              font-size:${row.isHeader ? 16 : 14}px;
+              padding-left: 30px;
+            ">
+              ${row.isHeader ? '<b><span ' : '<a href="#"'}
+                data-id=${row.ID}>${row.caption}
+              ${row.isHeader ? '</span></b>' : '</a>'}
+            </td>`
+        }
+        shTemplate += '</tr>'
+      }
+      por += 2
+    }
+
+    iFrameDoc.head.innerHTML = `
+      <style type="text/css">
+        body {
+          background-color: #FFFFFF;
+          color: #000000;
+          font-family: Roboto, Arial, Helvetica, sans-serif;
+          font-size: 14px;
+          line-height: 1.3;
+        }
+        a {
+          text-decoration: none;
+          color: #2f7c94;
+        }
+        td,th {
+          font-family: Roboto,Arial,Helvetica,sans-serif;
+          font-size: 14px
+        }
+      </style>`
+    iFrameDoc.body.innerHTML = `
+      <table
+        style="
+          border-collapse: collapse;
+          width: 730px;
+          word-break: break-all;
+        "
+        border="0px"
+        cellspacing="0"
+        cellpadding="3px"
+      >
+        <tbody>
+          ${shTemplate}
+        </tbody>
+      </table>`
+
+    const refs = iFrameDoc.getElementsByTagName('a')
+    for (let i = 0, L = refs.length; i < L; i++) {
+      refs[i].addEventListener('click', me.onReportClick, true)
+    }
+  },
+  prepareShortcut: async function () {
+    const result = []
+    const parentCodes = ['hrPayDictionary', 'hrPaySettings']
+    const advCodes = ['accPay_AllDict', 'accPay_Update']
+
+    const parents = await UB.Repository('ubm_navshortcut')
+      .attrs('ID')
+      .where('code', 'in', parentCodes)
+      .selectAsObject()
+
+    const shortcuts = UB.core.UBStoreManager.getNavigationShortcutStore().data.items
+      .filter(o => parentCodes.indexOf(o.get('code')) !== -1 || parents.map(item => item.ID).indexOf(o.get('parentID')) !== -1)
+
+    const folders = shortcuts.filter(o => o.get('isFolder'))
+
+    folders.forEach(folder => {
+      const shcuts = shortcuts.filter(o => { return o.get('parentID') === folder.get('ID') })
+      if (shcuts.length) {
+        const folderShortcut = [
+          {
+            ID: '',
+            caption: folder.get('caption'),
+            isHeader: true
+          },
+          {
+            ID: '',
+            caption: '',
+            isHeader: true
+          }
+        ]
+        shcuts.filter(sh => !advCodes.includes(sh.get('code'))).forEach(sh => {
+          folderShortcut.push({
+            ID: sh.get('ID'),
+            caption: sh.get('caption'),
+            isHeader: false
+          })
+        })
+        if (shcuts.some(sh => advCodes.includes(sh.get('code')))) {
+          folderShortcut.push({
+            ID: '',
+            caption: '<hr  align="left" width="300"  size="2">',
+            isHeader: true
+          })
+        }
+        shcuts.filter(sh => advCodes.includes(sh.get('code'))).forEach(sh => {
+          folderShortcut.push({
+            ID: sh.get('ID'),
+            caption: sh.get('caption'),
+            isHeader: false
+          })
+        })
+        result.push(folderShortcut)
+      }
+    })
+    return result
+  },
+  onReportClick: function (e) {
+    e.preventDefault()
+    if (e.target.dataset.id && e.target.dataset.id !== '') {
+      const store = UB.core.UBStoreManager.getNavigationShortcutStore()
+      const shortcut = _.find(store.data.items, item => { return item.get('ID') === Number(e.target.dataset.id) })
+
+      $App.runShortcutCommand(shortcut.get('code'), shortcut.get('inWindow'))
+    }
+  }
+})

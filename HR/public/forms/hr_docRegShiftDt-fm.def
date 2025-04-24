@@ -1,0 +1,507 @@
+/* global Ext UB AC appAC $App */
+
+exports.formDef = 'HR.hrDocRegShiftDt'
+
+Ext.define('HR.hrDocRegShiftDt', {
+  extend: 'Ext.form.Panel',
+
+  requires: [
+    'AC.validators',
+    'UB.core.UBCommand',
+    'UB.core.UBUtil',
+    'UB.ux.form.field.UBComboBox'
+  ],
+  width: 500,
+  height: 500,
+  layout: { type: 'vbox', align: 'stretch' },
+
+  actionId: {
+    save: 'save'
+  },
+  eventId: {
+    save: 'save'
+  },
+  hotKeys: {
+    save: {
+      key: Ext.EventObject.ENTER,
+      shift: false,
+      ctrl: true,
+      text: ' (Ctrl+Enter)'
+    }
+  },
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [],
+      ubID: 'mainToolbar',
+      enableOverflow: true
+    }]
+    me.items = [
+      {
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'ubcombobox',
+            name: 'payElID',
+            fieldLabel: UB.i18n('Вид оплати'),
+            allowBlank: false,
+            enableKeyEvents: true,
+            ubRequest: {
+              entity: 'hr_payEl',
+              fieldList: ['ID', 'description', 'methodID.code'],
+              whereList: {
+                payElID: {
+                  expression: '[methodID.code]',
+                  condition: 'in',
+                  value: ['150', '4', '6']
+                }
+              },
+              orderList: { orderBy: { expression: 'codeSort' } }
+            }
+          },
+          {
+            layout: { type: 'hbox' },
+            style: 'margin-top: 10px; margin-bottom: 10px'
+          },
+          {
+            xtype: 'ubdatefield',
+            name: 'dateFrom',
+            fieldLabel: UB.i18n('З'),
+            allowBlank: false,
+            flagsFix: 1 << 2
+          },
+          {
+            xtype: 'ubdatefield',
+            name: 'dateTo',
+            fieldLabel: UB.i18n('По'),
+            allowBlank: false,
+            flagsFix: 1 << 3
+          },
+          {
+            layout: { type: 'hbox' },
+            style: 'margin-top: 10px; margin-bottom: 10px'
+          },
+          {
+            xtype: 'numberfield',
+            name: 'baseSum',
+            fieldLabel: UB.i18n('Сума для розрахунку'),
+            maxLength: 17,
+            enforceMaxLength: true,
+            hideTrigger: true,
+            keyNavEnabled: false,
+            mouseWheelEnabled: false,
+            enableKeyEvents: true,
+            vtype: 'floatValidator',
+            maskRe: AC.validators.maskRe('currency'),
+            valueToRaw: UB.core.UBUtil.formatAsCurrency,
+            decimalPrecision: 2,
+            maxValue: 8999000000000000,
+            minValue: -8999000000000000,
+            flagsFix: 1 << 0
+          },
+          {
+            layout: { type: 'hbox' },
+            style: 'margin-top: 10px; margin-bottom: 10px'
+          },
+          {
+            xtype: 'numberfield',
+            name: 'planDays',
+            fieldLabel: UB.i18n('Норма днів'),
+            maxLength: 17,
+            enforceMaxLength: true,
+            hideTrigger: true,
+            keyNavEnabled: false,
+            mouseWheelEnabled: false,
+            enableKeyEvents: true,
+            allowDecimals: false,
+            maxValue: 8999000000000000,
+            minValue: -8999000000000000,
+            flagsFix: 1 << 4
+          },
+          {
+            xtype: 'numberfield',
+            name: 'days',
+            fieldLabel: UB.i18n('Тривалість днів'),
+            maxLength: 17,
+            enforceMaxLength: true,
+            hideTrigger: true,
+            keyNavEnabled: false,
+            mouseWheelEnabled: false,
+            enableKeyEvents: true,
+            allowDecimals: false,
+            maxValue: 8999000000000000,
+            minValue: -8999000000000000,
+            flagsFix: 1 << 6
+          },
+          {
+            xtype: 'numberfield',
+            name: 'planHours',
+            fieldLabel: UB.i18n('Норма годин'),
+            maxLength: 17,
+            enforceMaxLength: true,
+            hideTrigger: true,
+            keyNavEnabled: false,
+            mouseWheelEnabled: false,
+            enableKeyEvents: true,
+            vtype: 'floatValidator',
+            maskRe: AC.validators.maskRe('currency'),
+            valueToRaw: UB.core.UBUtil.formatAsCurrency,
+            decimalPrecision: 2,
+            maxValue: 8999000000000000,
+            minValue: -8999000000000000,
+            flagsFix: 1 << 5
+          },
+          {
+            xtype: 'numberfield',
+            name: 'hours',
+            fieldLabel: UB.i18n('Тривалість годин'),
+            maxLength: 17,
+            enforceMaxLength: true,
+            hideTrigger: true,
+            keyNavEnabled: false,
+            mouseWheelEnabled: false,
+            enableKeyEvents: true,
+            vtype: 'floatValidator',
+            maskRe: AC.validators.maskRe('currency'),
+            valueToRaw: UB.core.UBUtil.formatAsCurrency,
+            decimalPrecision: 2,
+            maxValue: 8999000000000000,
+            minValue: -8999000000000000,
+            flagsFix: 1 << 7
+          },
+          {
+            layout: { type: 'hbox' },
+            style: 'margin-top: 10px; margin-bottom: 10px'
+          },
+          {
+            xtype: 'numberfield',
+            name: 'rate',
+            fieldLabel: UB.i18n('Відсоток'),
+            maxLength: 17,
+            enforceMaxLength: true,
+            hideTrigger: true,
+            keyNavEnabled: false,
+            mouseWheelEnabled: false,
+            enableKeyEvents: true,
+            vtype: 'floatValidator',
+            maskRe: AC.validators.maskRe('currency'),
+            valueToRaw: UB.core.UBUtil.formatAsCurrency,
+            decimalPrecision: 2,
+            maxValue: 8999000000000000,
+            minValue: -8999000000000000,
+            flagsFix: 1 << 9
+          },
+          {
+            xtype: 'numberfield',
+            name: 'paySum',
+            fieldLabel: UB.i18n('Сума'),
+            maxLength: 17,
+            enforceMaxLength: true,
+            hideTrigger: true,
+            keyNavEnabled: false,
+            mouseWheelEnabled: false,
+            enableKeyEvents: true,
+            vtype: 'floatValidator',
+            maskRe: AC.validators.maskRe('currency'),
+            valueToRaw: UB.core.UBUtil.formatAsCurrency,
+            decimalPrecision: 2,
+            maxValue: 8999000000000000,
+            minValue: -8999000000000000,
+            flagsFix: 1 << 0
+          },
+          {
+            layout: { type: 'hbox' },
+            style: 'margin-top: 10px; margin-bottom: 10px'
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictFundSourceID',
+            flex: 1,
+            fieldLabel: UB.i18n('Фінансування'),
+            allowBlank: false,
+            flagsFix: 1 << 14,
+            ubRequest: {
+              entity: 'ac_fundSource',
+              method: 'selectByOrg',
+              fieldList: ['ID', 'name'],
+              orderList: { orderBy: { expression: 'name' } }
+            },
+            beforeQuerySend: (ctrl) => {
+              ctrl.combo.store.ubRequest.orgID = me.parentForm.record.get('orderRegistryID.organizationID') || appAC.globalOrganization()
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictProgClassID',
+            flex: 1,
+            fieldLabel: UB.i18n('КПК'),
+            allowBlank: false,
+            flagsFix: 1 << 24,
+            ubRequest: {
+              entity: 'ac_dictProgClass',
+              fieldList: ['ID', 'description'],
+              orderList: { orderBy: { expression: 'description' } }
+            }
+          }
+        ]
+      }
+    ]
+    me.on('afterrender',
+      function () {
+        me.up('window').setTitle(UB.i18n('Нарахування'))
+        me.createToolbarButtons(me)
+        me.valueAttrName = ['dateFrom', 'dateTo', 'baseSum', 'planDays', 'days', 'planHours', 'hours', 'rate', 'paySum',
+          'payElID', 'dictFundSourceID', 'dictProgClassID']
+        me.attr = {
+          payElID: me.down('[name=payElID]'),
+          dateFrom: me.down('[name=dateFrom]'),
+          dateTo: me.down('[name=dateTo]'),
+          dictFundSourceID: me.down('[name=dictFundSourceID]'),
+          dictProgClassID: me.down('[name=dictProgClassID]'),
+          baseSum: me.down('[name=baseSum]'),
+          planDays: me.down('[name=planDays]'),
+          days: me.down('[name=days]'),
+          planHours: me.down('[name=planHours]'),
+          hours: me.down('[name=hours]'),
+          rate: me.down('[name=rate]'),
+          paySum: me.down('[name=paySum]')
+        }
+        me.parentForm = me.gridSender.up('form')
+        // me.attr.dictFundSourceID.store.ubRequest.orgID = appAC.globalOrganization()
+
+        const dateFrom = AC.dateService.unshiftDate(me.parentForm.attr.dateFrom.getValue())
+        const dateTo = AC.dateService.unshiftDate(me.parentForm.attr.dateTo.getValue())
+       /* if (!dateFrom || !dateTo || !me.parentForm.attr.employeePositionID.getFieldValue('employeeNumberID')) {
+          me.up().close()
+          return
+        }*/
+        Ext.defer(() => me.attr.payElID.focus(true, 1), 1)
+        me.attr.dateFrom.setMinValue(dateFrom)
+        me.attr.dateFrom.setMaxValue(dateTo)
+        me.attr.dateTo.setMinValue(dateFrom)
+        me.attr.dateTo.setMaxValue(dateTo)
+        if (me.parentForm.record.get('state') === 'POSTED') {
+          Object.keys(me.attr).forEach(attrName => {
+            me.attr[attrName].setReadOnly(true)
+          })
+          me.down('[name=saveAndClose]').setDisabled(true)
+        }
+        me.employeeNumberID = me.parentForm.attr.employeeNumberID.getValue()
+        me.orgID = me.parentForm.record.get('orderRegistryID.organizationID') || appAC.globalOrganization()
+        if (me.formData) {
+          me.flagsFix = me.formData.flagsFix || 0
+          me.setAttrValues(me, me.formData)
+        } else {
+          // me.attr.dictFundSourceID.setValueById(me.parentForm.attr.trfPositionID.getFieldValue('dictFundSourceID'))
+          // me.attr.dictProgClassID.setValueById(me.parentForm.attr.trfPositionID.getFieldValue('dictProgClassID'))
+          me.attr.dateFrom.setValue(dateFrom)
+          me.attr.dateTo.setValue(dateTo)
+          me.flagsFix = 0
+        }
+
+        const changeAttrs = ['dateFrom', 'dateTo', 'baseSum', 'planDays', 'days', 'planHours', 'hours', 'rate', 'paySum']
+        changeAttrs.forEach(attrName => {
+          me.attr[attrName].on('keypress', (ctrl, e) => {
+            if (e.getKey() === e.ENTER) {
+              changeParams(ctrl)
+            }
+          })
+          me.attr[attrName].on('blur', changeParams)
+        })
+        me.attr.days[me.parentForm.attr.calcTimeType.getValue() === 'DAY' ? 'show' : 'hide']()
+        me.attr.planDays[me.parentForm.attr.calcTimeType.getValue() === 'DAY' ? 'show' : 'hide']()
+        me.attr.hours[me.parentForm.attr.calcTimeType.getValue() !== 'DAY' ? 'show' : 'hide']()
+        me.attr.planHours[me.parentForm.attr.calcTimeType.getValue() !== 'DAY' ? 'show' : 'hide']()
+
+        const changeComboAttrs = ['payElID', 'dictFundSourceID', 'dictProgClassID']
+        changeComboAttrs.forEach(attrName => {
+          me.attr[attrName].on('change', (ctrl, value) => {
+            if (ctrl.skipChanged) {
+              ctrl.skipChanged = false
+            } else {
+              if (ctrl.name === 'payElID') {
+                me.flagsFix = 0
+              } else {
+                if (value) {
+                  me.flagsFix = (me.flagsFix | ctrl.flagsFix)
+                } else {
+                  me.flagsFix = (me.flagsFix & ~ctrl.flagsFix)
+                }
+              }
+              if (value) {
+                me.calculate(me)
+              }
+            }
+          })
+        })
+
+        function changeParams (ctrl) {
+          const value = ctrl.getValue()
+          if (ctrl.calcValue !== value) {
+            if (value) {
+              me.flagsFix = (me.flagsFix | ctrl.flagsFix)
+            } else {
+              me.flagsFix = (me.flagsFix & ~ctrl.flagsFix)
+            }
+            me.calculate(me)
+          }
+        }
+      }, me)
+    me.callParent(arguments)
+  },
+  setAttrValues: function (me, data, skipChanged = true) {
+    Object.keys(data).forEach(attrName => {
+      if (data[attrName] !== undefined) {
+        switch (attrName) {
+          case 'dateFrom':
+          case 'dateTo':
+            me.attr[attrName].calcValue = AC.dateService.unshiftDate(data[attrName])
+            me.attr[attrName].setValue(AC.dateService.unshiftDate(data[attrName]))
+            break
+          case 'baseSum':
+          case 'planDays':
+          case 'days':
+          case 'planHours':
+          case 'hours':
+          case 'rate':
+          case 'paySum':
+            me.attr[attrName].calcValue = data[attrName]
+            me.attr[attrName].setValue(data[attrName])
+            break
+          case 'payElID':
+          case 'dictFundSourceID':
+          case 'dictProgClassID':
+            me.attr[attrName].setValueById(data[attrName])
+            me.attr[attrName].skipChanged = skipChanged
+            break
+        }
+      }
+    })
+  },
+  createToolbarButtons: function (me) {
+    let tb = me.down('toolbar')
+    tb.insert(tb.items.length - 2, {
+      xtype: 'button',
+      scale: 'medium',
+      name: 'saveAndClose',
+      iconCls: 'fas fa-share-square',
+      tooltip: UB.i18n('saveAndClose') + me.hotKeys[me.actionId.save].text,
+      cls: 'save-action',
+      handler: function () {
+        me.onButtonSave(me)
+      }
+    })
+  },
+  setIsDirty: function (action) {
+
+  },
+  calculate: function (me) {
+    if (!me.attr.payElID.getValue() || !me.attr.dateFrom.getValue() || !me.attr.dateTo.getValue()) {
+      return
+    }
+    const internalId = me.gridRecord ? me.gridRecord.internalId : 1
+    const params = {
+      orgID: me.orgID,
+      orderRegistryID: me.parentForm.record.get('orderRegistryID'),
+      periodCalcID: me.parentForm.record.get('orderRegistryID.periodID'),
+      periodSalaryID: me.parentForm.record.get('periodSalaryID'),
+      payElID: me.parentForm.record.get('orderRegistryID.payElID'),
+      employeeNumberID: me.parentForm.attr.employeePositionID.getFieldValue('employeeNumberID'),
+      employeePositionID: me.parentForm.attr.employeePositionID.getValue(),
+      linkEmployeeNumberID: me.parentForm.attr.linkEmployeeNumberID.getValue(),
+      trfPositionID: me.parentForm.attr.trfPositionID.getValue(),
+      dictPositionID: me.parentForm.attr.dictPositionID.getValue(),
+      dictPositionExID: me.parentForm.attr.dictPositionExID.getValue(),
+      dictTarifCoeffID: me.parentForm.attr.dictTarifCoeffID.getValue(),
+      calcTimeType: me.parentForm.attr.calcTimeType.getValue(),
+      workScheduleID: me.parentForm.attr.employeePositionID.getFieldValue('workScheduleID'),
+      workNormID: me.parentForm.attr.workNormID.getValue(),
+      rateType: me.parentForm.attr.rateType.getValue(),
+      orderID: me.parentForm.instanceID,
+      flagsRec: me.parentForm.record.get('flagsRec'),
+      flagsFix: me.parentForm.record.get('flagsFix'),
+      dateFrom: me.parentForm.attr.dateFrom.getValue(),
+      dateTo: me.parentForm.attr.dateTo.getValue(),
+      payElIDs: null,
+      accruals: []
+    }
+    const allRecord = me.parentForm.attr.orderRegistryDt.getStore().snapshot || me.parentForm.attr.orderRegistryDt.getStore().data
+    allRecord.items.forEach((row) => {
+      const data = row.getData()
+      if (internalId === row.internalId) {
+        me.valueAttrName.forEach(attrName => {
+          data[attrName] = me.attr[attrName].getValue()
+        })
+        data.flagsFix = me.flagsFix
+      }
+      params.accruals.push(Object.assign(data, { idx: row.internalId }))
+    })
+    if (internalId === 1) {
+      const data = { idx: 1 }
+      me.valueAttrName.forEach(attrName => {
+        data[attrName] = me.attr[attrName].getValue()
+      })
+      data.flagsFix = me.flagsFix
+      params.accruals.push(data)
+    }
+
+    me.setLoading(true)
+    $App.connection.run({
+      entity: 'hr_docRegShift',
+      method: 'calcShift',
+      params: JSON.stringify(params)
+    }).then(response => {
+      let data = JSON.parse(response.resultData)
+      data.accruals.forEach(accr => {
+        if (accr.idx === internalId) {
+          delete accr.idx
+          me.recalcAccrual = accr
+          me.setAttrValues(me, accr, false)
+        }
+      })
+      me.setLoading(false)
+    }, (err) => {
+      me.setLoading(false)
+      throw err
+    })
+  },
+  onButtonSave: function (me) {
+    if (me.isValid()) {
+      const formData = me.recalcAccrual || {}
+      me.valueAttrName.forEach(attrName => {
+        formData[attrName] = me.attr[attrName].getValue()
+      })
+      formData['payElID.description'] = me.attr.payElID.getFieldValue('description')
+      formData['dictFundSourceID.name'] = me.attr.dictFundSourceID.getFieldValue('name')
+      formData['dictProgClassID.description'] = me.attr.dictProgClassID.getFieldValue('description')
+      formData.flagsFix = me.flagsFix
+      if (me.formData && me.formData.ID) {
+        formData.ID = me.formData.ID
+      }
+      if (me.formData && me.formData.mi_modifyDate) {
+        formData.mi_modifyDate = me.formData.mi_modifyDate
+      }
+      me.onSave(me.parentForm, me.gridSender, me.gridRecord, formData)
+      me.up().close()
+    } else {
+      me.getForm().getFields().each(function (item) {
+        if (!item.isValid()) {
+          UB.toast({
+            entityTitle: UB.i18n('Нарахування'),
+            fieldLabel: item.fieldLabel,
+            callback: function () {
+              if (me) {
+                let wnd = me.getFormWin()
+                if (wnd) wnd.toFront()
+                Ext.callback(item.focus, item, [], 100)
+              }
+            }
+          })
+          item.focus()
+        }
+      }, me)
+    }
+  }
+})

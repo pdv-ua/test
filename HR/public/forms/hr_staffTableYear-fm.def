@@ -1,0 +1,250 @@
+/* global Ext UB AC appAC */
+exports.formDef = 'HR.staffTableListYear'
+
+Ext.define('HR.staffTableListYear', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.staffTableListYear',
+  layout: { type: 'border' },
+  height: 600,
+  width: 1100,
+  initComponent: function () {
+    let me = this
+    const notShowSalary = AC.entityUtils.verifyRightsMethod('hr_service', 'notShowSalary') && !AC.entityUtils.isAdmin()
+    me.items = [
+      {
+        xtype: 'acGrid',
+        name: 'gridStaffTableYear',
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_staffTableListYear_gridStaffTableYear'),
+        region: 'center',
+        entity: 'hr_staffTable',
+        formCode: 'hr_staffTable',
+        flex: 1,
+        hideActions: ['addNew', 'del', 'addNewByCurrent'],
+        storeType: 'ub',
+        storeAutoLoad: false,
+        disablePaging: false,
+        onSaveEditData: true,
+        showToolBar: true,
+        multilineRows: true,
+        enableExpandableRows: true,
+        ubStoreConfig: {
+          entity: 'hr_staffTable',
+          method: 'select',
+          fieldList: ['name', 'changeListNumber', 'orderNumber', 'orgName', 'withChild', 'docType', 'docType.name', 'entryOrderID.description',
+            'entryOrderID.entryDate', 'textOrder', 'comment'],
+          whereList: {
+            orderState: {
+              expression: '[orderState]',
+              condition: 'equal',
+              value: 'POSTED'
+            },
+            entryOrderID: {
+              expression: '[entryOrderID]',
+              condition: 'isNotNull'
+            },
+            docType: {
+              expression: '[docType]',
+              condition: 'in',
+              value: ['NEW', 'ACCRUAL', 'ACCRUAL_CHANGES']
+            },
+            staffTableID: {
+              expression: '[staffTableID]',
+              condition: 'isNull'
+            }
+          },
+          orderList: {
+            orderBy: { expression: 'orderDate', order: 'desc' }
+          }
+        },
+        expandedRowConfig: {
+          onExpandBody: async function (rowNode, record, expandRow, eOpts) {
+            const grid = this
+            const view = grid.getView()
+            view.addRowCls(record.index, 'grd-bold')
+            const data = await UB.Repository('hr_staffTable')
+              .attrs(['name', 'changeListNumber', 'docType.name', 'entryOrderID.description', 'entryOrderID.entryDate', 'textOrder', 'comment', 'ID', 'docType', 'entryOrderID.empOrderType', 'entryOrderID.ID'])
+              .where('staffTableID', '=', record.get('ID') || 0)
+              .where('docType', 'in', ['CHANGES', 'ACCRUAL_CHANGES'])
+              .orderBy('mi_createDate', 'asc')
+              .selectAsObject()
+            let detail = ` <style type="text/css">.table { width: 100%; padding:10px; } #td { text-indent: 20px } .span { color: #2196F3 } </style>
+              <td class="x-grid-cell-rowbody" colspan="10"><div class="x-grid-rowbody">
+              <div style="width: 100%"><TABLE>
+              `
+            if (data.length) {
+              detail += `<TR style="text-align: left; font-weight: normal;">
+                <TD style="width:80px;">${UB.i18n('Номер')}</TD>
+                <TD style="width:200px;">${UB.i18n('Вид документа')}</TD>
+                <TD style="width:400px;">${UB.i18n('Наказ вступу в дію')}</TD>
+                <TD style="width:200px;">${UB.i18n('Дата вступу в дію')}</TD>
+                <TD style="width:200px;">${UB.i18n('Опис')}</TD>
+                <TD style="width:150px;">${UB.i18n('Коментар')}</TD>
+              </TR>
+              `
+              data.forEach(item => {
+                detail += `<TR style="text-align: left; font-weight: normal;">
+                  <TD style="width:80px;"><span class = "span">${item.changeListNumber || ''}</span></TD>
+                  <TD style="width:200px;"><a href = "#"> <span data-id = "${item['ID']}" data-docType = "${item['docType']}" class = "span">${item['docType.name']}</span></a></TD>
+                  <TD style="width:400px;"><a href = "#"> <span data-id = "${item['entryOrderID.ID']}" data-docType = "${item['entryOrderID.empOrderType']}" class = "span">${item['entryOrderID.description'] || ''}</span></a></TD>
+                  <TD style="width:150px;"><span class = "span">${item['entryOrderID.entryDate'] ? AC.dateService.formatDate(item['entryOrderID.entryDate']) : ''}</span></TD>
+                  <TD style="width:200px;"><span class = "span">${item.textOrder || ''}</span></TD>
+                  <TD style="width:150px;"><span class = "span">${item.comment || ''}</span></TD>
+                </TR>
+                `
+              })
+            }
+            detail += '</TABLE></div></td>'
+            expandRow.innerHTML = detail
+            const refs = expandRow.getElementsByTagName('a')
+            for (let i = 0, L = refs.length; i < L; i++) {
+              refs[i].addEventListener('click', me.onClickElem, true)
+            }
+            grid.getView().refreshSize()
+          },
+          onCollapseBody: function (rowNode, record, expandRow, eOpts) {
+            const grid = this
+            const view = grid.getView()
+            view.removeRowCls(record.index, 'grd-bold')
+          }
+        },
+        fields: [
+          { name: 'ID' },
+          { name: 'name', columnConfig: { text: UB.i18n('Назва'), width: 200, hidden: true } },
+          { name: 'orderNumber', columnConfig: { text: UB.i18n('Номер'), width: 100 } },
+          { name: 'orgName', columnConfig: { text: UB.i18n('Організація'), width: 200 } },
+          { name: 'withChild' }, /*, columnConfig: { text: 'Із підлеглими', width: 130, align: 'center', booleanFormat: true } */
+          { name: 'docType.name', columnConfig: { text: UB.i18n('Вид документа'), width: 150 } },
+          { name: 'entryOrderID.description', columnConfig: { text: UB.i18n('Наказ вступу в дію'), width: 220 } },
+          {
+            name: 'entryOrderID.entryDate',
+            columnConfig: {
+              text: UB.i18n('Дата вступу в дію'),
+              dataType: 'Date',
+              dateFormat: 'd.m.Y',
+              width: 200,
+              align: 'center'
+            }
+          },
+          { name: 'textOrder', columnConfig: { text: UB.i18n('Опис'), width: 200 } },
+          { name: 'comment', columnConfig: { text: UB.i18n('Коментар'), width: 150 } },
+          { name: 'docType' }
+        ],
+        onDeterminateForm: function (grid) {
+          let res = {
+            entityName: 'hr_staffTable',
+            formCode: 'hr_staffTable'
+          }
+          const reco = AC.gridUtils.getCurrentRecord(grid)
+          if (reco && ['ACCRUAL', 'ACCRUAL_CHANGES'].includes(reco.get('docType'))) {
+            res.formCode = 'hr_staffTableAccrual'
+          }
+          return res
+        },
+        onAfterRender: function (grid) {
+          AC.gridUtils.setGlobalOrganization(grid, 'orgID')
+          AC.gridUtils.setGlobalDate(grid, wl => {
+            wl.dateFrom = {
+              expression: '[entryOrderID.orderDate]',
+              condition: 'moreEqual',
+              value: AC.dateService.minDate()
+            }
+            wl.dateTo = {
+              expression: '[entryOrderID.orderDate]',
+              condition: 'lessEqual',
+              value: AC.dateService.maxDate()
+            }
+            wl.orderDelDate = {
+              expression: '[entryOrderID.mi_deleteDate]',
+              condition: 'moreEqual',
+              value: '#maxdate'
+            }
+            if (notShowSalary) {
+              wl.notShowSalary = {
+                expression: `[ID]`,
+                condition: 'equal',
+                value: 0
+              }
+            }
+          })
+          grid.loadData()
+        },
+        customToolBarActions: [
+          {
+            tooltip: UB.i18n('Оновити'),
+            scale: 'medium',
+            iconCls: 'u-icon-refresh',
+            handler: function (btn) {
+              const grid = btn.up('[name=gridStaffTableYear]')
+              grid.loadData()
+            }
+          },
+          {
+            xtype: 'label',
+            margin: '2 15 1 15',
+            name: 'alert',
+            text: UB.i18n('Відсутній доступ для перегляду інформації'),
+            hidden: !notShowSalary,
+            style: { color: 'red' }
+          }
+        ],
+        customContextActions: [
+          {
+            text: UB.i18n('Перейти до наказу'),
+            handler: function () {
+              const grid = me.down('[name=gridStaffTableYear]')
+              const reco = AC.gridUtils.getCurrentRecord(grid)
+              if (!reco) {
+                AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вибраний запис'))
+                return
+              }
+              appHR.showStaffOrderForm(reco.get('ID'), reco.get('entryOrderID'))
+            }
+          }
+        ]
+      }
+    ]
+
+    me.on('afterrender', function () {
+      me.attr = {
+        alert: me.down('[name=alert]')
+      }
+
+      me.attr.alert[notShowSalary ? 'show' : 'hide']()
+    }, me)
+
+    me.callParent(arguments)
+  },
+  onClickElem: function (e) {
+    e.preventDefault()
+    if (e.target.dataset.id && e.target.dataset.id !== '') {
+      if (e.target.dataset.doctype === 'CHANGES') {
+        $App.doCommand({
+          cmdType: 'showForm',
+          formCode: 'hr_staffTable',
+          entity: 'hr_staffTable',
+          tabId: 'hr_staffTable' + '-' + e.target.dataset.id,
+          target: $App.getViewport().centralPanel,
+          instanceID: Number(e.target.dataset.id)
+        })
+      } else if (e.target.dataset.doctype === 'ACCRUAL_CHANGES') {
+        $App.doCommand({
+          cmdType: 'showForm',
+          formCode: 'hr_staffTableAccrual',
+          entity: 'hr_staffTable',
+          tabId: 'hr_staffTableAccrual' + '-' + e.target.dataset.id,
+          target: $App.getViewport().centralPanel,
+          instanceID: Number(e.target.dataset.id)
+        })
+      } else if (e.target.dataset.doctype === 'STAFFLIST') {
+        $App.doCommand({
+          cmdType: 'showForm',
+          formCode: 'hr_empOrder',
+          entity: 'hr_empOrder',
+          tabId: 'hr_empOrder' + '-' + e.target.dataset.id,
+          target: $App.getViewport().centralPanel,
+          instanceID: Number(e.target.dataset.id)
+        })
+      }
+    }
+  }
+})

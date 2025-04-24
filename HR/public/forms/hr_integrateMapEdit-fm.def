@@ -1,0 +1,147 @@
+/* global Ext $App appAC AC UB */
+exports.formDef = 'HR.integrateMapEdit'
+
+Ext.define('HR.integrateMapEdit', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.integrateMapEdit',
+  height: 400,
+  width: 800,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'panel',
+            layout: { type: 'vbox' },
+            region: 'center',
+            name: 'mainPanel',
+            items: [
+              {
+                margin: '30 0 0 15',
+                xtype: 'component'
+              },
+              {
+                xtype: 'numberfield',
+                fieldLabel: UB.i18n('Зовнішній ID'),
+                labelWidth: 120,
+                decimalPrecision: 0,
+                vtype: 'numberValidator',
+                enforceMaxLength: true,
+                hideTrigger: true,
+                keyNavEnabled: false,
+                mouseWheelEnabled: false,
+                allowBlank: false,
+                name: 'externalID'
+              },
+              {
+                xtype: 'textfield',
+                fieldLabel: UB.i18n('Зовнішній код'),
+                labelWidth: 120,
+                name: 'externalCode'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.commandConfig.deferred.resolve(null)
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Зберегти'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              if (!me.attr.internalID.getValue()) return
+              me.commandConfig.deferred.resolve({
+                internalID: me.attr.internalID.getValue(),
+                externalID: me.attr.externalID.getValue() || 0,
+                externalCode: me.attr.externalCode.getValue(),
+                descriptionField: me.attr.internalID.rawValue
+              })
+              me.up('window').close()
+            }
+          }
+        ]
+      }
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      const win = this.window
+      if (win) {
+        if (!win.height || win.height > 300) {
+          win.height = 300
+        }
+        if (!win.width || win.width < 800) {
+          win.width = 800
+        }
+      }
+      me.attr = {
+        externalID: me.down('[name=externalID]'),
+        externalCode: me.down('[name=externalCode]')
+      }
+      if (me.customParams) {
+        const isStaffUnit = ['hr_organization', 'hr_department', 'hr_position'].includes(me.customParams.entityName)
+        const filterByOrg = me.customParams.filterByOrg
+
+        const ctrlParams = {
+          name: 'internalID',
+          fieldLabel: UB.i18n('Елемент'),
+          labelWidth: 120,
+          width: 650,
+          hideEntityItemInContext: true,
+          valueField: isStaffUnit? 'mi_data_id' : 'ID',
+          displayField: me.customParams.descriptionField,
+          allowBlank: false,
+          ubRequest: {
+            entity: me.customParams.entityName,
+            method: 'select',
+            fieldList: isStaffUnit ? ['mi_data_id', me.customParams.descriptionField] : ['ID', me.customParams.descriptionField]
+          }
+        }
+        if (isStaffUnit) {
+          ctrlParams.ubRequest.whereList = {
+            state: {
+              expression: '[state]',
+              condition: 'equal',
+              value: 'ACTIVE'
+            }
+          }
+        }
+        if (filterByOrg) {
+          if (!ctrlParams.ubRequest.whereList) {
+            ctrlParams.ubRequest.whereList = {}
+          }
+          ctrlParams.ubRequest.whereList.orgID = {
+            expression: '[orgID]',
+            condition: 'equal',
+            value: appAC.globalOrganization()
+          }
+        }
+        const internalIDCtrl = Ext.create('UB.ux.form.field.UBComboBox', ctrlParams)
+        me.attr.internalID = internalIDCtrl
+        me.down('[name=mainPanel]').items.insert(1, internalIDCtrl)
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

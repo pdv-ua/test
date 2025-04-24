@@ -1,0 +1,506 @@
+/* global UB $App AC HR Ext */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'organizationID', 'empOrderType', 'firstName', 'lastName', 'middleName', 'sourceParaDescription',
+      'employeePositionID.employeeNumberID'],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      defaults: {
+        labelWidth: 130
+      }
+    },
+    size: {
+      width: 1100,
+      height: 650
+    },
+    items: [
+      {
+        attributeName: 'employeePositionID',
+        fieldLabel: UB.i18n('Працівник'),
+        allowBlank: false,
+        xtype: 'empPositionCombobox',
+        addWorkPlace: true,
+        fieldList: ['ID', 'description', 'workScheduleID', 'employeeID', 'employeeNumberID', 'workPlace', 'organizationID',
+          'vacancyDateFrom', 'vacancyDateTo'],
+        orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+        customContextActions: [{
+          text: UB.i18n('Право на відпустки'),
+          iconCls: 'u-icon-check',
+          handler: function () {
+            const ctrl = this
+            const me = ctrl.up('form')
+            let employeeID
+            let employeeNumberID
+            let reco = AC.gridUtils.getCurrentRecord(ctrl)
+            if (reco) {
+              employeeID = reco.get('employeeID')
+              employeeNumberID = reco.get('employeeNumberID')
+            } else if (!employeeID || !employeeNumberID) {
+              $App.dialogInfo(UB.i18n('Необхідно вибрати працівника'), UB.i18n('Увага'))
+              return
+            }
+            HR.employeeTabs.runEmpCard({
+              employeeID: employeeID,
+              employeeNumberID: employeeNumberID,
+              isModal: true,
+              nodeId: 'hr_empVacationPlan',
+              customParams: {
+                visibleNodes: ['grpCommon', 'grpVac', 'hr_employee', 'hr_empVacationPlan'],
+                readOnlyExceptActive: true
+              }
+            })
+            me.toRefreshEmpData = true
+          }
+        }]
+      },
+      {
+        xtype: 'ubcombobox',
+        gridFieldList: ['descriptionExtView'],
+        name: 'sourceParaDescription',
+        fieldLabel: UB.i18n('Наказ про роботу'),
+        valueField: 'ID',
+        ubRequest: {
+          entity: 'hr_empOrderDet',
+          fieldList: ['ID', 'descriptionExtView', 'dateFrom'],
+          whereList: {
+            empOrderType: {
+              expression: '[empOrderType]',
+              condition: 'in',
+              value: ['CWSHD', 'CWSHDGRP']
+            },
+            orderState: {
+              expression: '[orderID.orderState]',
+              condition: 'in',
+              value: ['POSTED', 'PROCESSED']
+            },
+            notExists: {
+              expression: '',
+              condition: 'subquery',
+              subQueryType: 'notExists',
+              value: {
+                entity: 'hr_empOrderCwsrelaxhdDet',
+                fieldList: [],
+                method: 'select',
+                whereList: {
+                  cond: {
+                    expression: '[sourceParaID]=[{master}.ID]',
+                    condition: 'custom'
+                  },
+                  orderState: {
+                    condition: 'in',
+                    expression: '[orderID.orderState]',
+                    value: ['POSTED', 'PROCESSED']
+                  }
+                }
+              }
+            }
+          }
+        },
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+        isFormField: true,
+        displayField: 'descriptionExtView',
+        allowCustomText: true,
+        triggerCls: 'hr-list-trigger',
+        listeners: {
+          blur: ctrl => {
+            ctrl.setValue(ctrl.rawValue)
+            ctrl.up('form').record.set('sourceParaDescription', ctrl.rawValue)
+          },
+          change: ctrl => {
+            if (ctrl.disableChangeEvent) {
+              return
+            }
+            let form = ctrl.up('form')
+            form.record.set('sourceParaID', null)
+          },
+          select: (ctrl, data) => {
+            let form = ctrl.up('form')
+            ctrl.setValue(ctrl.rawValue)
+            form.record.set('sourceParaDescription', ctrl.rawValue)
+            let record = data.find(item => item.data.descriptionExt === ctrl.rawValue)
+            form.record.set('sourceParaID', record ? record.get('ID') : null)
+            if (record) {
+              form.record.set('dateTo', record.get('dateFrom'))
+            }
+          }
+        },
+        initContextMenu: function () {
+          const me = this
+          let menuItems = []
+          menuItems.push({
+            text: UB.i18n('clearSelection'),
+            iconCls: 'fa fa-eraser',
+            itemID: 'clearValue',
+            hidden: me.disableClearSelection,
+            handler: me.clearValue,
+            disabled: me.disabled || me.readOnly,
+            scope: me
+          })
+          me.contextMenu = Ext.create('Ext.menu.Menu', { items: menuItems })
+          me.clearValueButton = me.contextMenu.items.getAt(0)
+        }
+      },
+      {
+        attributeName: 'sourceParaID',
+        disabled: true,
+        hidden: true,
+        gridFieldList: ['descriptionExt'],
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+        fieldList: ['descriptionExt', 'dateFrom'],
+        displayField: ['descriptionExt'],
+        disabledIf: (ctrl, me) => !me.record.get('employeePositionID'),
+        whereList: {
+          empOrderType: {
+            expression: '[empOrderType]',
+            condition: '=',
+            value: 'CWSHD'
+          },
+          orderState: {
+            expression: '[orderID.orderState]',
+            condition: '=',
+            value: 'POSTED'
+          },
+          notExists: {
+            expression: '',
+            condition: 'subquery',
+            subQueryType: 'notExists',
+            value: {
+              entity: 'hr_empOrderCwsrelaxhdDet',
+              fieldList: [],
+              method: 'select',
+              whereList: {
+                cond: {
+                  expression: '[sourceParaID]=[{master}.ID]',
+                  condition: 'custom'
+                },
+                orderState: {
+                  condition: 'equal',
+                  expression: '[orderID.orderState]',
+                  value: 'POSTED'
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        attributeName: 'dateTo',
+        fieldLabel: UB.i18n('День роботи'),
+        allowBlank: false
+      },
+      {
+        attributeName: 'dateFrom',
+        fieldLabel: UB.i18n('День відпочинку'),
+        allowBlank: false
+      },
+      /* UBHR-16065, замість цього поля при проведенні буде використано детальну таблицю "Вид відпочинку" */
+      /* {
+        attributeName: 'dictTimeCostID',
+        allowBlank: false,
+        fieldList: ['ID', 'displayField'],
+        displayField: 'displayField',
+        gridFieldList: ['displayField'],
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+      }, */
+      {
+        attributeName: 'payElID',
+        hideEntityItemInContext: true
+      },
+      {
+        name: 'errorText',
+        xtype: 'label',
+        cls: 'x-form-item-label field-label-red',
+        margin: '10 10 5 15'
+      },
+      {
+        xtype: 'tabpanel',
+        region: 'center',
+        layout: 'fit',
+        ubID: 'tpDetail',
+        flex: 1,
+        items: [
+          {
+            title: UB.i18n('Вид відпочинку'),
+            name: 'empOrderVacationListDet',
+            xtype: 'ubdetailgrid',
+            paraGrid: true,
+            rowEditing: true,
+            notWriteChanges: true,
+            sortableColumns: false,
+            enableColumnHide: true,
+            autoScroll: true,
+            hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit',
+              'history', 'showDetail'],
+            flex: 1,
+            entityConfig: {
+              entity: 'hr_empOrderVacationListDet',
+              method: 'select',
+              fieldList: [
+                {
+                  name: 'dictVacationKindID.name',
+                  description: UB.i18n('Вид відпустки'),
+                  visibility: true,
+                  config: {
+                    width: 320
+                  },
+                  editor: {
+                    fieldList: ['ID', 'name', 'code', 'isDay'],
+                    whereList: {
+                      vacKindCode: {
+                        expression: '[code]',
+                        condition: 'equal',
+                        value: 'dWeekWork'
+                      }
+                    },
+                    orderList: { orderBy: { expression: 'name', order: 'asc' } }
+                  }
+                },
+                {
+                  name: 'dateFrom',
+                  visibility: true,
+                  config: {
+                    align: 'center',
+                    width: 100
+                  },
+                  editor: {
+                    caption: UB.i18n('Дата з')
+                  }
+                },
+                {
+                  name: 'dateTo',
+                  visibility: true,
+                  config: {
+                    align: 'center',
+                    width: 100
+                  },
+                  editor: {
+                    caption: UB.i18n('Дата по')
+                  }
+                },
+                {
+                  name: 'dayCount',
+                  readOnly: true,
+                  config: {
+                    align: 'center',
+                    config: {
+                      width: 80
+                    }
+                  },
+                  editor: {
+                    readOnly: true,
+                    allowBlank: true
+                  }
+                },
+                {
+                  name: 'empVacationPeriodID.descriptionEx',
+                  description: UB.i18n('За період'),
+                  config: {
+                    width: 350
+                  },
+                  editor: {
+                    allowBlank: false,
+                    fieldList: ['ID', 'descriptionEx', 'dateFrom', 'dayCountPlan', 'dayDiff'],
+                    gridFieldList: [
+                      { name: 'ID', visibility: false },
+                      { name: 'descriptionEx' },
+                      { name: 'dayCountPlan', config: { align: 'center' } },
+                      { name: 'dayDiff', config: { align: 'center' } }
+                    ],
+                    orderList: { orderBy: { expression: 'dateFrom' } },
+                    hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                  }
+                },
+                { name: 'empOrderType', visibility: false },
+                { name: 'employeePositionID', visibility: false },
+                { name: 'employeeNumberID', visibility: false },
+                { name: 'dictVacationKindID', visibility: false },
+                { name: 'empVacationPeriodID', visibility: false },
+                { name: 'orderID', visibility: false },
+                { name: 'paraID', visibility: false },
+                { name: 'isGroup', visibility: false }
+              ]
+            },
+            masterFields: ['ID'],
+            detailFields: ['paraID'],
+            onBeforeEdit: function (rowEditor, context) {
+              const editor = rowEditor.editor
+              const me = editor.up('form')
+              const reco = context.record
+              const employeeNumberID = me.attr.employeePositionID.getFieldValue('employeeNumberID') || 0
+              const dictVacationKindIDCtrl = editor.query(`[name=dictVacationKindID.name]`)[0]
+              const empVacationPeriodIDCtrl = editor.query(`[name=empVacationPeriodID.descriptionEx]`)[0]
+              const dateFromCtrl = editor.query(`[name=dateFrom]`)[0]
+              const dateToCtrl = editor.query(`[name=dateTo]`)[0]
+              const toSetDefaultValues = !!reco.phantom
+              const vacKindStore = dictVacationKindIDCtrl.getStore()
+              const vacPeriodStore = empVacationPeriodIDCtrl.getStore()
+              const dateRest = me.attr.dateFrom.getValue()
+              const sourceParaID = me.attr.sourceParaID.getValue()
+
+              dateFromCtrl.on('change', (ctrl, value) => {
+                if (AC.dateService.isValid(value)) {
+                  let dateTo = dateToCtrl.getValue()
+                  if (AC.dateService.isValid(dateTo) && !AC.dateService.equals(value, dateTo)) {
+                    dateToCtrl.setValue(value)
+                  }
+                }
+              })
+
+              dateToCtrl.on('change', (ctrl, value) => {
+                if (AC.dateService.isValid(value)) {
+                  let dateFrom = dateFromCtrl.getValue()
+                  if (AC.dateService.isValid(dateFrom) && !AC.dateService.equals(value, dateFrom)) {
+                    dateFromCtrl.setValue(value)
+                  }
+                }
+              })
+
+              if (toSetDefaultValues) {
+                reco.set('empOrderType', me.record.get('empOrderType'))
+                reco.set('employeePositionID', me.record.get('employeePositionID'))
+                reco.set('employeeNumberID', employeeNumberID)
+                reco.set('isGroup', true)
+                if (dateRest) {
+                  reco.set('dateFrom', dateRest)
+                  reco.set('dateTo', dateRest)
+                }
+                reco.set('dayCount', 1)
+              }
+
+              let vacPeriodFilter = [
+                ['empVacationPlanID.employeeNumberID', '=', employeeNumberID],
+                ['empVacationPlanID.dictVacationKindID.code', '=', me.vacKindCode],
+                ['dayDiff', '>', 0],
+                ['empVacationPlanID.mi_deleteDate', '>=', '#maxdate']
+              ]
+              if (dateRest) {
+                vacPeriodFilter.push(['dateFrom', '<=', dateRest])
+              }
+              AC.viewUtils.setWhereListProperty(empVacationPeriodIDCtrl, vacPeriodFilter)
+
+              function setVacPeriodDefaultValue () {
+                if (toSetDefaultValues && me.periodList && me.periodList.length > 0 && dictVacationKindIDCtrl.getValue()) {
+                  let empVacationPeriodIDVal = me.periodList[0]
+                  vacPeriodStore.isInternalChange = true
+                  HR.controlService.setRowEditComboValueById(empVacationPeriodIDCtrl, empVacationPeriodIDVal, () => {
+                    vacPeriodStore.isInternalChange = false
+                  })
+                  reco.set('empVacationPeriodID', empVacationPeriodIDVal)
+                }
+              }
+
+              function setVacKindDefaultValue () {
+                let dictVacationKindIDVal
+                let vacPeriodModes = []
+                if (toSetDefaultValues) {
+                  const vacKinds = vacKindStore.data.items
+                  if (vacKinds.length) {
+                    dictVacationKindIDVal = vacKinds[0].get('ID')
+                    if (dictVacationKindIDVal) {
+                      vacKindStore.isInternalChange = true
+                      HR.controlService.setRowEditComboValueById(dictVacationKindIDCtrl, dictVacationKindIDVal, () => {
+                        vacKindStore.isInternalChange = false
+                      })
+                      reco.set('dictVacationKindID', dictVacationKindIDVal)
+                      vacPeriodModes.push('clearStore')
+                    }
+                  }
+                }
+                if (!dictVacationKindIDVal) {
+                  dictVacationKindIDVal = dictVacationKindIDCtrl.getValue()
+                }
+                me.fillPeriodList(dictVacationKindIDVal).then(() => {
+                  if (toSetDefaultValues && me.periodList && me.periodList.length > 0 && dictVacationKindIDVal) {
+                    // Оновлення виконається в функції setVacPeriodDefaultValue
+                    vacPeriodModes = []
+                  }
+                  vacPeriodStore.isInternalChange = vacPeriodModes.includes('clearStore')
+                  if (!me.periodList || me.periodList.length === 0 || !dictVacationKindIDVal) {
+                    let filter = [
+                      ['empVacationPlanID.employeeNumberID', '=', employeeNumberID],
+                      ['empVacationPlanID.dictVacationKindID.code', '=', me.vacKindCode],
+                      ['dayDiff', '>', 0],
+                      ['empVacationPlanID.mi_deleteDate', '>=', '#maxdate']
+                    ]
+                    AC.viewUtils.setWhereListProperty(empVacationPeriodIDCtrl, filter, undefined, vacPeriodModes)
+                  } else {
+                    vacPeriodModes.push('clearWhereList')
+                    AC.viewUtils.setWhereListProperty(empVacationPeriodIDCtrl, [
+                      ['ID', 'in', me.periodList]
+                    ], undefined, vacPeriodModes)
+                  }
+                  if (!sourceParaID) { // UBHR-16240
+                    setVacPeriodDefaultValue()
+                  }
+                })
+              }
+
+              dictVacationKindIDCtrl.getStore().on('load', (store) => {
+                if (!store.isLoaded) {
+                  setVacKindDefaultValue()
+                  store.isLoaded = true
+                }
+              })
+            },
+            optimizeColumnWidth: function () {
+              /* do nothing for manual column width tunning */
+            },
+            customActions: [
+              {
+                tooltip: UB.i18n('Додати вид відпочинку'),
+                name: 'addPeriods',
+                actionId: 'addPeriods',
+                iconCls: 'fas fa-angle-double-down',
+                cls: 'fill-action',
+                handler: function (btn) {
+                  const grid = btn.up('[name=empOrderVacationListDet]')
+                  const form = btn.up('form')
+                  if (form.orderState !== 'PROJECT' && form.orderState !== 'ON_COMPLETION') {
+                    return
+                  }
+
+                  if (grid.getStore().data.length) {
+                    $App.dialogYesNo(UB.i18n('Раніше додані записи будуть видалені. Продовжити?'))
+                      .then(function (res) {
+                        if (res) {
+                          form.addPeriod()
+                        }
+                      })
+                  } else {
+                    form.addPeriod()
+                  }
+                }
+              }
+            ],
+            cmpInitConfig: {
+              customInit: function () {
+                const grid = this
+                grid.on('changeData', (grd, event) => {
+                  const me = grd.up('form')
+                  HR.orderManager.setIsDirty(me, true)
+                  me.enableGridActions(grd, event)
+                  if (event === 'delete') {
+                    grid.deletedID = grid.id4del
+                  }
+                })
+                grid.on('addNew', () => {
+                  grid.inserted = true
+                })
+                grid.on('edit', () => {
+                  grid.inserted = false
+                })
+                grid.on('del', () => {
+                  grid.id4del = grid.store.data.items.length && grid.store.data.items[0].get('ID')
+                  grid.inserted = false
+                })
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+})()

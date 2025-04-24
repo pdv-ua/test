@@ -1,0 +1,138 @@
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'orderID.orderDate', 'empOrderType', 'organizationID', 'isGroup',
+    'employeeNumberID', 'employeeID'
+  ],
+  parentConfig: {
+    layout: {
+      type: 'border'
+    }
+  },
+  defaults: {
+    layout: 'fit'
+  },
+  size: {
+    width: 900,
+    height: 400
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Передача матеріальних цінностей'),
+          ubID: 'tabMain',
+          layout: { type: 'hbox' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              defaults: { labelWidth: 120 },
+              items: [
+                {
+                  attributeName: 'employeePositionID',
+                  addWorkPlace: true,
+                  xtype: 'empPositionCombobox',
+                  fieldList: ['ID', 'description', 'employeeNumberID', 'workPlace', 'organizationID', 'vacancyDateFrom', 'vacancyDateTo'],
+                  orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+                  margin: '10 15 5 15'
+                },
+                {
+                  attributeName: 'toEmployeePositionID',
+                  xtype: 'empPositionCombobox',
+                  addWorkPlace: true,
+                  fieldList: ['ID', 'description', 'employeeNumberID', 'workPlace'],
+                  orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } }
+                },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    {
+                      attributeName: 'dateFrom',
+                      fieldLabel: UB.i18n('З'),
+                      labelWidth: 120,
+                      width: 240
+                    },
+                    {
+                      attributeName: 'dateTo',
+                      fieldLabel: UB.i18n('по'),
+                      labelWidth: 40,
+                      width: 160
+                    }
+                  ]
+                },
+                {
+                  layout: {
+                    type: 'hbox'
+                  },
+                  items: [
+                    {
+                      attributeName: 'reason',
+                      fieldLabel: UB.i18n('Причина'),
+                      labelWidth: 120,
+                      flex: 1
+                    },
+                    {
+                      xtype: 'button',
+                      cls: 'list-icon',
+                      name: 'reasonButton',
+                      tooltip: UB.i18n('Вибрати'),
+                      width: 35,
+                      height: 35,
+                      margin: '0 12 0 -45',
+                      handler: btn => {
+                        btn.up('form').attr.reason.selectHandler(btn)
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              width: 140,
+              items: [
+                {
+                  xtype: 'checkboxfield',
+                  name: 'empPosAll',
+                  fieldLabel: UB.i18n('Показати всіх'),
+                  labelWidth: 100,
+                  width: 120,
+                  margin: '10 10 5 0',
+                  listeners: {
+                    change: function (ctrl) {
+                      const me = ctrl.up('form')
+                      me.filterEmpPos(ctrl.getValue())
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Комісія'),
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'commissionHRID',
+              fieldList: ['ID', 'name', 'organizationID'],
+              margin: '10 15 5 15'
+            },
+            {
+              xtype: 'commissionHR',
+              commissionIDAttribute: 'commissionHRID',
+              dateRecordField: 'orderID.orderDate',
+              masterFields: ['ID'],
+              detailFields: ['orderDetID'],
+              flex: 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

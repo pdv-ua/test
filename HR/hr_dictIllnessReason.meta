@@ -1,0 +1,146 @@
+{
+  "caption": "Причини непрацездатності",
+  "description": "Причини непрацездатності",
+  "descriptionAttribute": "name",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 32,
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код",
+      "allowNull": false
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 256,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "fullName",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Повна назва",
+      "description": "Повна назва",
+      "documentation": "Повна назва",
+      "allowNull": false
+    },
+    {
+      "name": "illnessKind",
+      "dataType": "Enum",
+      "enumGroup": "HR_ILLNESSKIND",
+      "caption": "Тип документа",
+      "description": "Тип документа",
+      "documentation": "Тип документа",
+      "defaultValue": "1",
+      "allowNull": false
+    },
+    {
+      "name": "payElFOPID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати за рахунок ФОП",
+      "description": "Вид оплати за рахунок ФОП",
+      "documentation": "Вид оплати за рахунок ФОП"
+    },
+    {
+      "name": "maxDayFOP",
+      "dataType": "Int",
+      "caption": "Днів за рахунок ФОП",
+      "description": "Днів за рахунок ФОП",
+      "documentation": "Днів за рахунок ФОП"
+    },
+    {
+      "name": "payElFSSUID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати за рахунок СС",
+      "description": "Вид оплати за рахунок СС",
+      "documentation": "Вид оплати за рахунок СС"
+    },
+    {
+      "name": "payElUnpaidID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_payEl",
+      "caption": "Вид оплати для неоплачуваних днів",
+      "description": "Вид оплати для неоплачуваних днів",
+      "documentation": "Вид оплати для неоплачуваних днів"
+    },
+    {
+      "name": "orderN",
+      "dataType": "Int",
+      "caption": "Упорядкування",
+      "description": "Упорядкування",
+      "documentation": "Упорядкування",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "documentation": "Діє з",
+      "description": "Діє з",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "allowNull": false,
+      "defaultView": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "documentation": "Діє з",
+      "description": "Діє з",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

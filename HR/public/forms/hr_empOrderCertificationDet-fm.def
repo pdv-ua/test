@@ -1,0 +1,247 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+/* eslint-disable no-unused-vars */
+/* global AC $App HR _ UB */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'empOrderType', 'organizationID', 'isGroup',
+    'positionID', 'employeeNumberID', 'employeePositionID.employeeNumberID', 'employeeID', 'destOrganizationName', 'destOrganizationID'
+  ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  defaults: {
+    layout: 'fit'
+  },
+  size: {
+    width: 1100,
+    height: 700
+  },
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [{
+      orderId: 4,
+      actionId: 'dummyAction'
+    }]
+  }],
+  items: [{
+    xtype: 'tabpanel',
+    region: 'center',
+    listeners: {
+      tabchange: function (tp, t) {}
+    },
+    items: [{
+      title: UB.i18n('Загальне'),
+      ubID: 'tabMain',
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [{
+        attributeName: 'employeePositionID',
+        xtype: 'empPositionCombobox',
+        fieldLabel: UB.i18n('Працівник'),
+        fieldList: ['ID', 'description', 'organizationID', 'dateFrom', 'dateTo', 'dictStaffCatID.name', 'workPlace', 'payElID', 'positionType', 'vacancyDateFrom', 'vacancyDateTo', 'employeeNumberID'],
+        addWorkPlace: true
+      },
+      {
+        xtype: 'ubfieldset',
+        border: 1,
+        title: UB.i18n('За наказом'),
+        margin: '0 15 0 15',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          HR.controlService.getEduOrgCombo({
+            fieldID: 'destOrganizationID',
+            fieldName: 'destOrganizationName',
+            labelWidth: 115,
+            width: 635,
+            whereList: {},
+            fieldLabel: UB.i18n('Установа, яка видала')
+          }),
+          {
+            layout: {
+              type: 'hbox',
+              align: 'middle'
+            },
+            items: [{
+              attributeName: 'orderNumber'
+            },
+            {
+              attributeName: 'orderDate'
+            }
+            ]
+
+          }
+        ]
+
+      },
+      {
+        layout: {
+          type: 'hbox',
+          align: 'middle'
+        },
+        items: [{
+          flex: 1,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+
+          items: [
+            {
+              attributeName: 'certificationType',
+              fieldList: ['code', 'name'],
+              editable: false,
+              whereList: {
+                a: {
+                  expression: '[code]',
+                  condition: 'in',
+                  value: ['ASSIGN', 'PROLONG']
+                }
+              }
+            },
+            {
+              attributeName: 'dictEmpCategoryID'
+            },
+            {
+              attributeName: 'dateFrom'
+            },
+            {
+              attributeName: 'dateToEmpty'
+            },
+            {
+              attributeName: 'docNumber'
+            }
+          ]
+        },
+        {
+          flex: 1,
+          layout: {
+            type: 'vbox',
+            align: 'stretch'
+          },
+          items: [{
+            attributeName: 'dictTarifCoeffID',
+            fieldList: ['ID', 'description', 'accrualSum'],
+            displayField: 'description',
+            labelWidth: 250,
+            listeners: {
+              select: ctrl => {
+                const me = ctrl.up('form')
+                const accrualSum = ctrl.getFieldValue('accrualSum')
+                me.record.set('tarifSalary', accrualSum)
+                me.attr.tarifSalary.setValue(accrualSum)
+              },
+              change: ctrl => {
+                if (!ctrl.getValue()) {
+                  ctrl.up('form').record.set('tarifSalary', null)
+                }
+              }
+
+            }
+          },
+          {
+            attributeName: 'tarifSalary',
+            labelWidth: 250,
+            border: false,
+            readOnly: true
+          },
+          {
+            xtype: 'ubfieldset',
+            border: 1,
+            title: UB.i18n('Оклад'),
+            margin: '0 15 0 0',
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            items: [{
+              attributeName: 'payElID',
+              fieldList: ['ID', 'description', 'methodID.methodGroupID.code'],
+              whereList: {
+                code: {
+                  expression: '[methodID.methodGroupID.code]',
+                  condition: 'equal',
+                  value: 1
+                }
+              }
+            },
+            {
+              attributeName: 'accrualSum'
+            }
+            ]
+          }
+          ]
+        }
+
+        ]
+
+      },
+      {
+        attributeName: 'dictSpecialtyID',
+        whereList: {
+          specialityType: {
+            expression: '[specialityType]',
+            condition: 'equal',
+            value: '2'
+
+          }
+        }
+
+      },
+      {
+        attributeName: 'info'
+      },
+      {
+        layout: {
+          type: 'hbox'
+        },
+        items: [{
+          layout: {
+            type: 'hbox',
+            align: 'top'
+          },
+          flex: 1,
+          items: [{
+            attributeName: 'reason',
+            flex: 1,
+            margin: '5 13 0 15'
+          },
+          {
+            xtype: 'button',
+            cls: 'list-icon',
+            name: 'reasonButton',
+            tooltip: UB.i18n('Вибрати'),
+            width: 35,
+            height: 35,
+            margin: '0 13 0 -45',
+            handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+          }
+          ]
+        }]
+      }
+      ]
+    },
+    {
+      title: UB.i18n('Нарахування'),
+      name: 'orderAccrualGridTab',
+      layout: {
+        type: 'border'
+      },
+      items: [
+        _.merge(HR.orderManager.getOrderAccrualGrid('hr_empOrderCertificationDet'), {
+          region: 'center',
+          name: 'orderAccrualGrid'
+        })
+      ]
+    }
+    ]
+  }]
+}

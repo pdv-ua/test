@@ -1,0 +1,1445 @@
+// @isModal true
+/* global appAC appHR UB Ext AC $App HR */
+
+exports.formDef = 'HR.employeePositionUpdate'
+
+Ext.define('HR.employeePositionUpdate', {
+  extend: 'Ext.form.Panel',
+  alias: 'widget.employeePositionUpdate',
+  width: 1100,
+  height: 700,
+  layout: { type: 'border' },
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  isModal: true,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        layout: { type: 'border' },
+        region: 'center',
+        items: [
+          {
+            xtype: 'tabpanel',
+            region: 'center',
+            items: [
+              {
+                title: UB.i18n('Параметри коригування'),
+                layout: { type: 'border' },
+                items: [
+                  {
+                    xtype: 'panel',
+                    region: 'north',
+                    margin: {
+                      top: 10
+                    },
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        xtype: 'combobox',
+                        name: 'entity',
+                        labelWidth: 100,
+                        width: 350,
+                        fieldLabel: UB.i18n('Розділ'),
+                        valueField: 'code',
+                        displayField: 'name',
+                        defaultValue: 'employeePosition',
+                        store: Ext.create('Ext.data.Store', {
+                          fields: [
+                            { name: 'name' },
+                            { name: 'code' }
+                          ],
+                          data: [
+                            { name: UB.i18n('Призначення працівника'), code: 'employeePosition' },
+                            { name: UB.i18n('Постійні нарахування'), code: 'employeeAccrual' },
+                            { name: UB.i18n('Постійні утримання'), code: 'payRetention' },
+                            { name: UB.i18n('Шаблон виплати'), code: 'payOutTemplate' }
+                          ]
+                        }),
+                        listeners: {
+                          change: (ctrl, value) => {
+                            HR.orderManager.showIf(me)
+                            HR.orderManager.disabledIf(me)
+                            switch (value) {
+                              case 'employeePosition':
+                                me.attr.action.setValue({ mode: 'updateEmployeePosition' })
+                                me.attr.accrualSum.setFieldLabel(UB.i18n('Оклад'))
+                                AC.viewUtils.setWhereListProperty(me.attr.payElID, [
+                                  ['methodID.code', 'in', ['1', '2', '3', '44', '77', '63']]
+                                ], undefined, ['clearValue', 'clearStore', 'clearWhereList'])
+                                break
+                              case 'employeeAccrual':
+                                me.attr.action.setValue({ mode: 'updateEmployeeAccrual' })
+                                me.attr.accrualSum.setFieldLabel(UB.i18n('Сума'))
+                                AC.viewUtils.setWhereListProperty(me.attr.payElID, [
+                                  ['methodID.methodGroupID.groupType', '=', 'PAYMENT'],
+                                  ['isAutoCalc', '=', 1]
+                                ], undefined, ['clearValue', 'clearStore', 'clearWhereList'])
+                                break
+                              case 'payRetention':
+                                me.attr.action.setValue({ mode: 'updatePayRetention' })
+                                me.attr.accrualSum.setFieldLabel(UB.i18n('Сума'))
+                                AC.viewUtils.setWhereListProperty(me.attr.payElID, [
+                                  ['methodID.methodGroupID.groupType', 'in', ['OFFTAKE', 'FORPAY']],
+                                  ['methodID.code', 'notEqual', '43']
+                                ], undefined, ['clearValue', 'clearStore', 'clearWhereList'])
+                                break
+                              case 'payOutTemplate':
+                                me.attr.action.setValue({ mode: 'updatePayOutTemplate' })
+                                break
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'panel',
+                    region: 'center',
+                    ubID: 'employeePosition',
+                    margin: {
+                      top: 10
+                    },
+                    style: 'border-top: 1px solid #BFBFBF;',
+                    layout: { type: 'vbox', align: 'stretch' },
+                    autoScroll: true,
+                    items: [
+                      {
+                        xtype: 'radiogroup',
+                        name: 'action',
+                        columns: 1,
+                        vertical: true,
+                        margin: {
+                          left: 100
+                        },
+                        listeners: {
+                          change: (ctrl, value) => {
+                            HR.orderManager.showIf(me)
+                            HR.orderManager.disabledIf(me)
+                            HR.orderManager.requiredIf(me)
+                          }
+                        },
+                        items: [
+                          {
+                            name: 'mode',
+                            boxLabel: UB.i18n('Коригувати наявні призначення'),
+                            showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()),
+                            inputValue: 'updateEmployeePosition',
+                            width: 450
+                          },
+                          {
+                            name: 'mode',
+                            boxLabel: UB.i18n('Створити нове призначення'),
+                            showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()),
+                            inputValue: 'createEmployeePosition'
+                          },
+                          {
+                            name: 'mode',
+                            boxLabel: ('Коригувати наявні записи постійних нарахувань'),
+                            showIf: (ctrl, me) => ['employeeAccrual'].includes(me.attr.entity.getValue()),
+                            inputValue: 'updateEmployeeAccrual'
+                          },
+                          {
+                            name: 'mode',
+                            boxLabel: UB.i18n('Створити новий запис постійного нарахування'),
+                            showIf: (ctrl, me) => ['employeeAccrual'].includes(me.attr.entity.getValue()),
+                            inputValue: 'createEmployeeAccrual'
+                          },
+                          {
+                            name: 'mode',
+                            showIf: (ctrl, me) => ['payRetention'].includes(me.attr.entity.getValue()),
+                            boxLabel: UB.i18n('Коригувати наявні записи постійних утримань і виплат'),
+                            inputValue: 'updatePayRetention'
+                          },
+                          {
+                            name: 'mode',
+                            showIf: (ctrl, me) => ['payRetention'].includes(me.attr.entity.getValue()),
+                            boxLabel: UB.i18n('Створити новий запис постійного утримання або виплати'),
+                            inputValue: 'createPayRetention'
+                          },
+                          {
+                            name: 'mode',
+                            showIf: (ctrl, me) => ['payOutTemplate'].includes(me.attr.entity.getValue()),
+                            boxLabel: UB.i18n('Коригувати наявні записи шаблонів виплат'),
+                            inputValue: 'updatePayOutTemplate'
+                          }
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        padding: {
+                          bottom: 10
+                        },
+                        items: [
+                          {
+                            layout: { type: 'hbox' },
+                            flex: 1,
+                            items: [
+                              {
+                                name: 'dateFrom',
+                                showIf: (ctrl, me) => !['payOutTemplate'].includes(me.attr.entity.getValue()),
+                                xtype: 'ubdatefield',
+                                labelWidth: 100,
+                                fieldLabel: UB.i18n('Початок'),
+                                requiredIf: (ctrl, me) => ['createEmployeePosition', 'createEmployeeAccrual', 'createPayRetention'].includes(me.getActionValue())
+                              },
+                              {
+                                name: 'dateTo',
+                                showIf: (ctrl, me) => !['payOutTemplate'].includes(me.attr.entity.getValue()),
+                                xtype: 'ubdatefield',
+                                fieldLabel: UB.i18n('Закінчення')
+                              }
+                            ]
+                          },
+                          {
+                            layout: { type: 'hbox' },
+                            flex: 1,
+                            items: [
+                              {
+                                name: 'orderNumber',
+                                showIf: (ctrl, me) => ['employeePosition', 'employeeAccrual'].includes(me.attr.entity.getValue()) && !['updateEmployeePosition'].includes(me.getActionValue()),
+                                labelWidth: 80,
+                                xtype: 'ubtextfield',
+                                fieldLabel: UB.i18n('Наказ')
+                              },
+                              {
+                                name: 'orderDate',
+                                labelWidth: 60,
+                                showIf: (ctrl, me) => ['employeePosition', 'employeeAccrual'].includes(me.attr.entity.getValue()) && !['updateEmployeePosition'].includes(me.getActionValue()),
+                                xtype: 'ubdatefield',
+                                fieldLabel: UB.i18n('від')
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        style: 'border-top: 1px solid #BFBFBF;',
+                        items: [
+                          {
+                            layout: { type: 'hbox' },
+                            flex: 1,
+                            showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()),
+                            items: [
+                              {
+                                xtype: 'checkbox',
+                                name: 'checkWorkPlace',
+                                listeners: {
+                                  change: (ctrl, value) => {
+                                    if (!value) me.attr.workPlace.setValue()
+                                  }
+                                }
+                              },
+                              {
+                                xtype: 'ubcombobox',
+                                fieldLabel: UB.i18n('Місце роботи'),
+                                labelWidth: 150,
+                                name: 'workPlace',
+                                hideEntityItemInContext: true,
+                                valueField: 'code',
+                                ubRequest: {
+                                  entity: 'ubm_enum',
+                                  method: UB.core.UBCommand.methodName.SELECT,
+                                  fieldList: ['ID', 'name', 'code', 'eGroup'],
+                                  whereList: {
+                                    enumGroupFilter: {
+                                      expression: '[eGroup]',
+                                      condition: 'equal',
+                                      values: {
+                                        val: 'HR_WORKER_PLACE'
+                                      }
+                                    }
+                                  }
+                                },
+                                listeners: {
+                                  select: () => {
+                                    me.attr.checkWorkPlace.setValue(true)
+                                  },
+                                  change: (ctrl, value) => {
+                                    me.attr.checkWorkPlace.setValue(!!value)
+                                  }
+                                },
+                                flex: 1
+                              }
+                            ]
+                          },
+                          {
+                            layout: { type: 'hbox' },
+                            flex: 1,
+                            showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()),
+                            items: [
+                              {
+                                xtype: 'checkbox',
+                                name: 'checkRaiseSalary',
+                                listeners: {
+                                  change: (ctrl, value) => {
+                                    if (!value) me.attr.raiseSalary.setValue()
+                                  }
+                                }
+                              },
+                              {
+                                xtype: 'ubdatefield',
+                                fieldLabel: UB.i18n('Місяць підвищення доходу для індексації'),
+                                labelWidth: 150,
+                                name: 'raiseSalary',
+                                flex: 1,
+                                listeners: {
+                                  select: () => {
+                                    me.attr.checkRaiseSalary.setValue(true)
+                                  },
+                                  change: (ctrl, value) => {
+                                    me.attr.checkRaiseSalary.setValue(!!value)
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        showIf: (ctrl, me) => ['payOutTemplate'].includes(me.attr.entity.getValue()),
+                        requiredIf: (ctrl, me) => ['payOutTemplate'].includes(me.attr.entity.getValue()),
+                        items: [
+                          {
+                            xtype: 'ubcombobox',
+                            fieldLabel: UB.i18n('Шаблон виплати'),
+                            labelWidth: 150,
+                            name: 'payOutTemplateID',
+                            hideEntityItemInContext: true,
+                            ubRequest: {
+                              entity: 'hr_payOut',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['ID', 'name']
+                            },
+                            flex: 1
+                          }
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            layout: { type: 'hbox' },
+                            flex: 1,
+                            showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()),
+                            items: [
+                              {
+                                xtype: 'checkbox',
+                                name: 'checkWorkerType',
+                                listeners: {
+                                  change: (ctrl, value) => {
+                                    if (!value) me.attr.workerType.setValue()
+                                  }
+                                }
+                              },
+                              {
+                                xtype: 'ubcombobox',
+                                fieldLabel: UB.i18n('Форма зайнятості'),
+                                labelWidth: 150,
+                                name: 'workerType',
+                                hideEntityItemInContext: true,
+                                valueField: 'code',
+                                ubRequest: {
+                                  entity: 'ubm_enum',
+                                  method: UB.core.UBCommand.methodName.SELECT,
+                                  fieldList: ['ID', 'name', 'code', 'eGroup'],
+                                  whereList: {
+                                    enumGroupFilter: {
+                                      expression: '[eGroup]',
+                                      condition: 'equal',
+                                      values: {
+                                        val: 'HR_WORKER_TYPE'
+                                      }
+                                    }
+                                  }
+                                },
+                                listeners: {
+                                  select: () => {
+                                    me.attr.checkWorkerType.setValue(true)
+                                  },
+                                  change: (ctrl, value) => {
+                                    me.attr.checkWorkerType.setValue(!!value)
+                                  }
+                                },
+                                flex: 1
+                              }
+                            ]
+                          },
+                          {
+                            layout: { type: 'hbox' },
+                            flex: 1,
+                            showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()),
+                            items: [
+                              {
+                                xtype: 'checkbox',
+                                name: 'checkDateNew',
+                                listeners: {
+                                  change: (ctrl, value) => {
+                                    if (!value) me.attr.dateNew.setValue()
+                                  }
+                                }
+                              },
+                              {
+                                xtype: 'ubdatefield',
+                                fieldLabel: UB.i18n('Дата створення нового робочого місця'),
+                                labelWidth: 150,
+                                name: 'dateNew',
+                                flex: 1,
+                                listeners: {
+                                  select: () => {
+                                    me.attr.checkDateNew.setValue(true)
+                                  },
+                                  change: (ctrl, value) => {
+                                    me.attr.checkDateNew.setValue(!!value)
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()),
+                        items: [
+                          {
+                            xtype: 'checkbox',
+                            name: 'checkDictStaffCatID',
+                            listeners: {
+                              change: (ctrl, value) => {
+                                if (!value) me.attr.dictStaffCatID.setValue()
+                              }
+                            }
+                          },
+                          {
+                            xtype: 'ubcombobox',
+                            fieldLabel: UB.i18n('Категорія персоналу'),
+                            labelWidth: 150,
+                            disableModifyEntity: true,
+                            displayField: 'description',
+                            name: 'dictStaffCatID',
+                            ubRequest: {
+                              entity: 'hr_dictStaffCat',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['ID', 'name', 'code', 'description']
+                            },
+                            listeners: {
+                              select: () => {
+                                me.attr.checkDictStaffCatID.setValue(true)
+                              },
+                              change: (ctrl, value) => {
+                                me.attr.checkDictStaffCatID.setValue(!!value)
+                              }
+                            },
+                            flex: 1
+                          },
+                          {
+                            xtype: 'checkbox',
+                            name: 'checkIsIndex',
+                            listeners: {
+                              change: (ctrl, value) => {
+                                if (!value) me.attr.isIndex.setValue()
+                              }
+                            }
+                          },
+                          {
+                            xtype: 'checkbox',
+                            fieldLabel: UB.i18n('Індексувати середній заробіток згідно підвищення окладу'),
+                            labelWidth: 250,
+                            name: 'isIndex',
+                            flex: 1,
+                            listeners: {
+                              select: () => {
+                                me.attr.checkIsIndex.setValue(true)
+                              },
+                              change: (ctrl, value) => {
+                                me.attr.checkIsIndex.setValue(!!value)
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()),
+                        items: [
+                          {
+                            xtype: 'checkbox',
+                            name: 'checkDepartmentID',
+                            listeners: {
+                              change: (ctrl, value) => {
+                                if (!value) me.attr.departmentID.setValue()
+                              }
+                            }
+                          },
+                          {
+                            xtype: 'ubcombobox',
+                            fieldLabel: UB.i18n('Підрозділ'),
+                            labelWidth: 150,
+                            name: 'departmentID',
+                            disableModifyEntity: true,
+                            valueField: 'mi_data_id',
+                            displayField: 'caption',
+                            ubRequest: {
+                              entity: 'hr_department',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['ID', 'name', 'description', 'caption', 'mi_data_id'],
+                              __mip_recordhistory_all: true,
+                              whereList: { state: { expression: '[state]', condition: '=', value: 'ACTIVE' } }
+                            },
+                            flex: 1,
+                            listeners: {
+                              select: () => {
+                                me.attr.checkDepartmentID.setValue(true)
+                              },
+                              change: (ctrl, value) => {
+                                me.attr.checkDepartmentID.setValue(!!value)
+                              }
+                            }
+                          },
+                          {
+                            xtype: 'checkbox',
+                            name: 'checkDictCategoryECBID',
+                            listeners: {
+                              change: (ctrl, value) => {
+                                if (!value) me.attr.dictCategoryECBID.setValue()
+                              }
+                            }
+                          },
+                          {
+                            xtype: 'ubcombobox',
+                            fieldLabel: UB.i18n('Категорія застрахованої особи'),
+                            labelWidth: 150,
+                            disableModifyEntity: true,
+                            displayField: 'description',
+                            name: 'dictCategoryECBID',
+                            ubRequest: {
+                              entity: 'hr_dictCategoryECB',
+                              method: UB.core.UBCommand.methodName.SELECT,
+                              fieldList: ['ID', 'name', 'description']
+                            },
+                            flex: 1,
+                            listeners: {
+                              select: () => {
+                                me.attr.checkDictCategoryECBID.setValue(true)
+                              },
+                              change: (ctrl, value) => {
+                                me.attr.checkDictCategoryECBID.setValue(!!value)
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            layout: { type: 'hbox' },
+                            flex: 1,
+                            showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()) && AC.settings.get('hrUseStaffingTable', appAC.globalOrganization()),
+                            items: [
+                              {
+                                xtype: 'checkbox',
+                                name: 'checkPositionID',
+                                listeners: {
+                                  change: (ctrl, value) => {
+                                    if (!value) me.attr.positionID.setValue()
+                                  }
+                                }
+                              },
+                              {
+                                xtype: 'ubcombobox',
+                                fieldLabel: UB.i18n('Посада'),
+                                labelWidth: 150,
+                                name: 'positionID',
+                                valueField: 'mi_data_id',
+                                displayField: 'caption',
+                                disableModifyEntity: true,
+                                ubRequest: {
+                                  entity: 'hr_position',
+                                  method: UB.core.UBCommand.methodName.SELECT,
+                                  fieldList: ['ID', 'name', 'description', 'caption', 'mi_data_id'],
+                                  __mip_recordhistory_all: true,
+                                  whereList: { state: { expression: '[state]', condition: '=', value: 'ACTIVE' } }
+                                },
+                                flex: 1,
+                                listeners: {
+                                  select: () => {
+                                    me.attr.checkPositionID.setValue(true)
+                                  },
+                                  change: (ctrl, value) => {
+                                    me.attr.checkPositionID.setValue(!!value)
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            layout: { type: 'hbox' },
+                            flex: 1,
+                            showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()) && !AC.settings.get('hrUseStaffingTable', appAC.globalOrganization()),
+                            items: [
+                              {
+                                xtype: 'checkbox',
+                                name: 'checkDictPositionID',
+                                listeners: {
+                                  change: (ctrl, value) => {
+                                    if (!value) me.attr.dictPositionID.setValue()
+                                  }
+                                }
+                              },
+                              {
+                                xtype: 'ubcombobox',
+                                fieldLabel: UB.i18n('Посада'),
+                                labelWidth: 150,
+                                name: 'dictPositionID',
+                                valueField: 'ID',
+                                displayField: 'name',
+                                disableModifyEntity: true,
+                                ubRequest: {
+                                  entity: 'hr_dictPosition',
+                                  method: UB.core.UBCommand.methodName.SELECT,
+                                  fieldList: ['ID', 'name'],
+                                  __mip_recordhistory_all: true
+                                },
+                                flex: 1,
+                                listeners: {
+                                  select: () => {
+                                    me.attr.checkDictPositionID.setValue(true)
+                                  },
+                                  change: (ctrl, value) => {
+                                    me.attr.checkDictPositionID.setValue(!!value)
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            layout: { type: 'hbox' },
+                            showIf: (ctrl, me) => ['employeeAccrual', 'payRetention'].includes(me.attr.entity.getValue()),
+                            // disabledIf: (ctrl, me) => !(['createEmployeeAccrual', 'createPayRetention'].includes(me.getActionValue())),
+                            flex: 1,
+                            items: [
+                              {
+                                xtype: 'checkbox',
+                                name: 'checkPayElID',
+                                // disabledIf: (ctrl, me) => !(['createEmployeeAccrual', 'createPayRetention'].includes(me.getActionValue())),
+                                listeners: {
+                                  change: (ctrl, value) => {
+                                    if (!value) me.attr.payElID.setValue()
+                                  }
+                                }
+                              },
+                              {
+                                xtype: 'ubcombobox',
+                                name: 'payElID',
+                                labelWidth: 150,
+                                flex: 1,
+                                displayField: 'description',
+                                fieldLabel: UB.i18n('Вид оплати'),
+                                disableModifyEntity: true,
+                                ubRequest: {
+                                  entity: 'hr_payEl',
+                                  method: UB.core.UBCommand.methodName.SELECT,
+                                  fieldList: ['ID', 'name', 'description'],
+                                  orderList: {
+                                    orderBy: {
+                                      expression: 'codeSort'
+                                    }
+                                  }
+                                },
+                                requiredIf: (ctrl, me) => ['createEmployeeAccrual', 'createPayRetention'].includes(me.getActionValue()),
+                                // disabledIf: (ctrl, me) => !(['createEmployeeAccrual', 'createPayRetention'].includes(me.getActionValue())),
+                                listeners: {
+                                  select: () => {
+                                    me.attr.checkPayElID.setValue(true)
+                                  },
+                                  change: (ctrl, value) => {
+                                    me.attr.checkPayElID.setValue(!!value)
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            layout: { type: 'hbox' },
+                            flex: 1,
+                            showIf: (ctrl, me) => ['employeeAccrual', 'employeePosition'].includes(me.attr.entity.getValue()),
+                            items: [
+                              {
+                                xtype: 'checkbox',
+                                name: 'checkDictFundSourceID',
+                                listeners: {
+                                  change: (ctrl, value) => {
+                                    if (!value) me.attr.dictFundSourceID.setValue()
+                                  }
+                                }
+                              },
+                              {
+                                xtype: 'ubcombobox',
+                                fieldLabel: UB.i18n('Джерело фінансування'),
+                                labelWidth: 150,
+                                name: 'dictFundSourceID',
+                                disableModifyEntity: true,
+                                displayField: 'description',
+                                ubRequest: {
+                                  entity: 'ac_fundSource',
+                                  method: UB.core.UBCommand.methodName.SELECT,
+                                  fieldList: ['ID', 'name', 'description']
+                                },
+                                flex: 1,
+                                listeners: {
+                                  select: () => {
+                                    me.attr.checkDictFundSourceID.setValue(true)
+                                  },
+                                  change: (ctrl, value) => {
+                                    me.attr.checkDictFundSourceID.setValue(!!value)
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            layout: { type: 'hbox' },
+                            showIf: (ctrl, me) => ['payRetention'].includes(me.attr.entity.getValue()),
+                            flex: 1,
+                            items: [
+                              {
+                                xtype: 'checkbox',
+                                name: 'checkContractorID',
+                                listeners: {
+                                  change: (ctrl, value) => {
+                                    if (!value) me.attr.contractorID.setValue()
+                                  }
+                                }
+                              },
+                              {
+                                xtype: 'ubcombobox',
+                                fieldLabel: UB.i18n('Отримувач'),
+                                labelWidth: 150,
+                                displayField: 'description',
+                                disableModifyEntity: true,
+                                name: 'contractorID',
+                                ubRequest: {
+                                  entity: 'ac_contractor',
+                                  method: UB.core.UBCommand.methodName.SELECT,
+                                  fieldList: ['ID', 'name', 'description']
+                                },
+                                flex: 1,
+                                listeners: {
+                                  select: () => {
+                                    me.attr.checkContractorID.setValue(true)
+                                  },
+                                  change: (ctrl, value) => {
+                                    me.attr.checkContractorID.setValue(!!value)
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            layout: { type: 'vbox', align: 'stretch' },
+                            flex: 1,
+                            items: [
+                              {
+                                layout: { type: 'hbox' },
+                                flex: 1,
+                                showIf: (ctrl, me) => ['payRetention'].includes(me.attr.entity.getValue()),
+                                items: [
+                                  {
+                                    xtype: 'checkbox',
+                                    name: 'checkPaymentMethod',
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        if (!value) me.attr.paymentMethod.setValue()
+                                      }
+                                    }
+                                  },
+                                  {
+                                    xtype: 'ubcombobox',
+                                    fieldLabel: UB.i18n('Спосіб виплати'),
+                                    labelWidth: 150,
+                                    name: 'paymentMethod',
+                                    hideEntityItemInContext: true,
+                                    valueField: 'code',
+                                    ubRequest: {
+                                      entity: 'ubm_enum',
+                                      method: UB.core.UBCommand.methodName.SELECT,
+                                      fieldList: ['ID', 'name', 'code', 'eGroup'],
+                                      whereList: {
+                                        enumGroupFilter: {
+                                          expression: '[eGroup]',
+                                          condition: 'equal',
+                                          values: {
+                                            val: 'HR_PAYMENT_METHOD'
+                                          }
+                                        }
+                                      }
+                                    },
+                                    flex: 1,
+                                    listeners: {
+                                      select: () => {
+                                        me.attr.checkPaymentMethod.setValue(true)
+                                      },
+                                      change: (ctrl, value) => {
+                                        me.attr.checkPaymentMethod.setValue(!!value)
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                layout: { type: 'hbox' },
+                                showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()),
+                                items: [
+                                  {
+                                    xtype: 'checkbox',
+                                    name: 'checkDictTarifCoeffID',
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        if (!value) me.attr.dictTarifCoeffID.setValue()
+                                      }
+                                    }
+                                  },
+                                  {
+                                    xtype: 'ubcombobox',
+                                    fieldLabel: UB.i18n('Тарифний розряд'),
+                                    labelWidth: 150,
+                                    displayField: 'description',
+                                    disableModifyEntity: true,
+                                    name: 'dictTarifCoeffID',
+                                    ubRequest: {
+                                      entity: 'hr_dictTarifCoeff',
+                                      method: UB.core.UBCommand.methodName.SELECT,
+                                      fieldList: ['ID', 'name', 'description']
+                                    },
+                                    flex: 1,
+                                    listeners: {
+                                      select: () => {
+                                        me.attr.checkDictTarifCoeffID.setValue(true)
+                                      },
+                                      change: (ctrl, value) => {
+                                        me.attr.checkDictTarifCoeffID.setValue(!!value)
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                layout: { type: 'hbox' },
+                                showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()),
+                                items: [
+                                  {
+                                    xtype: 'checkbox',
+                                    name: 'checkWorkScheduleID',
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        if (!value) me.attr.workScheduleID.setValue()
+                                      }
+                                    }
+                                  },
+                                  {
+                                    xtype: 'ubcombobox',
+                                    fieldLabel: UB.i18n('Графік роботи'),
+                                    labelWidth: 150,
+                                    disableModifyEntity: true,
+                                    name: 'workScheduleID',
+                                    ubRequest: {
+                                      entity: 'hr_workSchedule',
+                                      method: UB.core.UBCommand.methodName.SELECT,
+                                      fieldList: ['ID', 'name'],
+                                      whereList: {
+                                        organizationID: {
+                                          expression: '[organizationID]',
+                                          condition: 'equal',
+                                          value: appAC.globalOrganization()
+                                        },
+                                        orgIsNull: {
+                                          expression: '[organizationID]',
+                                          condition: 'isNull'
+                                        }
+                                      },
+                                      logicalPredicates: ['[organizationID] OR [orgIsNull]']
+                                    },
+                                    flex: 1,
+                                    listeners: {
+                                      select: () => {
+                                        me.attr.checkWorkScheduleID.setValue(true)
+                                      },
+                                      change: (ctrl, value) => {
+                                        me.attr.checkWorkScheduleID.setValue(!!value)
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                layout: { type: 'hbox' },
+                                showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()),
+                                items: [
+                                  {
+                                    xtype: 'checkbox',
+                                    name: 'checkEmpPosPayElID',
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        if (!value) me.attr.empPosPayElID.setValue()
+                                      }
+                                    }
+                                  },
+                                  {
+                                    xtype: 'ubcombobox',
+                                    name: 'empPosPayElID',
+                                    labelWidth: 150,
+                                    flex: 1,
+                                    displayField: 'description',
+                                    fieldLabel: UB.i18n('Система оплати'),
+                                    disableModifyEntity: true,
+                                    ubRequest: {
+                                      entity: 'hr_payEl',
+                                      method: UB.core.UBCommand.methodName.SELECT,
+                                      fieldList: ['ID', 'name', 'description'],
+                                      whereList: {
+                                        isSalary: {
+                                          expression: '[methodID.code]',
+                                          condition: 'in',
+                                          value: ['1', '2', '3', '44', '63', '77']
+                                        }
+                                      },
+                                      orderList: {
+                                        orderBy: {
+                                          expression: 'codeSort'
+                                        }
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                layout: { type: 'hbox' },
+                                showIf: (ctrl, me) => ['payRetention'].includes(me.attr.entity.getValue()),
+                                items: [
+                                  {
+                                    xtype: 'checkbox',
+                                    name: 'checkRate',
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        if (!value) me.attr.rate.setValue()
+                                      }
+                                    }
+                                  },
+                                  {
+                                    xtype: 'numberfield',
+                                    name: 'rate',
+                                    labelWidth: 150,
+                                    fieldLabel: UB.i18n('Відсоток'),
+                                    allowDecimals: true,
+                                    allowExponential: false,
+                                    hideTrigger: true,
+                                    vtype: 'floatValidator',
+                                    decimalPrecision: 2,
+                                    minValue: 0,
+                                    width: 300,
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        me.attr.checkRate.setValue(!!value)
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                layout: { type: 'hbox' },
+                                showIf: (ctrl, me) => ['employeeAccrual'].includes(me.attr.entity.getValue()),
+                                items: [
+                                  {
+                                    xtype: 'checkbox',
+                                    name: 'checkAccrualRate',
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        if (!value) me.attr.accrualRate.setValue()
+                                      }
+                                    }
+                                  },
+                                  {
+                                    xtype: 'numberfield',
+                                    name: 'accrualRate',
+                                    labelWidth: 150,
+                                    fieldLabel: UB.i18n('Відсоток'),
+                                    allowDecimals: true,
+                                    allowExponential: false,
+                                    hideTrigger: true,
+                                    vtype: 'floatValidator',
+                                    decimalPrecision: 2,
+                                    minValue: 0,
+                                    width: 300,
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        me.attr.checkAccrualRate.setValue(!!value)
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                layout: { type: 'hbox' },
+                                items: [
+                                  {
+                                    xtype: 'checkbox',
+                                    name: 'checkAccrualSum',
+                                    showIf: (ctrl, me) => !['payOutTemplate'].includes(me.attr.entity.getValue()),
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        if (!value) me.attr.accrualSum.setValue()
+                                      }
+                                    }
+                                  },
+                                  {
+                                    xtype: 'numberfield',
+                                    name: 'accrualSum',
+                                    showIf: (ctrl, me) => !['payOutTemplate'].includes(me.attr.entity.getValue()),
+                                    labelWidth: 150,
+                                    fieldLabel: UB.i18n('Оклад'),
+                                    allowDecimals: true,
+                                    allowExponential: false,
+                                    hideTrigger: true,
+                                    vtype: 'floatValidator',
+                                    decimalPrecision: 2,
+                                    minValue: 0,
+                                    width: 300,
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        me.attr.checkAccrualSum.setValue(!!value)
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                layout: { type: 'hbox' },
+                                showIf: (ctrl, me) => ['employeePosition'].includes(me.attr.entity.getValue()),
+                                items: [
+                                  {
+                                    xtype: 'checkbox',
+                                    name: 'checkMtCount',
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        if (!value) me.attr.mtCount.setValue()
+                                      }
+                                    }
+                                  },
+                                  {
+                                    xtype: 'numberfield',
+                                    name: 'mtCount',
+                                    labelWidth: 150,
+                                    fieldLabel: UB.i18n('Кількість ставок'),
+                                    vtype: 'floatValidator',
+                                    decimalPrecision: 3,
+                                    hideTrigger: true,
+                                    minValue: 0,
+                                    width: 300,
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        me.attr.checkMtCount.setValue(!!value)
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            layout: { type: 'vbox', align: 'stretch' },
+                            flex: 1,
+                            items: [
+                              {
+                                layout: { type: 'hbox' },
+                                showIf: (ctrl, me) => ['employeeAccrual', 'employeePosition'].includes(me.attr.entity.getValue()),
+                                items: [
+                                  {
+                                    xtype: 'checkbox',
+                                    name: 'checkAccountID',
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        if (!value) me.attr.accountID.setValue()
+                                      }
+                                    }
+                                  },
+                                  {
+                                    xtype: 'ubcombobox',
+                                    fieldLabel: UB.i18n('Рахунок витрат'),
+                                    labelWidth: 150,
+                                    displayField: 'description',
+                                    disableModifyEntity: true,
+                                    name: 'accountID',
+                                    ubRequest: {
+                                      entity: 'gl_account',
+                                      method: UB.core.UBCommand.methodName.SELECT,
+                                      fieldList: ['ID', 'name', 'description']
+                                    },
+                                    flex: 1,
+                                    listeners: {
+                                      select: () => {
+                                        me.attr.checkAccountID.setValue(true)
+                                      },
+                                      change: (ctrl, value) => {
+                                        me.attr.checkAccountID.setValue(!!value)
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                layout: { type: 'hbox' },
+                                showIf: (ctrl, me) => ['payRetention'].includes(me.attr.entity.getValue()),
+                                items: [
+                                  {
+                                    xtype: 'checkbox',
+                                    name: 'checkBankAccount',
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        if (!value) me.attr.bankAccount.setValue()
+                                      }
+                                    }
+                                  },
+                                  {
+                                    xtype: 'ubtextfield',
+                                    fieldLabel: UB.i18n('Розрахунковий рахунок'),
+                                    name: 'bankAccount',
+                                    labelWidth: 150,
+                                    flex: 1,
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        me.attr.checkBankAccount.setValue(!!value)
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                layout: { type: 'hbox' },
+                                showIf: (ctrl, me) => ['payRetention'].includes(me.attr.entity.getValue()),
+                                items: [
+                                  {
+                                    xtype: 'checkbox',
+                                    name: 'checkPayOutID',
+                                    listeners: {
+                                      change: (ctrl, value) => {
+                                        if (!value) me.attr.payOutID.setValue()
+                                      }
+                                    }
+                                  },
+                                  {
+                                    xtype: 'ubcombobox',
+                                    fieldLabel: UB.i18n('Зарплатний проєкт'),
+                                    labelWidth: 150,
+                                    disableModifyEntity: true,
+                                    name: 'payOutID',
+                                    ubRequest: {
+                                      entity: 'hr_payOut',
+                                      method: UB.core.UBCommand.methodName.SELECT,
+                                      fieldList: ['ID', 'name']
+                                    },
+                                    flex: 1,
+                                    listeners: {
+                                      select: () => {
+                                        me.attr.checkPayOutID.setValue(true)
+                                      },
+                                      change: (ctrl, value) => {
+                                        me.attr.checkPayOutID.setValue(!!value)
+                                      }
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                xtype: 'acGrid',
+                name: 'employeePositionList',
+                stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_employeePositionUpdate_employeePositionList'),
+                title: UB.i18n('Список особових рахунків'),
+                layout: 'fit',
+                flex: 1,
+                autoScroll: true,
+                rowEditing: true,
+                notWriteChanges: true,
+                storeType: 'local',
+                showToolBar: true,
+                disablePaging: true,
+                hideActions: ['addNewByCurrent'],
+                loadMaskMessage: UB.i18n('Завантаження даних...'),
+                onBeforeEdit: (control, context) => {
+                  AC.viewUtils.setFilterValue(context.column.field, { orgID: appAC.globalOrganization() })
+                  context.column.field.on('change', (ctrl) => {
+                    context.record.set('employeeNumberID.posName', ctrl.getFieldValue('posName'))
+                    context.record.set('employeeNumberID.depName', ctrl.getFieldValue('depName'))
+                  })
+                },
+                fields: [
+                  { name: 'ID' },
+                  { name: 'mi_modifyDate' },
+                  {
+                    name: 'employeeNumberID.description',
+                    columnConfig: {
+                      text: UB.i18n('Працівник'),
+                      flex: 1,
+                      editor: {
+                        dataType: 'Entity',
+                        hideEntityItemInContext: true,
+                        associatedEntity: 'hr_employeeNumberSR',
+                        allowBlank: false,
+                        disableClearSelection: true,
+                        disableContextMenu: true,
+                        storeAttributeValueField: 'employeeNumberID',
+                        fieldList: ['ID', 'description', 'orgID', 'posName', 'depName']
+                      }
+                    }
+                  },
+                  {
+                    name: 'employeeNumberID.posName',
+                    columnConfig: {
+                      text: UB.i18n('Посада'),
+                      flex: 1
+                    }
+                  },
+                  {
+                    name: 'employeeNumberID.depName',
+                    columnConfig: {
+                      text: UB.i18n('Підрозділ'),
+                      flex: 1
+                    }
+                  },
+                  { name: 'employeeNumberID' }
+                ],
+                customToolBarActions: [
+                  {
+                    xtype: 'button',
+                    name: 'addBtn',
+                    iconCls: 'fas fa-angle-double-down',
+                    cls: 'fill-action',
+                    scale: 'medium',
+                    tooltip: UB.i18n('Додати списком'),
+                    handler: function (btn) {
+                      const me = btn.up('form')
+                      me.setEmployeeNumbers(me)
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            layout: { type: 'hbox', pack: 'end' },
+            region: 'south',
+            style: 'border-top: 1px solid #BFBFBF',
+            items: [
+              {
+                xtype: 'button',
+                text: UB.i18n('Коригувати'),
+                width: 150,
+                height: 30,
+                margin: '10 10 10 0',
+                cls: 'blue-action',
+                handler: function () {
+                  me.doCorrection()
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+
+    me.setEmployeeNumbers = function (me) {
+      $App.doCommand({
+        cmdType: 'showForm',
+        formCode: 'hr_employeeNumberSearch',
+        isModal: true,
+        cmpInitConfig: {
+          orgID: appAC.globalOrganization(),
+          readOnlyAttr: ['periodID'],
+          defaultValues: {
+            periodID: me.currentPeriod.ID
+          },
+          onSelect: (data) => {
+            const addEmployeeNumbers = []
+            const store = me.attr.employeePositionList.getStore()
+            const setData = () => {
+              me.attr.employeePositionList.getStore().un('clear', setData)
+              data.forEach(row => {
+                if (!store.findRecord('employeeNumberID', row.employeeNumberID)) {
+                  row['employeeNumberID.posName'] = row['posName']
+                  row['employeeNumberID.depName'] = row['depName']
+                  addEmployeeNumbers.push(row)
+                }
+              })
+              if (addEmployeeNumbers.length) {
+                me.attr.employeePositionList.getStore().insert(me.attr.employeePositionList.getStore().data.length, addEmployeeNumbers)
+              }
+            }
+            if (me.attr.employeePositionList.getStore().count()) {
+              $App.dialogYesNo(UB.i18n('Попередження'), UB.i18n(`Видалити раніше внесені особові рахунки?`))
+                .then(res => {
+                  if (res) {
+                    me.attr.employeePositionList.getStore().on('clear', setData)
+                    me.attr.employeePositionList.removeAll()
+                  } else {
+                    setData()
+                  }
+                })
+            } else {
+              setData()
+            }
+          }
+        }
+      })
+    }
+
+    me.getActionValue = function () {
+      return me.attr.action.getChecked() && me.attr.action.getChecked().length ? me.attr.action.getChecked()[0].inputValue : null
+    }
+
+    me.doCorrection = function () {
+      const employeeNumberIDs = me.attr.employeePositionList.getStore().data.items.map(item => item.get('employeeNumberID'))
+      if (!employeeNumberIDs.length) {
+        $App.dialogInfo(UB.i18n('Не вибрано працівників'), UB.i18n('Увага'))
+        return
+      }
+      const entityCode = me.attr.entity.getValue()
+      const action = me.attr.action.getChecked()[0].inputValue
+      const execParams = {
+        orgID: appAC.globalOrganization(),
+        dateFrom: me.attr.dateFrom.getValue(),
+        dateTo: me.attr.dateTo.getValue(),
+        orderNumber: me.attr.orderNumber.getValue(),
+        orderDate: me.attr.orderDate.getValue(),
+        action,
+        employeeNumbers: employeeNumberIDs,
+        params: {}
+      }
+      if (['createEmployeePosition', 'createEmployeeAccrual', 'createPayRetention'].includes(action) && !me.attr.dateFrom.getValue()) {
+        $App.dialogInfo(UB.i18n('Не заповнена дата початку'), UB.i18n('Увага'))
+        return
+      }
+      if (['createEmployeeAccrual', 'createPayRetention'].includes(action) && !me.attr.payElID.getValue()) {
+        $App.dialogInfo(UB.i18n('Не заповнено вид оплати  '), UB.i18n('Увага'))
+        return
+      }
+      switch (entityCode) {
+        case 'employeePosition':
+          if (me.attr.checkWorkPlace.getValue()) execParams.params.workPlace = me.attr.workPlace.getValue()
+          if (me.attr.checkRaiseSalary.getValue()) execParams.params.raiseSalary = me.attr.raiseSalary.getValue()
+          if (me.attr.checkWorkerType.getValue()) execParams.params.workerType = me.attr.workerType.getValue()
+          if (me.attr.checkDateNew.getValue()) execParams.params.dateNew = me.attr.dateNew.getValue()
+          if (me.attr.checkDictStaffCatID.getValue()) execParams.params.dictStaffCatID = me.attr.dictStaffCatID.getValue()
+          if (me.attr.checkIsIndex.getValue()) execParams.params.isIndex = me.attr.isIndex.getValue()
+          if (me.attr.checkDepartmentID.getValue()) execParams.params.departmentID = me.attr.departmentID.getValue()
+          if (me.attr.checkPositionID.getValue()) execParams.params.positionID = me.attr.positionID.getValue()
+          if (me.attr.checkDictPositionID.getValue()) execParams.params.dictPositionID = me.attr.dictPositionID.getValue()
+          if (me.attr.checkDictCategoryECBID.getValue()) execParams.params.dictCategoryECBID = me.attr.dictCategoryECBID.getValue()
+          if (me.attr.checkDictFundSourceID.getValue()) execParams.params.dictFundSourceID = me.attr.dictFundSourceID.getValue()
+          if (me.attr.checkDictTarifCoeffID.getValue()) execParams.params.dictTarifCoeffID = me.attr.dictTarifCoeffID.getValue()
+          if (me.attr.checkWorkScheduleID.getValue()) execParams.params.workScheduleID = me.attr.workScheduleID.getValue()
+          if (me.attr.checkEmpPosPayElID.getValue()) execParams.params.payElID = me.attr.empPosPayElID.getValue()
+          if (me.attr.checkAccountID.getValue()) execParams.params.accountID = me.attr.accountID.getValue()
+          if (me.attr.checkAccrualSum.getValue()) execParams.params.accrualSum = me.attr.accrualSum.getValue()
+          if (me.attr.checkMtCount.getValue()) execParams.params.mtCount = me.attr.mtCount.getValue()
+          break
+        case 'employeeAccrual':
+          if (me.attr.checkPayElID.getValue()) execParams.params.payElID = me.attr.payElID.getValue()
+          if (me.attr.checkDictFundSourceID.getValue()) execParams.params.dictFundSourceID = me.attr.dictFundSourceID.getValue()
+          if (me.attr.checkAccountID.getValue()) execParams.params.accountID = me.attr.accountID.getValue()
+          if (me.attr.checkAccrualSum.getValue()) execParams.params.accrualSum = me.attr.accrualSum.getValue()
+          if (me.attr.checkAccrualRate.getValue()) execParams.params.accrualRate = me.attr.accrualRate.getValue()
+          break
+        case 'payRetention':
+          if (me.attr.checkPayElID.getValue()) execParams.params.payElID = me.attr.payElID.getValue()
+          if (me.attr.checkContractorID.getValue()) execParams.params.contractorID = me.attr.contractorID.getValue()
+          if (me.attr.checkPaymentMethod.getValue()) execParams.params.paymentMethod = me.attr.paymentMethod.getValue()
+          if (me.attr.checkBankAccount.getValue()) execParams.params.bankAccount = me.attr.bankAccount.getValue()
+          if (me.attr.checkPayOutID.getValue()) execParams.params.payOutID = me.attr.payOutID.getValue()
+          if (me.attr.checkAccrualSum.getValue()) execParams.params.baseSum = me.attr.accrualSum.getValue()
+          if (me.attr.checkRate.getValue()) execParams.params.rate = me.attr.rate.getValue()
+          break
+        case 'payOutTemplate':
+          execParams.params.payOutID = me.attr.payOutTemplateID.getValue()
+          break
+      }
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_employeeNumber',
+        method: 'dataCorrection',
+        execParams: execParams
+      }).then((mParams) => {
+        me.setLoading(false)
+        const result = JSON.parse(mParams.result) || []
+        if (result.length) {
+          const errors = []
+          result.forEach(o => {
+            if (/<<<.*>>>/.test(o.message)) {
+              o.message = o.message.match(/<<<(.*)>>>/)[1]
+            }
+            errors.push(`${o.description}: ${o.message}`)
+          })
+          $App.dialogError(UB.i18n('Не вдалося створити/оновити записи: <br/> {0}', errors.join('<br/>')))
+        } else {
+          $App.dialogInfo(UB.i18n('Завершено'))
+
+          me.up('window') && me.up('window').close()
+        }
+      }, (err) => {
+        $App.dialogError(err.message)
+        me.setLoading(false)
+      })
+    }
+
+    me.on('afterrender', async () => {
+      const me = this
+      AC.viewUtils.setAttr(me)
+      me.attr.employeePositionList = me.down('[name=employeePositionList]')
+      me.attr.entity.setValue('employeePosition')
+      me.currentPeriod = await appHR.getCurrentPeriod(appAC.globalOrganization())
+
+      AC.viewUtils.setWhereListProperty(me.attr.workScheduleID, [
+        ['organizationID', '=', appAC.globalOrganization(), 'org'],
+        ['organizationID', 'isNull', null, 'orgNull']
+      ], ['(([org]) OR ([orgNull]))'], ['clearWhereList'])
+
+      const entryDate = appAC.globalApplicationDate()
+      me.attr.departmentID.store.ubRequest.__mip_ondate = entryDate
+      delete me.attr.departmentID.store.ubRequest.__mip_recordhistory_all
+      me.attr.positionID.store.ubRequest.__mip_ondate = entryDate
+      delete me.attr.positionID.store.ubRequest.__mip_recordhistory_all
+      delete me.attr.dictPositionID.store.ubRequest.__mip_recordhistory_all
+      AC.viewUtils.setFilterValue(me.attr.departmentID, { orgID: appAC.globalOrganization() })
+
+      appHR.getPayOutList(appAC.globalOrganization()).then(payOutList => {
+        AC.viewUtils.setFilterValue(me.attr.payOutID, { ID: payOutList })
+        AC.viewUtils.setFilterValue(me.attr.payOutTemplateID, { ID: payOutList })
+      })
+
+      AC.viewUtils.setWhereListProperty(me.attr.positionID, [
+        [ 'orgID', '=', appAC.globalOrganization() ]
+      ], null, [])
+
+      HR.orderManager.showIf(me)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,146 @@
+{
+  "caption": "Можливий перетин елементів обліку",
+  "description": "Можливий перетин елементів обліку",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "dictTimeCost1ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTimeCost",
+      "caption": "Перший елемент",
+      "description": "Перший елемент",
+      "documentation": "Перший елемент",
+      "allowNull": false
+    },
+    {
+      "name": "dictTimeCost2ID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTimeCost",
+      "caption": "Другий елемент",
+      "description": "Другий елемент",
+      "documentation": "Другий елемент",
+      "allowNull": false
+    },
+    {
+      "name": "isElemFirst",
+      "dataType": "Boolean",
+      "caption": "Ознака приоритету першого елементу",
+      "description": "Ознака приоритету першого елементу",
+      "documentation": "Ознака приоритету першого елементу",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "isDateFirst",
+      "dataType": "Boolean",
+      "caption": "Ознака пріорітету по даті початку",
+      "description": "Ознака пріорітету по даті початку",
+      "documentation": "Ознака пріорітету по даті початку",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "priorityType",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDERELEM",
+      "caption": "Правило пріоритету",
+      "documentation": "Правило пріоритету",
+      "description": "Правило пріоритету"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "isCrossInfo",
+      "dataType": "Boolean",
+      "caption": "Інформувати про перетин",
+      "description": "Інформувати про перетин",
+      "defaultValue": "0"
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    }
+  ],
+  "dbExtensions": {
+    "UIDX_HR_DICTTIMECOSTINT_TC12": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "dictTimeCost1ID": {
+            "sort": "ASC"
+          },
+          "dictTimeCost2ID": {
+            "sort": "ASC"
+          },
+          "mi_deleteDate": {
+            "sort": "ASC"
+          },
+          "dateFrom": {
+            "sort": "ASC"
+          },
+          "dateTo": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": true
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

@@ -1,0 +1,2719 @@
+
+/* global Ext $App UB AC _ appAC appHR HR */
+exports.formDef = 'HR.rlEl'
+
+Ext.define('HR.rlEl', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.hr_rlEl',
+  height: 800,
+  width: 600,
+  layout: 'border',
+  autoScroll: true,
+  initComponent: function () {
+    const me = this
+    me.dockedItems = [
+      {
+        xtype: 'toolbar',
+        dock: 'top',
+        ubID: 'mainToolbar',
+        enableOverflow: true,
+        items: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Розрахувати'),
+            name: 'calcButton',
+            hidden: true,
+            iconCls: 'fas fa-calculator',
+            cls: 'fill-action',
+            disabled: !AC.entityUtils.verifyRightsMethod('hr_rl', 'calcAccrual'),
+            handler: function () {
+              me.calculate()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Зберегти'),
+            name: 'saveButton',
+            hidden: true,
+            iconCls: 'fas fa-save',
+            cls: 'green-action',
+            disabled: !AC.entityUtils.verifyRightsMethod('hr_rl', 'saveAccrual'),
+            handler: function () {
+              me.save()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Аналітика'),
+            name: 'dimButton',
+            iconCls: 'el-icon-notebook-2',
+            cls: 'blue-action',
+            handler: function () {
+              me.dimension()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Документ'),
+            name: 'docButton',
+            hidden: true,
+            iconCls: 'el-icon-document',
+            cls: 'delete-action',
+            handler: function () {
+              me.document()
+            }
+          },
+          '->',
+          { xtype: 'label', name: 'changeData', text: '', cls: 'x-form-item-label' }
+        ]
+      }
+    ]
+    me.items = [
+      {
+        region: 'north',
+        autoScroll: true,
+        split: true,
+        layout: { type: 'vbox', align: 'stretch' },
+        defaults: {
+          labelWidth: 200
+        },
+        items: [
+          {
+            layout: { type: 'hbox', pack: 'end' },
+            items: [
+              { xtype: 'label', hidden: true, name: 'calcMessage', text: '', cls: 'grd-color-red' }
+            ]
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'employeeNumberID',
+            fieldLabel: UB.i18n('Працівник'),
+            readOnly: true,
+            allowBlank: false,
+            ubRequest: {
+              entity: 'hr_employeeNumberSR',
+              fieldList: ['ID', 'description', 'employeeID', 'orgID', 'dateFrom', 'dateTo'],
+              orderList: { orderBy: { expression: 'tabNumSort' } }
+            },
+            listeners: {
+              change: function (ctrl) {
+                AC.viewUtils.setFilterValue(me.attr.periodSalaryID, { orgID: ctrl.getFieldValue('orgID') })
+                AC.viewUtils.setFilterValue(me.attr.periodFromAvg, { orgID: ctrl.getFieldValue('orgID') })
+                AC.viewUtils.setFilterValue(me.attr.periodToAvg, { orgID: ctrl.getFieldValue('orgID') })
+                AC.viewUtils.setFilterValue(me.attr.missingEmployeeNumberID, { orgID: ctrl.getFieldValue('orgID'), ID: { value: ctrl.getFieldValue('ID'), condition: '<>' } })
+                me.attr.dictFundSourceID.store.ubRequest.orgID = ctrl.getFieldValue('orgID') || appAC.globalOrganization()
+                me.changePeriodSalary()
+              }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'payElID',
+            fieldLabel: UB.i18n('Вид оплати'),
+            allowBlank: false,
+            ubRequest: {
+              entity: 'hr_payEl',
+              fieldList: ['ID', 'description', 'methodID.code', 'calcSumType', 'methodID.methodGroupID.groupType', 'codeSort'],
+              orderList: { orderBy: { expression: 'codeSort' } }
+            },
+            listeners: {
+              change: function (cntr) {
+                me.changePayEl(cntr.getFieldValue('methodID.code'))
+                me.changePeriodSalary()
+              }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'periodSalaryID',
+            fieldLabel: UB.i18n('Обліковий період'),
+            allowBlank: false,
+            pageSize: 50,
+            ubRequest: {
+              entity: 'hr_dictPeriod',
+              fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+              orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+            },
+            listeners: {
+              expand: appHR.periodExpand,
+              change: function (ctrl) {
+                if (ctrl.skipChange) {
+                  delete ctrl.skipChange
+                  return
+                }
+                me.changePeriodSalary()
+              }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'periodCalcID',
+            fieldLabel: UB.i18n('Розрахунковий період'),
+            hidden: true,
+            pageSize: 50,
+            allowBlank: false,
+            ubRequest: {
+              entity: 'hr_dictPeriod',
+              fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+              orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+            },
+            listeners: {
+              expand: appHR.periodExpand
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictFundSourceID',
+            fieldLabel: UB.i18n('Джерело фінансування'),
+            hideEntityItemInContext: true,
+            hidden: true,
+            flagsFix: 1 << 14,
+            ubRequest: {
+              entity: 'ac_fundSource',
+              method: 'select',
+              fieldList: ['ID', 'name']
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictProgClassID',
+            fieldLabel: UB.i18n('КПК'),
+            hideEntityItemInContext: true,
+            hidden: true,
+            flagsFix: 1 << 24,
+            ubRequest: {
+              entity: 'ac_dictProgClass',
+              fieldList: ['ID', 'description'],
+              orderList: { orderBy: { expression: 'description' } }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'dictProjectID',
+            fieldLabel: UB.i18n('Проєкт'),
+            hideEntityItemInContext: true,
+            hidden: true,
+            flagsFix: 1 << 25,
+            ubRequest: {
+              entity: 'ac_dictProject',
+              fieldList: ['ID', 'description'],
+              orderList: { orderBy: { expression: 'description' } }
+            }
+          },
+          {
+            xtype: 'ubcombobox',
+            name: 'missingEmployeeNumberID',
+            fieldLabel: UB.i18n('Працівник, що заміщується'),
+            hidden: true,
+            allowBlank: false,
+            ubRequest: {
+              entity: 'hr_employeeNumberSR',
+              fieldList: ['ID', 'description', 'employeeID', 'orgID'],
+              orderList: { orderBy: { expression: 'tabNumSort' } }
+            },
+            listeners: {
+              change: function () {
+                me.isChanged = true
+              }
+            }
+          },
+          {
+            fieldLabel: UB.i18n('Документ-підстава'),
+            xtype: 'textfield',
+            name: 'orderDescription',
+            fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+            hidden: true,
+            readOnly: true
+          },
+          {
+            xtype: 'ubfieldset',
+            name: 'taxIndivid',
+            border: '1 1 1 1',
+            margin: '5 10 0 10',
+            title: UB.i18n('Суми за видами доходу'),
+            hidden: true,
+            layout: { type: 'vbox', align: 'stretch' },
+            items: [
+              {
+                xtype: 'acGrid',
+                name: 'taxIndividGrid',
+                stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_rlEl_taxIndividGrid'),
+                flex: 1,
+                autoScroll: true,
+                region: 'center',
+                storeType: 'local',
+                disablePaging: true,
+                notWriteChanges: true,
+                cellEditing: true,
+                showToolBar: false,
+                hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+                summary: { incomeSum: 'sum', privilegeSum: 'sum', taxSum: 'sum', taxFreeSum: 'sum' },
+                onBeforeEdit: (editor, context) => {
+
+                },
+                edit: function (control, context) {
+                  if (context.record.get(context.field) === null) {
+                    context.record.set(context.field, 0)
+                  }
+                  if (me.attr.payElID.getFieldValue('methodID.code') === '27') {
+                    me.flagsFix = (me.flagsFix | 1 << 13)
+                    if (context.field === 'incomeSum') {
+                      context.record.set('taxSum', AC.currencyService.round(context.record.get('incomeSum') * (me.attr.rate.getValue() || 0) / 100))
+                      me.flagsFix = (me.flagsFix | 1 << 0)
+                      me.attr.baseSum.setValue(context.store.sum('incomeSum') || 0)
+                      me.attr.paySum.setValue(context.store.sum('taxSum') || 0)
+                    }
+                    if (context.field === 'taxSum') {
+                      context.record.set('incomeSum', AC.currencyService.round(context.record.get('taxSum') / (me.attr.rate.getValue() || 0) * 100))
+                      me.flagsFix = (me.flagsFix | 1 << 0) | 1 << 1
+                      me.attr.baseSum.setValue(context.store.sum('incomeSum') || 0)
+                      me.attr.paySum.setValue(context.store.sum('taxSum') || 0)
+                    }
+                    me.isChanged = true
+                    me.calculate()
+                  } else {
+                    if (
+                      ['incomeSum', 'privilegeSum'].includes(context.field) &&
+                      context.record.get('incomeSum') >= 0 && context.record.get('privilegeSum') >= 0) {
+                      const me = context.grid.up('[formCode=hr_rlEl]')
+                      const date = AC.dateService.unshiftDate(me.attr.periodSalaryID.getFieldValue('dateFrom'))
+                      const year = date.getFullYear()
+                      const inSum = context.record.get('incomeSum') - context.record.get('privilegeSum')
+                      const rate = (me.hr_taxRate.find(o => o.yearFrom <= year && o.sumFrom <= inSum) || { rate: 0 }).rate
+                      context.record.set('taxSum', AC.currencyService.round((context.record.get('incomeSum') - context.record.get('privilegeSum')) * rate / 100))
+                    }
+                    me.attr.baseSum.setValue(context.store.sum('incomeSum') || 0)
+                    me.attr.paySum.setValue(context.store.sum('taxSum') || 0)
+                  }
+                  if (me.attr.taxIndividGrid.GridSummary) {
+                    me.attr.taxIndividGrid.GridSummary.dataBind()
+                  }
+                },
+                fields: [
+                  { name: 'ID' },
+                  { name: 'accrualID' },
+                  { name: 'taxIndividID' },
+                  { name: 'taxIndividID.name', columnConfig: { text: UB.i18n('Вид доходу'), flex: 1 } },
+                  {
+                    name: 'incomeSum',
+                    columnConfig: {
+                      text: UB.i18n('Сума доходу'),
+                      width: 150,
+                      align: 'right',
+                      floatFormat: 2,
+                      editor: {
+                        dataType: 'Currency',
+                        decimalPrecision: 2
+                      }
+                    }
+                  },
+                  {
+                    name: 'privilegeSum',
+                    columnConfig: {
+                      text: UB.i18n('Застосована пільга'),
+                      width: 150,
+                      align: 'right',
+                      floatFormat: 2,
+                      editor: {
+                        dataType: 'Currency',
+                        decimalPrecision: 2
+                      }
+                    }
+                  },
+                  {
+                    name: 'taxSum',
+                    columnConfig: {
+                      text: UB.i18n('Сума'),
+                      width: 150,
+                      align: 'right',
+                      floatFormat: 2,
+                      editor: {
+                        dataType: 'Currency',
+                        decimalPrecision: 2
+                      }
+                    }
+                  },
+                  {
+                    name: 'taxFreeSum',
+                    columnConfig: {
+                      text: UB.i18n('Неоподаткована сума'),
+                      hidden: true,
+                      width: 150,
+                      align: 'right',
+                      floatFormat: 2,
+                      editor: {
+                        dataType: 'Currency',
+                        decimalPrecision: 2
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            layout: { type: 'hbox' },
+            items: [
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                flex: 1,
+                items: [
+                  {
+                    xtype: 'ubfieldset',
+                    layout: { type: 'vbox' },
+                    defaults: { labelWidth: 200, width: 330 },
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'dateFrom',
+                        flagsFix: 1 << 2,
+                        fieldLabel: UB.i18n('Початок'),
+                        hidden: true,
+                        enableKeyEvents: true
+                      },
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'dateTo',
+                        flagsFix: 1 << 3,
+                        fieldLabel: UB.i18n('Кінець'),
+                        hidden: true,
+                        enableKeyEvents: true
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'ubfieldset',
+                    name: 'periodAvg',
+                    margin: '0 0 0 10',
+                    title: UB.i18n('Період збору заробітку'),
+                    hidden: true,
+                    layout: { type: 'vbox' },
+                    defaults: { labelWidth: 190, width: 320 },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'periodFromAvg',
+                        fieldLabel: UB.i18n('Період для розрахунку з'),
+                        hidden: true,
+                        pageSize: 80,
+                        width: '100%',
+                        allowBlank: false,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'name', 'dateFrom', 'dateTo', 'orgID'],
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                        },
+                        listeners: {
+                          expand: appHR.periodExpand
+                        }
+                      },
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'periodToAvg',
+                        fieldLabel: UB.i18n('Період для розрахунку по'),
+                        hidden: true,
+                        pageSize: 80,
+                        width: '100%',
+                        flex: 1,
+                        allowBlank: false,
+                        ubRequest: {
+                          entity: 'hr_dictPeriod',
+                          fieldList: ['ID', 'name', 'dateFrom', 'dateTo', 'orgID'],
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                        },
+                        listeners: {
+                          expand: appHR.periodExpand
+                        }
+                      },
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'dateFromAvg',
+                        flagsFix: 1 << 10,
+                        fieldLabel: UB.i18n('Дата початку розрахунку'),
+                        hidden: true,
+                        enableKeyEvents: true
+                      },
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'dateToAvg',
+                        flagsFix: 1 << 11,
+                        fieldLabel: UB.i18n('Дата кінця розрахунку'),
+                        hidden: true,
+                        enableKeyEvents: true
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    defaults: { labelWidth: 200, width: 330 },
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        name: 'baseDate',
+                        flagsFix: 1 << 10,
+                        fieldLabel: UB.i18n('Базовий місяць'),
+                        hidden: true,
+                        enableKeyEvents: true
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'baseSum',
+                        flagsFix: 1,
+                        fieldLabel: UB.i18n('Сума для розрахунку'),
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'rate',
+                        fieldLabel: UB.i18n('Відсоток'),
+                        flagsFix: 1 << 9,
+                        valueToRaw: AC.currencyService.valueAsMinDecimalPrecision, // UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 6,
+                        minDecimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        mouseWheelEnabled: false
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'ubfieldset',
+                    name: 'plan',
+                    margin: '0 0 0 10',
+                    title: UB.i18n('План'),
+                    hidden: true,
+                    layout: { type: 'vbox' },
+                    defaults: { labelWidth: 190, width: 320 },
+                    items: [
+                      {
+                        xtype: 'numberfield',
+                        name: 'planDays',
+                        flagsFix: 1 << 4,
+                        decimalPrecision: 2,
+                        fieldLabel: UB.i18n('Днів'),
+                        enforceMaxLength: true,
+                        allowExponential: false,
+                        // allowDecimals: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        enableKeyEvents: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'planHours',
+                        flagsFix: 1 << 5,
+                        fieldLabel: UB.i18n('Годин'),
+                        // valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 744,
+                        enforceMaxLength: true,
+                        allowExponential: false,
+                        decimalPrecision: 3,
+                        hideTrigger: true,
+                        hidden: true,
+                        enableKeyEvents: true,
+                        mouseWheelEnabled: false
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'ubfieldset',
+                    name: 'fact',
+                    margin: '0 0 0 10',
+                    title: UB.i18n('Факт'),
+                    hidden: true,
+                    layout: { type: 'vbox' },
+                    defaults: { labelWidth: 190, width: 320 },
+                    items: [
+                      {
+                        xtype: 'numberfield',
+                        name: 'days',
+                        flagsFix: 1 << 6,
+                        decimalPrecision: 2,
+                        fieldLabel: UB.i18n('Днів'),
+                        enforceMaxLength: true,
+                        allowExponential: false,
+                        // allowDecimals: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        enableKeyEvents: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'hours',
+                        flagsFix: 1 << 7,
+                        fieldLabel: UB.i18n('Годин'),
+                        // valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 744,
+                        enforceMaxLength: true,
+                        allowExponential: false,
+                        decimalPrecision: 3,
+                        hideTrigger: true,
+                        hidden: true,
+                        enableKeyEvents: true,
+                        mouseWheelEnabled: false
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'ubfieldset',
+                    name: 'experience',
+                    title: UB.i18n('Стаж'),
+                    margin: '10 0 0 10',
+                    hidden: true,
+                    layout: { type: 'vbox' },
+                    defaults: { labelWidth: 190, width: 320 },
+                    items: [
+                      {
+                        xtype: 'ubtextfield',
+                        name: 'expName',
+                        fieldLabel: UB.i18n('Назва'),
+                        width: '100%',
+                        hidden: true,
+                        readOnly: true,
+                        ubRequest: {
+                          entity: 'hr_accrual',
+                          fieldList: ['ID', 'payElID.dictExperienceID.name'],
+                          orderList: { orderBy: { expression: 'dateFrom', order: 'desc' } }
+                        }
+                      },
+                      {
+                        xtype: 'textfield',
+                        name: 'expYear',
+                        fieldLabel: UB.i18n('Років'),
+                        hidden: true
+                      },
+                      {
+                        xtype: 'textfield',
+                        name: 'expMonth',
+                        fieldLabel: UB.i18n('Місяців'),
+                        hidden: true
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'extraRate',
+                        fieldLabel: UB.i18n('Відсоток за розміром стажу'),
+                        flagsFix: 1 << 19,
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        mouseWheelEnabled: false
+                      }
+                    ]
+                  },
+                  {
+                    layout: { type: 'vbox' },
+                    defaults: { labelWidth: 200, width: 330 },
+                    items: [
+                      {
+                        xtype: 'ubcombobox',
+                        name: 'avgCalcType',
+                        fieldLabel: UB.i18n('Тип розрахунку'),
+                        hidden: true,
+                        hideEntityItemInContext: true,
+                        enumGroupFilter: 'HR_AVGCALC_TYPE',
+                        valueField: 'code',
+                        displayField: 'name',
+                        ubRequest: {
+                          entity: 'ubm_enum',
+                          method: UB.core.UBCommand.methodName.SELECT,
+                          fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                          whereList: {
+                            eGroup: {
+                              expression: '[eGroup]',
+                              condition: 'equal',
+                              values: { eGroup: 'HR_AVGCALC_TYPE' }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'sumAvg',
+                        flagsFix: 1 << 18,
+                        fieldLabel: UB.i18n('Середньомісячна'),
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'planSumAvg',
+                        flagsFix: 1,
+                        fieldLabel: UB.i18n('Плановий заробіток'),
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'incomingDebtSum',
+                        fieldLabel: UB.i18n('Вхідний залишок'),
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        readOnly: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'repaymentDebtSum',
+                        flagsFix: 1 << 10,
+                        fieldLabel: UB.i18n('Погашення залишку'),
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        margin: '3 15 15 15',
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'mtCount',
+                        flagsFix: 1 << 8,
+                        fieldLabel: UB.i18n('Кількість ставок'),
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 6,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'standingAll',
+                        // flagsFix: 1 << 19,
+                        fieldLabel: UB.i18n('Днів'),
+                        enforceMaxLength: true,
+                        allowExponential: false,
+                        allowDecimals: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        enableKeyEvents: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'calendarDays',
+                        flagsFix: 1 << 19,
+                        fieldLabel: UB.i18n('Днів'),
+                        enforceMaxLength: true,
+                        allowExponential: false,
+                        allowDecimals: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        enableKeyEvents: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'calculatedSum',
+                        flagsFix: 1 << 11,
+                        fieldLabel: UB.i18n('Розраховано за місяць'),
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'paySumAccrual',
+                        flagsFix: 1 << 21,
+                        fieldLabel: UB.i18n('Сума нарахування'),
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'repaymentSum',
+                        flagsFix: 1 << 12,
+                        fieldLabel: UB.i18n('Погашено за місяць'),
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        margin: '3 15 15 15',
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'koef',
+                        fieldLabel: UB.i18n('Коефіцієнт'),
+                        flagsFix: 1 << 12,
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 4,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'minSalarySum',
+                        flagsFix: 1 << 13,
+                        fieldLabel: UB.i18n('Мінімальна заробітна плата'),
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'paySum',
+                        flagsFix: 2,
+                        fieldLabel: UB.i18n('Сума'),
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        hidden: true,
+                        mouseWheelEnabled: false
+                      },
+                      {
+                        xtype: 'numberfield',
+                        name: 'balance',
+                        fieldLabel: UB.i18n('Залишок на наступний місяць'),
+                        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                        maxValue: 8999000000000000,
+                        minValue: -8999000000000000,
+                        decimalPrecision: 2,
+                        allowExponential: false,
+                        hideTrigger: true,
+                        readOnly: true,
+                        hidden: true,
+                        mouseWheelEnabled: false
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+                  {
+                    xtype: 'textfield',
+                    name: 'planHoursByDays',
+                    fieldLabel: UB.i18n('Планові години роботи'),
+                    hidden: true
+                  },
+                  {
+                    xtype: 'textfield',
+                    name: 'hoursByDays',
+                    fieldLabel: UB.i18n('Години роботи'),
+                    hidden: true
+                  },
+                  {
+                    xtype: 'textfield',
+                    name: 'leadingHoursByDays',
+                    fieldLabel: UB.i18n('Години роботи провідної системи оплати'),
+                    hidden: true
+                  },
+                  {
+                    xtype: 'textfield',
+                    name: 'calcParams',
+                    fieldLabel: UB.i18n('Параметри розрахунку'),
+                    hidden: true
+                  },
+                  {
+                    xtype: 'numberfield',
+                    name: 'mask',
+                    fieldLabel: UB.i18n('Маска'),
+                    allowDecimals: false,
+                    hideTrigger: true,
+                    hidden: true,
+                    mouseWheelEnabled: false
+                  },
+                  {
+                    xtype: 'numberfield',
+                    name: 'maskAdd',
+                    fieldLabel: UB.i18n('Маска'),
+                    allowDecimals: false,
+                    hideTrigger: true,
+                    hidden: true,
+                    mouseWheelEnabled: false
+                  },
+                  {
+                    xtype: 'datepicker',
+                    name: 'maskDatePicker',
+                    id: 'maskDatePicker',
+                    showToday: false,
+                    todayCls: '1',
+                    selectedCls: '1',
+                    margin: '10 10 10 10',
+                    disabled: true,
+                    hidden: true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            layout: { type: 'hbox' },
+            defaults: { labelWidth: 200, width: 330 },
+            items: [
+              {
+                xtype: 'ubdatefield',
+                name: 'orderDateFrom',
+                fieldLabel: UB.i18n('Початок'),
+                hidden: true,
+                enableKeyEvents: true
+              },
+              {
+                xtype: 'ubdatefield',
+                name: 'orderDateTo',
+                fieldLabel: UB.i18n('Кінець'),
+                hidden: true,
+                enableKeyEvents: true
+              }
+            ]
+          },
+          {
+            layout: { type: 'hbox' },
+            defaults: { labelWidth: 200, width: 330 },
+            items: [
+              {
+                xtype: 'numberfield',
+                name: 'dayCount',
+                fieldLabel: UB.i18n('Оплачувані дні'),
+                minValue: -180,
+                maxValue: 180,
+                decimalPrecision: 0,
+                enableKeyEvents: true,
+                allowExponential: false,
+                hideTrigger: true,
+                hidden: true,
+                mouseWheelEnabled: false
+              },
+              {
+                xtype: 'numberfield',
+                name: 'calendarDayCount',
+                fieldLabel: UB.i18n('Календарні дні'),
+                minValue: -180,
+                maxValue: 180,
+                decimalPrecision: 0,
+                enableKeyEvents: true,
+                allowExponential: false,
+                hideTrigger: true,
+                hidden: true,
+                mouseWheelEnabled: false
+              }
+            ]
+          },
+          {
+            layout: { type: 'hbox' },
+            defaults: { labelWidth: 200, width: 330 },
+            items: [
+              {
+                xtype: 'ubtextfield',
+                name: 'orderNumber',
+                fieldLabel: UB.i18n('Наказ №'),
+                hidden: true
+              },
+              {
+                xtype: 'ubdatefield',
+                name: 'orderDate',
+                fieldLabel: UB.i18n('Дата наказа'),
+                hidden: true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        region: 'center',
+        split: true,
+        xtype: 'panel',
+        autoScroll: true,
+        layout: 'border',
+        defaults: {
+          labelWidth: 200
+        },
+        items: [
+          {
+            xtype: 'acGrid',
+            name: 'accrual',
+            stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_docRegVacation_orderRegistryDt'),
+            title: UB.i18n('Розрахунок по місяцям'),
+            region: 'center',
+            split: true,
+            flex: 1,
+            hidden: true,
+            autoScroll: true,
+            cellEditing: true,
+            notWriteChanges: true,
+            storeType: 'local',
+            showToolBar: false,
+            disablePaging: true,
+            loadMaskMessage: UB.i18n('Завантаження даних...'),
+            summary: { paySum: 'sum', days: 'sum', calendarDays: 'sum' },
+            summaryDataOnClient: true,
+            ignoreAttr: ['posName', 'depName'],
+            ignoreAttrNewByCurrent: ['posName', 'depName', 'employeeNumberID.description', 'employeeNumberID'],
+            hideActions: ['addNew', 'del', 'addNewByCurrent'],
+            onBeforeEdit: (control, context) => {
+              if (context.record.phantom && context.record.dirtySave !== null) {
+                context.record.dirtySave = null
+              }
+              return !me.down('[name=saveButton]').hidden
+            },
+            customPopupMenuItems: [
+              {
+                text: UB.i18n('Аналітика'),
+                iconCls: 'el-icon-notebook-2',
+                cls: 'blue-action',
+                handler: (context) => {
+                  const grid = me.panel.accrual
+                  const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+                  if (record) {
+                    const accrualDt = record.get('accrualDt')
+                    if (accrualDt) {
+                      $App.connection.run({
+                        entity: 'hr_rl',
+                        method: 'getDimension',
+                        params: typeof accrualDt === 'object' ? JSON.stringify(accrualDt) : accrualDt,
+                        orgID: me.attr.employeeNumberID.getFieldValue('orgID')
+                      }).then(response => {
+                        const data = JSON.parse(response.resultData)
+                        $App.doCommand({
+                          cmdType: 'showForm',
+                          formCode: 'hr_rlDimension',
+                          isModal: true,
+                          cmpInitConfig: {
+                            readOnly: (record.get('flagsRec') & 1 << 1 || record.get('flagsRec') & 1 << 12 || record.get('flagsRec') & 1 << 9),
+                            defaultValues: data,
+                            paySum: record.get('paySum'),
+                            orgID: me.attr.employeeNumberID.getFieldValue('orgID'),
+                            employeeNumberID: me.attr.employeeNumberID.getValue(),
+                            typeData: me.payType !== 'PAYMENT' ? 'retention' : 'accrual',
+                            checkPaySum: false,
+                            onSave: (accrualDt, paySum) => {
+                              record.set('flagsFix', record.get('flagsFix') | 1 << 17)
+                              record.set('accrualDt', JSON.stringify(accrualDt))
+                              if (AC.currencyService.round(paySum) !== AC.currencyService.round(record.get('paySum'))) {
+                                record.set('flagsFix', record.get('flagsFix') | 1 << 1)
+                                record.set('paySum', AC.currencyService.round(paySum))
+                              }
+                            }
+                          }
+                        })
+                      })
+                    }
+                  }
+                }
+              }
+            ],
+            fields: [
+              { name: 'ID' },
+              { name: 'orgID' },
+              { name: 'periodCalcID' },
+              { name: 'periodSalaryID' },
+              { name: 'periodCalc' },
+              { name: 'periodSalary' },
+              { name: 'employeeNumberID' },
+              { name: 'employeeNumberPartID' },
+              { name: 'missingEmployeeNumberID' },
+              { name: 'payElID' },
+              { name: 'flagsRec' },
+              { name: 'flagsFix' },
+              { name: 'planHours' },
+              { name: 'planDays' },
+              { name: 'baseSum' },
+              { name: 'mask' },
+              { name: 'maskAdd' },
+              { name: 'mtCount' },
+              { name: 'avgCalcType' },
+              { name: 'dateFromAvg' },
+              { name: 'dateToAvg' },
+              { name: 'orderDateFrom' },
+              { name: 'orderDateTo' },
+              { name: 'planSumAvg' },
+              { name: 'sumAvg' },
+              { name: 'linkToParentID' },
+              { name: 'source' },
+              { name: 'sourceID' },
+              { name: 'paymentID' },
+              { name: 'orderID' },
+              { name: 'empOrderID' },
+              { name: 'timeSheetID' },
+              { name: 'orderNumber' },
+              { name: 'orderDate' },
+              { name: 'orderDtID' },
+              { name: 'koef' },
+              { name: 'baseDate' },
+              { name: 'minSalarySum' },
+              { name: 'incomingDebtSum' },
+              { name: 'repaymentDebtSum' },
+              { name: 'calculatedSum' },
+              { name: 'paySumAccrual' },
+              { name: 'repaymentSum' },
+              { name: 'basePayment' },
+              { name: 'accrualDt' },
+              { name: 'planHoursByDays' },
+              { name: 'hoursByDays' },
+              { name: 'leadingHoursByDays' },
+              { name: 'calcParams' },
+              { name: 'extraRate' },
+              { name: 'standingAll' },
+              { name: 'dictFundSourceID' },
+              { name: 'dictProgClassID' },
+              { name: 'dictProjectID' },
+              { name: 'calcEarnings' },
+
+              {
+                name: 'periodSalaryID.name',
+                columnConfig: {
+                  text: UB.i18n('Обліковий період'),
+                  sortable: false,
+                  flex: 1
+                }
+              },
+              {
+                name: 'dateFrom',
+                columnConfig: {
+                  text: UB.i18n('З'),
+                  flex: 1,
+                  sortable: false,
+                  dateFormat: 'd',
+                  dataType: 'Date'
+                }
+              },
+              {
+                name: 'dateTo',
+                columnConfig: {
+                  text: UB.i18n('По'),
+                  flex: 1,
+                  sortable: false,
+                  dateFormat: 'd',
+                  dataType: 'Date'
+                }
+              },
+              {
+                name: 'calendarDays',
+                columnConfig: {
+                  text: UB.i18n('Календарних днів'),
+                  sortable: false,
+                  flex: 1,
+                  dataType: 'Int'
+                }
+              },
+              {
+                name: 'hours',
+                columnConfig: {
+                  text: UB.i18n('Оплачуваних годин'),
+                  flex: 1,
+                  align: 'right',
+                  sortable: false,
+                  dataType: 'Int',
+                  editor: {
+                    dataType: 'Int',
+                    flagsFix: 1 << 7
+                  }
+                }
+              },
+              {
+                name: 'days',
+                columnConfig: {
+                  text: UB.i18n('Оплачуваних днів'),
+                  flex: 1,
+                  align: 'right',
+                  sortable: false,
+                  dataType: 'Int',
+                  editor: {
+                    dataType: 'Int',
+                    flagsFix: 1 << 6
+                  }
+                }
+              },
+              {
+                name: 'paySum',
+                columnConfig: {
+                  text: UB.i18n('Сума'),
+                  flex: 1,
+                  align: 'right',
+                  sortable: false,
+                  floatFormat: 2,
+                  editor: {
+                    dataType: 'Currency',
+                    decimalPrecision: 2,
+                    flagsFix: 1 << 1
+                  }
+                }
+              }
+            ]
+          },
+          {
+            region: 'south',
+            autoScroll: true,
+            split: true,
+            height: 300,
+            title: UB.i18n('Заробіток'),
+            layout: { type: 'border' },
+            name: 'avgPanel',
+            hidden: true,
+            defaults: {
+              labelWidth: 200
+            },
+            items: [
+              {
+                xtype: 'panel',
+                region: 'west',
+                split: true,
+                width: 400,
+                margin: '0 5 0 0',
+                layout: { type: 'vbox', align: 'stretch' },
+                items: [
+
+                  {
+                    xtype: 'ubcombobox',
+                    name: 'avgCalcTypeDoc',
+                    fieldLabel: UB.i18n('Тип розрахунку'),
+                    hidden: true,
+                    hideEntityItemInContext: true,
+                    enumGroupFilter: 'HR_AVGCALC_TYPE',
+                    valueField: 'code',
+                    displayField: 'name',
+                    readOnly: true,
+                    ubRequest: {
+                      entity: 'ubm_enum',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                      whereList: {
+                        eGroup: {
+                          expression: '[eGroup]',
+                          condition: 'equal',
+                          values: { eGroup: 'HR_AVGCALC_TYPE' }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'ubdatefield',
+                    name: 'dateFromAvgDoc',
+                    flagsFix: 1 << 10,
+                    fieldLabel: UB.i18n('Період для розрахунку з'),
+                    hidden: true,
+                    readOnly: true,
+                    enableKeyEvents: true
+                  },
+                  {
+                    xtype: 'ubdatefield',
+                    name: 'dateToAvgDoc',
+                    flagsFix: 1 << 11,
+                    fieldLabel: UB.i18n('Період для розрахунку по'),
+                    hidden: true,
+                    readOnly: true,
+                    enableKeyEvents: true
+                  },
+                  {
+                    xtype: 'numberfield',
+                    name: 'sumAvgDoc',
+                    flagsFix: 1 << 18,
+                    fieldLabel: UB.i18n('Середня для розрахунку'),
+                    valueToRaw: UB.core.UBUtil.formatAsCurrency,
+                    maxValue: 8999000000000000,
+                    minValue: -8999000000000000,
+                    decimalPrecision: 2,
+                    allowExponential: false,
+                    hideTrigger: true,
+                    readOnly: true,
+                    hidden: true,
+                    mouseWheelEnabled: false
+                  }
+                ]
+              },
+              {
+                xtype: 'acGrid',
+                name: 'accrualAvg',
+                region: 'center',
+                hidden: true,
+                split: true,
+                autoScroll: true,
+                cellEditing: true,
+                notWriteChanges: true,
+                storeType: 'local',
+                showToolBar: false,
+                disablePaging: true,
+                loadMaskMessage: UB.i18n('Завантаження даних...'),
+                summary: { opSum: 'sum', opDays: 'sum', opHours: 'sum', baseSum: 'sum' },
+                summaryDataOnClient: true,
+                ignoreAttr: ['posName', 'depName'],
+                hideActions: ['addNew', 'del', 'addNewByCurrent'],
+                onBeforeEdit: (control, context) => {
+                  context.column.field.prevValue = context.value
+                  if (context.record.phantom && context.record.dirtySave !== null) {
+                    context.record.dirtySave = null
+                  }
+                },
+                fields: [
+                  { name: 'ID' },
+                  { name: 'dateFrom' },
+                  { name: 'dateTo' },
+                  { name: 'orderID' },
+                  { name: 'accrualID' },
+                  { name: 'periodID' },
+                  { name: 'flagsFix' },
+                  {
+                    name: 'periodID.name',
+                    columnConfig: {
+                      text: UB.i18n('Місяць'),
+                      sortable: false,
+                      flex: 1
+                    }
+                  },
+                  {
+                    name: 'opDays',
+                    columnConfig: {
+                      text: UB.i18n('Днів'),
+                      flex: 1,
+                      sortable: false,
+                      align: 'right',
+                      floatFormat: 2,
+                      renderer: (value, meta, record) => {
+                        if (record.get('flagsFix') & 1 << 6) {
+                          meta.tdCls = 'grd-color-blue'
+                        }
+                        return value
+                      }
+                    }
+                  },
+                  {
+                    name: 'opHours',
+                    columnConfig: {
+                      text: UB.i18n('Годин'),
+                      sortable: false,
+                      flex: 1,
+                      align: 'right',
+                      floatFormat: 3,
+                      renderer: (value, meta, record) => {
+                        if (record.get('flagsFix') & 1 << 7) {
+                          meta.tdCls = 'grd-color-blue'
+                        }
+                        return value
+                      }
+                    }
+                  },
+                  {
+                    name: 'baseSum',
+                    columnConfig: {
+                      text: UB.i18n('Заробіток, що індексується'),
+                      flex: 1,
+                      align: 'right',
+                      sortable: false,
+                      floatFormat: 2,
+                      renderer: (value, meta, record) => {
+                        if (record.get('flagsFix') & 1) {
+                          meta.tdCls = 'grd-color-blue'
+                        }
+                        if (_.isNumber(value)) {
+                          return Ext.util.Format.currency(value, '', 2).replace(/ /g, '')
+                        } else return value
+                      }
+                    }
+                  },
+                  {
+                    name: 'opKoef',
+                    columnConfig: {
+                      text: UB.i18n('Коеф. індексації'),
+                      flex: 1,
+                      align: 'right',
+                      sortable: false,
+                      floatFormat: 6,
+                      renderer: (value, meta, record) => {
+                        if (record.get('flagsFix') & 1 << 12) {
+                          meta.tdCls = 'grd-color-blue'
+                        }
+                        if (_.isNumber(value)) {
+                          return Ext.util.Format.currency(value, '', 6).replace(/ /g, '')
+                        } else return value
+                      }
+                    }
+                  },
+                  {
+                    name: 'baseSumNotIndex',
+                    columnConfig: {
+                      text: UB.i18n('Заробіток, що не індексується'),
+                      flex: 1,
+                      align: 'right',
+                      sortable: false,
+                      floatFormat: 2,
+                      renderer: (value, meta, record) => {
+                        if (record.get('flagsFix') & 1 << 13) {
+                          meta.tdCls = 'grd-color-blue'
+                        }
+                        if (_.isNumber(value)) {
+                          return Ext.util.Format.currency(value, '', 2).replace(/ /g, '')
+                        } else return value
+                      }
+                    }
+                  },
+                  {
+                    name: 'opSum',
+                    columnConfig: {
+                      text: UB.i18n('Сума до розрахунку'),
+                      flex: 1,
+                      sortable: false,
+                      align: 'right',
+                      floatFormat: 2
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+
+        ]
+      }
+    ]
+
+    me.calculate = (save) => {
+      if (!me.attr.payElID.getValue() || !me.attr.periodSalaryID.getValue() || !me.attr.baseDate.isValid()) {
+        return
+      }
+      /* if (me.attr.payElID.getFieldValue('methodID.code') === '26' && me.attr.taxIndividGrid.getData().length) {
+        return
+      } */
+      me.setLoading(true)
+      me.flagsFix = (me.flagsFix | 4) | 8
+      me.record.flagsRec = (((me.record.flagsRec || 0) | 1 << 2) & ~(1 << 0)) & ~(1 << 9)
+
+      if (me.flagsFix & 1 << 7 || me.flagsFix & 1 << 5) {
+        me.record.flagsRec = me.record.flagsRec | 1 << 5
+      }
+      if (['141', '201', '202', '203'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+        me.record.flagsRec = me.record.flagsRec | 1 << 13
+      }
+      if (['150'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+        me.flagsFix = (me.flagsFix | 240)
+      }
+      const params = {
+        ID: me.record.ID,
+        employeeNumberID: (me.flagsFix & 1 << 20) ? me.record.employeeNumberPartID : me.attr.employeeNumberID.getValue(),
+        periodSalaryID: me.attr.periodSalaryID.getValue(),
+        periodCalcID: me.attr.periodCalcID.getValue(),
+        payElID: me.attr.payElID.getValue(),
+        flagsFix: me.flagsFix,
+        flagsRec: me.record.flagsRec,
+        planHours: me.attr.planHours.getValue(),
+        planDays: me.attr.planDays.getValue(),
+        baseSum: me.attr.baseSum.getValue(),
+        mtCount: me.attr.mtCount.getValue(),
+        rate: me.attr.rate.getValue(),
+        koef: me.attr.koef.getValue(),
+        baseDate: me.attr.baseDate.getValue(),
+        minSalarySum: me.attr.minSalarySum.getValue(),
+        days: me.attr.days.getValue(),
+        hours: me.attr.hours.getValue(),
+        paySum: me.attr.paySum.getValue(),
+        dateFrom: me.attr.dateFrom.getValue(),
+        dateTo: me.attr.dateTo.getValue(),
+        mask: me.attr.mask.getValue() || 0,
+        maskAdd: me.attr.maskAdd.getValue() || 0,
+        planHoursByDays: me.attr.planHoursByDays.getValue(),
+        hoursByDays: me.attr.hoursByDays.getValue(),
+        leadingHoursByDays: me.attr.leadingHoursByDays.getValue(),
+        source: me.record.source,
+        sourceID: me.record.sourceID,
+        paymentID: me.record.paymentID,
+        avgCalcType: me.attr.avgCalcType.getValue(),
+        dateFromAvg: me.attr.dateFromAvg.getValue(),
+        dateToAvg: me.attr.dateToAvg.getValue(),
+        sumAvg: me.attr.sumAvg.getValue(),
+        planSumAvg: me.attr.planSumAvg.getValue(),
+        idx: 1,
+        taxIndividAcc: ['26', '27'].includes(me.attr.payElID.getFieldValue('methodID.code')) ? me.attr.taxIndividGrid.getData() : [],
+        accrualDt: me.accrualDt,
+        incomingDebtSum: me.attr.incomingDebtSum.getValue(),
+        repaymentDebtSum: me.attr.repaymentDebtSum.getValue(),
+        calculatedSum: me.attr.calculatedSum.getValue(),
+        paySumAccrual: me.attr.paySumAccrual.getValue(),
+        calendarDays: me.attr.calendarDays.getValue(),
+        standingAll: me.attr.calendarDays.getValue(),
+        repaymentSum: me.attr.repaymentSum.getValue(),
+        extraRate: me.attr.extraRate.getValue(),
+        methodCode: me.attr.payElID.getFieldValue('methodID.code'),
+        missingEmployeeNumberID: me.attr.missingEmployeeNumberID.getValue(),
+        dictFundSourceID: me.attr.dictFundSourceID.getValue(),
+        dictProgClassID: me.attr.dictProgClassID.getValue(),
+        dictProjectID: me.attr.dictProjectID.getValue()
+      }
+      $App.connection.run({
+        entity: 'hr_rl',
+        method: 'calcAccrual',
+        params: JSON.stringify(params)
+      }).then(response => {
+        me.isChanged = false
+        const data = JSON.parse(response.resultData)
+        if (!data) return
+        me.calcRecord = data
+        me.attr.dateFrom.setValue(AC.dateService.unshiftDate(data.dateFrom))
+        me.attr.dateTo.setValue(AC.dateService.unshiftDate(data.dateTo))
+        me.attr.planHours.setValue(data.planHours)
+        me.attr.planDays.setValue(data.planDays)
+        me.attr.baseSum.setValue(data.baseSum)
+        me.attr.mtCount.setValue(data.mtCount)
+        me.attr.rate.setValue(data.rate)
+        me.attr.koef.setValue(data.koef)
+        me.attr.baseDate.setValue(data.baseDate ? AC.dateService.unshiftDate(data.baseDate) : null)
+        me.attr.minSalarySum.setValue(data.minSalarySum)
+        me.attr.days.setValue(data.days)
+        me.attr.hours.setValue(data.hours)
+        me.attr.paySum.setValue(data.paySum)
+        me.attr.mask.setValue(data.mask || 0)
+        me.attr.maskAdd.setValue(data.maskAdd || 0)
+        me.attr.planHoursByDays.setValue(typeof data.planHoursByDays === 'object' ? JSON.stringify(data.planHoursByDays) : data.planHoursByDays)
+        me.attr.hoursByDays.setValue(typeof data.hoursByDays === 'object' ? JSON.stringify(data.hoursByDays) : data.hoursByDays)
+        me.attr.leadingHoursByDays.setValue(data.leadingHoursByDays ? (typeof data.leadingHoursByDays === 'object' ? JSON.stringify(data.leadingHoursByDays) : data.leadingHoursByDays) : null)
+        me.attr.incomingDebtSum.setValue(data.incomingDebtSum)
+        me.attr.repaymentDebtSum.setValue(data.repaymentDebtSum)
+        me.attr.calculatedSum.setValue(data.calculatedSum)
+        me.attr.paySumAccrual.setValue(data.paySumAccrual)
+        me.attr.calendarDays.setValue(data.calendarDays)
+        me.attr.standingAll.setValue(data.standingAll)
+        me.attr.repaymentSum.setValue(data.repaymentSum)
+        me.record.flagsRec = data.flagsRec
+        me.attr.avgCalcType.setValueById(data.avgCalcType)
+        if (data.dateFromAvg) {
+          me.attr.dateFromAvg.setValue(AC.dateService.unshiftDate(data.dateFromAvg))
+        }
+        if (data.dateToAvg) {
+          me.attr.dateToAvg.setValue(AC.dateService.unshiftDate(data.dateToAvg))
+        }
+        me.attr.sumAvg.setValue(data.sumAvg)
+        me.attr.planSumAvg.setValue(data.planSumAvg)
+        me.attr.extraRate.setValue(data.extraRate)
+        me.setDatePicker()
+        if (['201'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+          me.attr.avgCalcTypeDoc.setValueById(data.avgCalcType)
+          me.attr.dateFromAvgDoc.setValue(AC.dateService.unshiftDate(data.dateFromAvg))
+          me.attr.dateToAvgDoc.setValue(AC.dateService.unshiftDate(data.dateToAvg))
+          me.attr.sumAvgDoc.setValue(data.baseSum)
+          if (data.accrualAvg) {
+            me.panel.accrualAvg.setLocalStoreData(data.accrualAvg)
+          }
+        }
+        if (['26', '27'].includes(me.attr.payElID.getFieldValue('methodID.code')) && data.taxIndividAcc) {
+          me.attr.taxIndividGrid.setLocalStoreData(data.taxIndividAcc)
+          AC.gridUtils.setGridColumnVisible(me, ['privilegeSum'], ['26'].includes(me.attr.payElID.getFieldValue('methodID.code')))
+        }
+        if (['31', '61'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+          me.attr.balance.setValue(AC.currencyService.round((me.attr.incomingDebtSum.getValue() || 0) + (me.attr.calculatedSum.getValue() || 0) -
+            (me.attr.repaymentDebtSum.getValue() || 0) - (me.attr.repaymentSum.getValue() || 0)), 2)
+        }
+        if (data.accrualDt) {
+          me.accrualDt = data.accrualDt
+        }
+
+        me.setLoading(false)
+        if (save) {
+          me.save()
+        }
+      }, (err) => {
+        me.setLoading(false)
+        throw err
+      })
+    }
+    me.save = () => {
+      const addWorkPlaceAccrual = me.flagsRec & 1 << 20
+      const saveEmployeeNumberID = addWorkPlaceAccrual ? me.record.employeeNumberPartID : me.attr.employeeNumberID.getValue()
+      if (!['13', '16', '71', '67', '142', '21', '22', '23', '44', '68', '73', '17', '18', '19', '20', '40', '36', '37', '149'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+        me.record.flagsRec = (me.record.flagsRec || 0) | 1 << 2
+        me.record.flagsRec = me.record.flagsRec & ~(1 << 0)
+        me.record.flagsRec = me.record.flagsRec & ~(1 << 20)
+        if (me.flagsFix & 1 << 7 || me.flagsFix & 1 << 5) {
+          me.record.flagsRec = me.record.flagsRec | 1 << 5
+        }
+        if (!['26'].includes(me.attr.payElID.getFieldValue('methodID.code')) && (me.attr.mask.getValue() === null || me.isChanged)) {
+          $App.dialogInfo(UB.i18n('Необхідно розрахувати вид оплати'))
+          return
+        }
+        if (me.attr.dateFrom.isVisible() && me.attr.dateTo.isVisible() && !(me.attr.dateFrom.isValid() && me.attr.dateTo.isValid())) {
+          $App.dialogInfo(UB.i18n('Необхідно виправити дати'))
+          return
+        }
+
+        me.setLoading(true)
+        const params = {
+          employeeNumberID: saveEmployeeNumberID,
+          orgID: me.attr.employeeNumberID.getFieldValue('orgID'),
+          periodSalaryID: me.attr.periodSalaryID.getValue(),
+          periodCalcID: me.attr.periodCalcID.getValue(),
+          periodSalary: me.attr.periodSalaryID.getFieldValue('dateFrom'),
+          periodCalc: me.attr.periodCalcID.getFieldValue('dateFrom'),
+          payElID: me.attr.payElID.getValue(),
+          dateFrom: me.attr.dateFrom.getValue(),
+          dateTo: me.attr.dateTo.getValue(),
+          mask: me.attr.mask.getValue(),
+          maskAdd: me.attr.maskAdd.getValue() || 0,
+          planHoursByDays: me.attr.planHoursByDays.getValue(),
+          hoursByDays: me.attr.hoursByDays.getValue(),
+          leadingHoursByDays: me.attr.leadingHoursByDays.getValue(),
+          flagsRec: me.record.flagsRec,
+          flagsFix: me.flagsFix,
+          planHours: me.attr.planHours.getValue(),
+          planDays: me.attr.planDays.getValue(),
+          baseSum: me.attr.baseSum.getValue(),
+          days: me.attr.days.getValue(),
+          hours: me.attr.hours.getValue(),
+          mtCount: me.attr.mtCount.getValue(),
+          rate: me.attr.rate.getValue(),
+          koef: me.attr.koef.getValue(),
+          baseDate: me.attr.baseDate.getValue(),
+          orderID: me.record.orderID || null,
+          empOrderID: me.record.empOrderID || null,
+          timeSheetID: me.record.timeSheetID || null,
+          minSalarySum: me.attr.minSalarySum.getValue(),
+          avgCalcType: me.attr.avgCalcType.getValue(),
+          dateFromAvg: me.attr.dateFromAvg.getValue(),
+          dateToAvg: me.attr.dateToAvg.getValue(),
+          sumAvg: me.attr.sumAvg.getValue(),
+          planSumAvg: me.attr.planSumAvg.getValue(),
+          incomingDebtSum: me.attr.incomingDebtSum.getValue(),
+          repaymentDebtSum: me.attr.repaymentDebtSum.getValue(),
+          calculatedSum: me.attr.calculatedSum.getValue(),
+          paySumAccrual: me.attr.paySumAccrual.getValue(),
+          calendarDays: me.attr.calendarDays.getValue(),
+          standingAll: me.attr.standingAll.getValue(),
+          repaymentSum: me.attr.repaymentSum.getValue(),
+          extraRate: me.attr.extraRate.getValue(),
+          missingEmployeeNumberID: me.attr.missingEmployeeNumberID.getValue(),
+          dictFundSourceID: me.attr.dictFundSourceID.getValue(),
+          dictProgClassID: me.attr.dictProgClassID.getValue(),
+          dictProjectID: me.attr.dictProjectID.getValue()
+        }
+        if (['26', '27'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+          params.taxIndividAcc = me.attr.taxIndividGrid.getData()
+          params.taxIndividAcc.forEach(row => {
+            delete row['taxIndividID.name']
+            delete row.ID
+            delete row.accrualID
+          })
+          params.paySum = me.attr.taxIndividGrid.getData().reduce((accum, obj) => ((obj.taxSum || 0) + accum), 0)
+          params.baseSum = me.attr.taxIndividGrid.getData().reduce((accum, obj) => ((obj.incomeSum || 0) + accum), 0)
+          params.accrualDt = HR.accrualService.correctAccrualDt(me.accrualDt, params.paySum || 0)
+        } else {
+          params.paySum = me.attr.paySum.getValue() || 0
+          params.accrualDt = HR.accrualService.correctAccrualDt(me.accrualDt, me.attr.paySum.getValue() || 0)
+        }
+        if (['201'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+          params.accrualAvg = me.panel.accrualAvg.getData(true)
+        }
+
+        if (me.record.source) {
+          params.source = me.record.source
+        }
+        if (me.record.sourceID) {
+          params.sourceID = me.record.sourceID
+        }
+        if (me.record.paymentID) {
+          params.paymentID = me.record.paymentID
+        }
+        if (me.flagsRec & 4) {
+          if (addWorkPlaceAccrual) {
+            const calcParams = me.defaultValues.calcParams ? JSON.parse(me.defaultValues.calcParams) : {}
+            params.ID = calcParams.createFromAccrualID
+          } else {
+            params.ID = me.record.ID
+          }
+        }
+
+        $App.connection.run({
+          entity: 'hr_rl',
+          method: 'saveAccrual',
+          params: JSON.stringify(params),
+          reversalAccrual: me.reversalValues ? JSON.stringify(me.reversalValues) : null,
+          addReversal: me.addReversal ? JSON.stringify(me.addReversal) : null
+        }).then(response => {
+          if (me.onAfterSave) {
+            me.onAfterSave()
+          }
+          me.setLoading(false)
+          me.up('window').close()
+        }, function (err) {
+          me.setLoading(false)
+          throw err
+        })
+      } else {
+        me.setLoading(true)
+        let accruals
+        let accrualAvg
+        switch (me.attr.payElID.getFieldValue('methodID.code')) {
+          case '13':
+          case '16':
+          case '71':
+          case '67':
+          case '142':
+          case '21':
+          case '22':
+          case '23':
+          case '44':
+          case '68':
+          case '73':
+          case '17':
+          case '18':
+          case '19':
+          case '20':
+          case '40':
+          case '37':
+          case '36':
+          case '149':
+          case '201': {
+            accruals = me.panel.accrual.getData(true)
+            accruals.forEach(accr => {
+              delete accr.id
+              if (me.flagsRec & 4) {
+                if (addWorkPlaceAccrual) {
+                  const calcParams = me.defaultValues.calcParams ? JSON.parse(me.defaultValues.calcParams) : {}
+                  accr.ID = calcParams.createFromAccrualID
+                }
+              } else if (me.flagsRec & 1 << 10) {
+                delete accr.ID
+              }
+              if (accr.flagsRec & 1 << 20) {
+                accr.employeeNumberID = accr.employeeNumberPartID
+                accr.flagsRec = accr.flagsRec & ~(1 << 20)
+                accr.employeeNumberPartID = null
+              }
+              accr.flagsRec = (accr.flagsRec || 0) | 1 << 2
+              accr.flagsRec = accr.flagsRec & ~(1 << 0)
+              accr.accrualDt = accr.paySum === 0 ? []
+                : HR.accrualService.correctAccrualDt(typeof accr.accrualDt === 'string' ? JSON.parse(accr.accrualDt) : accr.accrualDt, accr.paySum || 0)
+              if (accr.paySum !== 0 && !accr.accrualDt.length) {
+                accr.accrualDt = [{ paySum: accr.paySum }]
+              }
+            })
+            accrualAvg = me.panel.accrualAvg.getData(true)
+            accrualAvg.forEach(avg => {
+              delete avg.id
+            })
+          }
+        }
+
+        $App.connection.run({
+          entity: 'hr_rl',
+          method: 'saveOrderAccrual',
+          accruals: JSON.stringify(accruals),
+          accrualAvg: JSON.stringify(accrualAvg)
+        }).then(response => {
+          if (me.onAfterSave) {
+            me.onAfterSave()
+          }
+          me.setLoading(false)
+          me.up('window').close()
+        }, function (err) {
+          me.setLoading(false)
+          throw err
+        })
+      }
+    }
+
+    me.changePayEl = (method) => {
+      const panel = []
+      const ctrl = []
+      const readOnlyCtrl = []
+      me.attr.baseSum.setFieldLabel(UB.i18n('Сума для розрахунку'))
+      me.attr.paySum.setFieldLabel(UB.i18n('Сума'))
+
+      me.down('[name=calcButton]').show()
+      me.down('[name=saveButton]').show()
+      if (me.flagsRec & 2 || me.flagsRec & 1 << 12 ||
+        ['13', '16', '71', '67', '142', '21', '22', '23', '44', '68', '73', '17', '18', '19', '20', '40', '36', '37', '149'].includes(method)) {
+        me.down('[name=calcButton]').hide()
+        me.down('[name=dimButton]').hide()
+      }
+      if (me.flagsRec & 2 || me.flagsRec & 1 << 12) {
+        me.down('[name=saveButton]').hide()
+      }
+
+      switch (method) {
+        case '1':
+        case '2':
+        case '77':
+        case '146':
+        case '147':
+        case '156':
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['dictFundSourceID', 'planHours', 'planDays', 'baseSum', 'mtCount', 'days', 'hours', 'paySum', 'dateFrom', 'dateTo'])
+          break
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+        case '8':
+        case '10':
+        case '11':
+        case '12':
+        case '9':
+        case '148':
+        case '153':
+        case '154':
+        case '155':
+        case '207':
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['dictFundSourceID', 'planHours', 'planDays', 'baseSum', 'rate', 'days', 'hours', 'paySum', 'dateFrom', 'dateTo', 'orderDescription'])
+          break
+        case '150':
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['dictFundSourceID', 'planHours', 'planDays', 'baseSum', 'rate', 'hours', 'paySum', 'dateFrom', 'dateTo', 'orderDescription'])
+          break
+        case '137':
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['dictFundSourceID', 'planHours', 'planDays', 'baseSum', 'rate', 'mtCount', 'days', 'hours', 'paySum', 'dateFrom', 'dateTo', 'orderDescription'])
+          break
+        case '33':
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['dictFundSourceID', 'missingEmployeeNumberID', 'planHours', 'planDays', 'baseSum', 'mtCount', 'rate', 'days', 'hours', 'paySum', 'dateFrom', 'dateTo'])
+          break
+        case '24':
+          me.attr.rate.setFieldLabel(UB.i18n('Коефіцієнт'))
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['dictFundSourceID', 'planHours', 'planDays', 'baseSum', 'days', 'rate', 'baseDate', 'hours', 'paySum', 'dateFrom', 'dateTo'])
+          break
+        case '25':
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['dictFundSourceID', 'dateFrom', 'dateTo', 'planHours', 'planDays', 'days', 'hours', 'baseSum',
+            'minSalarySum', 'paySum'])
+          break
+        case '49':
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['dictFundSourceID', 'dateFrom', 'dateTo', 'planHours', 'planDays', 'days', 'hours', 'baseSum',
+            'minSalarySum', 'paySum'])
+          break
+        case '26':
+          panel.push(...['taxIndivid'])
+          ctrl.push(...['dictFundSourceID', 'taxIndividGrid'])
+          me.attr.paySum.setFieldLabel(UB.i18n('Загальна сума ПДФО'))
+          break
+        case '27':
+          panel.push(...['taxIndivid'])
+          panel.push(...['fact'])
+          ctrl.push(...['dictFundSourceID', 'baseSum', 'rate', 'paySum', 'dateFrom', 'dateTo', 'taxIndividGrid'])
+          break
+        case '32':
+        case '202':
+          ctrl.push(...['dictFundSourceID', 'baseSum', 'rate', 'paySum', 'dateFrom', 'dateTo'])
+          break
+        case '28':
+        case '29':
+        case '30':
+        case '53':
+        case '75':
+          ctrl.push(...['dictFundSourceID', 'dateFrom', 'dateTo', 'paySum', 'orderDescription'])
+          break
+        case '15':
+        case '41':
+          panel.push(...['fact'])
+          ctrl.push(...['dateFrom', 'dateTo', 'days'])
+          readOnlyCtrl.push(...['days'])
+          break
+        case '31':
+        case '61':
+          me.attr.baseSum.setFieldLabel(UB.i18n('Дохід'))
+          me.attr.paySum.setFieldLabel(UB.i18n('Разом до перерахування'))
+          ctrl.push(...['dictFundSourceID', 'incomingDebtSum', 'repaymentDebtSum', 'baseSum', 'rate', 'calculatedSum', 'repaymentSum',
+            'paySum', 'balance'])
+          readOnlyCtrl.push(...['incomingDebtSum', 'balance', 'paySum'])
+          break
+        case '62':
+          ctrl.push(...['dictFundSourceID', 'baseSum', 'rate', 'calculatedSum', 'paySum'])
+          readOnlyCtrl.push(...['calculatedSum'])
+          break
+        case '50':
+        case '51':
+          ctrl.push(...['dictFundSourceID', 'baseSum', 'paySum'])
+          readOnlyCtrl.push(...['calculatedSum'])
+          break
+        case '38':
+        case '42':
+        case '43':
+        case '141':
+          ctrl.push(...['dictFundSourceID', 'paySum'])
+          break
+        case '3':
+          ctrl.push(...['dictFundSourceID', 'paySum', 'dateFrom', 'dateTo'])
+          break
+        case '63':
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['dictFundSourceID', 'planHours', 'planDays', 'days', 'hours', 'paySum', 'dateFrom', 'dateTo'])
+          // readOnlyCtrl.push(...['dateFrom', 'dateTo'])
+          break
+        case '45':
+        case '65':
+          me.attr.rate.setFieldLabel(UB.i18n('Відсоток'))
+          panel.push(...['periodAvg'])
+          ctrl.push(...['dictFundSourceID', 'periodFromAvg', 'periodToAvg', 'dateFromAvg', 'dateToAvg', 'baseSum', 'rate', 'paySum', 'orderDescription'])
+          break
+        case '46':
+          me.attr.sumAvg.setFieldLabel(UB.i18n('Середньомісячний заробіток'))
+          me.attr.rate.setFieldLabel(UB.i18n('Відсоток'))
+          panel.push(...['periodAvg', 'experience'])
+          ctrl.push(...['dictFundSourceID', 'periodFromAvg', 'periodToAvg', 'sumAvg', 'expName', 'expYear', 'expMonth', 'extraRate', 'baseSum', 'rate', 'paySum', 'orderDescription'])
+          readOnlyCtrl.push(...['expName', 'expYear', 'expMonth'])
+          break
+        case '47':
+          me.attr.rate.setFieldLabel(UB.i18n('Відсоток'))
+          panel.push(...['periodAvg', 'fact'])
+          ctrl.push(...['dictFundSourceID', 'baseSum', 'rate', 'paySum', 'days', 'hours', 'dateFromAvg', 'dateToAvg', 'orderDescription'])
+          break
+        case '56':
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['dictFundSourceID', 'planHours', 'planDays', 'days', 'hours', 'paySum', 'dateFrom', 'dateTo'])
+          readOnlyCtrl.push(...['planHours', 'planDays', 'days', 'hours'])
+          break
+        case '138':
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['planHours', 'baseSum', 'mtCount', 'hours', 'rate', 'paySum', 'dateFrom', 'dateTo'])
+          break
+        case '14':
+        case '57':
+        case '140':
+          panel.push(...['fact'])
+          ctrl.push(...['dateFrom', 'dateTo', 'days'])
+          break
+        case '151':
+          panel.push(...['fact'])
+          ctrl.push(...['dictFundSourceID', 'dateFrom', 'dateTo', 'days', 'hours', 'paySum'])
+          break
+        case '139':
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['planHours', 'planDays', 'days', 'hours', 'baseSum', 'rate', 'paySum', 'dateFrom', 'dateTo'])
+          break
+        case '201':
+          me.attr.standingAll.setFieldLabel(UB.i18n('Кількість днів відпустки на рік'))
+          me.attr.koef.setFieldLabel(UB.i18n('Днів відпустки'))
+          me.attr.baseDate.setFieldLabel(UB.i18n('Дата розрахунку'))
+          me.attr.paySumAccrual.setFieldLabel(UB.i18n('Сума за період збору середнього'))
+          me.attr.calendarDays.setFieldLabel(UB.i18n('Дні за період збору середнього'))
+          panel.push(...['avgPanel', 'accrualAvg'])
+          ctrl.push(...['dictFundSourceID', 'baseDate', 'baseSum', 'standingAll', 'koef', 'paySum', 'paySumAccrual', 'calendarDays', 'avgCalcTypeDoc', 'dateFromAvgDoc', 'dateToAvgDoc', 'sumAvgDoc'])
+          readOnlyCtrl.push(...['orderDateFrom', 'avgCalcTypeDoc', 'dateFromAvgDoc', 'dateToAvgDoc', 'sumAvgDoc'])
+          break
+        case '13':
+        case '16':
+        case '71':
+        case '67':
+        case '142':
+        case '21':
+        case '22':
+        case '23':
+        case '44':
+        case '68':
+        case '73':
+        case '17':
+        case '18':
+        case '19':
+        case '20':
+        case '40':
+        case '37':
+        case '36':
+        case '48':
+        case '149':
+          panel.push(...['accrual', 'avgPanel', 'accrualAvg'])
+          ctrl.push(...['orderDateFrom', 'orderDateTo', 'dayCount', 'calendarDayCount', 'orderDescription', 'avgCalcTypeDoc', 'dateFromAvgDoc', 'dateToAvgDoc', 'sumAvgDoc'])
+          readOnlyCtrl.push(...['orderDateFrom', 'orderDateTo', 'dayCount', 'calendarDayCount', 'orderDescription', 'avgCalcTypeDoc', 'dateFromAvgDoc', 'dateToAvgDoc', 'sumAvgDoc'])
+          me.down('[name=dimButton]').hide()
+          break
+        case '204':
+        case '205':
+          me.attr.sumAvg.setFieldLabel(UB.i18n('Сума доплати'))
+          me.attr.planSumAvg.setFieldLabel(UB.i18n('Сума обмеження'))
+          me.attr.calculatedSum.setFieldLabel(UB.i18n('Нарахована сума без утримань'))
+          me.attr.paySumAccrual.setFieldLabel(UB.i18n('Сума доплати без утримань'))
+          me.attr.paySum.setFieldLabel(UB.i18n('Доплата'))
+          panel.push(...['plan', 'fact'])
+          ctrl.push(...['dictFundSourceID', 'planHours', 'planDays', 'days', 'hours', 'mtCount', 'sumAvg', 'planSumAvg', 'calculatedSum', 'paySumAccrual', 'paySum', 'dateFrom', 'dateTo'])
+          break
+        case '206':
+          me.attr.baseSum.setFieldLabel(UB.i18n('Базовая чистая сума'))
+          me.attr.paySumAccrual.setFieldLabel(UB.i18n('Сума премії без утримань'))
+          me.attr.paySum.setFieldLabel(UB.i18n('Сума премії'))
+          ctrl.push(...['dictFundSourceID', 'paySumAccrual', 'paySum', 'dateFrom', 'dateTo', 'periodFromAvg', 'periodToAvg', 'dateFromAvg', 'dateToAvg', 'baseSum', 'rate'])
+          break
+        case '208':
+          me.attr.rate.setFieldLabel(UB.i18n('Відсоток'))
+          ctrl.push(...['dictFundSourceID', 'baseSum', 'rate', 'paySum'])
+          break
+        default:
+          ctrl.push(...['paySum'])
+          me.down('[name=calcButton]').hide()
+          me.down('[name=saveButton]').hide()
+      }
+
+      if (AC.settings.get('hrProgClassAcc', appAC.globalOrganization()) && ctrl.find(o => o === 'dictFundSourceID')) {
+        ctrl.push('dictProgClassID')
+      }
+      if (AC.settings.get('hrProjectAcc', appAC.globalOrganization()) && ctrl.find(o => o === 'dictFundSourceID')) {
+        ctrl.push('dictProjectID')
+      }
+      _.forEach(me.panel, pl => {
+        pl[panel.includes(pl.name) ? 'show' : 'hide']()
+      })
+      _.forEach(me.attr, cntr => {
+        if (!me.baseCntr.includes(cntr.name)) {
+          if (ctrl.includes(cntr.name)) {
+            cntr.show()
+          } else {
+            cntr.hide()
+            if (!['mask', 'planHoursByDays', 'hoursByDays', 'leadingHoursByDays', 'dateFrom', 'dateTo', 'taxIndividGrid'].includes(cntr.name)) {
+              cntr.setValue()
+            }
+          }
+          if ((!me.defaultValues || !(me.defaultValues.flagsRec & 1 << 9))) {
+            cntr.setReadOnly(_.includes(readOnlyCtrl, cntr.name))
+          }
+        }
+        if ((me.flagsRec & 2 && !(me.flagsRec & 1 << 10)) || me.flagsRec & 1 << 12) {
+          cntr.setReadOnly(true)
+        }
+      })
+      if (method === '26' && !me.hr_taxRate) {
+        UB.Repository('hr_taxRate').orderByDesc('yearFrom').orderByDesc('sumFrom').attrs(['ID', 'yearFrom', 'sumFrom', 'rate']).selectAsObject()
+          .then(result => { me.hr_taxRate = result })
+      }
+    }
+
+    me.changePeriodSalary = () => {
+      const value = me.attr.periodSalaryID.getValue()
+      if (value && !['13', '16', '71', '67', '142', '21', '22', '23', '44', '68', '73', '17', '48', '18', '19', '20', '40', '36', '37', '149', '201'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+        const dateFrom = new Date(Math.max(me.attr.periodSalaryID.getFieldValue('dateFrom'), me.attr.employeeNumberID.getFieldValue('dateFrom')))
+        const dateTo = new Date(Math.min(me.attr.periodSalaryID.getFieldValue('dateTo'), Math.max(me.attr.periodSalaryID.getFieldValue('dateFrom'), me.attr.employeeNumberID.getFieldValue('dateTo'))))
+        if (!me.record.periodSalaryID || me.record.periodSalaryID !== value || !me.attr.dateFrom.getValue() || !me.attr.dateTo.getValue() ||
+          dateFrom > me.attr.dateFrom.getValue() || dateTo < me.attr.dateTo.getValue()
+        ) {
+          me.attr.dateFrom.setValue(dateFrom)
+          me.attr.dateTo.setValue(dateTo)
+        }
+        if (dateFrom) {
+          me.maskDatePicker.selectedCls = ''
+          me.maskDatePicker.update(dateFrom)
+        }
+        me.attr.dateFrom.setMinValue(dateFrom)
+        me.attr.dateFrom.setMaxValue(dateTo)
+        me.attr.dateTo.setMinValue(dateFrom)
+        me.attr.dateTo.setMaxValue(dateTo)
+        me.attr.days.setMaxValue(dateTo.getDate())
+        me.attr.planDays.setMaxValue(dateTo.getDate())
+        me.attr.dateFrom.clearInvalid()
+        me.attr.dateTo.clearInvalid()
+        if (!(me.attr.dateFrom.getValue() >= AC.dateService.unshiftDate(me.attr.periodSalaryID.getFieldValue('dateFrom')) &&
+            me.attr.dateFrom.getValue() <= AC.dateService.unshiftDate(me.attr.periodSalaryID.getFieldValue('dateTo')))) {
+          me.attr.dateFrom.setValue(AC.dateService.unshiftDate(me.attr.periodSalaryID.getFieldValue('dateFrom')))
+        }
+        if (!(me.attr.dateTo.getValue() >= AC.dateService.unshiftDate(me.attr.periodSalaryID.getFieldValue('dateFrom')) &&
+            me.attr.dateTo.getValue() <= AC.dateService.unshiftDate(me.attr.periodSalaryID.getFieldValue('dateTo')))) {
+          me.attr.dateTo.setValue(AC.dateService.unshiftDate(me.attr.periodSalaryID.getFieldValue('dateTo')))
+        }
+        if (!me.record.periodSalaryID || me.record.periodSalaryID !== value || !me.attr.dateFromAvg.getValue() || !me.attr.dateToAvg.getValue()) {
+          if (['65', '45', '46'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+            const month = dateFrom.getMonth()
+            let dateFromAvg
+            let dateToAvg
+            switch (me.attr.payElID.getFieldValue('methodID.code')) {
+              case '65':
+                dateFromAvg = AC.dateService.addMonths(dateFrom, -1)
+                dateToAvg = AC.dateService.lastDayOfMonth(AC.dateService.addMonths(dateFrom, -1))
+                break
+              case '45':
+                if ([2, 5, 8, 11].includes(month)) {
+                  dateToAvg = dateTo
+                  dateFromAvg = AC.dateService.addMonths(dateFrom, -2)
+                } else {
+                  dateFromAvg = AC.dateService.getQuarterDates(dateFrom.getFullYear(), AC.dateService.getQuarter(dateFrom) - 1).dateFrom
+                  dateToAvg = AC.dateService.getQuarterDates(dateFrom.getFullYear(), AC.dateService.getQuarter(dateFrom) - 1).dateTo
+                }
+                break
+              case '46':
+                if (month === 11) {
+                  dateFromAvg = AC.dateService.firstDayOfYear(dateFrom)
+                  dateToAvg = AC.dateService.lastDayOfYear(dateFrom)
+                } else {
+                  dateFromAvg = AC.dateService.firstDayOfYear(AC.dateService.addYears(dateFrom, -1))
+                  dateToAvg = AC.dateService.lastDayOfYear(AC.dateService.addYears(dateFrom, -1))
+                }
+                me.getExperience()
+                break
+            }
+            dateFromAvg = AC.dateService.unshiftDate(dateFromAvg)
+            dateToAvg = AC.dateService.unshiftDate(dateToAvg)
+            const periodFrom = me.attr.periodFromAvg.getStore().data.items.find(o => o.getData().dateFrom <= dateFromAvg && o.getData().dateTo >= dateFromAvg)
+            const periodTo = me.attr.periodToAvg.getStore().data.items.find(o => o.getData().dateFrom <= dateToAvg && o.getData().dateTo >= dateToAvg)
+            Ext.suspendLayouts()
+            me.attr.periodFromAvg.suspendEvents()
+            me.attr.periodToAvg.suspendEvents()
+            if (periodFrom) { me.attr.periodFromAvg.setValue(periodFrom.getData().ID) }
+            if (periodTo) { me.attr.periodToAvg.setValue(periodTo.getData().ID) }
+            me.attr.dateFromAvg.setValue(dateFromAvg)
+            me.attr.dateToAvg.setValue(dateToAvg)
+            me.attr.periodFromAvg.resumeEvents()
+            me.attr.periodToAvg.resumeEvents()
+            Ext.resumeLayouts(true)
+          }
+        }
+
+        me.setDatePicker()
+      }
+    }
+    me.setDatePicker = () => {
+      const elements = Ext.get('maskDatePicker').query('td.x-datepicker-active')
+      const mask = me.attr.mask.getValue() || 0
+      me.maskDatePicker[mask && me.attr.payElID.getFieldValue('methodID.methodGroupID.groupType') === 'PAYMENT' ? 'show' : 'hide']()
+      elements.forEach((element, day) => {
+        if (mask & 1 << (day)) {
+          Ext.get(element.id).addCls('calendar-weekend-blue')
+        } else {
+          Ext.get(element.id).removeCls('calendar-weekend-blue')
+        }
+      })
+    }
+    me.changeParams = (ctrl) => {
+      if (ctrl.isValid() && ctrl.getValue() !== ctrl.focusValue) {
+        switch (ctrl.name) {
+          case 'days' :
+            if (ctrl.getValue() > ctrl.maxValue) {
+              ctrl.setValue(ctrl.maxValue)
+            }
+            if (me.flagsFix & 1 << 7 && me.attr.hours.getValue() && (ctrl.getValue() * 24) > me.attr.hours.getValue()) {
+              me.attr.hours.setValue()
+            }
+            break
+          case 'hours' :
+            if (ctrl.getValue() > ctrl.maxValue) {
+              ctrl.setValue(ctrl.maxValue)
+            }
+            me.record.flagsRec = ctrl.getValue() ? (me.record.flagsRec || 0) | 1 << 5 : (me.record.flagsRec || 0) & ~(1 << 5)
+            if (me.flagsFix & 1 << 6 && me.attr.days.getValue() && (ctrl.getValue() / 24) > me.attr.days.getValue()) {
+              me.attr.days.setValue()
+            }
+            break
+          case 'planDays' :
+            if (ctrl.getValue() > ctrl.maxValue) {
+              ctrl.setValue(ctrl.maxValue)
+            }
+            if (me.flagsFix & 1 << 5 && me.attr.planHours.getValue() && (ctrl.getValue() * 24) > me.attr.planHours.getValue()) {
+              me.attr.planHours.setValue()
+            }
+            break
+          case 'planHours' :
+            if (ctrl.getValue() > ctrl.maxValue) {
+              ctrl.setValue(ctrl.maxValue)
+            }
+            if (me.flagsFix & 1 << 4 && me.attr.planDays.getValue() && (ctrl.getValue() / 24) > me.attr.planDays.getValue()) {
+              me.attr.planDays.setValue()
+            }
+            break
+        }
+        me.getWorkTime(ctrl.name)
+      }
+    }
+    me.changeControlParams = (ctrl, value, oldValue) => {
+      if ((ctrl.isValid() && ctrl.getValue() !== ctrl.focusValue && ctrl.name !== 'periodFromAvg' && ctrl.name !== 'periodToAvg')) {
+        switch (ctrl.name) {
+          case 'rate' :
+            if (['12', '4', '6', '33', '9', '10', '7', '11', '8', '45', '46', '47', '65', '148', '153', '154', '155', '207'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+              me.attr.paySum.setValue(AC.currencyService.round(me.attr.baseSum.getValue() * me.attr.rate.getValue() / 100))
+              me.flagsFix = me.flagsFix & ~(1 << 1)
+            }
+            break
+          case 'paySum' :
+            if (['12', '4', '6', '33', '9', '10', '7', '11', '8', '45', '46', '47', '65', '148', '153', '154', '155', '204', '205', '206', '207'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+              me.attr.rate.setValue(me.attr.baseSum.getValue() ? AC.currencyService.round(me.attr.paySum.getValue() / me.attr.baseSum.getValue() * 100) : 0)
+              me.flagsFix = me.flagsFix & ~(1 << 9)
+            }
+            break
+        }
+        me.isChanged = true
+        me.calculate()
+      }
+
+      if ((ctrl.name === 'periodFromAvg' && ctrl.getValue() !== ctrl.focusValue &&
+        (!!AC.dateService.dateDiff(me.attr.dateFromAvg.getValue(), me.attr.periodFromAvg.getFieldValue('dateFrom')) || !me.attr.dateFromAvg.getValue())) ||
+        (ctrl.name === 'periodToAvg' && ctrl.getValue() !== ctrl.focusValue &&
+          (!!AC.dateService.dateDiff(me.attr.dateToAvg.getValue(), me.attr.periodToAvg.getFieldValue('dateTo')) || !me.attr.dateToAvg.getValue()))) {
+        switch (ctrl.name) {
+          case 'periodFromAvg' :
+            if (value) { me.attr.dateFromAvg.setValue(ctrl.getFieldValue('dateFrom')) }
+            break
+          case 'periodToAvg' :
+            if (value) { me.attr.dateToAvg.setValue(ctrl.getFieldValue('dateTo')) }
+            break
+        }
+        if (me.attr.dateFromAvg.getValue() && me.attr.dateToAvg.getValue()) {
+          me.isChanged = true
+          me.calculate()
+        }
+      }
+      ctrl.focusValue = 0
+    }
+
+    me.getExperience = () => {
+      const params = {
+        orgID: me.attr.employeeNumberID.getFieldValue('orgID'),
+        employeeNumberID: me.attr.employeeNumberID.getValue(),
+        periodSalaryID: me.attr.periodSalaryID.getValue(),
+        payElID: me.attr.payElID.getValue(),
+        dateFrom: me.attr.dateFrom.getValue(),
+        dateTo: me.attr.dateTo.getValue()
+      }
+
+      $App.connection.run({
+        entity: 'hr_rl',
+        method: 'getExperience',
+        params: JSON.stringify(params)
+      }).then(response => {
+        const data = JSON.parse(response.resultData)
+        me.attr.expName.setValue(data.name)
+        me.attr.expYear.setValue(data.years)
+        me.attr.expMonth.setValue(data.months)
+        if (!(me.flagsFix & 1 << 19)) {
+          me.calcRecord.extraRate = data.rate
+          me.attr.extraRate.setValue(data.rate)
+        }
+      })
+    }
+    me.dimension = () => {
+      $App.connection.run({
+        entity: 'hr_rl',
+        method: 'getDimension',
+        params: JSON.stringify(me.accrualDt),
+        orgID: me.attr.employeeNumberID.getFieldValue('orgID')
+      }).then(response => {
+        const data = JSON.parse(response.resultData)
+        $App.doCommand({
+          cmdType: 'showForm',
+          formCode: 'hr_rlDimension',
+          isModal: true,
+          cmpInitConfig: {
+            readOnly: (me.flagsRec & 1 << 1 || me.flagsRec & 1 << 12 || me.flagsRec & 1 << 9),
+            defaultValues: data,
+            paySum: me.attr.paySum.getValue(),
+            orgID: me.attr.employeeNumberID.getFieldValue('orgID'),
+            employeeNumberID: me.attr.employeeNumberID.getValue(),
+            typeData: me.payType !== 'PAYMENT' ? 'retention' : 'accrual',
+            checkPaySum: false,
+            onSave: (accrualDt, paySum) => {
+              me.flagsFix = me.flagsFix | 1 << 17
+              me.accrualDt = accrualDt
+              if (AC.currencyService.round(paySum) !== AC.currencyService.round(me.attr.paySum.getValue())) {
+                me.flagsFix = me.flagsFix | 1 << 1
+                me.attr.paySum.setValue(AC.currencyService.round(paySum))
+                if (['26', '27'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+                  const taxIndividAcc = HR.accrualService.correctAccrualDt(me.attr.taxIndividGrid.getData(), AC.currencyService.round(paySum), null, 'taxSum')
+                  me.attr.taxIndividGrid.setLocalStoreData(taxIndividAcc)
+                }
+              }
+              me.calculate()
+            }
+          }
+        })
+      })
+    }
+    me.document = () => {
+      if (me.orderID || me.record.orderID || 0) {
+        if (me.payType === 'PAYMENT') {
+          UB.Repository('hr_order')
+            .attrs(['ID', 'orderClass.entityName'])
+            .selectById(me.orderID || me.record.orderID || 0)
+            .then(result => {
+              const formCode = result && result['orderClass.entityName']
+              if (formCode === 'hr_orderRegistry') {
+                UB.Repository('hr_orderRegistry')
+                  .attrs('orderType')
+                  .selectById(me.orderID || me.record.orderID || 0)
+                  .then(order => {
+                    const formStore = UB.core.UBStoreManager.getFormStore()
+                    if (order && formStore.findRecord('code', order.orderType, 0, false, true, true)) {
+                      $App.doCommand({
+                        cmdType: 'showForm',
+                        formCode: order.orderType,
+                        entity: 'hr_orderRegistry',
+                        instanceID: me.orderID || me.record.orderID || 0,
+                        tabId: order.orderType + (me.orderID || me.record.orderID || 0),
+                        target: $App.getViewport().centralPanel
+                      })
+                    }
+                  })
+              } else {
+                const formStore = UB.core.UBStoreManager.getFormStore()
+                if (formStore.findRecord('code', formCode, 0, false, true, true)) {
+                  $App.doCommand({
+                    cmdType: 'showForm',
+                    formCode: formCode,
+                    entity: result['orderClass.entityName'],
+                    instanceID: me.orderID || me.record.orderID || 0,
+                    tabId: result['orderClass.entityName'] + (me.orderID || me.record.orderID || 0),
+                    target: $App.getViewport().centralPanel
+                  })
+                }
+              }
+            })
+        } else {
+          UB.Repository('hr_payRoll')
+            .attrs(['ID', 'orderType'])
+            .selectById(me.orderID || me.record.orderID)
+            .then(result => {
+              $App.doCommand({
+                cmdType: 'showForm',
+                formCode: result['orderType'],
+                entity: 'hr_payRoll',
+                instanceID: me.orderID || me.record.orderID || 0,
+                tabId: 'hr_payRoll' + (me.orderID || me.record.orderID || 0),
+                target: $App.getViewport().centralPanel
+              })
+            })
+        }
+      }
+    }
+    me.getWorkTime = (attrName) => {
+      if (!(me.attr.planHours.isValid() && me.attr.planDays.isValid() && me.attr.days.isValid() && me.attr.hours.isValid() &&
+        me.attr.dateFrom.isValid() && me.attr.dateTo.isValid() && me.attr.payElID.getValue()) ||
+        ['138', '150'].includes(me.attr.payElID.getFieldValue('methodID.code'))) {
+        me.calculate()
+        return
+      }
+      const params = {
+        employeeNumberID: me.attr.employeeNumberID.getValue(),
+        periodSalaryID: me.attr.periodSalaryID.getValue(),
+        periodCalcID: me.attr.periodCalcID.getValue(),
+        payElID: me.attr.payElID.getValue(),
+        flagsFix: me.flagsFix,
+        planHours: me.attr.planHours.getValue(),
+        planDays: me.attr.planDays.getValue(),
+        days: me.attr.days.getValue(),
+        hours: me.attr.hours.getValue(),
+        dateFrom: me.attr.dateFrom.getValue(),
+        dateTo: me.attr.dateTo.getValue(),
+        attrName: attrName
+      }
+
+      $App.connection.run({
+        entity: 'hr_rl',
+        method: 'getWorkTime',
+        params
+      }).then(response => {
+        const data = response.resultData
+        me.calcRecord = data
+        if (data.dateFrom !== undefined) { me.attr.dateFrom.setValue(AC.dateService.unshiftDate(data.dateFrom)) }
+        if (data.dateTo !== undefined) { me.attr.dateTo.setValue(AC.dateService.unshiftDate(data.dateTo)) }
+        if (data.planHours !== undefined) { me.attr.planHours.setValue(data.planHours) }
+        if (data.planDays !== undefined) { me.attr.planDays.setValue(data.planDays) }
+        if (data.days !== undefined) { me.attr.days.setValue(data.days) }
+        if (data.hours !== undefined) { me.attr.hours.setValue(data.hours) }
+        if (data.mask !== undefined) { me.attr.mask.setValue(data.mask) }
+        if (data.planHoursByDays !== undefined) { me.attr.planHoursByDays.setValue(data.planHoursByDays) }
+        if (data.hoursByDays !== undefined) { me.attr.hoursByDays.setValue(data.hoursByDays) }
+        if (data.leadingHoursByDays !== undefined) { me.attr.leadingHoursByDays.setValue(data.leadingHoursByDays) }
+        if (data.flagsFix !== undefined) { me.flagsFix = data.flagsFix }
+        me.setDatePicker()
+        me.calculate()
+      })
+    }
+
+    me.openSourceDoc = function () {
+      if (me.orderID || me.record.orderID) {
+        me.document()
+      }
+      if (me.record && me.record.sourceID && me.record.source === 'hr_employeeAccrual') {
+        UB.Repository('hr_employeeAccrual')
+          .attrs(['orderID', 'orderID.orderClass.entityName'])
+          .selectById(me.record.sourceID).then(pAccr => {
+            if (pAccr && pAccr.orderID && pAccr['orderID.orderClass.entityName']) {
+              $App.doCommand({
+                cmdType: 'showForm',
+                formCode: pAccr['orderID.orderClass.entityName'],
+                entity: pAccr['orderID.orderClass.entityName'],
+                isModal: false,
+                instanceID: pAccr.orderID,
+                tabId: pAccr['orderID.orderClass.entityName'] + pAccr.orderID,
+                target: $App.getViewport().centralPanel,
+                sender: me
+              })
+            }
+          })
+      }
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.up('window').setTitle(me.formTitle || (me.payType === 'PAYMENT' ? UB.i18n('Нарахування') : me.payType === 'FORPAY' ? UB.i18n('Виплата') : UB.i18n('Утримання')))
+      me.accrualDt = []
+      me.baseCntr = ['employeeNumberID', 'periodSalaryID', 'periodCalcID', 'payElID']
+      me.attr = {
+        employeeNumberID: me.down('[name=employeeNumberID]'),
+        periodSalaryID: me.down('[name=periodSalaryID]'),
+        periodCalcID: me.down('[name=periodCalcID]'),
+        payElID: me.down('[name=payElID]'),
+        planHours: me.down('[name=planHours]'),
+        planDays: me.down('[name=planDays]'),
+        baseSum: me.down('[name=baseSum]'),
+        mtCount: me.down('[name=mtCount]'),
+        rate: me.down('[name=rate]'),
+        koef: me.down('[name=koef]'),
+        baseDate: me.down('[name=baseDate]'),
+        minSalarySum: me.down('[name=minSalarySum]'),
+        calendarDays: me.down('[name=calendarDays]'),
+        standingAll: me.down('[name=standingAll]'),
+        days: me.down('[name=days]'),
+        hours: me.down('[name=hours]'),
+        paySum: me.down('[name=paySum]'),
+        dateFrom: me.down('[name=dateFrom]'),
+        dateTo: me.down('[name=dateTo]'),
+        mask: me.down('[name=mask]'),
+        maskAdd: me.down('[name=maskAdd]'),
+        planHoursByDays: me.down('[name=planHoursByDays]'),
+        hoursByDays: me.down('[name=hoursByDays]'),
+        leadingHoursByDays: me.down('[name=leadingHoursByDays]'),
+        avgCalcType: me.down('[name=avgCalcType]'),
+        periodFromAvg: me.down('[name=periodFromAvg]'),
+        periodToAvg: me.down('[name=periodToAvg]'),
+        dateFromAvg: me.down('[name=dateFromAvg]'),
+        dateToAvg: me.down('[name=dateToAvg]'),
+        sumAvg: me.down('[name=sumAvg]'),
+        planSumAvg: me.down('[name=planSumAvg]'),
+        incomingDebtSum: me.down('[name=incomingDebtSum]'),
+        repaymentDebtSum: me.down('[name=repaymentDebtSum]'),
+        calculatedSum: me.down('[name=calculatedSum]'),
+        paySumAccrual: me.down('[name=paySumAccrual]'),
+        repaymentSum: me.down('[name=repaymentSum]'),
+        balance: me.down('[name=balance]'),
+        taxIndividGrid: me.down('[name=taxIndividGrid]'),
+        expName: me.down('[name=expName]'),
+        expYear: me.down('[name=expYear]'),
+        expMonth: me.down('[name=expMonth]'),
+        extraRate: me.down('[name=extraRate]'),
+        missingEmployeeNumberID: me.down('[name=missingEmployeeNumberID]'),
+        dictFundSourceID: me.down('[name=dictFundSourceID]'),
+        dictProgClassID: me.down('[name=dictProgClassID]'),
+        dictProjectID: me.down('[name=dictProjectID]'),
+        orderDateFrom: me.down('[name=orderDateFrom]'),
+        orderDateTo: me.down('[name=orderDateTo]'),
+        dayCount: me.down('[name=dayCount]'),
+        calendarDayCount: me.down('[name=calendarDayCount]'),
+        orderNumber: me.down('[name=orderNumber]'),
+        orderDate: me.down('[name=orderDate]'),
+        avgCalcTypeDoc: me.down('[name=avgCalcTypeDoc]'),
+        dateFromAvgDoc: me.down('[name=dateFromAvgDoc]'),
+        dateToAvgDoc: me.down('[name=dateToAvgDoc]'),
+        sumAvgDoc: me.down('[name=sumAvgDoc]'),
+        orderDescription: me.down('[name=orderDescription]')
+      }
+
+      me.maskDatePicker = me.down('[name=maskDatePicker]')
+      me.panel = {
+        plan: me.down('[name=plan]'),
+        fact: me.down('[name=fact]'),
+        periodAvg: me.down('[name=periodAvg]'),
+        experience: me.down('[name=experience]'),
+        taxIndivid: me.down('[name=taxIndivid]'),
+        accrual: me.down('[name=accrual]'),
+        avgPanel: me.down('[name=avgPanel]'),
+        accrualAvg: me.down('[name=accrualAvg]')
+      }
+      me.attr.orderDescription.inputEl.on('click', me.openSourceDoc, me)
+      const globalOrganization = appAC.globalOrganization()
+      appHR.getCurrentPeriod(globalOrganization).then(response => {
+        if (response) {
+          AC.viewUtils.setFilterValue(me.attr.payElID, {
+            'dateTo': { value: response.dateFrom, condition: '>=' },
+            'dateFrom': { value: response.dateTo, condition: '<=' }
+          })
+        }
+      })
+      if (!me.orderID) {
+        me.record = me.defaultValues || {}
+        me.flagsRec = me.record.flagsRec
+        me.calcRecord = {}
+        me.flagsFix = me.record.flagsFix || 0
+        me.isChanged = false
+
+        if (me.flagsRec & 1 << 1 || me.flagsRec & 1 << 12 || me.flagsRec & 1 << 9) {
+          me.down('[name=calcButton]').hide()
+          me.down('[name=saveButton]').hide()
+        }
+        me.down('[name=docButton]')[(me.flagsRec & 2 || (me.defaultValues && me.defaultValues.orderID)) ? 'show' : 'hide']()
+
+        if (me.flagsRec & 1 << 12) {
+          me.record.employeeNumberID = me.defaultValues.employeeNumberPartID
+          me.defaultValues.employeeNumberID = me.defaultValues.employeeNumberPartID
+        }
+
+        if (me.defaultValues) {
+          const userName = (me.defaultValues.flagsRec & 1 || me.defaultValues.flagsRec & 1 << 3) ? null : me.defaultValues.createUserFullFIO || me.defaultValues.createUserFullName || me.defaultValues.createUserName
+          const calcParams = me.defaultValues.calcParams ? JSON.parse(me.defaultValues.calcParams) : {}
+          if (calcParams.calcMessage) {
+            me.down('[name=calcMessage]').setText(calcParams.calcMessage === 1 ? UB.i18n('Автоматичний розрахунок при наявності пільг неможливий!') : '')
+            me.down('[name=calcMessage]').show()
+          }
+
+          me.down('[name=changeData]').setText(`${UB.i18n(me.defaultValues.flagsRec & 1 ? 'Розраховано' : 'Внесено')} ${me.defaultValues.calculateDate
+            ? AC.dateService.formatDate(new Date(me.defaultValues.calculateDate), 'dd.mm.yyyy hh:nn:ss') : ''}
+           ${userName ? ` (${userName})` : ''}  `)
+          if (me.defaultValues.ID) {
+            me.attr.periodSalaryID.setReadOnly(true)
+            me.attr.payElID.setReadOnly(true)
+          } else {
+            appHR.getCurrentPeriod(globalOrganization).then(response => {
+              if (response) {
+                AC.viewUtils.setFilterValue(me.attr.payElID, {
+                  'methodID.code': ['1', '2', '3', '4', '5', '6', '7',
+                    '8', '9', '10', '11', '12', '24', '25', '33', '38', '42', '43', '45', '46', '47', '49', '63', '65', '77', '137', '138', '139',
+                    '26', '28', '29', '30', '53', '141', '146', '147', '148', '50', '51', '151', '75', '153', '154', '155', '156', '201', '202', '62', '204', '205', '206', '207'],
+                  'methodID.methodGroupID.groupType': me.payType === 'PAYMENT' ? 'PAYMENT' : ['FORPAY', 'OFFTAKE'],
+                  'dateTo': { value: response.dateFrom, condition: '>=' },
+                  'dateFrom': { value: response.dateTo, condition: '<=' }
+                })
+              }
+            })
+          }
+          if (me.defaultValues.accrualDt) {
+            me.accrualDt = typeof me.defaultValues.accrualDt === 'string' ? JSON.parse(me.defaultValues.accrualDt) : me.defaultValues.accrualDt
+          }
+          if (['201'].includes(me.defaultValues.methodCode)) {
+            me.panel.accrualAvg.setLocalStoreData(JSON.parse(me.defaultValues.accrualAvg))
+            me.attr.avgCalcTypeDoc.setValueById(me.defaultValues.avgCalcType)
+            me.attr.dateFromAvgDoc.setValue(AC.dateService.unshiftDate(me.defaultValues.dateFromAvg))
+            me.attr.dateToAvgDoc.setValue(AC.dateService.unshiftDate(me.defaultValues.dateToAvg))
+            me.attr.sumAvgDoc.setValue(me.defaultValues.baseSum)
+          }
+
+          if (['31', '61'].includes(me.defaultValues.methodCode)) {
+            me.attr.balance.setValue(AC.currencyService.round((me.defaultValues.incomingDebtSum || 0) + (me.defaultValues.calculatedSum || 0) -
+              (me.defaultValues.repaymentDebtSum || 0) - (me.defaultValues.repaymentSum || 0)), 2)
+          }
+          if (['26', '27'].includes(me.defaultValues.methodCode)) {
+            const taxIndividAcc = me.defaultValues.taxIndividAcc
+              ? (typeof me.defaultValues.taxIndividAcc === 'string' ? JSON.parse(me.defaultValues.taxIndividAcc) : me.defaultValues.taxIndividAcc) : []
+            me.attr.taxIndividGrid.setLocalStoreData(taxIndividAcc)
+            AC.gridUtils.setGridColumnVisible(me, ['privilegeSum'], ['26'].includes(me.defaultValues.methodCode))
+            UB.Repository('hr_taxRate').orderByDesc('yearFrom').orderByDesc('sumFrom').attrs(['ID', 'yearFrom', 'sumFrom', 'rate']).selectAsObject()
+              .then(result => { me.hr_taxRate = result })
+          }
+          _.forEach(me.attr, attr => {
+            if (me.defaultValues[attr.name] !== undefined && (attr.xtype !== 'ubdatefield' || me.defaultValues[attr.name] !== null)) {
+              const value = attr.xtype === 'ubdatefield' ? new Date(me.defaultValues[attr.name]) : me.defaultValues[attr.name]
+              attr.focusValue = value
+              attr[attr.setValueById ? 'setValueById' : 'setValue'](value)
+            }
+          })
+          _.forEach(me.attr, attr => {
+            attr.on('focus', ctrl => { ctrl.focusValue = ctrl.getValue() })
+            attr.on('change', (ctrl, value) => {
+              if (_.includes(me.baseCntr, ctrl.name)) {
+
+              } else {
+                if (ctrl.flagsFix) {
+                  if ((value !== me.calcRecord[ctrl.name] || (me.calcRecord[ctrl.name] === undefined && value !== me.record[ctrl.name])) && !ctrl.hidden) {
+                    if (value || value === 0) {
+                      me.flagsFix = me.flagsFix | ctrl.flagsFix
+                    } else {
+                      me.flagsFix = me.flagsFix & ~ctrl.flagsFix
+                    }
+                  }
+                }
+              }
+            })
+          })
+          if (me.record.sourceID && me.record.source === 'hr_employeeAccrual') {
+            UB.Repository('hr_employeeAccrual')
+              .attrs(['description', 'orderID.description'])
+              .selectById(me.record.sourceID).then(pAccr => {
+                if (pAccr) {
+                  me.attr.orderDescription.setVisible(true)
+                  me.attr.orderDescription.setReadOnly(true)
+                  me.attr.orderDescription.setValue(pAccr['orderID.description'] || pAccr['description'])
+                }
+              })
+          } else if (me.record['orderID.description']) {
+            me.attr.orderDescription.setVisible(true)
+            me.attr.orderDescription.setReadOnly(true)
+            let description = me.record['orderID.orderNumber'] ? '№' + me.record['orderID.orderNumber'] + ' ' : ''
+            if (me.record['orderID.orderDate']) description += UB.i18n('від ') + AC.dateService.formatDate(me.record['orderID.orderDate'])
+            me.attr.orderDescription.setValue(description + (description ? ', ' : '') + me.record['orderID.description'])
+          }
+        }
+        if (!me.defaultValues || !(me.defaultValues.flagsRec & 1 << 9)) {
+          const timeAttr = ['planDays', 'days', 'hours', 'planHours']
+
+          timeAttr.forEach(attrName => {
+            me.attr[attrName].on('keypress', (ctrl, e) => {
+              if (e.getKey() === e.ENTER) {
+                me.changeParams(ctrl)
+              }
+            })
+            me.attr[attrName].on('blur', me.changeParams)
+          })
+          const inputAttr = ['baseSum', 'mtCount', 'rate', 'koef', 'minSalarySum', 'paySum', 'sumAvg', 'planSumAvg',
+            'incomingDebtSum', 'repaymentDebtSum', 'calculatedSum', 'repaymentSum', 'balance', 'extraRate', 'calendarDays',
+            'standingAll', 'paySumAccrual']
+          inputAttr.forEach(attrName => {
+            me.attr[attrName].on('keypress', (ctrl, e) => {
+              if (e.getKey() === e.ENTER) {
+                me.changeControlParams(ctrl)
+              }
+            })
+            me.attr[attrName].on('blur', me.changeControlParams)
+          })
+          const comboAttr = ['employeeNumberID', 'periodSalaryID', 'periodCalcID', 'payElID', 'baseDate',
+            'missingEmployeeNumberID', 'dictFundSourceID', 'dictProgClassID', 'dictProjectID'].concat(['201'].includes(me.defaultValues.methodCode) ? [] : ['avgCalcType', 'periodFromAvg', 'periodToAvg'])
+
+          comboAttr.forEach(attrName => {
+            me.attr[attrName].on('change', me.changeControlParams)
+          })
+          me.attr.dateFrom.on('change', me.changeParams)
+          me.attr.dateTo.on('change', me.changeParams)
+          me.attr.periodFromAvg.getStore().on('load', (ctrl, value) => {
+            const period = value.find(o => o.getData().dateFrom <= AC.dateService.unshiftDate(me.record.dateFromAvg) && o.getData().dateTo >= AC.dateService.unshiftDate(me.record.dateFromAvg))
+            if (period) {
+              ctrl.focusValue = period.getData().ID
+              me.attr.periodFromAvg.setValue(period.getData().ID)
+            }
+          })
+          me.attr.periodToAvg.getStore().on('load', (ctrl, value) => {
+            const period = value.find(o => o.getData().dateFrom <= AC.dateService.unshiftDate(me.record.dateToAvg) && o.getData().dateTo >= AC.dateService.unshiftDate(me.record.dateToAvg))
+            if (period) {
+              ctrl.focusValue = period.getData().ID
+              me.attr.periodToAvg.setValue(period.getData().ID)
+            }
+          })
+        } else {
+          Object.keys(me.attr).forEach(attrName => {
+            if (me.attr[attrName].setReadOnly) {
+              me.attr[attrName].setReadOnly(true)
+            }
+          })
+        }
+      } else {
+        if (me.defaultValues && me.defaultValues.length) {
+          const lastAccrual = me.defaultValues[me.defaultValues.length - 1]
+          const userName = (lastAccrual.flagsRec & 1 || lastAccrual.flagsRec & 1 << 3) ? null : (lastAccrual.createUserFullFIO || lastAccrual.createUserFullName || lastAccrual.createUserName)
+          me.down('[name=changeData]').setText(`${UB.i18n(lastAccrual.flagsRec & 1 ? 'Розраховано' : 'Внесено')} ${lastAccrual.calculateDate
+            ? AC.dateService.formatDate(new Date(lastAccrual.calculateDate), 'dd.mm.yyyy hh:nn:ss') : ''}
+            ${userName ? `(${userName})` : ''}`)
+          me.down('[name=docButton]').show()
+          me.flagsRec = lastAccrual.flagsRec
+          me.attr.employeeNumberID.setValueById(lastAccrual.employeeNumberID)
+          me.attr.payElID.setValueById(lastAccrual.payElID)
+          me.attr.periodCalcID.setValueById(lastAccrual.periodCalcID)
+          me.attr.periodSalaryID.skipChange = true
+          me.attr.periodSalaryID.setValueById(lastAccrual.periodSalaryID)
+          me.panel.accrualAvg.down('[dataIndex = opDays]')[lastAccrual.calcEarnings !== 'HOUR' ? 'show' : 'hide']()
+          me.panel.accrualAvg.down('[dataIndex = opHours]')[lastAccrual.calcEarnings === 'HOUR' ? 'show' : 'hide']()
+          me.panel.accrual.setLocalStoreData(me.defaultValues)
+          me.panel.accrualAvg.setLocalStoreData(JSON.parse(lastAccrual.accrualAvg))
+          me.attr.periodSalaryID.setReadOnly(true)
+          me.attr.payElID.setReadOnly(true)
+          me.attr.employeeNumberID.setReadOnly(true)
+          if (lastAccrual['orderID.description']) {
+            me.attr.orderDescription.setVisible(true)
+            me.attr.orderDescription.setReadOnly(true)
+            let description = lastAccrual['orderID.orderNumber'] ? '№' + lastAccrual['orderID.orderNumber'] + ' ' : ''
+            if (lastAccrual['orderID.orderDate']) description += UB.i18n('від ') + AC.dateService.formatDate(lastAccrual['orderID.orderDate'])
+            me.attr.orderDescription.setValue(description + (description ? ', ' : '') + lastAccrual['orderID.description'])
+            if (['17', '18', '149', '48'].includes(lastAccrual.methodCode) && lastAccrual.orderDtID) {
+              UB.Repository('hr_orderRegistryDt')
+                .attrs(['empOrderID.description'])
+                .selectById(lastAccrual.orderDtID).then(det => {
+                  if (det) {
+                    const desc = me.attr.orderDescription.getValue()
+                    me.attr.orderDescription.setValue(desc + (desc ? ', ' : '') + det['empOrderID.description'])
+                  }
+                })
+            }
+          }
+          switch (lastAccrual.methodCode) {
+            case '13':
+            case '16':
+            case '71':
+            case '67':
+            case '142':
+            case '21':
+            case '22':
+            case '23':
+            case '44':
+            case '68':
+            case '73':
+            case '17':
+            case '18':
+            case '19':
+            case '20':
+            case '40':
+            case '37':
+            case '36':
+            case '48':
+            case '149': {
+              let dayCount = 0
+              let calendarDayCount = 0
+              me.defaultValues.forEach(accr => {
+                dayCount += accr.days
+                calendarDayCount += accr.calendarDays || accr.days
+              })
+              me.attr.avgCalcTypeDoc.setValueById(lastAccrual.avgCalcType)
+              me.attr.dateFromAvgDoc.setValue(AC.dateService.unshiftDate(lastAccrual.dateFromAvg))
+              me.attr.dateToAvgDoc.setValue(AC.dateService.unshiftDate(lastAccrual.dateToAvg))
+              me.attr.orderDateFrom.setValue(AC.dateService.unshiftDate(lastAccrual.orderDateFrom || lastAccrual.dateFrom))
+              me.attr.orderDateTo.setValue(AC.dateService.unshiftDate(lastAccrual.orderDateTo || lastAccrual.dateTo))
+              me.attr.sumAvgDoc.setValue(lastAccrual.baseSum)
+              me.attr.dayCount.setValue(dayCount)
+              me.attr.calendarDayCount.setValue(calendarDayCount)
+              break
+            }
+          }
+        }
+      }
+    }, me)
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,61 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+/* eslint-disable no-unused-vars */
+/* global AC $App HR */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'empOrderType', 'organizationID', 'isGroup',
+    'positionID', 'employeeNumberID', 'employeePositionID.employeeNumberID', 'employeeID'
+  ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'border'
+    }
+  },
+  defaults: {
+    layout: 'fit'
+  },
+  size: {
+    width: 1100,
+    height: 700
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'dummyAction'
+        }
+      ]
+    }
+  ],
+  items: [{
+    xtype: 'tabpanel',
+    region: 'center',
+    listeners: {
+      tabchange: function (tp, t) {}
+    },
+    items: [
+      {
+        title: UB.i18n('Загальне'),
+        ubID: 'tabMain',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+          {
+            attributeName: 'employeePositionID',
+            fieldLabel: UB.i18n('Співробітник'),
+            fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+            fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+            xtype: 'empPositionCombobox',
+            addWorkPlace: true,
+            displayField: 'description'
+          }
+        ]
+      }]
+  }]
+}

@@ -1,0 +1,39 @@
+/* global Ext */
+exports.formDef = 'HR.showImage'
+
+Ext.define('HR.showImage', {
+  extend: 'Ext.panel.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.showImage',
+  mainPanel: {
+    xtype: 'panel',
+    header: false,
+    region: 'center',
+    flex: 1,
+    layout: 'fit',
+    items: [
+      {
+        xtype: 'image',
+        // src: '/models/HR/images/capture.png',
+        region: 'south',
+        layout: 'fit',
+        flex: 1
+      }
+    ]
+  },
+
+  initComponent: function () {
+    let me = this
+    me.items = [
+      me.mainPanel
+    ]
+    me.on('afterrender', () => {
+      const me = this
+      const image = me.down('[xtype=image]')
+      image.setSrc(`/models/HR/images/${me.commandConfig.image}`)
+    }, me)
+    me.callParent(arguments)
+  }
+})

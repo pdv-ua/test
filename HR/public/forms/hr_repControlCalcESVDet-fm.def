@@ -1,0 +1,272 @@
+/* global Ext AC UB Blob $App */
+
+exports.formDef = 'HR.repControlCalcESVDetails'
+
+Ext.define('HR.repControlCalcESVDetails', {
+  extend: 'Ext.form.Panel',
+  width: 1200,
+  height: 600,
+  layout: { type: 'vbox', align: 'stretch' },
+  flex: 1,
+  items: [
+    {
+      xtype: 'panel',
+      region: 'center',
+      name: 'reportPanel',
+      flex: 1,
+      items: []
+    }
+  ],
+  initComponent: function () {
+    const me = this
+    me.reportType = 'html'
+    me.reportOptions = {
+      pageOrientation: 'landscape'
+    }
+    const control = Ext.create('Ext.Component', {
+      flex: 1,
+      margin: 0,
+      autoEl: {
+        tag: 'iframe'
+      }
+    })
+    const container = Ext.create('Ext.panel.Panel', {
+      layout: { type: 'vbox', align: 'stretch' },
+      flex: 1,
+      items: [
+        {
+          flex: 1,
+          autoScroll: true,
+          layout: { type: 'hbox', pack: 'center', align: 'stretch' },
+          bodyCls: 'ub-panel-gray',
+          items: [control]
+        },
+        {
+          xtype: 'panel',
+          layout: { type: 'hbox', pack: 'end' },
+          items: [
+            {
+              text: UB.i18n('Друкувати'),
+              name: 'printBtn',
+              xtype: 'button',
+              iconCls: 'fas fa-print',
+              margin: '2 2 2 2',
+              cls: 'blue-action',
+              handler: function () {
+                if (!me.reportPrint) {
+                  const iFrame = me.reportControl.getEl().dom
+                  iFrame.contentWindow.print()
+                }
+              }
+            },
+            {
+              xtype: 'button',
+              name: 'exportData',
+              margin: '2 2 2 2',
+              iconCls: 'fas fa-file-excel',
+              cls: 'green-action',
+              text: 'Excel',
+              tooltip: UB.i18n('Вивантаження в Excel'),
+              handler: function () {
+                AC.documentService.generateXLSXFromHtml(me.reportOptions.html, true).then(data => {
+                  const blobData = new Blob(
+                    [data], {
+                      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    }
+                  )
+                  const repName = me.reportFileName || UB.i18n('Контроль розрахунку ЄСВ. Деталізація')
+                  const fileName = `${repName}.xlsx`
+                  window.saveAs(blobData, fileName)
+                })
+              }
+            }
+          ]
+        }
+      ]
+    })
+    me.items = [
+      container
+    ]
+    me.reportControl = control
+
+    me.showReport = function (data) {
+      const me = this
+      const HTML_PAGEBREAK_RE = new RegExp('<!-- pagebreak -->', 'gi')
+      const HTML_PAGEBREAK_EL = '<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="mce-pagebreak"/>'
+      const iFrame = me.reportControl.getEl().dom
+      const iFrameDoc = iFrame.contentDocument
+      const style = [getStyle()]
+      const orientation = me.reportOptions.pageOrientation
+      if (orientation === 'landscape') {
+        style.push('@page{size: landscape;}')
+      } else if (orientation === 'portrait') {
+        style.push('@page{size: portrait;}')
+      }
+      const styleText = `<style type="text/css"> ${style.join('\n')} </style>`
+      me.reportOptions.html = data
+      iFrameDoc.body.innerHTML = data.replace(HTML_PAGEBREAK_RE, HTML_PAGEBREAK_EL)
+      iFrameDoc.head.innerHTML = styleText
+      const refs = iFrameDoc.getElementsByTagName('a')
+      for (let i = 0, L = refs.length; i < L; i++) {
+        refs[i].addEventListener('click', me.onReportClick, true)
+      }
+      me.setLoading(false)
+    }
+
+    me.onReportClick = function (e) {
+      const cellCode = e.target.dataset['cellcode']
+      const dataID = Number(e.target.dataset['id'])
+      if (cellCode === 'payEl') {
+        $App.doCommand({
+          cmdType: 'showForm',
+          entity: 'hr_payEl',
+          instanceID: dataID,
+          tabId: 'hr_payEl' + e.target.dataset.id,
+          target: $App.getViewport().centralPanel
+        })
+      }
+      if (cellCode === 'periodCalc' || cellCode === 'periodSalary') {
+        $App.doCommand({
+          cmdType: 'showForm',
+          entity: 'hr_paySummary',
+          instanceID: dataID,
+          tabId: 'hr_paySummary' + e.target.dataset.id,
+          target: $App.getViewport().centralPanel,
+          cmpInitConfig: {
+            defaultValues: {
+              periodID: dataID
+            }
+          }
+        })
+      }
+      if (cellCode === 'employee') {
+        const defValues = {
+          employeeNumberID: dataID
+        }
+        if (e.target.dataset['period']) {
+          defValues.periodID = Number(e.target.dataset['period'])
+        }
+        if (e.target.dataset['payel']) {
+          defValues.payElID = Number(e.target.dataset['payel'])
+          defValues.makeBold = 'accrual'
+        }
+        $App.doCommand({
+          cmdType: 'showForm',
+          formCode: 'hr_rl',
+          entity: 'hr_rl',
+          tabId: 'hr_rl' + dataID,
+          target: $App.getViewport().centralPanel,
+          cmpInitConfig: {
+            defaultValues: defValues
+          }
+        })
+      }
+      if (cellCode === 'payFund') {
+        $App.doCommand({
+          cmdType: 'showForm',
+          formCode: 'hr_payFund',
+          entity: 'hr_payFund',
+          tabId: 'hr_payFund' + dataID,
+          instanceID: dataID,
+          target: $App.getViewport().centralPanel
+        })
+      }
+      e.preventDefault()
+    }
+
+    me.on('afterrender', function () {
+      const me = this
+
+      let reportCode = 'hr_reportControlCalcESVDet'
+      switch (me.reportParams.cellCode) {
+        case 'taxBaseSum':
+          reportCode = 'hr_reportControlCalcESVTax'
+          break
+        case 'addBaseCalcSum':
+        case 'excMaxBaseSum':
+          reportCode = 'hr_reportControlCalcESVFund'
+          break
+        case 'controlSum':
+          reportCode = 'hr_reportControlCalcESVControl1'
+          break
+        case 'controlChargedSum':
+          reportCode = 'hr_reportControlCalcESVControl2'
+          break
+        case 'chargedFactSum':
+        case 'factSum':
+          reportCode = 'hr_reportControlCalcESVFundDet'
+          break
+      }
+      me.setLoading(true)
+      me.reportData.reportName = me.title
+      me.report = Ext.create('UBS.UBReport', {
+        code: reportCode,
+        type: me.reportType,
+        params: me.reportData || {},
+        language: $App.connection.userLang()
+      })
+
+      me.report
+        .init()
+        .then(function () {
+          return me.report.makeReport()
+        })
+        .then(function (data) {
+          if (data && data.reportData) {
+            me.showReport(data.reportData)
+          } else {
+            me.reportDone = true
+          }
+          me.setLoading(false)
+        })
+    })
+    me.callParent(arguments)
+  }
+})
+
+function getStyle () {
+  return `
+    body {
+      background-color: #FFFFFF;
+      color: #000000;
+      font-family: Times New Roman, Verdana, Arial, Helvetica, sans-serif;
+      font-size: 12pt;
+      line-height: 1.3;
+    }
+    .word-wrap {
+      word-wrap: break-word;
+      hyphens: auto
+    }
+    a:visited { color: blue; }
+    td {
+      padding: 3px;
+    }
+    .mce-pagebreak {
+      cursor: default;
+      display: block;
+      border: 0;
+      width: 100%;
+      height: 5px;
+      border: 1px dashed #666;
+      margin-top: 15px;
+      page-break-before: always
+    }
+    table.layout-portrait {
+      width:750px;
+    }
+    table.layout-landscape {
+      width:1100px !important;
+    }
+    @media print {
+      .mce-pagebreak {
+        border: 0
+      }
+      a {
+        text-decoration: none
+      }
+      table.layout-landscape {
+        width:1300px;
+      }
+    }
+  `
+}

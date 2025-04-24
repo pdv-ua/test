@@ -1,0 +1,249 @@
+// @isModal true
+/* jshint maxerr: 10000 */
+
+/* global AC UB */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['orderID', 'empOrderType', 'organizationID', 'isGroup', 'organizationID.mi_data_id', 'employeeNumberID', 'employeePositionID.employeeNumberID'],
+    parentConfig: {
+      postOnlySimpleAttributes: true,
+      layout: {
+        type: 'border'
+      }
+    },
+    defaults: {
+      layout: 'fit'
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [{
+      xtype: 'tabpanel',
+      region: 'center',
+      autoScroll: true,
+      listeners: {
+        tabchange: function (tp, t) {
+
+        }
+      },
+      items: [{
+        title: UB.i18n('Загальне'),
+        ubID: 'tabMain',
+        layout: {
+          type: 'vbox',
+          align: 'stretch'
+        },
+        items: [
+
+          {
+            title: UB.i18n('Період стажування'),
+            xtype: 'ubfieldset',
+            border: true,
+            margin: '10 10 10 10',
+            layout: {
+              type: 'hbox'
+            },
+            items: [{
+              attributeName: 'dateFrom',
+              fieldLabel: UB.i18n('Дата початку')
+            },
+            {
+              attributeName: 'dateTo',
+              labelWidth: 130,
+              fieldLabel: UB.i18n('Дата закінчення')
+            }
+            ]
+          },
+          {
+            title: UB.i18n('Місце стажування'),
+            xtype: 'ubfieldset',
+            border: true,
+            margin: '0 10 10 10',
+            layout: {
+              type: 'vbox',
+              align: 'stretch'
+            },
+            items: [{
+              attributeName: 'departmentID',
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              fieldList: ['ID', 'description'],
+              valueField: 'ID',
+              displayField: 'description',
+              gridFieldList: ['description'],
+              __mip_recordhistory_all: true
+            }]
+          },
+          {
+            attributeName: 'internshipType'
+          },
+          {
+            attributeName: 'employeePositionID',
+            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+            fieldList: ['ID', 'description', 'employeeNumberID', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+            xtype: 'empPositionCombobox',
+            addWorkPlace: true,
+            valueField: 'ID',
+            displayField: 'description',
+            gridFieldList: ['description']
+          },
+
+          {
+            attributeName: 'payElID',
+            hideEntityItemInContext: true,
+            fieldList: ['ID', 'description', 'codeSort', 'methodID.valuation'],
+            orderList: { orderBy: { expression: 'codeSort' } },
+            whereList: {
+              methodCode: {
+                expression: '[methodID.code]',
+                condition: 'equal',
+                value: '4'
+              }
+            }
+          },
+          {
+            layout: {
+              type: 'hbox',
+              align: 'middle'
+            },
+            items: [
+              {
+                attributeName: 'bountySum',
+                fieldLabel: UB.i18n('Значення'),
+                width: 300
+              },
+              {
+                xtype: 'label',
+                name: 'valyationLabel',
+                html: '',
+                width: 100
+              },
+              {
+                attributeName: 'valuationType',
+                flex: 1,
+                fieldLabel: UB.i18n('Оцінка'),
+                labelWidth: 80
+              }
+            ]
+          },
+          {
+            attributeName: 'educationOrgID',
+            fieldList: ['ID', 'description'],
+            whereList: {
+              orgBusinessType: {
+                expression: '[orgBusinessTypeID.code]',
+                condition: 'equal',
+                value: 'med'
+              }
+            }
+          },
+          {
+            attributeName: 'description',
+            xtype: 'textfield',
+            allowBlank: true,
+            fieldLabel: UB.i18n("Суб'єкт стажування")
+          },
+          {
+            xtype: 'tabpanel',
+            region: 'center',
+            layout: 'fit',
+            ubID: 'tpDetail',
+            flex: 1,
+            items: [
+              {
+                title: UB.i18n('Стажисти'),
+                name: 'hr_empOrderInternshipListDet',
+                xtype: 'ubdetailgrid',
+                rowEditing: true,
+                paraGrid: true,
+                enableColumnHide: false,
+                autoScroll: true,
+
+                hideActions: [],
+                flex: 1,
+                entityConfig: {
+                  entity: 'hr_empOrderInternshipListDet',
+                  method: 'select',
+                  fieldList: [{
+                    name: 'lastName',
+                    description: UB.i18n('Прізвище'),
+                    visibility: true
+                  },
+                  {
+                    name: 'firstName',
+                    visibility: true
+                  },
+                  {
+                    name: 'middleName',
+                    visibility: true
+                  },
+                  {
+                    name: 'description',
+                    visibility: true
+                  }, {
+                    name: 'empOrderType',
+                    description: UB.i18n('Тип пункту'),
+                    visibility: false
+                  },
+                  {
+                    name: 'organizationID',
+                    visibility: false
+                  }
+                  ]
+
+                },
+                masterFields: ['ID', 'orderID'],
+                detailFields: ['paraID', 'orderID'],
+                onBeforeEdit: function (rowEditor, context) {
+                  if (context.grid.isEditDisabled) {
+                    return false
+                  }
+                  let editor = rowEditor.editor
+                  let me = editor.up('form')
+                  let reco = context.record
+                  /*
+                  let dateFromCtrl = editor.query(`[name=dateFrom]`)[0]
+                  let dateToCtrl = editor.query(`[name=dateTo]`)[0]
+*/
+                  if (!reco.get('empOrderType')) {
+                    reco.set('empOrderType', me.record.get('empOrderType'))
+                    reco.set('organizationID', me.record.get('organizationID'))
+                    reco.set('description', me.record.get('description'))
+                  }
+                },
+                listeners: {
+                  changeData: function (grid, action) {
+                    // let me = grid.up('form')
+                    // me.setIsDirty(true)
+                  },
+                  afterdel: function () {
+
+                  },
+
+                  afterrender: grid => {
+
+                  },
+                  render: grid => {
+
+                  }
+                },
+                cmpInitConfig: {
+                  afterInit: function () {
+
+                  },
+                  customInit: function () {
+                    let grid = this
+                    AC.gridUtils.tuneGridColumns(grid, {})
+                  }
+                }
+
+              }
+            ]
+          }
+
+        ]
+      }]
+    }]
+
+  }
+})()

@@ -1,0 +1,243 @@
+{
+  "caption": "Право на пільгу",
+  "description": "Право на пільгу",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "documentation": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "dictBenefitsKindID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictBenefitsKind",
+      "caption": "Вид пільги",
+      "description": "Вид пільги",
+      "documentation": "Вид пільги",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії"
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення",
+      "documentation": "Дата закінчення",
+      "allowNull": true,
+      "defaultView": false,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "employeeFamilyID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeFamily",
+      "caption": "Член родини, за якого надається пільга",
+      "description": "Член родини, за якого надається пільга",
+      "documentation": "Член родини, за якого надається пільга"
+    },
+    {
+      "name": "docNumber",
+      "dataType": "String",
+      "size": 20,
+      "caption": "№ документа",
+      "description": "№ документа",
+      "documentation": "№ документа"
+    },
+    {
+      "name": "docDate",
+      "dataType": "Date",
+      "caption": "Дата видачі",
+      "description": "Дата видачі",
+      "documentation": "Дата видачі"
+    },
+    {
+      "name": "issued",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Ким виданий",
+      "description": "Ким виданий",
+      "documentation": "Ким виданий"
+    },
+    {
+      "name": "coef",
+      "dataType": "Float",
+      "caption": "Коефіцієнт",
+      "description": "Коефіцієнт",
+      "documentation": "Коефіцієнт"
+    },
+    {
+      "name": "avgSum",
+      "dataType": "Float",
+      "caption": "Сума середньоденного заробітку",
+      "description": "Сума середньоденного заробітку",
+      "documentation": "Сума середньоденного заробітку"
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Примітки",
+      "description": "Примітки",
+      "documentation": "Примітки"
+    },
+    {
+      "name": "employeeDisabilityID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeDisability",
+      "caption": "Інвалідність",
+      "description": "Інвалідність",
+      "documentation": "Інвалідність"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 200,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "customSettings": {
+        "compositeFields": ["dictBenefitsKindID.name", "docNumber", "docDate"],
+        "compositeSeparator": " "
+      }
+    },
+    {
+      "name": "taxCode",
+      "dataType": "String",
+      "size": 20,
+      "caption": "РНОКПП",
+      "description": "РНОКПП",
+      "documentation": "Використовується тільки при імпорті",
+      "allowNull": true,
+      "isUnique": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "fullFIO",
+      "dataType": "String",
+      "size": 512,
+      "caption": "Повне ім'я особи",
+      "description": "Повне ім'я особи",
+      "documentation": "Використовується тільки при імпорті",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "birthDate",
+      "dataType": "Date",
+      "caption": "Дата народження",
+      "description": "Дата народження",
+      "documentation": "Використовується тільки при імпорті",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "docSeries",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Серія документа",
+      "description": "Серія документа",
+      "documentation": "Використовується тільки при імпорті",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "catCode",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Категорія",
+      "description": "Технічні дані, код запису довідника 'Категорія пільговиків' АС Картка (таблиця K57)",
+      "documentation": "Використовується тільки при імпорті",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "select null"
+        }
+      ]
+    },
+    {
+      "name": "impSourceID",
+      "dataType": "Bigint",
+      "caption": "Код джерела",
+      "description": "Код джерела даних імпорту",
+      "documentation": "Код джерела даних імпорту",
+      "allowNull": true
+    },
+    {
+      "name": "impEmployeeID",
+      "dataType": "String",
+      "size": 20,
+      "caption": "Зовнішній код",
+      "description": "Зовнішній код",
+      "documentation": "Використовується тільки при імпорті",
+      "allowNull": true
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "unity": {
+      "entity": "hr_attachEntity",
+      "attributeList": [],
+      "defaults": {
+        "entityName": "hr_employeeBenefits"
+      }
+    }
+  }
+}

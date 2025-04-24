@@ -1,0 +1,111 @@
+{
+  "caption": "Додаткові гарантії працевлаштування",
+  "description": "Додаткові гарантії працевлаштування",
+  "descriptionAttribute": "",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employee",
+      "caption": "Особа",
+      "description": "Особа",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "addGuarant",
+      "dataType": "Enum",
+      "enumGroup": "HR_ADDGUARANT",
+      "caption": "Категорія гарантій працевлаштування",
+      "description": "Категорія гарантій працевлаштування",
+      "defaultValue": "0",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку",
+      "description": "Дата початку",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення",
+      "description": "Дата закінчення"
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "employeeDocID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeDocs",
+      "caption": "Документ",
+      "description": "Документ"
+    },
+    {
+      "name": "docNumber",
+      "dataType": "String",
+      "size": 80,
+      "caption": "Номер",
+      "description": "Номер"
+    },
+    {
+      "name": "docSeries",
+      "dataType": "String",
+      "size": 10,
+      "caption": "Серія",
+      "description": "Серія"
+    },
+    {
+      "name": "docIssuer",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Ким виданий",
+      "description": "Ким виданий"
+    },
+    {
+      "name": "dateIssue",
+      "dataType": "Date",
+      "caption": "Дата видачі",
+      "description": "Дата видачі"
+    },
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 50,
+      "caption": "Номер наказу  ( для звіту \"Інформація про зайнятість\")",
+      "description": "Номер наказу  ( для звіту \"Інформація про зайнятість\")"
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу ( для звіту \"Інформація про зайнятість\")",
+      "description": "Дата наказу ( для звіту \"Інформація про зайнятість\")"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+
+}

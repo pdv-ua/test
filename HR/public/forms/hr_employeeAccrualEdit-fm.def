@@ -1,0 +1,125 @@
+
+/* global HR appAC UB */
+exports.formDef = {
+  requiredFields: ['employeeNumberID', 'payElID.name', 'payElID.methodID.valuation', 'payElID.methodID.code', 'payElID.calcAlgorithm',
+    'd0', 'd1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7', 'd8', 'd9',
+    'd0Value', 'd1Value', 'd2Value', 'd3Value', 'd4Value', 'd5Value', 'd6Value', 'd7Value', 'd8Value', 'd9Value',
+    'accountID.code', 'accountID', 'orderID', 'orderID.description', 'changeOrderID', 'changeOrderID.description'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            { attributeName: 'employeeID', hidden: true },
+            { attributeName: 'employeeNumberID',
+              hidden: true,
+              fieldList: ['ID', 'description', 'dateFrom']
+            },
+            {
+              attributeName: 'payElID',
+              fieldList: ['ID', 'description', 'methodID.valuation', 'methodID.code', 'calcAlgorithm', 'codeSort'],
+              whereList: {
+                groupType: {
+                  expression: '[methodID.methodGroupID.groupType]',
+                  condition: 'equal',
+                  value: 'PAYMENT'
+                }
+              },
+              orderList: { orderBy: { expression: 'codeSort' } },
+              hideEntityItemInContext: true,
+              width: 600,
+              margin: '5 15 15 15',
+              fieldLabel: UB.i18n('Вид оплати')
+            },
+            {
+              attributeName: 'dateFromEmpty',
+              fieldLabel: UB.i18n('Початок'),
+              allowBlank: false
+            },
+            {
+              attributeName: 'dateToEmpty',
+              fieldLabel: UB.i18n('Кінець'),
+              margin: '5 15 15 15'
+            },
+            {
+              attributeName: 'missingEmployeeNumberID',
+              fieldList: ['ID', 'description', 'orgID'],
+              hidden: true
+            },
+            { attributeName: 'accrualRate', width: 230, hidden: true, decimalPrecision: 6 },
+            {
+              attributeName: 'accrualSum',
+              width: 230,
+              hidden: true,
+              margin: '5 15 15 15'
+            },
+            { attributeName: 'remindSum', width: 230, hidden: true },
+            { attributeName: 'limitSum', width: 230, hidden: true },
+            { attributeName: 'isFactHourHarmful', hidden: true },
+            { attributeName: 'orderNumber', width: 230 },
+            { attributeName: 'orderDate' },
+            { attributeName: 'changeOrderNumber', width: 230 },
+            { attributeName: 'changeOrderDate' }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              attributeName: 'dictFundSourceID',
+              labelWidth: 130,
+              fieldList: ['ID', 'name'],
+              listeners: {
+                beforeQuerySend: function () {
+                  this.store.ubRequest.orgID = appAC.globalOrganization()
+                }
+              }
+            },
+            {
+              xtype: 'accountDimensionsControl',
+              name: 'dimControl',
+              labelWidth: 130,
+              fieldLabel: UB.i18n('Рахунок витрат'),
+              accountDisplayField: 'description',
+              allowBlank: true,
+              allowBlankDims: true,
+              getDefaultDimension: HR.accrualService.getDefaultDimension
+            },
+            {
+              fieldLabel: UB.i18n('Надано наказом'),
+              xtype: 'textfield',
+              labelWidth: 125,
+              name: 'orderDescription',
+              fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+              flex: 1,
+              hidden: true,
+              readOnly: true
+            },
+            {
+              fieldLabel: UB.i18n('Скасовано наказом'),
+              xtype: 'textfield',
+              labelWidth: 125,
+              name: 'orderCanceledDescription',
+              fieldStyle: 'text-decoration: none; color: #2f7c94; cursor:pointer; border: 0px;',
+              flex: 1,
+              hidden: true,
+              readOnly: true
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

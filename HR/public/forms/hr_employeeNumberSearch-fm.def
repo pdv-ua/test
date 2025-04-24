@@ -1,0 +1,1259 @@
+/* global UB Ext AC _ appAC appHR saveAs Blob moment */
+
+exports.formDef = 'HR.employeeNumberSearch'
+
+Ext.define('HR.employeeNumberSearch', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.employeeNumberSearch',
+  withoutQuittedEmployees: false,
+  autoFill: true,
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        region: 'north',
+        autoScroll: true,
+        split: true,
+        layout: { type: 'hbox' },
+        items: [
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: { labelWidth: 130 },
+            flex: 2,
+            items: [
+              {
+                layout: { type: 'hbox' },
+                defaults: { labelWidth: 130 },
+                items: [
+                  {
+                    xtype: 'ubcombobox',
+                    flex: 1,
+                    name: 'dictMultiGroup',
+                    fieldLabel: UB.i18n('Група підрозділів'),
+                    valueField: 'ID',
+                    displayField: 'name',
+                    ubRequest: {
+                      entity: 'hr_dictMultiGroup',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['ID', 'name'],
+                      __mip_ondate: appAC.globalApplicationDate(),
+                      whereList: {
+                        orgID: {
+                          expression: '[orgID]',
+                          condition: '=',
+                          value: appAC.globalOrganization()
+                        },
+                        isClose: {
+                          expression: '[isClose]',
+                          condition: '=',
+                          value: false
+                        }
+                      }
+                    },
+                    listeners: {
+                      change: () => {
+                        me.attr.grid.getStore().removeAll()
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'checkbox',
+                    width: 110,
+                    name: 'childDictMultiGroup',
+                    boxLabel: UB.i18n('з підлеглими'),
+                    boxLabelAlign: 'after',
+                    labelWidth: 70,
+                    listeners: {
+                      change: () => {
+                        me.attr.grid.getStore().removeAll()
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                defaults: { labelWidth: 130 },
+                items: [
+                  {
+                    xtype: 'hrMultiSelectBox',
+                    multiSelect: true,
+                    flex: 1,
+                    name: 'depID',
+                    fieldLabel: UB.i18n('Підрозділ'),
+                    valueField: 'mi_data_id',
+                    displayField: 'caption',
+                    ubRequest: {
+                      entity: 'hr_department',
+                      method: UB.core.UBCommand.methodName.SELECT,
+                      fieldList: ['mi_data_id', 'caption', 'parentUnitID', 'orgID', 'mi_treePath'],
+                      __mip_ondate: appAC.globalApplicationDate(),
+                      whereList: {
+                        state: {
+                          expression: '[state]',
+                          condition: '=',
+                          values: {
+                            state: 'ACTIVE'
+                          }
+                        }
+                      }
+                    },
+                    listeners: {
+                      change: () => {
+                        me.attr.grid.getStore().removeAll()
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'checkbox',
+                    width: 110,
+                    name: 'childDep',
+                    boxLabel: UB.i18n('з підлеглими'),
+                    boxLabelAlign: 'after',
+                    labelWidth: 70,
+                    listeners: {
+                      change: () => {
+                        me.attr.grid.getStore().removeAll()
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                xtype: 'ubboxselect',
+                flex: 1,
+                multiSelect: true,
+                name: 'dictPositionID',
+                fieldLabel: UB.i18n('Посада'),
+                valueField: 'ID',
+                displayField: 'name',
+                ubRequest: {
+                  entity: 'hr_dictPosition',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['ID', 'name'],
+                  __mip_ondate: appAC.globalApplicationDate()
+                },
+                listeners: {
+                  change: () => {
+                    me.attr.grid.getStore().removeAll()
+                  }
+                }
+              },
+              {
+                layout: { type: 'hbox' },
+                flex: 1,
+                items: [
+                  {
+                    xtype: 'ubdatefield',
+                    name: 'dateFrom',
+                    labelWidth: 130,
+                    fieldLabel: UB.i18n('За період з'),
+                    allowBlank: false
+                  },
+                  {
+                    xtype: 'ubdatefield',
+                    name: 'dateTo',
+                    labelWidth: 50,
+                    fieldLabel: UB.i18n('по')
+                  }
+                ]
+              },
+              { xtype: 'component', height: 30 },
+              {
+                xtype: 'radiogroup',
+                name: 'stateEmployee',
+                hidden: me.withoutQuittedEmployees,
+                columns: 3,
+                items: [
+                  { boxLabel: UB.i18n('Всі'), name: 'rb', inputValue: 1, checked: true },
+                  { boxLabel: UB.i18n('Без звільнених'), name: 'rb', inputValue: 2 },
+                  { boxLabel: UB.i18n('Тільки звільнені'), name: 'rb', inputValue: 3 }
+                ],
+                listeners: {
+                  change: () => {
+                    me.attr.grid.getStore().removeAll()
+                  }
+                }
+              }
+            ]
+          },
+          {
+            layout: { type: 'vbox', align: 'stretch' },
+            defaults: { labelWidth: 130 },
+            flex: 1,
+            items: [
+              {
+                xtype: 'ubboxselect',
+                name: 'dictStaffCatID',
+                fieldLabel: UB.i18n('Категорія'),
+                flex: 1,
+                multiSelect: true,
+                valueField: 'ID',
+                displayField: 'description',
+                ubRequest: {
+                  entity: 'hr_dictStaffCat',
+                  fieldList: ['ID', 'description']
+                },
+                listeners: {
+                  change: () => {
+                    me.attr.grid.getStore().removeAll()
+                  }
+                }
+              },
+              {
+                xtype: 'ubboxselect',
+                name: 'dictEmpCategoryID',
+                fieldLabel: UB.i18n('Кваліфікаційна категорія'),
+                flex: 1,
+                multiSelect: true,
+                valueField: 'ID',
+                displayField: 'description',
+                ubRequest: {
+                  entity: 'hr_dictEmpCategory',
+                  fieldList: ['ID', 'description']
+                },
+                listeners: {
+                  change: () => {
+                    me.attr.grid.getStore().removeAll()
+                  }
+                }
+              },
+              {
+                xtype: 'ubboxselect',
+                name: 'workPlace',
+                flex: 1,
+                multiSelect: true,
+                fieldLabel: UB.i18n('Місце роботи'),
+                hideEntityItemInContext: true,
+                enumGroupFilter: 'HR_WORKER_PLACE',
+                valueField: 'code',
+                displayField: 'name',
+                ubRequest: {
+                  entity: 'ubm_enum',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                  whereList: {
+                    eGroup: {
+                      expression: '[eGroup]',
+                      condition: 'equal',
+                      values: { 'eGroup': 'HR_WORKER_PLACE' }
+                    }
+                  }
+                },
+                listeners: {
+                  change: () => {
+                    me.attr.grid.getStore().removeAll()
+                  }
+                }
+              },
+              {
+                xtype: 'ubboxselect',
+                flex: 1,
+                multiSelect: true,
+                name: 'workerType',
+                recordValue: 'positionID.workerType',
+                formParams: true,
+                region: 'East',
+                fieldLabel: UB.i18n('Форма зайнятості'),
+                hideEntityItemInContext: true,
+                enumGroupFilter: 'HR_WORKER_TYPE',
+                valueField: 'code',
+                displayField: 'shortName',
+                ubRequest: {
+                  entity: 'ubm_enum',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['code', 'shortName', 'eGroup', 'sortOrder'],
+                  whereList: {
+                    eGroup: {
+                      expression: '[eGroup]',
+                      condition: 'equal',
+                      values: { 'eGroup': 'HR_WORKER_TYPE' }
+                    }
+                  }
+                },
+                listeners: {
+                  change: () => {
+                    me.attr.grid.getStore().removeAll()
+                  }
+                }
+              },
+              {
+                xtype: 'ubboxselect',
+                flex: 1,
+                multiSelect: true,
+                name: 'sexType',
+                region: 'East',
+                recordValue: 'sexType',
+                formParams: true,
+                fieldLabel: UB.i18n('Стать'),
+                hideEntityItemInContext: true,
+                enumGroupFilter: 'HR_SEX_TYPE',
+                valueField: 'code',
+                displayField: 'shortName',
+                ubRequest: {
+                  entity: 'ubm_enum',
+                  method: UB.core.UBCommand.methodName.SELECT,
+                  fieldList: ['code', 'shortName', 'eGroup', 'sortOrder'],
+                  whereList: {
+                    eGroup: {
+                      expression: '[eGroup]',
+                      condition: 'equal',
+                      values: { 'eGroup': 'HR_SEX_TYPE' }
+                    }
+                  }
+                },
+                listeners: {
+                  change: () => {
+                    me.attr.grid.getStore().removeAll()
+                  }
+                }
+              },
+              {
+                xtype: 'numberfield',
+                name: 'mtCount',
+                flex: 1,
+                fieldLabel: UB.i18n('Кількість ставок'),
+                vtype: 'floatValidator',
+                decimalPrecision: 3,
+                hideTrigger: true,
+                minValue: 0,
+                listeners: {
+                  change: () => {
+                    me.attr.grid.getStore().removeAll()
+                  }
+                }
+              },
+              {
+                xtype: 'checkbox',
+                flex: 1,
+                name: 'onlyWithLimitedAccess',
+                boxLabel: UB.i18n('Тільки працівники з обмеженим доступом'),
+                boxLabelAlign: 'before',
+                labelWidth: 250,
+                hidden: !AC.entityUtils.verifyRightsMethod('hr_employeeNumber', 'employeeLimitedAccess'),
+                listeners: {
+                  change: () => {
+                    me.attr.grid.getStore().removeAll()
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'acGrid',
+        name: 'employeeNumberList',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        notWriteChanges: true,
+        storeType: 'local',
+        showToolBar: true,
+        disablePaging: true,
+        loadMaskMessage: UB.i18n('Завантаження даних...'),
+        stripeRows: true,
+        ignoreAttr: ['posName', 'depName', 'depCaption'],
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        checkColumn: {},
+        viewConfig: {
+          markDirty: false
+        },
+        customToolBarActions: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Вигрузка в Excel'),
+            iconCls: 'fas fa-file-excel',
+            cls: 'green-action',
+            handler: async function (btn) {
+              function setStyles () {
+                defFont = stl.fonts.add({
+                  code: 'def',
+                  name: 'Calibri',
+                  fontSize: 11,
+                  scheme: 'minor'
+                })
+                stl.fonts.add({
+                  code: 'defBold',
+                  name: 'Calibri',
+                  fontSize: 11,
+                  scheme: 'minor',
+                  bold: true
+                })
+
+                borderFull = stl.borders.add({
+                  left: {
+                    style: 'thin'
+                  },
+                  right: {
+                    style: 'thin'
+                  },
+                  top: {
+                    style: 'thin'
+                  },
+                  bottom: {
+                    style: 'thin'
+                  }
+                })
+                stl.alignments.add({
+                  code: 'Hright',
+                  horizontal: 'right'
+                })
+                stl.alignments.add({
+                  code: 'Hcenter',
+                  horizontal: 'center',
+                  wrapText: '1'
+                })
+                stl.alignments.add({
+                  code: 'HVcenter',
+                  horizontal: 'center',
+                  vertical: 'center',
+                  wrapText: '1'
+                })
+                stl.alignments.add({
+                  code: 'HVLeft',
+                  horizontal: 'left',
+                  vertical: 'center',
+                  wrapText: '1'
+                })
+                stl.alignments.add({
+                  code: 'wrapText',
+                  wrapText: '1'
+                })
+                styleCol = stl.getStyle({
+                  font: defFont
+                })
+                headerStyle = stl.getStyle({
+                  font: stl.fonts.named.defBold,
+                  alignment: stl.alignments.named.HVcenter
+                })
+                rowHeaderStyle = stl.getStyle({
+                  font: stl.fonts.named.defBold,
+                  fill: 'EBEDED',
+                  border: borderFull,
+                  alignment: stl.alignments.named.HVcenter
+                })
+              }
+              let wb, defFont, ws, borderFull, headerStyle, rowHeaderStyle, stl, styleCol, styleSummaryCol, defBoldFont
+              wb = new window.XLSX.XLSXWorkbook()
+              wb.useSharedString = true
+              stl = wb.style
+              setStyles()
+              let data = me.down('grid').getData()
+              let columns = me.down('grid').columns.filter(o => !o.hidden).map(o => [o.dataIndex, o.text])
+              let fName = UB.i18n('Вибір працівників')
+              let depName = false
+              if (me.attr.depID.getValue()) {
+                let depIDs = me.attr.depID.getValue('mi_data_id')
+                let depCaptions = await UB.Repository('hr_department')
+                  .attrs('caption')
+                  .where('ID', 'in', depIDs)
+                  .selectAsArrayOfValues()
+                depName = depCaptions.join('; ')
+              }
+              if (me.attr.dictMultiGroup.getValue()) {
+                let dictMultiGroupID = me.attr.dictMultiGroup.getValue()
+                let depGroup = await UB.Repository('hr_dictMultiGroup')
+                  .attrs('name')
+                  .where('ID', '=', dictMultiGroupID)
+                  .selectSingle()
+                if (depGroup) {
+                  depName = depGroup.name
+                }
+              }
+
+              const childDep = me.attr.childDep.getValue()
+              const childDictMultiGroup = me.attr.childDictMultiGroup.getValue()
+              const dateFrom = me.attr.dateFrom.getValue()
+              const dateTo = me.attr.dateTo.getValue()
+
+              const dictPositionID = me.attr.dictPositionID.getValue()
+              const stateEmployee = me.attr.stateEmployee.getValue()
+              const dictStaffCatID = me.attr.dictStaffCatID.getValue()
+              const dictEmpCategoryID = me.attr.dictEmpCategoryID.getValue()
+              const mtCount = me.attr.mtCount.getValue()
+              const workPlace = me.attr.workPlace.getValue()
+              const workerType = me.attr.workerType.getValue()
+              const sexType = me.attr.sexType.getValue()
+
+              ws = wb.addWorkSheet({ caption: UB.i18n('Вибір працівників'), name: UB.i18n('Вибір працівників') })
+
+              if (depName) {
+                ws.addMerge({ colFrom: 0, colTo: columns.length })
+                ws.addRow({ value: `Підрозділ: ${depName}${childDep || childDictMultiGroup ? ' з підлеглими' : ''}`, column: 0, style: headerStyle }, {}, { height: 30 })
+              }
+              if (dictPositionID) {
+                let dictPositions = await UB.Repository('hr_dictPosition')
+                  .attrs('name')
+                  .where('ID', 'in', dictPositionID.split(',').map(el => parseInt(el)))
+                  .selectAsArrayOfValues()
+                let posNameTxt = ''
+                dictPositions.forEach((el) => {
+                  if (el) {
+                    posNameTxt = posNameTxt === '' ? el : `${posNameTxt}; ${el}`
+                  }
+                })
+                ws.addMerge({ colFrom: 0, colTo: columns.length })
+                ws.addRow({ value: `Посада: ${posNameTxt}`, column: 0, style: headerStyle }, {}, { height: 30 })
+              }
+              if (dateFrom && dateTo) {
+                ws.addMerge({ colFrom: 0, colTo: columns.length })
+                ws.addRow({ value: `За період з: ${moment(dateFrom).format('DD.MM.YYYY')} по ${moment(dateTo).format('DD.MM.YYYY')}`, column: 0, style: headerStyle }, {}, { height: 30 })
+              }
+              if (dictStaffCatID) {
+                let dictStaffCats = await UB.Repository('hr_dictStaffCat')
+                  .attrs('description')
+                  .where('ID', 'in', dictStaffCatID.split(',').map(el => parseInt(el)))
+                  .selectAsArrayOfValues()
+                let catNameTxt = ''
+                dictStaffCats.forEach((el) => {
+                  if (el) {
+                    catNameTxt = catNameTxt === '' ? el : `${catNameTxt}; ${el}`
+                  }
+                })
+                ws.addMerge({ colFrom: 0, colTo: columns.length })
+                ws.addRow({ value: `Категорія: ${catNameTxt}`, column: 0, style: headerStyle }, {}, { height: 30 })
+              }
+              if (dictEmpCategoryID) {
+                let dictStaffCats = await UB.Repository('hr_dictEmpCategory')
+                  .attrs('description')
+                  .where('ID', 'in', dictEmpCategoryID.split(',').map(el => parseInt(el)))
+                  .selectAsArrayOfValues()
+                let empCatNameTxt = ''
+                dictStaffCats.forEach((el) => {
+                  if (el) {
+                    empCatNameTxt = empCatNameTxt === '' ? el : `${empCatNameTxt}; ${el}`
+                  }
+                })
+                ws.addMerge({ colFrom: 0, colTo: columns.length })
+                ws.addRow({ value: `Кваліфікаційна категорія: ${empCatNameTxt}`, column: 0, style: headerStyle }, {}, { height: 30 })
+              }
+              if (workPlace) {
+                let workPlaces = await UB.Repository('ubm_enum')
+                  .attrs('name')
+                  .where('eGroup', '=', 'HR_WORKER_PLACE')
+                  .where('code', 'in', workPlace.split(',').map(el => el.replace(/"/g, '')))
+                  .selectAsArrayOfValues()
+                let placeNameTxt = ''
+                workPlaces.forEach((el) => {
+                  if (el) {
+                    placeNameTxt = placeNameTxt === '' ? el : `${placeNameTxt}; ${el}`
+                  }
+                })
+                ws.addMerge({ colFrom: 0, colTo: columns.length })
+                ws.addRow({ value: `Місце роботи: ${placeNameTxt}`, column: 0, style: headerStyle }, {}, { height: 30 })
+              }
+              if (workerType) {
+                let workerTypes = await UB.Repository('ubm_enum')
+                  .attrs('shortName')
+                  .where('eGroup', '=', 'HR_WORKER_TYPE')
+                  .where('code', 'in', workerType.split(',').map(el => el.replace(/"/g, '')))
+                  .selectAsArrayOfValues()
+                let typeNameTxt = ''
+                workerTypes.forEach((el) => {
+                  if (el) {
+                    typeNameTxt = typeNameTxt === '' ? el : `${typeNameTxt}; ${el}`
+                  }
+                })
+                ws.addMerge({ colFrom: 0, colTo: columns.length })
+                ws.addRow({ value: `Форма зайнятості: ${typeNameTxt}`, column: 0, style: headerStyle }, {}, { height: 30 })
+              }
+              if (sexType) {
+                let sexTypes = await UB.Repository('ubm_enum')
+                  .attrs('shortName')
+                  .where('eGroup', '=', 'HR_SEX_TYPE')
+                  .where('code', 'in', sexType.split(',').map(el => el.replace(/"/g, '')))
+                  .selectAsArrayOfValues()
+                let sexTypeNameTxt = ''
+                sexTypes.forEach((el) => {
+                  if (el) {
+                    sexTypeNameTxt = sexTypeNameTxt === '' ? el : `${sexTypeNameTxt}; ${el}`
+                  }
+                })
+                ws.addMerge({ colFrom: 0, colTo: columns.length })
+                ws.addRow({ value: `Стать: ${sexTypeNameTxt}`, column: 0, style: headerStyle }, {}, { height: 30 })
+              }
+              if (stateEmployee) {
+                let value = ''
+                switch (stateEmployee.rb) {
+                  case 1:
+                    value = 'Всі'
+                    break
+                  case 2:
+                    value = 'Без звільнених'
+                    break
+                  case 3:
+                    value = 'Тільки звільнені'
+                    break
+                }
+                ws.addMerge({ colFrom: 0, colTo: columns.length })
+                ws.addRow({ value: `${value}`, column: 0, style: headerStyle }, {}, { height: 30 })
+              }
+
+              let columnsWidth = {
+                'isChecked': 10,
+                'tabNum': 20,
+                'employeeID.lastName': 40,
+                'employeeID.firstName': 40,
+                'employeeID.middleName': 40,
+                'posName': 30,
+                'sexType': 30,
+                'dictPositionName': 30,
+                'depName': 30,
+                'depCaption': 30,
+                'dateFrom': 20,
+                'dateToEmpty': 20,
+                'payCalcDateFrom': 20
+              }
+
+              let colsProperties = []
+              let colsHeaders = []
+              columns.forEach((el, idx) => {
+                colsProperties.push({ column: idx, width: columnsWidth[el[0]] })
+                colsHeaders.push({ column: idx, value: el[0] === 'isChecked' ? 'Вибрано' : el[1], style: rowHeaderStyle })
+              })
+              ws.setColsProperties(colsProperties)
+              ws.addRow(colsHeaders, null, { height: 30 })
+
+              data.forEach(fix => {
+                let dataRow = []
+                columns.forEach((el, idx) => {
+                  let col = { column: idx, style: styleCol }
+                  if (['dateFrom', 'dateToEmpty'].includes(el[0])) {
+                    col.value = fix[el[0]] ? moment(fix[el[0]]).format('DD.MM.YYYY') : ''
+                  } else if (['isChecked'].includes(el[0])) {
+                    col.value = fix[el[0]] ? 'True' : 'False'
+                  } else {
+                    col.value = fix[el[0]]
+                  }
+                  dataRow.push(col)
+                })
+                ws.addRow(dataRow, null, { height: 20 })
+              })
+
+              const rData = wb.render()
+              const dBlob = new Blob([rData], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) // data:  ;base64
+              saveAs(dBlob, fName + '.xlsx')
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Заповнити'),
+            iconCls: 'fas fa-angle-double-down',
+            cls: 'fill-action',
+            handler: function (btn) {
+              me.setEmployeeNumbers()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Очистити'),
+            iconCls: 'u-icon-delete',
+            handler: function (btn) {
+              me.attr.grid.getStore().removeAll()
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Додаткові параметри звіту'),
+            iconCls: 'u-icon-list-success',
+            handler: function (btn) {
+              let win = Ext.create('Ext.window.Window', {
+                title: 'Додаткові параметри звіту',
+                winCode: 'visibleSettings',
+                closable: true,
+                maximizable: true,
+                width: 300,
+                height: 400,
+                items: [
+                  {
+                    layout: { type: 'vbox' },
+                    items: [
+                      {
+                        xtype: 'checkboxfield',
+                        fieldLabel: UB.i18n('Відображати колонку "Кількість ставок"'),
+                        labelWidth: 170,
+                        name: 'mtCount',
+                        value: JSON.parse(UB.core.UBLocalStorageManager.getItem('hr_employeeNumberSearch-columnSettings') || '{}')['mtCount']
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        fieldLabel: UB.i18n('Відображати колонку "Стать"'),
+                        labelWidth: 170,
+                        name: 'employeeID.sexType.name',
+                        value: JSON.parse(UB.core.UBLocalStorageManager.getItem('hr_employeeNumberSearch-columnSettings') || '{}')['employeeID.sexType.name']
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        fieldLabel: UB.i18n('Відображати колонку "Форма зайнятості"'),
+                        labelWidth: 170,
+                        name: 'workerType',
+                        value: JSON.parse(UB.core.UBLocalStorageManager.getItem('hr_employeeNumberSearch-columnSettings') || '{}')['workerType']
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        fieldLabel: UB.i18n('Відображати колонку "Місце роботи"'),
+                        labelWidth: 170,
+                        name: 'workPlace',
+                        value: JSON.parse(UB.core.UBLocalStorageManager.getItem('hr_employeeNumberSearch-columnSettings') || '{}')['workPlace']
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        fieldLabel: UB.i18n('Відображати колонку "Кваліфікаційна категорія"'),
+                        labelWidth: 170,
+                        name: 'dictEmpCategoryID',
+                        value: JSON.parse(UB.core.UBLocalStorageManager.getItem('hr_employeeNumberSearch-columnSettings') || '{}')['dictEmpCategoryID']
+                      },
+                      {
+                        xtype: 'checkboxfield',
+                        fieldLabel: UB.i18n('Відображати колонку "Категорія"'),
+                        labelWidth: 170,
+                        name: 'dictStaffCatName',
+                        value: JSON.parse(UB.core.UBLocalStorageManager.getItem('hr_employeeNumberSearch-columnSettings') || '{}')['dictStaffCatName']
+                      }
+                    ]
+                  }
+                ],
+                dockedItems: [
+                  {
+                    xtype: 'button',
+                    scale: 'medium',
+                    iconCls: 'u-icon-save-and-close',
+                    tooltip: UB.i18n('saveAndClose'),
+                    disable: false,
+                    cls: 'save-action',
+                    hidden: false,
+                    handler: function (data) {
+                      let checkboxes = win.query('checkboxfield')
+
+                      const visibleSettings = {}
+                      checkboxes.forEach(checkbox => (
+                        visibleSettings[checkbox.name] = checkbox.getValue()
+                      ))
+
+                      UB.core.UBLocalStorageManager.setItem('hr_employeeNumberSearch-columnSettings', visibleSettings)
+
+                      for (const [key, value] of Object.entries(visibleSettings)) {
+                        AC.gridUtils.setGridColumnVisible(me.attr.grid, [key], value)
+                      }
+
+                      win.close()
+                    }
+                  }
+                ] })
+              win.show()
+            }
+          },
+          {
+            xtype: 'textfield',
+            name: 'searchBox',
+            skipSetReadOnly: true,
+            labelWidth: 60,
+            fieldLabel: UB.i18n('filter'),
+            listeners: {
+              change: function (ctrl, value) {
+                const store = me.attr.grid.getStore()
+                store.clearFilter()
+                if (value === '') {
+                  return
+                }
+                if (store.sorters.items.length) {
+                  store.sorters.removeAll()
+                }
+                store.filter(row => {
+                  return (row.get('employeeNumberID.description') && row.get('employeeNumberID.description').toUpperCase().includes(value.toUpperCase())) ||
+                  (row.get('posName') && row.get('posName').toUpperCase().includes(value.toUpperCase())) ||
+                  (row.get('dictPositionName') && row.get('dictPositionName').toUpperCase().includes(value.toUpperCase())) ||
+                  (row.get('depCaption') && row.get('depCaption').toUpperCase().includes(value.toUpperCase())) ||
+                  (row.get('depName') && row.get('depName').toUpperCase().includes(value.toUpperCase())) ||
+                  (row.get('tabNum') && row.get('tabNum').toUpperCase().includes(value.toUpperCase()))
+                })
+              }
+            }
+          }
+        ],
+        fields: [
+          { name: 'orgID' },
+          { name: 'depID' },
+          { name: 'employeeNumberID' },
+          { name: 'employeeID' },
+          { name: 'sexType' },
+          { name: 'employeeNumberID.description' },
+          { name: 'employeeNumberID.dateTo' },
+          { name: 'tabNum',
+            columnConfig: {
+              text: UB.i18n('Таб. №'),
+              sortBy: 'Number',
+              width: 80
+            }
+          },
+          { name: 'employeeID.lastName',
+            columnConfig: {
+              text: UB.i18n('Прізвище'),
+              flex: 1
+            }
+          },
+          { name: 'employeeID.firstName',
+            columnConfig: {
+              text: UB.i18n(`Ім'я`),
+              flex: 1
+            }
+          },
+          { name: 'employeeID.middleName',
+            columnConfig: {
+              text: UB.i18n('По батькові'),
+              flex: 1
+            }
+          },
+          { name: 'posName',
+            columnConfig: {
+              text: UB.i18n('Штатна посада'),
+              flex: 1
+            }
+          },
+          { name: 'dictPositionName',
+            columnConfig: {
+              text: UB.i18n('Посада'),
+              flex: 1
+            }
+          },
+          { name: 'depCaption',
+            columnConfig: {
+              text: UB.i18n('Підрозділ'),
+              flex: 1
+            }
+          },
+          { name: 'dateFrom',
+            columnConfig: {
+              text: UB.i18n('Дата прийняття'),
+              flex: 1,
+              sortBy: 'Date',
+              renderer: Ext.util.Format.dateRenderer('d.m.Y')
+            }
+          },
+          { name: 'dateTo' },
+          { name: 'dateToEmpty',
+            columnConfig: {
+              text: UB.i18n('Дата звільнення'),
+              sortBy: 'Date',
+              flex: 1,
+              renderer: (value) => {
+                if (_.isDate(value)) {
+                  if (AC.dateService.shiftDate(value) < AC.dateService.maxDate()) {
+                    return AC.dateService.formatDate(value)
+                  } else {
+                    return ''
+                  }
+                } else {
+                  return value
+                }
+              }
+            }
+          },
+          {
+            name: 'payCalcDateFrom',
+            hidden: true,
+            visibility: false,
+            columnConfig: {
+              text: UB.i18n('Дата перерахунку'),
+              flex: 1
+            }
+          },
+          { name: 'dictStaffCatName',
+            columnConfig: {
+              text: UB.i18n('Категорія'),
+              flex: 1
+            }
+          },
+          { name: 'dictEmpCategoryName',
+            columnConfig: {
+              text: UB.i18n('Кваліфікаційна категорія'),
+              flex: 1
+            }
+          },
+          { name: 'workPlace',
+            columnConfig: {
+              text: UB.i18n('Місце роботи'),
+              flex: 1
+            }
+          },
+          { name: 'workerType',
+            columnConfig: {
+              text: UB.i18n('Форма зайнятості'),
+              flex: 1
+            }
+          },
+          { name: 'employeeID.sexType.name',
+            columnConfig: {
+              text: UB.i18n('Стать'),
+              flex: 1
+            }
+          },
+          { name: 'mtCount',
+            columnConfig: {
+              text: UB.i18n('Кількість ставок'),
+              flex: 1
+            }
+          }
+        ],
+        onBeforeEdit: function (editor, context) {
+          let me = context.grid.up('form')
+        },
+        getRowClass: function (record) {
+          if (record.get('dateToEmpty')) {
+            return 'grd-color-blue'
+          }
+        }
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'numberfield',
+            name: 'allRecordCount',
+            fieldLabel: 'Всього працівників',
+            readOnly: true,
+            width: 225,
+            labelWidth: 160,
+            margin: '10 10 20 0',
+            decimalPrecision: 0,
+            minValue: 0
+          },
+          {
+            xtype: 'numberfield',
+            name: 'chosenRecordCount',
+            fieldLabel: 'Вибрано працівників',
+            readOnly: true,
+            width: 225,
+            labelWidth: 160,
+            margin: '10 10 20 0',
+            decimalPrecision: 0,
+            minValue: 0
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 100,
+            height: 30,
+            margin: '10 10 20 0',
+            handler: function () {
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Вибрати'),
+            width: 100,
+            height: 30,
+            margin: '10 10 20 0',
+            handler: function () {
+              if (me.onSelect) {
+                const data = []
+                me.attr.grid.getCheckedRow().forEach(record => {
+                  if (me.usePeriodDate) {
+                    record.set('dateFrom', me.attr.dateFrom.getValue())
+                    record.set('dateTo', me.attr.dateTo.getValue())
+                    data.push(record.data)
+                  } else {
+                    data.push(record.getData())
+                  }
+                })
+                me.onSelect(data)
+              }
+              me.up('window').close()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.setEmployeeNumbers = async () => {
+      if (!me.attr.dateFrom.getValue()) {
+        me.attr.dateFrom.isValid()
+        return
+      }
+      me.setLoading(true)
+      me.attr.grid.getStore().removeAll()
+      const existPosition = UB.Repository('hr_employeePositionSR')
+        .correlation('employeeNumberID', 'ID')
+        .where('organizationID', '=', me.orgID)
+        .where('dateFrom', '<=', AC.dateService.shiftDate(me.attr.dateTo.getValue() || AC.dateService.maxDate()))
+        .where('dateTo', '>=', AC.dateService.shiftDate(me.attr.dateFrom.getValue()))
+        .where('mi_deleteDate', '>=', '#maxdate')
+      if (me.attr.dictStaffCatID.getValue()) {
+        let dictStaffCatIDs = me.attr.dictStaffCatID.getValue().split(',')
+        existPosition.where('dictStaffCatID', 'in', dictStaffCatIDs)
+      }
+      if (me.attr.dictEmpCategoryID.getValue()) {
+        let dictEmpCategoryIDs = me.attr.dictEmpCategoryID.getValue().split(',')
+        existPosition.where('dictEmpCategoryID', 'in', dictEmpCategoryIDs)
+      }
+      if (me.attr.sexType.getValue()) {
+        let sexTypes = me.attr.sexType.getValue().replace(/"/g, '').split(',')
+        existPosition.where('employeeID.sexType', 'in', sexTypes)
+      }
+      if (me.attr.workerType.getValue()) {
+        let workerTypes = me.attr.workerType.getValue().replace(/"/g, '').split(',')
+        existPosition.where('workerType', 'in', workerTypes)
+      }
+      if (me.attr.workPlace.getValue()) {
+        let workPlaceIDs = me.attr.workPlace.getValue().replace(/"/g, '').split(',')
+        existPosition.where('workPlace', 'in', workPlaceIDs)
+      }
+      if (me.attr.mtCount.getValue()) {
+        let mtCount = me.attr.mtCount.getValue()
+        existPosition.where('mtCount', '=', mtCount)
+      }
+      if (me.attr.depID.getValue()) {
+        let depIDs = me.attr.depID.getValue('mi_data_id')
+        if (me.attr.childDep.getValue()) {
+          let allDeptsID = []
+          for (let i = 0; i < depIDs.length; i++) {
+            let childDep = await UB.Repository('hr_department')
+              .attrs('mi_data_id')
+              .where('mi_treePath', 'like', `%${depIDs[i]}%`)
+              .where('state', '=', 'ACTIVE')
+              .where('mi_dateFrom', '<=', me.attr.dateTo.getValue())
+              .where('mi_dateTo', '>=', me.attr.dateFrom.getValue())
+              .misc({ __mip_recordhistory_all: true })
+              .selectAsArrayOfValues()
+            allDeptsID = allDeptsID.concat(childDep)
+          }
+          existPosition.where('departmentID', 'in', allDeptsID)
+        } else {
+          existPosition.where('departmentID', 'in', depIDs)
+        }
+      }
+
+      if (me.attr.dictMultiGroup.getValue()) {
+        const dictMultiGroupID = me.attr.dictMultiGroup.getValue()
+        const dictMultiGroupDepsID = await UB.Repository('hr_dictMultiGroupDep')
+          .attrs('departmentID')
+          .where('dictMultiGroupID', '=', dictMultiGroupID)
+          .selectAsArrayOfValues()
+        if (dictMultiGroupDepsID.length) {
+          if (me.attr.childDictMultiGroup.getValue()) {
+            let allDeptsID = []
+            for (let i = 0; i < dictMultiGroupDepsID.length; i++) {
+              const childDep = await UB.Repository('hr_department')
+                .attrs('mi_data_id')
+                .where('mi_treePath', 'like', `%${dictMultiGroupDepsID[i]}%`)
+                .where('state', '=', 'ACTIVE')
+                .where('mi_dateFrom', '<=', me.attr.dateTo.getValue())
+                .where('mi_dateTo', '>=', me.attr.dateFrom.getValue())
+                .misc({ __mip_recordhistory_all: true })
+                .selectAsArrayOfValues()
+              allDeptsID = allDeptsID.concat(childDep)
+            }
+            existPosition.where('departmentID', 'in', allDeptsID)
+          } else {
+            existPosition.where('departmentID', 'in', dictMultiGroupDepsID)
+          }
+        }
+      }
+
+      if (me.attr.dictPositionID.getValue()) {
+        let dictPositionIDs = me.attr.dictPositionID.getValue().split(',')
+        existPosition.where('dictPositionID', 'in', dictPositionIDs)
+      }
+
+      const employeeNumbers = UB.Repository('hr_employeeNumberSR')
+        .attrs(['ID', 'description', 'orgID', 'dateFrom', 'dateTo', 'posName', 'dictPositionName', 'depName', 'depID', 'depCaption', 'tabNum',
+          'employeeID', 'employeeID.firstName', 'employeeID.lastName', 'employeeID.middleName',
+          'employeeID.sexType.name', 'dateToEmpty', 'workPlaceCode', 'dictPositionID',
+          'dictStaffCatName', 'dictCategoryECBName', 'dictEmpCategoryName',
+          'workPlace', 'workerType', 'mtCount'])
+        .where('orgID', '=', me.orgID)
+
+      if (me.attr.onlyWithLimitedAccess.getValue()) {
+        employeeNumbers.where('limitedAccess', '=', 1)
+      }
+      if (me.nullMainEmpNumberID) {
+        employeeNumbers.where('mainEmpNumberID', 'isNull')
+      }
+
+      if (me.attr.dictStaffCatID.getValue() || me.attr.mtCount.getValue() || me.attr.dictEmpCategoryID.getValue() || me.attr.depID.getValue() || me.attr.dictMultiGroup.getValue() || me.attr.workPlace.getValue() ||
+          me.attr.workerType.getValue() || me.attr.sexType.getValue() || me.attr.dictPositionID.getValue()) {
+        employeeNumbers.exists(existPosition)
+      }
+
+      const quittedEmployees = me.withoutQuittedEmployees ? 2 : me.attr.stateEmployee.getChecked()[0].inputValue
+      switch (quittedEmployees) {
+        case 1: // Всі
+          employeeNumbers.where('dateTo', '>=', AC.dateService.shiftDate(me.attr.dateFrom.getValue() || AC.dateService.maxDate()))
+          employeeNumbers.where('dateFrom', '<=', AC.dateService.shiftDate(me.attr.dateTo.getValue() || AC.dateService.maxDate()))
+          break
+        case 2: // Без звільнених
+          employeeNumbers.where('dateFrom', '<=', AC.dateService.shiftDate(me.attr.dateTo.getValue() || AC.dateService.maxDate()))
+          employeeNumbers.where('dateTo', '>=', AC.dateService.shiftDate(me.attr.dateTo.getValue() || AC.dateService.maxDate()))
+          break
+        case 3: // Тільки звільнені
+          employeeNumbers.where('dateTo', '>=', AC.dateService.shiftDate(me.attr.dateFrom.getValue() || AC.dateService.maxDate()))
+          employeeNumbers.where('dateTo', '<=', AC.dateService.shiftDate(me.attr.dateTo.getValue() || AC.dateService.maxDate()))
+          break
+      }
+
+      let data = await employeeNumbers.orderBy('tabNumSort').selectAsObject({
+        'ID': 'employeeNumberID',
+        'description': 'employeeNumberID.description',
+        'dateTo': 'employeeNumberID.dateTo'
+      })
+      UB.Repository('hr_dictPeriod').attrs(['ID', 'dateFrom', 'dateTo'])
+        .where('orgID', '=', me.orgID || null)
+        .where('isCurrent', '=', true)
+        .selectSingle().then(periodCalc => {
+          UB.Repository('hr_payCalcDateFrom')
+            .attrs('ID', 'employeeNumberID', 'periodSalaryID.name')
+            .where('periodCalcID', '=', periodCalc.ID || null)
+            .where('employeeNumberID', 'in', data.map(el => el.employeeNumberID))
+            .selectAsObject().then(payCalcDateFrom => {
+              for (const payCalc of payCalcDateFrom) {
+                let rowIdx = data.findIndex(o => o.employeeNumberID === payCalc.employeeNumberID)
+                if (rowIdx >= 0) {
+                  data[rowIdx].payCalcDateFrom = payCalc['periodSalaryID.name']
+                }
+              }
+              me.attr.grid.getStore().loadData(data)
+              me.attr.allRecordCount.setValue(data.length)
+              me.attr.chosenRecordCount.setValue(0)
+              me.setLoading(false)
+            })
+        })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        dictStaffCatID: me.down('[name=dictStaffCatID]'),
+        dictEmpCategoryID: me.down('[name=dictEmpCategoryID]'),
+        mtCount: me.down('[name=mtCount]'),
+        dictPositionID: me.down('[name=dictPositionID]'),
+        sexType: me.down('[name=sexType]'),
+        depID: me.down('[name=depID]'),
+        childDep: me.down('[name=childDep]'),
+        dictMultiGroup: me.down('[name=dictMultiGroup]'),
+        childDictMultiGroup: me.down('[name=childDictMultiGroup]'),
+        onlyWithLimitedAccess: me.down('[name=onlyWithLimitedAccess]'),
+        stateEmployee: me.down('[name=stateEmployee]'),
+        workerType: me.down('[name=workerType]'),
+        workPlace: me.down('[name=workPlace]'),
+        grid: me.down('[name=employeeNumberList]'),
+        dateFrom: me.down('[name=dateFrom]'),
+        dateTo: me.down('[name=dateTo]'),
+        allRecordCount: me.down('[name=allRecordCount]'),
+        chosenRecordCount: me.down('[name=chosenRecordCount]')
+      }
+      AC.viewUtils.setFilterValue(me.attr.depID, { orgID: me.orgID })
+      let depID
+      let periodFromID
+      let periodToID
+      if (me.defaultValues) {
+        depID = me.defaultValues['depID'] || false
+        periodFromID = me.defaultValues['periodFromID'] || false
+        periodToID = me.defaultValues['periodToID'] || false
+        if (me.defaultValues['depID']) delete me.defaultValues['depID']
+        if (me.defaultValues['periodFromID']) delete me.defaultValues['periodFromID']
+        if (me.defaultValues['periodToID']) delete me.defaultValues['periodToID']
+
+        _.forEach(me.attr, attr => {
+          if (me.defaultValues[attr.name] && me.attr[attr.name]) {
+            attr[attr.setValueById ? 'setValueById' : 'setValue'](attr.xtype === 'ubdatefield' ? new Date(me.defaultValues[attr.name]) : me.defaultValues[attr.name])
+          }
+        })
+
+        if (me.defaultValues.dateFrom) {
+          me.attr.dateFrom.setMinValue(me.defaultValues.dateFrom)
+          me.attr.dateTo.setMinValue(me.defaultValues.dateFrom)
+        }
+        if (me.defaultValues.dateTo) {
+          me.attr.dateFrom.setMaxValue(me.defaultValues.dateTo)
+          me.attr.dateTo.setMaxValue(me.defaultValues.dateTo)
+        }
+        if (me.defaultValues.periodID) {
+          appHR.getPeriodByID(me.defaultValues.periodID).then(response => {
+            me.attr.dateFrom.setValue(response.dateFrom)
+            me.attr.dateTo.setValue(response.dateTo)
+          })
+        }
+
+        if (['hr_orderRegistryPremium', 'hr_orderRegistryNetSum'].includes(me.parentCode)) {
+          appHR.getPeriodByID(periodFromID).then(response => {
+            me.attr.dateFrom.setValue(response.dateFrom)
+          })
+          appHR.getPeriodByID(periodToID).then(response => {
+            me.attr.dateTo.setValue(response.dateTo)
+          })
+        }
+
+        if (depID) me.attr.depID.setValueById(depID)
+        AC.gridUtils.setGridColumnVisible(me.attr.grid, ['payCalcDateFrom'], me.defaultValues.showPayCalcDateFrom)
+      }
+
+      if (me.readOnlyAttr) {
+        me.readOnlyAttr.forEach(attrName => {
+          if (me.attr[attrName]) {
+            me.attr[attrName].setReadOnly(true)
+          }
+        })
+      }
+
+      me.attr.dictMultiGroup.on('change', (value) => {
+        if (me.attr.dictMultiGroup.getValue()) {
+          me.attr.depID.setValue()
+          me.attr.childDep.setValue()
+          me.attr.childDep.setDisabled(true)
+          me.attr.childDictMultiGroup.setDisabled(false)
+        } else {
+          me.attr.childDictMultiGroup.setValue()
+          me.attr.childDictMultiGroup.setDisabled(true)
+        }
+      })
+      me.attr.childDictMultiGroup.setDisabled(!me.attr.dictMultiGroup.getValue())
+
+      me.attr.depID.on('change', (value) => {
+        me.attr.childDep.setDisabled(!me.attr.depID.getValue())
+
+        if (me.attr.depID.getValue()) {
+          me.attr.dictMultiGroup.setValue()
+          me.attr.childDictMultiGroup.setValue()
+          me.attr.childDictMultiGroup.setDisabled(true)
+          me.attr.childDep.setDisabled(false)
+        } else {
+          me.attr.childDep.setValue()
+          me.attr.childDep.setDisabled(true)
+        }
+      })
+      me.attr.childDep.setDisabled(!me.attr.depID.getValue())
+
+      const hrUseStaffingTable = AC.settings.get('hrUseStaffingTable', appAC.globalOrganization())
+      AC.gridUtils.setGridColumnVisible(me.attr.grid, ['dictPositionName'], !hrUseStaffingTable)
+      AC.gridUtils.setGridColumnVisible(me.attr.grid, ['posName'], hrUseStaffingTable)
+
+      const visibleSettings = JSON.parse(UB.core.UBLocalStorageManager.getItem('hr_employeeNumberSearch-columnSettings') ||
+      '{"mtCount":false,"employeeID.sexType.name":false,"workerType":false,"workPlace":false,"dictCategoryECBName":false,"dictStaffCatName":false}')
+
+      for (const [key, value] of Object.entries(visibleSettings)) {
+        AC.gridUtils.setGridColumnVisible(me.attr.grid, [key], value)
+      }
+
+      if (me.autoFill && me.attr.dateFrom.getValue()) {
+        me.autoFill = false
+        me.setLoading(true)
+        me.setEmployeeNumbers()
+        me.setLoading(false)
+      }
+
+      me.attr.grid.on('changeChecked', (grid) => {
+        me.attr.chosenRecordCount.setValue(grid.getCheckedRow().length)
+      })
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,137 @@
+/* global UB Ext $App AC appAC */
+
+exports.formDef = 'HR.importStudentAPIConfig'
+
+Ext.define('HR.importStudentAPIConfig', {
+  extend: 'Ext.form.Panel',
+  width: 600,
+  height: 350,
+  layout: 'border',
+  alias: 'widget.importStudentAPIConfig',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        layout: { type: 'vbox', align: 'stretch' },
+        items: [
+          {
+            xtype: 'panel',
+            layout: { type: 'vbox' },
+            region: 'center',
+            items: [
+              {
+                name: 'url',
+                xtype: 'textfield',
+                margin: '30 0 0 15',
+                labelWidth: 150,
+                fieldLabel: UB.i18n('URL'),
+                allowBlank: false,
+                width: 550
+              },
+              {
+                name: 'username',
+                xtype: 'textfield',
+                labelWidth: 150,
+                fieldLabel: UB.i18n('Ім\'я користувача'),
+                allowBlank: false
+              },
+              {
+                xtype: 'textfield',
+                fieldLabel: UB.i18n('Пароль'),
+                labelWidth: 150,
+                name: 'password',
+                allowBlank: false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.commandConfig.deferred.resolve(null)
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Зберегти'),
+            width: 120,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.saveAndClose()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.saveAndClose = async function () {
+      if (!me.attr.username.getValue()) {
+        me.attr.username.markInvalid(UB.i18n(me.attr.username.blankText))
+        AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказано Ім\'я користувача'))
+        return
+      }
+      if (!me.attr.password.getValue()) {
+        me.attr.password.markInvalid(UB.i18n(me.attr.password.blankText))
+        AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказаний Пароль'))
+        return
+      }
+      if (!me.attr.url.getValue()) {
+        me.attr.url.markInvalid(UB.i18n(me.attr.url.blankText))
+        AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Не вказаний URL'))
+        return
+      }
+      const params = {
+        url: me.attr.url.getValue(),
+        username: me.attr.username.getValue(),
+        password: me.attr.password.getValue()
+      }
+      await $App.connection.run({
+        entity: 'hr_importStudentApi',
+        method: 'saveConfig',
+        orgID: appAC.globalOrganization(),
+        execParams: params
+      })
+      me.commandConfig.deferred.resolve(true)
+      me.up('window').close()
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      const win = this.window
+      if (win) {
+        if (!win.height || win.height < 350) {
+          win.height = 350
+        }
+        if (!win.width || win.width < 600) {
+          win.width = 600
+        }
+      }
+      me.attr = {
+        url: me.down('[name=url]'),
+        username: me.down('[name=username]'),
+        password: me.down('[name=password]')
+      }
+      if (me.customParams.config) {
+        me.attr.url.setValue(me.customParams.config.url)
+        me.attr.username.setValue(me.customParams.config.userName)
+        me.attr.password.setValue(me.customParams.config.password)
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

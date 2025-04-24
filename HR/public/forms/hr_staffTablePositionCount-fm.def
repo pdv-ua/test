@@ -1,0 +1,347 @@
+// @isModal true
+/* global $App Ext UB AC */
+
+exports.formDef = 'HR.staffTablePositionCount'
+
+Ext.define('HR.staffTablePositionCount', {
+  extend: 'Ext.form.Panel',
+  width: 900,
+  height: 900,
+  layout: 'border',
+  alias: 'widget.staffTablePositionCount',
+  initComponent: function () {
+    const me = this
+    me.items = [
+      {
+        xtype: 'acGrid',
+        name: 'positionCount',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        cellEditing: true,
+        notWriteChanges: true,
+        storeType: 'local',
+        showToolBar: true,
+        disablePaging: true,
+        readOnly: !AC.entityUtils.verifyRightsMethod('hr_staffUnit', 'setPositionCount'),
+        loadMaskMessage: UB.i18n('Завантаження даних...'),
+        hideActions: ['addNew', 'addNewByCurrent'],
+        summaryDataOnClient: true,
+        onBeforeEdit: (control, context) => {
+          if ((context.column.dataIndex === 'quantityLead' && !context.record.get('isLead')) || (
+            context.record.get('mi_unityEntity') === 'hr_organization')) {
+            return false
+          }
+        },
+        edit: () => {
+          me.recalcDifference()
+        },
+        getRowClass: () => {},
+        fields: [
+          { name: 'ID' },
+          { name: 'mi_unityEntity' },
+          { name: 'mi_treePath' },
+          { name: 'parentUnitID' },
+          { name: 'mi_data_id' },
+          { name: 'childCount' },
+          { name: 'isLead' },
+          { name: 'orgID' },
+          { name: 'state' },
+          {
+            name: 'description',
+            columnConfig: {
+              text: UB.i18n('Назва'),
+              flex: 1,
+              renderer: (value, metaData, record) => {
+                if (record.get('mi_unityEntity') === 'hr_organization') {
+                  return `<span style="color: blue;"><b>${value}</b></span>`
+                } else {
+                  let level = (record.get('mi_treePath') || '/').split(`/`).length - 1
+                  const ident = ''.padStart((level - me.orgLevel) * 24, '&nbsp;')
+                  const color = (record.get('state') === 'NEW') ? (record.get('ID') === record.get('mi_data_id') ? '#0D9450' : '#78ACE3') : null
+                  if (record.get('parentUnitID') === record.get('orgID')) {
+                    return `${color ? `<span style="color: ${color};">` : ''}<b>${value}</b>${record.get('state') === 'NEW' ? '</span>' : ''}`
+                  } else {
+                    return `${color ? `<span style="color: ${color};">` : ''}<i>${ident}${value}</i>${record.get('state') === 'NEW' ? '</span>' : ''}`
+                  }
+                }
+              }
+            }
+          },
+          {
+            name: 'parentDescription',
+            columnConfig: {
+              text: UB.i18n('Підпорядкування'),
+              width: 200
+            }
+          },
+          {
+            name: 'quantity',
+            columnConfig: {
+              text: UB.i18n('Гранична кількість'),
+              width: 100,
+              align: 'right',
+              editor: {
+                dataType: 'Currency',
+                minValue: 0.00,
+                selectOnFocus: true
+              },
+              renderer: (value, metaData, record) => {
+                return (value !== null && (record.get('mi_unityEntity') === 'hr_organization' || record.get('parentUnitID') === record.get('orgID'))) ? `<b>${value}</b>` : value
+              }
+            }
+          },
+          {
+            name: 'quantityLead',
+            columnConfig: {
+              text: UB.i18n('Керівництво та ін. (підпорядковані безпосередньо)'),
+              width: 100,
+              align: 'right',
+              editor: {
+                dataType: 'Currency',
+                minValue: 0.00,
+                selectOnFocus: true
+              },
+              renderer: (value, metaData, record) => {
+                return (value !== null && (record.get('mi_unityEntity') === 'hr_organization' || record.get('parentUnitID') === record.get('orgID'))) ? `<b>${value}</b>` : value
+              }
+            }
+          },
+          {
+            name: 'childQuantity',
+            columnConfig: {
+              text: UB.i18n('Сума підпорядкованих'),
+              width: 100,
+              align: 'right',
+              renderer: (value, metaData, record) => {
+                return (value !== null && (record.get('mi_unityEntity') === 'hr_organization' || record.get('parentUnitID') === record.get('orgID'))) ? `<b>${value}</b>` : value
+              }
+            }
+          },
+          {
+            name: 'difference',
+            columnConfig: {
+              text: UB.i18n('Різниця'),
+              width: 100,
+              align: 'right',
+              renderer: (value, metaData, record) => {
+                if (!record.get('childCount')) {
+                  return null
+                } else {
+                  return `<span style="color:${value < 0 ? 'red' : value > 0 ? 'green' : 'black'};">${(value !== null && (record.get('mi_unityEntity') === 'hr_organization' || record.get('parentUnitID') === record.get('orgID'))) ? `<b>${value}</b>` : value}</span>`
+                }
+              }
+            }
+          },
+          {
+            name: 'quantityFact',
+            columnConfig: {
+              text: UB.i18n('Фактична кількість'),
+              width: 100,
+              align: 'right',
+              renderer: (value, metaData, record) => {
+                return (value !== null && (record.get('mi_unityEntity') === 'hr_organization' || record.get('parentUnitID') === record.get('orgID'))) ? `<b>${value}</b>` : value
+              }
+            }
+          }
+        ],
+        customToolBarActions: [
+          {
+            xtype: 'button',
+            scale: 'medium',
+            iconCls: 'u-icon-save',
+            tooltip: UB.i18n('save'),
+            cls: 'save-action',
+            hidden: !AC.entityUtils.verifyRightsMethod('hr_staffUnit', 'setPositionCount'),
+            handler: function (btn) {
+              const me = btn.up('form')
+              me.setPositionCount()
+            }
+          },
+          {
+            xtype: 'button',
+            scale: 'medium',
+            iconCls: 'fas fa-file-excel',
+            tooltip: UB.i18n('Сформувати XLSX'),
+            cls: 'green-action',
+            handler: () => { me.exportXLSX() }
+          }
+
+        ]
+      },
+      {
+        layout: { type: 'vbox', align: 'stretch' },
+        region: 'south',
+        items: [
+          {
+            xtype: 'label',
+            name: 'resultLabel',
+            text: UB.i18n('років'),
+            cls: 'x-form-item-label',
+            labelWidth: 400,
+            margin: '25 5 0 15'
+          }
+        ]
+      }
+    ]
+    me.recalcDifference = () => {
+      const data = me.attr.positionCount.getData()
+      const store = me.attr.positionCount.getStore()
+      const allRecord = store.snapshot || store.data
+      let orgIndex
+      let quantityLead = 0
+      allRecord.items.forEach((row, idx) => {
+        let hasChild = false
+        const childQuantity = data.reduce((res, item) => {
+          if ((row.get('ID') !== item.ID || item.mi_unityEntity === 'hr_position') && item.parentUnitID === row.get('mi_data_id') /* item.mi_treePath.indexOf(row.get('mi_treePath')) >= 0 */) {
+            res += item.quantity + (row.mi_unityEntity === 'hr_department' ? (item.quantityLead || 0) : 0)
+            hasChild = true
+          }
+          return res
+        }, 0)
+        if (hasChild && row.get('childQuantity') !== childQuantity) {
+          row.set('childQuantity', childQuantity)
+        }
+        if (row.get('mi_unityEntity') === 'hr_department') {
+          quantityLead += (row.get('quantityLead') || 0)
+        }
+        const difference = hasChild ? ((row.get('quantity') || 0) - (row.get('mi_unityEntity') === 'hr_department' ? (row.get('quantityLead') || 0) : 0) - (row.get('childQuantity') || 0)) : 0
+        if ((row.get('difference') || 0) !== difference) {
+          row.set('difference', difference)
+        }
+        if (row.get('mi_unityEntity') === 'hr_organization') {
+          orgIndex = idx
+        }
+      })
+      if (orgIndex !== undefined) {
+        const orgRecord = store.getAt(orgIndex)
+        orgRecord.set('quantityLead', quantityLead)
+        orgRecord.set('quantity', orgRecord.get('childQuantity')/* + quantityLead */)
+        me.setLabel(me.orgRecordQuantity, orgRecord.get('childQuantity')/* + quantityLead */)
+      }
+    }
+    me.exportXLSX = () => {
+      $App.connection.run({
+        entity: 'hr_staffUnit',
+        method: 'generateXLSX',
+        orgID: me.customParams.orgID,
+        onDate: me.customParams.onDate,
+        staffOrderID: me.customParams.staffOrderID
+      }).then(response => {
+        const data = JSON.parse(response.data)
+        AC.filesService.saveAsByBase64Buffer(data, UB.i18n('Розрахунок кількості посад.xlsx'), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+        me.setLoading(false)
+      }, function (err) {
+        me.setLoading(false)
+        throw err
+      })
+    }
+
+    me.setPositionCount = (isClose) => {
+      $App.connection.run({
+        entity: 'hr_staffUnit',
+        method: 'setPositionCount',
+        orgID: me.customParams.orgID,
+        onDate: me.customParams.onDate,
+        staffOrderID: me.customParams.staffOrderID,
+        data: JSON.stringify(me.attr.positionCount.getAttributeData())
+      }).then(result => {
+        if (!isClose) {
+          me.loadData()
+        }
+        me.customParams.sender.onRefresh()
+        if (isClose) {
+          me.up('window').canClose = true
+          me.up('window').close()
+        }
+      }, err => {
+        me.setLoading(false)
+        throw err
+      })
+    }
+
+    me.loadData = () => {
+      me.setLoading(true)
+      me.attr.positionCount.removeAll()
+      $App.connection.run({
+        entity: 'hr_staffUnit',
+        method: 'getPositionCount',
+        orgID: me.customParams.orgID,
+        onDate: me.customParams.onDate,
+        staffOrderID: me.customParams.staffOrderID
+      }).then(result => {
+        if (result.resultData) {
+          const resultData = JSON.parse(result.resultData)
+          const orgRecord = resultData.find(o => o.mi_unityEntity === 'hr_organization') || {}
+          me.orgLevel = (orgRecord.mi_treePath || '/').split(`/`).length - 1
+          me.setLabel(orgRecord.quantity, orgRecord.childQuantity/* + orgRecord.quantityLead */)
+          me.orgRecordQuantity = orgRecord.quantity
+          orgRecord.quantity = orgRecord.childQuantity // + orgRecord.quantityLead
+          me.attr.positionCount.setLocalStoreData(resultData)
+          me.setLoading(false)
+        }
+      }, err => {
+        me.setLoading(false)
+        throw err
+      })
+    }
+    me.setLabel = (quantity, childQuantity) => {
+      me.attr.resultLabel.removeCls('field-label-red')
+      me.attr.resultLabel.removeCls('field-label-green')
+      if ((quantity || 0) - (childQuantity || 0) > 0) {
+        me.attr.resultLabel.setText(UB.i18n(`Загальна кількість посад ({0}) менше встановленої кількості посад для організації ({1})`, childQuantity || 0, (quantity || 0)))
+        me.attr.resultLabel.addCls('field-label-green')
+      } else if (((quantity || 0) - (childQuantity || 0) < 0)) {
+        me.attr.resultLabel.setText(UB.i18n(`Загальна кількість посад ({0}) перевищує встановлену кількість посад для організації ({1})`, childQuantity || 0, (quantity || 0)))
+        me.attr.resultLabel.addCls('field-label-red')
+      } else {
+        me.attr.resultLabel.setText(UB.i18n(`Загальна кількість посад ({0}) відповідає встановленій кількості посад для організації`, childQuantity || 0))
+      }
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        positionCount: me.down('[name=positionCount]'),
+        resultLabel: me.down('[name=resultLabel]')
+      }
+      me.loadData()
+      me.up('window').on('beforeclose', win => {
+        if (win.canClose) {
+          win.canClose = false
+          return true
+        }
+        const data = me.attr.positionCount.getAttributeData()
+        if (!data.update.length) {
+          win.canClose = true
+          return true
+        } else {
+          Ext.Msg.confirm({
+            buttons: Ext.MessageBox.YESNOCANCEL,
+            icon: Ext.MessageBox.WARNING,
+            buttonText: {
+              yes: UB.i18n('save'),
+              no: UB.i18n('doNotSave'),
+              cancel: UB.i18n('cancel')
+            },
+            minWidth: 320,
+            title: UB.i18n('unsavedData'),
+            msg: UB.i18n('confirmSave'),
+            fn: function (btn) {
+              if (btn === 'yes') {
+                me.setPositionCount(true)
+              }
+              if (btn === 'no') {
+                win.canClose = true
+                win.close()
+              }
+            }
+          })
+          return false
+        }
+      })
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

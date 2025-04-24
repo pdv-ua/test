@@ -1,0 +1,297 @@
+/* global UB appAC */
+exports.formDef = {
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 2.5,
+              defaults: { labelWidth: 150 },
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  flex: 1,
+                  items: [
+                    { attributeName: 'code', allowBlank: true, labelWidth: 150, width: 240 },
+                    { attributeName: 'name', flex: 1, labelWidth: 60 },
+                    { attributeName: 'printName', flex: 1, labelWidth: 60 }
+                  ]
+                },
+                { attributeName: 'methodExpID', allowBlank: false },
+                {
+                  attributeName: 'experienceSpecID',
+                  fieldLabel: UB.i18n('Підстава обліку'),
+                  fieldList: ['ID', 'description', 'fullName'],
+                  toolTipField: 'fullName',
+                  listeners: {
+                    render: function (ctrl) {
+                      ctrl.on('focus', el => ctrl.getEl() && el.getEl().set({ 'data-qtip': el.getFieldValue('fullName') }))
+                      ctrl.on('change', el => ctrl.getEl() && el.getEl().set({ 'data-qtip': el.getFieldValue('fullName') }))
+                    }
+                  }
+                },
+                { attributeName: 'includeSecondJobs', labelWidth: 350 }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              defaults: { labelWidth: 130 },
+              items: [
+                { attributeName: 'dateFromEmpty', fieldLabel: UB.i18n('Дата початку') },
+                { attributeName: 'dateToEmpty', fieldLabel: UB.i18n('Дата закінчення') },
+                { attributeName: 'experienceUnits' }
+              ]
+            }
+          ]
+        },
+        {
+          xtype: 'fieldset',
+          hidden: true,
+          ubID: 'orderPanel',
+          layout: { type: 'hbox' },
+          margin: '10 15 15 15',
+          padding: '5 0',
+          items: [
+            { attributeName: 'orderNumber', fieldLabel: UB.i18n('Наказ про проведення атестації робочого місця №'), labelWidth: 350, flex: 1 },
+            { attributeName: 'orderDate', fieldLabel: UB.i18n('Дата'), flex: 1 }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Організації'),
+          xtype: 'ubdetailgrid',
+          name: 'dictExperienceDt',
+          autoScroll: true,
+          hideActions: ['addNew', 'showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'detail'],
+          flex: 1,
+          entityConfig: {
+            entity: 'hr_dictExperienceDt',
+            method: 'select',
+            fieldList: [
+              {
+                name: 'organizationID.name',
+                description: UB.i18n('Організація')
+              },
+              { name: 'dateFromEmpty' },
+              { name: 'dateToEmpty' }
+            ],
+            whereList: {
+              conditionType: {
+                expression: '[conditionType]',
+                condition: 'equal',
+                values: { 'conditionType': '1' }
+              },
+              orgDateFrom: {
+                expression: '[organizationID.mi_dateFrom]',
+                condition: 'lessEqual',
+                value: appAC.globalApplicationDate()
+              },
+              orgDateTo: {
+                expression: '[organizationID.mi_dateTo]',
+                condition: 'moreEqual',
+                value: appAC.globalApplicationDate()
+              },
+              orgState: {
+                expression: '[organizationID.state]',
+                condition: 'equal',
+                value: 'ACTIVE'
+              },
+              orgDel: {
+                expression: '[organizationID.mi_deleteDate]',
+                condition: 'equal',
+                value: '#maxdate'
+              }
+            }
+          },
+          masterFields: ['ID'],
+          detailFields: ['dictExperienceID'],
+          cmpInitConfig: {
+            customActions: [
+              {
+                text: UB.i18n('Редагувати'),
+                iconCls: 'u-icon-edit-alt',
+                cls: 'fill-action',
+                scale: 'medium',
+                handler: function (btn) {
+                  const grid = btn.up('grid')
+                  const form = grid.up('form')
+                  if (form.isNewInstance) {
+                    form.saveForm().then(result => {
+                      if (result !== -1) {
+                        form.changeGridValue(form, grid)
+                      }
+                    })
+                  } else {
+                    form.changeGridValue(form, grid)
+                  }
+                }
+              }
+            ],
+            onItemDblClick: function (grid) {
+              const form = grid.up('form')
+              form.changeGridValue(form, grid.ownerCt)
+            },
+            onDeterminateForm: function () {
+              return {
+                cmpInitConfig: {
+                  defaultValues: { conditionType: '1' }
+                }
+              }
+            }
+          }
+        },
+        {
+          xtype: 'ubdetailgrid',
+          autoScroll: true,
+          name: 'dictStaffCat',
+          title: UB.i18n('Категорії персоналу'),
+          hideActions: ['addNew', 'addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+          flex: 1,
+          entityConfig: {
+            entity: 'hr_dictExperienceDt',
+            cmdType: 'showList',
+            method: 'select',
+            fieldList: [
+              {
+                name: 'dictStaffCatID.name',
+                description: UB.i18n('Категорія персоналу')
+              },
+              { name: 'dateFromEmpty' },
+              { name: 'dateToEmpty' }
+            ],
+            whereList: {
+              conditionType: {
+                expression: '[conditionType]',
+                condition: 'equal',
+                values: { 'conditionType': '2' }
+              }
+            }
+          },
+          masterFields: ['ID'],
+          detailFields: ['dictExperienceID'],
+          cmpInitConfig: {
+            customActions: [
+              {
+                text: UB.i18n('Редагувати'),
+                iconCls: 'u-icon-edit-alt',
+                cls: 'fill-action',
+                scale: 'medium',
+                handler: function (btn) {
+                  const grid = btn.up('grid')
+                  const form = grid.up('form')
+                  if (form.isNewInstance) {
+                    form.saveForm().then(result => {
+                      if (result !== -1) {
+                        form.changeGridValue(form, grid)
+                      }
+                    })
+                  } else {
+                    form.changeGridValue(form, grid)
+                  }
+                }
+              }
+            ],
+            onItemDblClick: function (grid) {
+              const form = grid.up('form')
+              form.changeGridValue(form, grid.ownerCt)
+            },
+            onDeterminateForm: function () {
+              return {
+                cmpInitConfig: {
+                  defaultValues: { conditionType: '2' }
+                }
+              }
+            }
+          }
+        },
+        {
+          xtype: 'ubdetailgrid',
+          autoScroll: true,
+          title: UB.i18n('Посади'),
+          name: 'position',
+          hideActions: ['addNew', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+          flex: 1,
+          entityConfig: {
+            entity: 'hr_dictExperienceDt',
+            method: 'select',
+            fieldList: [
+              {
+                name: 'dictPositionID.description',
+                description: UB.i18n('Посада')
+              },
+              { name: 'dateFromEmpty' },
+              { name: 'dateToEmpty' }
+            ],
+            whereList: {
+              conditionType: {
+                expression: '[conditionType]',
+                condition: 'equal',
+                values: { 'conditionType': '3' }
+              }
+            }
+          },
+          masterFields: ['ID'],
+          detailFields: ['dictExperienceID'],
+          cmpInitConfig: {
+            customActions: [
+              {
+                text: UB.i18n('Редагувати'),
+                iconCls: 'u-icon-edit-alt',
+                cls: 'fill-action',
+                scale: 'medium',
+                handler: function (btn) {
+                  const grid = btn.up('grid')
+                  const form = grid.up('form')
+                  if (form.isNewInstance) {
+                    form.saveForm().then(result => {
+                      if (result !== -1) {
+                        form.changeGridValue(form, grid)
+                      }
+                    })
+                  } else {
+                    form.changeGridValue(form, grid)
+                  }
+                }
+              }
+            ],
+            onItemDblClick: function (grid) {
+              const form = grid.up('form')
+              form.changeGridValue(form, grid.ownerCt)
+            },
+            onDeterminateForm: function () {
+              return {
+                cmpInitConfig: {
+                  defaultValues: { conditionType: '3' }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

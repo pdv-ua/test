@@ -1,0 +1,113 @@
+/* global Ext UB */
+
+exports.formDef = 'HR.elementSelectEx'
+
+Ext.define('HR.elementSelectEx', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    let me = this
+    const queryDelay = 500
+    function setFilter () {
+      me.attr.grid.getStore().filter({
+        filterFn: function (item) {
+          return (item.get('description') || '').toLowerCase().includes((searchCtrl.getValue() || '').toLowerCase()) || item.get('isChecked')
+        }
+      })
+    }
+    function clearFilter () {
+      me.attr.grid.getStore().filters.removeAtKey('searchTask')
+      me.attr.grid.getStore().clearFilter()
+    }
+    let doQueryTask = new Ext.util.DelayedTask(function () {
+      let value = searchCtrl.getValue()
+      if (value === '') {
+        clearFilter()
+      } else {
+        setFilter()
+      }
+    }, me)
+    let searchCtrl = Ext.widget('textfield', {
+      labelWidth: 60,
+      fieldLabel: UB.i18n('filter')
+    })
+    searchCtrl.on('change', function () {
+      doQueryTask.delay(queryDelay)
+    })
+
+    me.items = [
+      {
+        xtype: 'acGrid',
+        name: 'parametersList',
+        region: 'center',
+        flex: 1,
+        autoScroll: true,
+        storeType: 'local',
+        disablePaging: true,
+        notWriteChanges: true,
+        showToolBar: false,
+        // useCheckBoxColumn: true,
+        checkColumn: {},
+        hideActions: ['edit', 'del', 'addNewByCurrent', 'addNew'],
+        fields: [
+          { name: 'ID' },
+          { name: 'description', columnConfig: { text: UB.i18n('Назва'), flex: 1 } }
+        ],
+        getRowClass: function (record) {
+          if (record.get('isChecked')) {
+            return 'ub-grid-row-selected'
+          }
+        },
+        tbar: Ext.create('Ext.toolbar.Toolbar', {
+          height: 40,
+          items: [
+            {
+              xtype: 'button',
+              scale: 'medium',
+              iconCls: 'u-icon-save-and-close',
+              tooltip: UB.i18n('saveAndClose'),
+              cls: 'save-action',
+              handler: () => {
+                const result = {
+                  selected: []
+                }
+                me.attr.grid.getCheckedRow().forEach(row => {
+                  result.selected.push({
+                    value: row.get('ID'),
+                    description: row.get('description')
+                  })
+                })
+                const wnd = me.up('window')
+                if (me.onSelectData) {
+                  me.onSelectData(result, wnd)
+                }
+                if (!me.showAfterSave) wnd.close()
+              }
+            },
+            searchCtrl
+          ]
+        })
+      }
+    ]
+
+    me.on('afterrender', function () {
+      me.attr = {
+        grid: me.down('[name=parametersList]')
+      }
+      const store = me.attr.grid.getStore()
+      me.attr.grid.removeAll()
+      store.insert(store.data.length, me.sourceData)
+      me.selectedData.forEach(row => {
+        // me.attr.grid.getSelectionModel().select(store.find('ID', row.value), true)
+        const idx = store.find('ID', row.value)
+        if (idx >= 0) {
+          const record = store.getAt(idx)
+          record.set('isChecked', true)
+        }
+      })
+    })
+    me.callParent(arguments)
+  }
+})

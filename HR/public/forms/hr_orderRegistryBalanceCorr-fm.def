@@ -1,0 +1,366 @@
+/* global $App AC appHR UB HR */
+
+exports.formDef = {
+  requiredFields: ['orderState', 'description', 'organizationID', 'filterParams', 'hasPosted', 'hasProject',
+    'payElID.methodID.valuation', 'payElID.methodID.code' ],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'exportExcel'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        {
+          layout: { type: 'hbox' },
+          flex: 1,
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              defaults: { labelWidth: 130 },
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  flex: 1,
+                  items: [
+                    { attributeName: 'orderType', hidden: true },
+                    { attributeName: 'organizationID', hidden: true },
+                    { attributeName: 'orderState', hidden: true },
+                    {
+                      attributeName: 'periodID',
+                      fieldLabel: UB.i18n('Розрахунковий період'),
+                      flex: 2,
+                      allowBlank: false,
+                      labelWidth: 130,
+                      pageSize: 50,
+                      fieldList: ['ID', 'description', 'dateFrom', 'dateTo', 'orgID'],
+                      orderList: {
+                        orderBy: {
+                          expression: 'dateFrom',
+                          order: 'desc'
+                        }
+                      },
+                      listeners: {
+                        expand: appHR.periodExpand
+                      }
+                    },
+                    {
+                      attributeName: 'orderNumber',
+                      fieldLabel: UB.i18n('Номер'),
+                      labelWidth: 50,
+                      allowBlank: true,
+                      flex: 1
+                    },
+                    {
+                      attributeName: 'orderDate',
+                      fieldLabel: UB.i18n('Дата'),
+                      labelWidth: 50,
+                      flex: 1,
+                      allowBlank: false,
+                      skipSetReadOnly: true
+                    }
+                  ]
+                },
+                {
+                  attributeName: 'payElID',
+                  allowBlank: false,
+                  fieldList: ['ID', 'description', 'periodType', 'methodID.methodGroupID.code', 'methodID.code',
+                    'methodID.valuation', 'calcSumType', 'codeSort', 'isIndividualRate'],
+                  orderList: { orderBy: { expression: 'codeSort' } },
+                  skipSetReadOnly: true
+                },
+                {
+                  attributeName: 'name',
+                  xtype: 'textfield',
+                  allowBlank: false,
+                  labelWidth: 130
+                }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              flex: 1,
+              defaults: { labelWidth: 170 },
+              items: [
+                {
+                  attributeName: 'dictFundSourceID',
+                  fieldLabel: UB.i18n('Джерело фінансування, що коригується'),
+                  flex: 2,
+                  fieldList: ['ID', 'name'],
+                  pageSize: 50,
+                  allowBlank: false
+                },
+                {
+                  attributeName: 'dictFundSourceToMoveID',
+                  fieldLabel: UB.i18n('Джерело фінансування, на якє переносимо'),
+                  allowBlank: false,
+                  flex: 2,
+                  fieldList: ['ID', 'name'],
+                  pageSize: 50
+                },
+                {
+                  xtype: 'ubcombobox',
+                  attributeName: 'correctionSaldoFormat',
+                  allowBlank: false,
+                  flex: 2,
+                  fieldLabel: UB.i18n('Коригувати сальдо на'),
+                  hideEntityItemInContext: true,
+                  enumGroupFilter: 'HR_CORRECTION_SALDO_FORMAT',
+                  valueField: 'code',
+                  displayField: 'name',
+                  ubRequest: {
+                    entity: 'ubm_enum',
+                    method: UB.core.UBCommand.methodName.SELECT,
+                    fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+                    whereList: {
+                      eGroup: {
+                        expression: '[eGroup]',
+                        condition: 'equal',
+                        values: { 'eGroup': 'HR_CORRECTION_SALDO_FORMAT' }
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'acGrid',
+      name: 'orderRegistryDt',
+      stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_orderRegistryBalanceCorr_orderRegistryDt'),
+      region: 'center',
+      flex: 1,
+      autoScroll: true,
+      cellEditing: true,
+      notWriteChanges: true,
+      storeType: 'local',
+      showToolBar: true,
+      disablePaging: true,
+      loadMaskMessage: UB.i18n('Завантаження даних...'),
+      summary: { paySum: 'sum' },
+      summaryDataOnClient: true,
+      ignoreAttr: ['posName', 'depName'],
+      hideActions: ['addNewByCurrent'],
+      includeContextMenuReadOnly: [],
+      ignoreAttrNewByCurrent: ['posName', 'depName', 'employeeNumberID.description', 'employeeNumberID'],
+      onBeforeEdit: (control, context) => {
+        const me = context.grid.up('form')
+        return me.beforeGridEdit(me, context)
+      },
+      edit: (control, context) => {
+        const me = context.grid.up('form')
+        return me.onGridEdit(me, context)
+      },
+      customContextActions: [
+        HR.orderManager.getOrderRegistryRlAction(null),
+        HR.orderManager.getOrderRegistryEmployeeAction(null),
+        {
+          text: UB.i18n('Аналітика'),
+          iconCls: 'el-icon-notebook-2',
+          name: 'dimension',
+          cls: 'blue-action',
+          handler: (context) => {
+            const me = context.up('').grid.up('form')
+            let record = context.up('').record || AC.gridUtils.getCurrentRecord(me.attr.orderRegistryDt)
+            me.getDimension(me, record)
+          }
+        }
+      ],
+      getRowClass: function (record) {
+        let cls = ''
+        /*if (record.get('paySum') !== record.get('paySumAccrual')) {
+          cls = 'grd-color-blue'
+        }*/
+        return cls
+      },
+      customToolBarActions: [
+        {
+          name: 'calc',
+          iconCls: 'fas fa-calculator',
+          cls: 'fill-action',
+          scale: 'medium',
+          tooltip: UB.i18n('Розрахувати'),
+          handler: function (btn) {
+            const me = btn.up('form')
+            let reCalcRate = !!me.attr.rate.getValue()
+            const store = me.attr.orderRegistryDt.getStore()
+            const allRecords = store.snapshot || store.data
+            const baseSum = me.attr.baseSum.getValue()
+            const rate = me.attr.rate.getValue()
+            allRecords.each(record => {
+              let flagsFix = record.get('flagsFix')
+              if (rate) {
+                record.set('flagsFix', ((flagsFix & ~2) & ~me.attr.baseSum.flagsFix) | me.attr.rate.flagsFix)
+                record.set('rate', rate)
+                record.set('baseSum', null)
+              } else if (baseSum) {
+                record.set('flagsFix', (flagsFix & ~me.attr.rate.flagsFix) | me.attr.baseSum.flagsFix)
+                record.set('baseSum', baseSum)
+                record.set('rate', null)
+              }
+            })
+            me.reCalc(me, null, reCalcRate)
+          }
+        },
+        {
+          name: 'addList',
+          iconCls: 'fas fa-angle-double-down',
+          cls: 'fill-action',
+          scale: 'medium',
+          tooltip: UB.i18n('Заповнити'),
+          handler: function (btn) {
+            const me = btn.up('form')
+            me.setEmployeeNumbers(me)
+          }
+        }
+      ],
+      dockedItemsCreated: function (grid) {
+        const toolBarItems = grid.dockedItems[0].items
+        const oldIdx = toolBarItems.findIndex(item => item.name === 'addNew')
+        const newIdx = toolBarItems.findIndex(item => item.name === 'addList')
+        if (oldIdx >= 0 && newIdx >= 0) {
+          AC.dataService.arraymove(toolBarItems, oldIdx, newIdx)
+        }
+      },
+      enableMultifilter: true,
+      fields: [
+        { name: 'ID' },
+        { name: 'employeeNumberID' },
+        { name: 'dictFundSourceID' },
+        { name: 'periodSalaryID' },
+        { name: 'periodSalary' },
+        { name: 'payElID' },
+        { name: 'mask' },
+        {
+          name: 'tabNum',
+          columnConfig: {
+            text: UB.i18n('Таб.№'),
+            width: 70,
+            filterBy: 'string'
+          }
+        },
+        {
+          name: 'employeeNumberID.description',
+          columnConfig: {
+            text: UB.i18n('Працівник'),
+            flex: 1,
+            editor: {
+              dataType: 'Entity',
+              hideEntityItemInContext: true,
+              associatedEntity: 'hr_employeeNumberSR',
+              storeAttributeValueField: 'employeeNumberID',
+              allowBlank: false,
+              fieldList: ['ID', 'description', 'orgID', 'dateFrom', 'dateTo', 'posName', 'depName', 'employeeID', 'dateToEmpty', 'workPlaceCode', 'mi_deleteUser', 'tabNum']
+            },
+            filterBy: 'string'
+          }
+        },
+        {
+          name: 'saldoToCorr',
+          columnConfig: {
+            text: UB.i18n('Сальдо, що коригується'),
+            width: 150,
+            floatFormat: 2,
+            align: 'right',
+            sortBy: 'Number',
+            editor: {
+              dataType: 'Currency',
+              decimalPrecision: 2,
+              flagsFix: 1
+            },
+            filterBy: 'float'
+          }
+        },
+        {
+          name: 'SumToMove',
+          columnConfig: {
+            text: UB.i18n('Сума, що переноситься'),
+            width: 150,
+            floatFormat: 2,
+            align: 'right',
+            sortBy: 'Number',
+            editor: {
+              dataType: 'Currency',
+              decimalPrecision: 2,
+              flagsFix: 1
+            },
+            filterBy: 'float'
+          }
+        },
+        {
+          name: 'saldoCorr',
+          columnConfig: {
+            text: UB.i18n('Скориговане сальдо'),
+            width: 150,
+            floatFormat: 2,
+            align: 'right',
+            sortBy: 'Number',
+            editor: {
+              dataType: 'Currency',
+              decimalPrecision: 2,
+              flagsFix: 1
+            },
+            filterBy: 'float'
+          }
+        },
+        {
+          name: 'dictFundSourceID.name',
+          columnConfig: {
+            text: UB.i18n('На джерело фінансування'),
+            width: 150,
+            filterBy: 'string'
+          }
+        },
+        {
+          name: 'posName',
+          columnConfig: {
+            text: UB.i18n('Посада'),
+            width: 150,
+            filterBy: 'string'
+          }
+        },
+        { name: 'depName',
+          columnConfig: {
+            text: UB.i18n('Підрозділ'),
+            width: 150,
+            filterBy: 'string'
+          }
+        }
+      ]
+    }
+  ]
+}

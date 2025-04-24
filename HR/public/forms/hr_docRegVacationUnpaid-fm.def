@@ -1,0 +1,257 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['description', 'orderRegistryID', 'orderRegistryID.organizationID', 'orderRegistryID.description',
+    'orderRegistryID.periodID', 'orderRegistryID.periodID.dateFrom', 'orderState'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 4,
+          actionId: 'postingAction'
+        },
+        {
+          orderId: 5,
+          actionId: 'cancelPostingAction'
+        },
+        {
+          orderId: 6,
+          actionId: 'calcVacationUnpaid'
+        }
+      ]
+    }
+  ],
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 130 },
+          flex: 1,
+          items: [
+            { attributeName: 'employeeID', hidden: true },
+            { attributeName: 'employeeNumberID', hidden: true },
+            {
+              attributeName: 'employeePositionID',
+              fieldList: ['ID', 'description', 'employeeID', 'employeeNumberID', 'organizationID', 'workPlace', 'vacancyDateFrom', 'vacancyDateTo'],
+              orderList: { orderBy: { expression: 'employeeNumberID.tabNumSort' } },
+              addWorkPlace: true,
+              addDateTo: true,
+              xtype: 'empPositionCombobox'
+            },
+            {
+              attributeName: 'payElID',
+              hideEntityItemInContext: true,
+              fieldList: ['ID', 'description', 'methodID.dayAccumCondition'],
+              orderList: { orderBy: { expression: 'codeSort' } }
+            },
+            {
+              layout: { type: 'hbox' },
+              defaults: { labelWidth: 130 },
+              items: [
+                { attributeName: 'orderRegistryID', hidden: true },
+                { attributeName: 'avgCalcType', hidden: true },
+                { attributeName: 'dateFromAvg', hidden: true },
+                { attributeName: 'dateToAvg', hidden: true },
+
+                {
+                  attributeName: 'orderNumber',
+                  readOnly: false,
+                  allowBlank: true,
+                  labelWidth: 130,
+                  width: 300
+                },
+                {
+                  attributeName: 'orderDate',
+                  labelWidth: 130,
+                  width: 300
+                }
+              ]
+            },
+            {
+              attributeName: 'orderRegistryID.description',
+              fieldLabel: UB.i18n('Реєстр'),
+              readOnly: true,
+              allowBlank: true,
+              hidden: true
+            }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 140 },
+          items: [
+            {
+              attributeName: 'dateFrom',
+              enableKeyEvents: true,
+              width: 260
+            },
+            { attributeName: 'calendarDayCount',
+              minValue: 0,
+              maxValue: 180,
+              enableKeyEvents: true,
+              width: 300
+            },
+            { attributeName: 'dayCount',
+              minValue: 0,
+              maxValue: 180,
+              enableKeyEvents: true,
+              width: 300
+            },
+            {
+              attributeName: 'dateTo',
+              enableKeyEvents: true,
+              width: 260
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          xtype: 'acGrid',
+          name: 'orderRegistryDt',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_docRegVacationUnpaid_orderRegistryDt'),
+          title: UB.i18n('Розрахунок по місяцям'),
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          cellEditing: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: false,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          summary: { paySum: 'sum', days: 'sum', calendarDays: 'sum' },
+          summaryDataOnClient: true,
+          ignoreAttr: ['posName', 'depName'],
+          ignoreAttrNewByCurrent: ['posName', 'depName', 'employeeNumberID.description', 'employeeNumberID'],
+          includeContextMenuReadOnly: [],
+          hideActions: ['addNew', 'del', 'addNewByCurrent'],
+          onBeforeEdit: (control, context) => {
+            const me = context.grid.up('form')
+            me.setIsDirty(true)
+          },
+          edit: (control, context) => {
+            const me = context.grid.up('form')
+            me.onGridEdit(me, 'orderRegistryDt', context, control)
+          },
+          customPopupMenuItems: [
+            {
+              text: UB.i18n('Аналітика'),
+              iconCls: 'el-icon-notebook-2',
+              name: 'dimension',
+              cls: 'blue-action',
+              handler: (context) => {
+                const me = context.up('').grid.up('form')
+                let record = context.up('').record || AC.gridUtils.getCurrentRecord(me.attr.orderRegistryDt)
+                me.getDimension(me, record)
+              }
+            }
+          ],
+          fields: [
+            { name: 'ID' },
+            { name: 'mi_modifyDate' },
+            { name: 'orderRegistryID' },
+            { name: 'orderID' },
+            { name: 'orderNumber' },
+            { name: 'employeeNumberID' },
+            { name: 'payElID' },
+            { name: 'periodCalcID' },
+            { name: 'periodSalaryID' },
+            { name: 'periodSalaryID.dateFrom' },
+            { name: 'periodSalaryID.dateTo' },
+            { name: 'periodCalc' },
+            { name: 'periodSalary' },
+            { name: 'payElID.description' },
+            { name: 'orderDateFrom' },
+            { name: 'orderDateTo' },
+            {
+              name: 'periodSalaryID.name',
+              columnConfig: {
+                text: UB.i18n('Обліковий період'),
+                sortable: false,
+                flex: 1
+              }
+            },
+            {
+              name: 'dateFrom',
+              columnConfig: {
+                text: UB.i18n('З'),
+                flex: 1,
+                sortable: false,
+                dateFormat: 'd',
+                dataType: 'Date'
+              }
+            },
+            {
+              name: 'dateTo',
+              columnConfig: {
+                text: UB.i18n('По'),
+                flex: 1,
+                sortable: false,
+                dateFormat: 'd',
+                dataType: 'Date'
+              }
+            },
+            {
+              name: 'calendarDays',
+              columnConfig: {
+                text: UB.i18n('Календарних днів'),
+                flex: 1,
+                sortable: false,
+                dataType: 'Int'
+              }
+            },
+            {
+              name: 'days',
+              columnConfig: {
+                text: UB.i18n('Робочих днів'),
+                flex: 1,
+                sortable: false,
+                dataType: 'Int'
+              }
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Додатки'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'docAttachment',
+              entity: 'hr_orderAttachment',
+              detailFields: 'documentID',
+              masterFields: 'ID',
+              showOriginal: true,
+              minHeight: 55,
+              maxHeight: 140,
+              height: 95
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

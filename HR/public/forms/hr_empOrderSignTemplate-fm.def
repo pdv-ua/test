@@ -1,0 +1,227 @@
+/* global AC appAC UB */
+exports.formDef = {
+  size: {
+    width: 1100,
+    height: 600
+  },
+  requiredFields: ['organizationID'],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  items: [
+    {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [
+        {
+          attributeName: 'empOrderType',
+          disableContextMenu: false,
+          fieldLabel: UB.i18n('Вид наказу'),
+          flex: 1
+        },
+        {
+          attributeName: 'name',
+          flex: 1
+        }
+      ]
+    },
+    {
+      xtype: 'ubdetailgrid',
+      name: 'signerTemplateList',
+      autoScroll: true,
+      disableSearchBar: true,
+      disableMenuItemDetails: true,
+      rowEditing: true,
+      hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+      flex: 1,
+      entityConfig: {
+        entity: 'hr_empOrderSignTemplateDet',
+        method: 'select',
+        lineNumberColumn: 'respNum',
+        fieldList: [
+          {
+            name: 'respNum',
+            description: UB.i18n('№'),
+            config: {
+              width: 50
+            },
+            editor: {
+              allowBlank: true
+            }
+          },
+          {
+            name: 'respPosition',
+            description: UB.i18n('Відповідальна особа'),
+            config: {
+              width: 300
+            },
+            editor: {
+              allowBlank: true
+            }
+          },
+          {
+            name: 'respPositionID.description',
+            description: UB.i18n('Підписант (посада)'),
+            config: {
+              width: 300
+            },
+            editor: {
+              allowBlank: false,
+              disableContextMenu: true,
+              fieldList: ['ID', 'description', 'mi_data_id'],
+              displayField: 'description',
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              gridFieldList: ['description'],
+              __mip_recordhistory_all: true,
+              whereList: {
+                state: {
+                  expression: '[state]',
+                  condition: '=',
+                  value: 'ACTIVE'
+                }
+              }
+            }
+          },
+          {
+            name: 'respEmployeePositionID.description',
+            description: UB.i18n('Підписав'),
+            config: {
+              width: 400
+            },
+            editor: {
+              fieldList: ['ID', 'description'],
+              gridFieldList: ['description'],
+              allowBlank: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+            }
+          }
+        ]
+      },
+      masterFields: ['ID'],
+      detailFields: ['empOrderSignTemplateID'],
+      onBeforeEdit: function (editor, context) {
+        const me = context.grid.up('form')
+        const onDate = appAC.globalApplicationDate()
+        const employeePositionCtrl = editor.editor.query('[name=respEmployeePositionID.description]')[0]
+        if (context.record.get('respPositionID')) {
+          const store = employeePositionCtrl.getStore()
+          store.ubRequest.positionID = context.record.get('respPositionID')
+          store.ubRequest.onDate = onDate
+          store.ubRequest.currTime = Date.now() // monkey request prevention
+          store.ubRequest.method = 'getTempExecution'
+        }
+        const respPositionCtrl = editor.editor.query('[name=respPosition]')[0]
+        const respPositionIDCtrl = editor.editor.query('[name=respPositionID.description]')[0]
+        respPositionIDCtrl.storeAttributeValueField = undefined
+        AC.viewUtils.setWhereListProperty(employeePositionCtrl, [
+          ['organizationID', '=', me.record.get('organizationID')],
+          ['dateFrom', '<=', onDate],
+          ['dateTo', '>=', onDate]
+        ], undefined, [])
+        respPositionIDCtrl.store.ubRequest.__mip_ondate = onDate
+        AC.viewUtils.setWhereListProperty(respPositionIDCtrl, [
+          ['orgID', '=', me.record.get('organizationID')],
+          ['state', '=', 'ACTIVE']
+        ], undefined, ['clearStore', 'clearWhereList'])
+        respPositionIDCtrl.on('change', (ctrl, value) => {
+          context.record.set('respPositionID', ctrl.getFieldValue('mi_data_id'))
+          if (value) {
+            const store = employeePositionCtrl.getStore()
+            store.ubRequest.positionID = ctrl.getFieldValue('mi_data_id')
+            store.ubRequest.onDate = onDate
+            store.ubRequest.currTime = Date.now() // monkey request prevention
+            store.ubRequest.method = 'getTempExecution'
+            employeePositionCtrl.setValue(null)
+            store.load().then(() => {
+              employeePositionCtrl.clearIsPhantom()
+            })
+            employeePositionCtrl.clearIsPhantom()
+          } else {
+            employeePositionCtrl.setValue(null)
+          }
+        })
+        respPositionCtrl.on('change', (ctrl, value) => {
+          if (value) {
+            respPositionIDCtrl.getStore().ubRequest.whereList = {
+              state: {
+                expression: '[state]',
+                condition: '=',
+                value: 'ACTIVE'
+              },
+              dateFrom: {
+                condition: '<=',
+                expression: '[mi_dateFrom]',
+                value: onDate
+              },
+              dateTo: {
+                condition: '>=',
+                expression: '[mi_dateTo]',
+                value: onDate
+              },
+              orgID: {
+                condition: '=',
+                expression: '[orgID]',
+                value: me.record.get('organizationID')
+              },
+              isRespPosition: {
+                expression: '',
+                condition: 'subquery',
+                subQueryType: 'exists',
+                value: {
+                  entity: 'hr_orgRespPosition',
+                  fieldList: ['ID'],
+                  method: 'select',
+                  whereList: {
+                    cond: {
+                      expression: '[positionID]=[{master}.mi_data_id]',
+                      condition: 'custom'
+                    },
+                    mi_deleteDate: {
+                      condition: 'equal',
+                      expression: '[mi_deleteDate]',
+                      value: '#maxdate'
+                    },
+                    dateFrom: {
+                      condition: '<=',
+                      expression: '[dateFrom]',
+                      value: onDate
+                    },
+                    dateTo: {
+                      condition: '>=',
+                      expression: '[dateTo]',
+                      value: onDate
+                    },
+                    organizationID: {
+                      condition: '=',
+                      expression: '[organizationID]',
+                      value: me.record.get('organizationID')
+                    },
+                    signer4EmpOrder: {
+                      expression: '[respPosition]',
+                      condition: '=',
+                      value
+                    }
+                  }
+                }
+              }
+            }
+            respPositionIDCtrl.clearValue()
+          } else {
+            AC.viewUtils.setWhereListProperty(respPositionIDCtrl, [
+              ['orgID', '=', me.record.get('organizationID')],
+              ['state', '=', 'ACTIVE'],
+              ['mi_dateFrom', '<=', onDate],
+              ['mi_dateTo', '>=', onDate]
+            ], undefined, ['clearStore', 'clearWhereList'])
+          }
+        })
+        return true
+      }
+    }
+  ]
+}

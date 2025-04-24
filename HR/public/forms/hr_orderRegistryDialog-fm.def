@@ -1,0 +1,39 @@
+/* global Ext */
+
+exports.formDef = 'HR.orderRegistryDialog'
+
+Ext.define('HR.orderRegistryDialog', {
+  extend: 'Ext.form.Panel',
+  height: 100,
+  width: 700,
+  alias: 'widget.orderRegistryDialog',
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        xtype: 'displayfield',
+        value: me.customParams.message
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        items: me.customParams.buttons.map((value, index) => ({
+          xtype: 'button',
+          text: value,
+          width: value.length <= 5 ? 50 : value.length <= 12 ? 100 : (me.customParams.buttonWidth || 150),
+          height: 30,
+          margin: 5,
+          handler: () => {
+            me.commandConfig.deferred.resolve(index)
+            me.up('window').close()
+          }
+        }))
+      }
+    ]
+
+    me.callParent(arguments)
+  }
+})

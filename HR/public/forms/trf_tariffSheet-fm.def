@@ -1,0 +1,70 @@
+/* global AC UB */
+
+exports.formDef = {
+  items: [{
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    items: [
+      {
+        'attributeName': 'code'
+      },
+      {
+        'attributeName': 'name'
+      },
+      {
+        xtype: 'ubdetailgrid',
+        title: '',
+        itemId: 'gridInOut',
+        hideToolbar: false,
+        toolbarActionList: ['refresh', 'addNew', 'edit', 'del'],
+        hideActions: ['showPreview', 'showDetail', 'audit', 'addNewByCurrent', 'itemLink'],
+        autoScroll: true,
+        margin: '0, 0, 5, 0',
+        cmdType: 'showList',
+        selModel: {
+          selectionMode: 'SINGLE'
+        },
+        entityConfig: {
+          entity: 'trf_tariffSheetDt',
+          method: 'select',
+          fieldList: [
+            { name: 'ID', visibility: false },
+            { name: 'staffSubCatCondition', visibility: false },
+            { name: 'dateFrom', description: UB.i18n('Початок') },
+            { name: 'dateTo', description: UB.i18n('Кінець') },
+            { name: 'degreeCondition', visibility: false },
+            { name: 'qualificationCondition', visibility: false },
+            { name: 'dictEducationLevelID.name', description: UB.i18n('Освіта') },
+            { name: 'dictStaffSubCatID.name', description: UB.i18n('Підкатегорія персоналу') },
+            { name: 'dictQualificationID.name', description: UB.i18n('Кваліфікація') },
+            { name: 'dictTarifCoeffID.code', description: UB.i18n('Розряд') }
+          ]
+        },
+        customInit: function () {
+          const me = this
+          AC.gridUtils.tuneGridColumns(me, {
+            'dictStaffSubCatID.name': {
+              renderer: function (value, meta, record) {
+                return `${record.get('staffSubCatCondition') === '1' ? '=' : record.get('staffSubCatCondition') === '2' ? '<>' : 'Не визначено'}${value || ''}`
+              }
+            },
+            'dictEducationLevelID.name': {
+              renderer: function (value, meta, record) {
+                return `${record.get('degreeCondition') === '1' ? '=' : record.get('degreeCondition') === '2' ? '<>' : 'Не визначено'}${value || ''}`
+              }
+            },
+            'dictQualificationID.name': {
+              renderer: function (value, meta, record) {
+                return `${record.get('qualificationCondition') === '1' ? '=' : record.get('qualificationCondition') === '2' ? '<>' : 'Не визначено'}${value || ''}`
+              }
+            }
+          })
+        },
+        masterFields: ['ID'],
+        detailFields: ['tariffSheetID']
+      }
+    ]
+  }]
+}

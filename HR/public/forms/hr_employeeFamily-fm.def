@@ -1,0 +1,105 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['employeeID', 'employeeID.fullFIO', 'dictKinshipKindID.name', 'peopleID.fullFIO', 'dictBenefitsKindID.name',
+    'peopleID.description', 'peopleID.birthDate', 'peopleID.phoneMobile', 'peopleID.email', 'impSourceID', 'description'],
+  parentConfig: {
+    // postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    { attributeName: 'employeeID', hidden: true },
+    { attributeName: 'dictKinshipKindID' },
+    {
+      layout: { type: 'hbox' },
+      items: [
+        {
+          attributeName: 'peopleID',
+          fieldList: ['ID', 'fullFIO', 'employeeID'],
+          allowCustomText: true,
+          triggerCls: 'hr-list-trigger',
+          flex: 1
+        },
+        {
+          xtype: 'button',
+          scale: 'small',
+          name: 'searchButton',
+          iconCls: 'fas fa-search',
+          margin: '4 15 0 0',
+          width: 30,
+          tooltip: UB.i18n('Пошук'),
+          cls: 'add-new-action',
+          handler: function (btn) {
+            let me = this.up('form').down('[name=peopleID]')
+            me.showExtBasedLookup()
+          }
+        },
+        {
+          xtype: 'button',
+          scale: 'small',
+          name: 'addNewButton',
+          iconCls: 'fa fa-plus-circle',
+          margin: '4 15 0 0',
+          width: 30,
+          tooltip: UB.i18n('Додати'),
+          cls: 'add-new-action',
+          handler: function (btn) {
+            let me = this.up('form')
+            const store = me.attr.peopleID.getStore()
+            const entityName = store.entityName
+            const displayField = me.attr.peopleID.displayField
+            const val = me.attr.peopleID.getValue()
+            const rec = store.getById(val)
+            let fio = me.attr.peopleID.rawValue ? me.attr.peopleID.rawValue.split(' ') : []
+
+            const cmdConfig = {
+              cmdType: UB.core.UBCommand.commandType.showForm,
+              entity: entityName,
+              store: store,
+              isModal: true,
+              sender: me.attr.peopleID,
+              onClose: function (itemId) {
+                if (itemId && me.setValueById) {
+                  me.attr.peopleID.setIsActualValue = true
+                  me.attr.peopleID.setValueById(itemId)
+                }
+              },
+              cmpInitConfig: {
+                defaultValues: {
+                  lastName: fio[0] || null,
+                  firstName: fio[1] || null,
+                  middleName: fio[2] || null
+                }
+              }
+            }
+            cmdConfig.initValue = {}
+            cmdConfig.initValue[displayField] = rec ? rec.get(displayField) : val
+
+            UB.core.UBApp.doCommand(cmdConfig)
+          }
+        }
+      ]
+    },
+    { attributeName: 'dateToEmpty' },
+    { attributeName: 'dictBenefitsKindID' },
+    { attributeName: 'isDependent' },
+    { attributeName: 'comment' },
+    {
+      layout: { type: 'hbox', align: 'middle' },
+      items: [
+        {
+          attributeName: 'peopleID.birthDate'
+        },
+        {
+          xtype: 'displayfield',
+          attributeName: 'peopleID.age',
+          labelWidth: 70,
+          style: { fontWeight: 'bold' }
+        }
+      ]
+    }
+  ]
+}

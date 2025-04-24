@@ -1,0 +1,249 @@
+/* global UB */
+exports.formDef = {
+  requiredFields: ['orderID', 'organizationID', 'empOrderType', 'typeCompensation'],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+      items: [
+        {
+          attributeName: 'dateFrom',
+          fieldLabel: UB.i18n('Дата роботи'),
+          labelWidth: 150
+        },
+        {
+          attributeName: 'dictTimeCostID',
+          flex: 1
+        }
+      ]
+    },
+    {
+      layout: {
+        type: 'hbox',
+      },
+      name: 'reasonDocPanel',
+      items: [{
+        attributeName: 'restDayScheduleDesc',
+        labelWidth: 150,
+        flex: 1
+      },
+      {
+        xtype: 'button',
+        cls: 'list-icon',
+        name: 'restDayScheduleDescButton',
+        tooltip: UB.i18n('Вибрати'),
+        width: 35,
+        height: 35,
+        margin: '0 2 0 -45',
+        handler: btn => btn.up('form').getField('restDayScheduleDesc').selectHandler(btn)
+      }
+      ]
+    },
+    {
+      attributeName: 'typeCompensation',
+      labelWidth: 150
+    },
+    {
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+      items: [
+        {
+          attributeName: 'byRequest',
+          labelWidth: 250,
+          hidden: true
+        },
+        {
+          attributeName: 'dictTimeCost2ID',
+          flex: 1,
+          hidden: true
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      layout: 'fit',
+      flex: 1,
+      items: [{
+        title: UB.i18n('Працівники'),
+        name: 'hr_empOrderCwshdgrpEmp',
+        xtype: 'ubdetailgrid',
+        paraGrid: true,
+        autoScroll: true,
+        rowEditing: true,
+        notWriteChanges: true,
+        hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit', 'history', 'showDetail'],
+        flex: 1,
+        entityConfig: {
+          entity: 'hr_empOrderCwshdgrpEmp',
+          method: 'select',
+          fieldList: [
+            {
+              name: 'employeePositionID.description',
+              description: UB.i18n('Працівник'),
+              visibility: true,
+              simpleFilter: true,
+              editor: {
+                fieldList: ['ID', 'description', 'employeeID', 'employeeID.fullFIO', 'workScheduleID', 'organizationID'],
+                gridFieldList: ['description'],
+                hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+              },
+              config: { width: 350 }
+            },
+            {
+              name: 'workHours',
+              format: '0.00',
+              config: {
+                decimalPrecision: 2,
+                width: 150
+              },
+              editor: {
+                decimalPrecision: 2,
+                minValue: 0,
+                maxValue: 24,
+                allowExponential: false
+              }
+            },
+            {
+              name: 'dateRest',
+              config: { width: 250 },
+              editor: {
+                allowBlank: true
+              }
+            },
+            {
+              name: 'employeeID',
+              visibility: false
+            },
+            {
+              name: 'description',
+              visibility: false
+            }
+          ]
+        },
+        masterFields: ['ID', 'orderID'],
+        detailFields: ['paraID', 'orderID'],
+        onBeforeEdit: function (rowEditor, context) {
+          let editor = rowEditor.editor
+          let me = editor.up('form')
+          if (context.grid.isEditDisabled) {
+            return false
+          }
+          me.setIsDirty(true)
+          let employeePositionCtrl = editor.query(`[name=employeePositionID.description]`)[0]
+
+          me.orderForm.filterEmployeePosition(me, {
+            ctrlToFilter: employeePositionCtrl,
+            onDate: appAC.globalApplicationDate()
+          })
+          if (!context.record.get('employeePositionID')) {
+            context.record.set('workHours', 8)
+          }
+          employeePositionCtrl.on('change', ctrl => {
+            context.record.set('employeeID', ctrl.getFieldValue('employeeID'))
+            context.record.set('description', ctrl.getFieldValue('description'))
+          })
+        },
+        customActions: [
+          {
+            iconCls: 'fas fa-angle-double-down',
+            cls: 'fill-action',
+            text: UB.i18n('Вибрати працівників'),
+            actionId: 'fillData',
+            handler: async function (btn) {
+              const me = btn.up('form')
+              if (me.isReadOnly) {
+                return
+              }
+              const gridEmp = me.down('[name=hr_empOrderCwshdgrpEmp]')
+              const store = gridEmp.getStore()
+              HR.orderManager.empOrderEmployeeSearch({
+                selected: store.data.items.map(o => o.get('employeePositionID')),
+                orgID: me.record.get('organizationID'),
+                onDate: AC.dateService.truncTimeToUtcNull(me.orderForm.record.get('orderDate') || me.orderForm.record.get('entryDate')),
+                entityID: me.instanceID,
+                workPlace: [],
+                onSelectData: function (data, isDelete) {
+                  me.loadEmployeers(data, isDelete)
+                }
+              })
+            }
+          },
+          {
+            name: 'importList',
+            iconCls: 'el-icon-download',
+            cls: 'fill-action',
+            scale: 'medium',
+            text: UB.i18n('Завантажити з файлу'),
+            handler: function (btn) {
+              const me = btn.up('form')
+              if (me.isReadOnly) {
+                return
+              }
+              me.saveForm().then(result => {
+                if (result !== -1) {
+                  me.loadCsv(btn)
+                }
+              })
+            }
+          },
+          {
+            name: 'dexportList',
+            iconCls: 'el-icon-upload2',
+            cls: 'fill-action',
+            scale: 'medium',
+            text: UB.i18n('Вивантажити шаблон CSV'),
+            tooltip: UB.i18n('Вивантажити шаблон CSV'),
+            handler: function (btn) {
+              const me = btn.up('form')
+              me.exportCSVTemplate()
+            }
+          }
+        ],
+        cmpInitConfig: {
+          customInit: function () {
+            let grid = this
+            let oldOnDel = grid.onDel
+            let newOnDel = function () {
+              let me = grid.up('form')
+              if (['POSTED', 'PROCESSED'].includes(me.record.get('orderState'))) {
+                AC.viewUtils.showToast(UB.i18n('Помилка'), UB.i18n('Неможливо видалити запис з проведеного наказу'))
+                return
+              }
+              oldOnDel.call(grid)
+              me.setIsDirty(true)
+            }
+            AC.gridUtils.replaceListener(grid, 'del', oldOnDel, newOnDel)
+            let _doOnEdit = grid.doOnEdit
+            AC.gridUtils.tuneGridColumns(grid, {})
+            grid.doOnEdit = function () {
+              grid.isEditMode = true
+              _doOnEdit.call(grid)
+            }
+            HR.controlService.setValidateEditPromise(grid, (rowEditor, context) => {
+              const form = context.grid.up('form')
+              return form.onValidateGridEdit(rowEditor.editor, context)
+            })
+          },
+          optimizeColumnWidth: function () {
+            /!* do nothing for manual column width tunning *!/
+          }
+        }
+      }]
+    }
+  ]
+}

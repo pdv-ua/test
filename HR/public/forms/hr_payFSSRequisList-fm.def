@@ -1,0 +1,247 @@
+// @isModal true
+/* global Ext UB */
+
+exports.formDef = 'HR.payFSSRequisList'
+
+Ext.define('HR.payFSSRequisList', {
+  extend: 'Ext.panel.Panel',
+  height: 600,
+  width: 1100,
+  layout: { type: 'border' },
+  alias: 'widget.payFSSRequisList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      Ext.widget('panel', {
+        xtype: 'panel',
+        region: 'center',
+        layout: { type: 'border' },
+        autoScroll: true,
+        items: [
+          {
+            xtype: 'panel',
+            region: 'center',
+            layout: 'fit',
+            items: [
+              {
+                xtype: 'ubdetailgrid',
+                region: 'center',
+                name: 'sicknessRequisList',
+                autoScroll: true,
+                disableSearchBar: true,
+                hideActions: ['addNew', 'addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'showDetail', 'refresh', 'edit', 'del'],
+                stateful: true,
+                stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_paFSSRequestList_sicknessRequisList'),
+                disableMenuItemDetails: true,
+                hideMenuAllActions: true,
+                margin: '0, 10, 0, 10',
+                cmdType: 'showList',
+                entityName: 'hr_sicknessRequis',
+                description: UB.i18n('Заяви-розрахунки'),
+                cmdData: {
+                  params: [{
+                    entity: 'hr_sicknessRequis',
+                    method: 'select',
+                    fieldList: [
+                      { name: 'ID', visibility: false },
+                      { name: 'description', visibility: false },
+                      { name: 'orgID', visibility: false },
+                      { name: 'periodID', visibility: false },
+                      { name: 'orderState', description: UB.i18n('Статус'), tooltip: UB.i18n('Статус документу'), config: { width: 70 } },
+                      { name: 'orderNumber', description: UB.i18n('Номер'), tooltip: UB.i18n('Номер документу') },
+                      { name: 'orderDate', description: UB.i18n('Дата'), tooltip: UB.i18n('Дата документу') },
+                      { name: 'periodID.name', description: UB.i18n('Період формування'), tooltip: UB.i18n('Період формування') },
+                      { name: 'lineCount', description: UB.i18n('Кількість рядків') },
+                      { name: 'totalPaySum', description: UB.i18n('Сума'), format: '0.00', config: { align: 'right', flex: 0.3 } }
+                    ]
+                  }]
+                },
+                cmpInitConfig: {
+                  selModel: {
+                    selectionMode: 'MULTI',
+                    showHeaderCheckbox: false,
+                    checkOnly: true,
+                    selType: 'checkboxmodel'
+                  },
+                  onItemDblClick: function () {
+                    return false
+                  },
+                  customInit: function () {
+                    this.store.on('load', () => {
+                      this.getSelectionModel().selectAll()
+                    })
+                  },
+                  afterInit: function () {
+                    const grid = this
+                    function setFilters (grid) {
+                      let req = grid.store.ubRequest
+                      req.whereList = {
+                        state: {
+                          expression: '[orderState]',
+                          condition: 'equal',
+                          value: 'POSTED'
+                        },
+                        org: {
+                          expression: '[orgID]',
+                          condition: 'equal',
+                          value: me.orgID
+                        },
+                        exists: {
+                          expression: '',
+                          condition: 'subquery',
+                          subQueryType: 'exists',
+                          value: {
+                            entity: 'hr_sicknessRequisDt',
+                            fieldList: [],
+                            method: 'select',
+                            whereList: {
+                              cond: {
+                                expression: '[sicknessRequisID]=[{master}.ID]',
+                                condition: 'custom'
+                              },
+                              org: {
+                                expression: '[employeeNumberID.orgID]',
+                                condition: 'equal',
+                                value: me.orgID
+                              },
+                              mi_deleteDate: {
+                                condition: 'equal',
+                                expression: '[mi_deleteDate]',
+                                value: '#maxdate'
+                              }
+                            }
+                          }
+                        },
+                        notExists: {
+                          expression: '',
+                          condition: 'subquery',
+                          subQueryType: 'notExists',
+                          value: {
+                            entity: 'hr_RollRequis',
+                            fieldList: [],
+                            method: 'select',
+                            whereList: {
+                              cond: {
+                                expression: '[sicknessRequisID]=[{master}.ID]',
+                                condition: 'custom'
+                              },
+                              pRoll: {
+                                expression: '[payRollID]',
+                                condition: 'notEqual',
+                                value: me.payRollID
+                              },
+                              org: {
+                                expression: '[payRollID.organizationID]',
+                                condition: 'equal',
+                                value: me.orgID
+                              }
+                            }
+                          }
+                        }
+                      }
+                      req.logicalPredicates = ['(([org] OR [exists]) AND [notExists])']
+                      grid.store.reload()
+                    }
+                    setFilters(grid)
+                  },
+                  customActions: [
+                    {
+                      text: UB.i18n('Відмітити всі'),
+                      iconCls: 'u-icon-check',
+                      cls: 'green-action',
+                      handler: function (btn) {
+                        const grid = btn.up('ubdetailgrid')
+                        grid.getSelectionModel().selectAll(true)
+                        me.calcTotalSum()
+                      }
+                    },
+                    {
+                      text: UB.i18n('Виключити всі'),
+                      iconCls: 'u-icon-close',
+                      cls: 'red-action',
+                      handler: function (btn) {
+                        const grid = btn.up('ubdetailgrid')
+                        grid.getSelectionModel().deselectAll(true)
+                        me.calcTotalSum()
+                      }
+                    },
+                    {
+                      text: UB.i18n('Зберегти та закрити'),
+                      iconCls: 'fas fa-share-square',
+                      cls: 'save-action',
+                      handler: function (btn) {
+                        const grid = btn.up('ubdetailgrid')
+                        if (me.onSelect) {
+                          const data = []
+                          const selModel = grid.getSelectionModel()
+                          selModel.selected.each(record => {
+                            data.push(record.getData())
+                          })
+                          me.onSelect(data)
+                        }
+                        me.up('window').close()
+                      }
+                    }
+                  ],
+                  listeners: {
+                    selectionchange: () => {
+                      this.calcTotalSum()
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            xtype: 'panel',
+            region: 'south',
+            layout: 'fit',
+            items: [
+              {
+                xtype: 'ubfieldset',
+                border: true,
+                region: 'south',
+                layout: { type: 'vbox', align: 'right' },
+                margin: '10 10 10 10',
+                items: [
+                  {
+                    xtype: 'textfield',
+                    fieldLabel: UB.i18n('Вибрано заявок на суму'),
+                    labelWidth: 200,
+                    name: 'totalSum',
+                    readOnly: true,
+                    value: '0.00',
+                    fieldStyle: 'text-align: right;'
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      })
+    ]
+
+    me.calcTotalSum = () => {
+      let isTotalSum = 0
+      const selModel = this.attr.grid.getSelectionModel()
+      selModel.selected.each(record => {
+        isTotalSum += record.getData().totalPaySum ? record.getData().totalPaySum : 0
+      })
+      this.attr.totalSum.setValue(isTotalSum.toFixed(2))
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[name=sicknessRequisList]'),
+        totalSum: me.down('[name=totalSum]')
+      }
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

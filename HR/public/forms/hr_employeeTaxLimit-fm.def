@@ -1,0 +1,76 @@
+exports.formDef = {
+  requiredFields: ['taxLimitID.taxLimitType', 'taxLimitID.name'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      items: [
+        { attributeName: 'employeeNumberID', hidden: true },
+        {
+          attributeName: 'dateFromEmpty',
+          format: 'm.Y',
+          validator: function (val) {
+            if (!val) {
+              return true
+            }
+            if (val.match(/^\d{2}([./-])\d{4}$/)) {
+              return true
+            }
+            return ' '
+          }
+        },
+        {
+          attributeName: 'dateToEmpty',
+          format: 'm.Y',
+          validator: function (val) {
+            if (!val) {
+              return true
+            }
+            if (val.match(/^\d{2}([./-])\d{4}$/)) {
+              return true
+            }
+            return ' '
+          }
+        },
+        {
+          layout: {
+            type: 'hbox',
+            align: 'middle'
+          },
+          items: [
+            {
+              attributeName: 'taxLimitID',
+              flex: 1,
+              rows: 1,
+              fieldList: ['name', 'code', 'taxLimitType'],
+              gridFieldList: ['code', 'name', 'taxLimitType', 'size', 'codeForReport'],
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+            },
+            {
+              xtype: 'button',
+              cls: 'list-icon',
+              name: 'reasonButton',
+              tooltip: UB.i18n('Вибрати'),
+              width: 35,
+              height: 35,
+              margin: '0 13 0 -45',
+              handler: function (btn) {
+                const me = btn.up('form')
+                me.attr.taxLimitID.showLookup()
+              }
+            }
+          ]
+
+        },
+        { attributeName: 'amountChild', minValue: 0 }
+      ]
+    }
+  ]
+}

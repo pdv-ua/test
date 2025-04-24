@@ -1,0 +1,506 @@
+{
+  "caption": "Довідник посад",
+  "description": "Довідник посад",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "code",
+      "dataType": "String",
+      "size": 10,
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код"
+    },
+    {
+      "name": "name",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва",
+      "description": "Назва",
+      "documentation": "Назва",
+      "allowNull": false
+    },
+    {
+      "name": "idxNum",
+      "dataType": "Int",
+      "caption": "Номер за порядком",
+      "description": "Номер за порядком",
+      "documentation": "Номер за порядком"
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "customSettings": {
+        "noSearch": "1"
+      }
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку",
+      "documentation": "Дата початку",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "allowNull": false
+    },
+    {
+      "name": "dateFromEmpty",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateFrom) WHEN 2000 THEN null ELSE {self}.dateFrom END)"
+        }
+      ]
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "dictProfessionID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictProfession",
+      "caption": "Державний класифікатор професій",
+      "description": "Державний класифікатор професій",
+      "documentation": "Державний класифікатор професій"
+    },
+    {
+      "name": "nameNom",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Називний (хто, що)",
+      "description": "Назва в називному відмінку",
+      "documentation": "Назва в називному відмінку"
+    },
+    {
+      "name": "nameGen",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Родовий",
+      "description": "Родовий",
+      "documentation": "Родовий"
+    },
+    {
+      "name": "nameDat",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Давальний",
+      "description": "Давальний",
+      "documentation": "Давальний"
+    },
+    {
+      "name": "nameAcc",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Знахідний",
+      "description": "Знахідний",
+      "documentation": "Знахідний"
+    },
+    {
+      "name": "nameOr",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Орудний",
+      "description": "Орудний",
+      "documentation": "Орудний"
+    },
+    {
+      "name": "nameLoc",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Місцевий",
+      "description": "Місцевий",
+      "documentation": "Місцевий"
+    },
+    {
+      "name": "nameVoc",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Кличний",
+      "description": "Кличний",
+      "documentation": "Кличний"
+    },
+    {
+      "name": "nameEng",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. (англ.)",
+      "description": "Назва. (англ.)",
+      "documentation": "Назва. (англ.)"
+    },
+    {
+      "name": "fullName",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Повна назва",
+      "description": "Повна назва",
+      "documentation": "Повна назва"
+    },
+    {
+      "name": "fullNameNom",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Називний (хто, що)",
+      "description": "Повна назва в род. відмінку",
+      "documentation": "Повна назва в род. відмінку"
+    },
+    {
+      "name": "fullNameGen",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Родовий (кого, чого)",
+      "description": "Повна назва в род. відмінку",
+      "documentation": "Повна назва в род. відмінку"
+    },
+    {
+      "name": "fullNameDat",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Давальний (кому, чому)",
+      "description": "Повна назва в дав. відмінку",
+      "documentation": "Повна назва в дав. відмінку"
+    },
+    {
+      "name": "fullNameAcc",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Знахідний (кого, що)",
+      "description": "Повна назва в знах. відмінку",
+      "documentation": "Повна назва в знах. відмінку"
+    },
+    {
+      "name": "fullNameOr",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Орудний (ким, чим)",
+      "description": "Повна назва в оруд. відмінку",
+      "documentation": "Повна назва в оруд. відмінку"
+    },
+    {
+      "name": "fullNameLoc",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Місцевий (на кому, на чому)",
+      "description": "Повна назва в місц. відмінку",
+      "documentation": "Повна назва в місц. відмінку"
+    },
+    {
+      "name": "fullNameVoc",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. Кличний",
+      "description": "Повна назва. Кличний",
+      "documentation": "Повна назва. Кличний"
+    },
+    {
+      "name": "fullNameEng",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Повна назва. (анг.)",
+      "description": "Повна назва. (анг.)",
+      "documentation": "Повна назва. (анг.)"
+    },
+    {
+      "name": "nameNomF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. Називний (хто, що)",
+      "description": "Назва в називному відмінку",
+      "documentation": "Назва в називному відмінку"
+    },
+    {
+      "name": "nameGenF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Родовий",
+      "description": "Родовий",
+      "documentation": "Родовий"
+    },
+    {
+      "name": "nameDatF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Давальний",
+      "description": "Давальний",
+      "documentation": "Давальний"
+    },
+    {
+      "name": "nameAccF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Знахідний",
+      "description": "Знахідний",
+      "documentation": "Знахідний"
+    },
+    {
+      "name": "nameOrF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Орудний",
+      "description": "Орудний",
+      "documentation": "Орудний"
+    },
+    {
+      "name": "nameLocF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Місцевий",
+      "description": "Місцевий",
+      "documentation": "Місцевий"
+    },
+    {
+      "name": "nameVocF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Кличний",
+      "description": "Кличний",
+      "documentation": "Кличний"
+    },
+    {
+      "name": "nameEngF",
+      "dataType": "String",
+      "size": 350,
+      "caption": "Назва. (англ.)",
+      "description": "Назва. (англ.)",
+      "documentation": "Назва. (англ.)"
+    },
+    {
+      "name": "nameForeign",
+      "dataType": "String",
+      "size": 600,
+      "caption": "Назва на іноземній мові",
+      "description": "Назва на іноземній мові",
+      "documentation": "Назва на іноземній мові"
+    },
+    {
+      "name": "dictStaffCatID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStaffCat",
+      "caption": "Категорія персоналу",
+      "description": "Категорія персоналу",
+      "documentation": "Категорія персоналу"
+    },
+    {
+      "name": "dictWagePayID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictWagePay",
+      "caption": "Тип посади держслужбовця",
+      "description": "Тип посади держслужбовця",
+      "documentation": "Тип посади держслужбовця"
+    },
+    {
+      "name": "positionCategory",
+      "dataType": "Enum",
+      "enumGroup": "HR_POSITION_CATEGORY",
+      "caption": "Категорія посади",
+      "documentation": "Категорія посади",
+      "description": "Категорія посади"
+    },
+    {
+      "name": "dictStatePayID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStatePay",
+      "caption": "Група оплати праці держслужбовців",
+      "description": "Група оплати праці держслужбовців",
+      "documentation": "Група оплати праці держслужбовців"
+    },
+    {
+      "name": "psCategory",
+      "dataType": "Enum",
+      "enumGroup": "HR_POSITION_PSCATEGORY",
+      "caption": "Категорія посади держслужбовця",
+      "documentation": "Категорія посади держслужбовця",
+      "description": "Категорія посади держслужбовця"
+    },
+    {
+      "name": "positionType",
+      "dataType": "Enum",
+      "enumGroup": "HR_POSITION_TYPE",
+      "caption": "Тип посади",
+      "documentation": "Тип посади",
+      "description": "Тип посади"
+    },
+    {
+      "name": "dictStaffSubCatID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictStaffSubCat",
+      "caption": "Підкатегорія персоналу",
+      "description": "Підкатегорія персоналу",
+      "documentation": "Підкатегорія персоналу"
+    },
+    {
+      "name": "dictSpecialtyID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_specialty",
+      "caption": "Спеціальність",
+      "description": "Спеціальність",
+      "documentation": "Спеціальність"
+    },
+    {
+      "name": "dictEmpCategoryID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictEmpCategory",
+      "caption": "Клас персоналу",
+      "description": "Клас персоналу",
+      "documentation": "Клас персоналу"
+    },
+    {
+      "name": "dictTarifCoeffID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictTarifCoeff",
+      "caption": "Тарифний розряд",
+      "description": "Тарифний розряд",
+      "documentation": "Тарифний розряд"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 1024,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "caption",
+      "dataType": "String",
+      "size": 400,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис",
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["name", "code"],
+        "compositeSeparator": ["", " [", "]"]
+      }
+    },
+    {
+      "name": "workScheduleID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_workSchedule",
+      "caption": "Графік роботи",
+      "description": "Графік роботи",
+      "documentation": "Графік роботи"
+    },
+    {
+      "name": "workNormID",
+      "dataType": "Entity",
+      "associatedEntity": "trf_workNorm",
+      "caption": "Тижнева норма",
+      "description": "Тижнева норма",
+      "documentation": "Тижнева норма"
+    },
+    {
+      "name": "isActive",
+      "dataType": "Boolean",
+      "caption": "Ознака дії",
+      "description": "Ознака дії",
+      "documentation": "Ознака дії",
+      "allowNull": false,
+      "defaultValue": "1"
+    },
+    {
+      "name": "paymentType",
+      "dataType": "Enum",
+      "enumGroup": "HR_PAYMENT_TYPE",
+      "caption": "Тип оплати",
+      "documentation": "Тип оплати",
+      "description": "Тип оплати",
+      "allowNull": false,
+      "defaultValue": "ACCRUAL"
+    },
+    {
+      "name": "codeSort",
+      "dataType": "Float",
+      "caption": "Код",
+      "description": "Код",
+      "documentation": "Код"
+    },
+    {
+      "name": "dictCostTypeID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictCostType",
+      "caption": "Місце виникнення витрат",
+      "description": "Місце виникнення витрат",
+      "documentation": "Місце виникнення витрат"
+    },
+    {
+      "name": "dictSalarySchemeLevelID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictSalarySchemeLevel",
+      "caption": "Група (рівень) за схемою посадових окладів",
+      "description": "Група (рівень) за схемою посадових окладів",
+      "documentation": "Група (рівень) за схемою посадових окладів"
+    },
+    {
+      "name": "isVehicle",
+      "dataType": "Boolean",
+      "caption": "Транспортний засіб",
+      "description": "Транспортний засіб",
+      "documentation": "Транспортний засіб",
+      "allowNull": true,
+      "defaultValue": "0"
+    },
+    {
+      "name": "dictAcademStatusID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictAcademStatus",
+      "caption": "Вчене звання",
+      "description": "Вчене звання",
+      "documentation": "Вчене звання"
+    },
+    {
+      "name": "dictDegreeID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictDegree",
+      "caption": "Науковий ступінь",
+      "description": "Науковий ступінь",
+      "documentation": "Науковий ступінь"
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    }
+  }
+}

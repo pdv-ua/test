@@ -1,0 +1,236 @@
+/* global HR UB AC Ext */
+exports.formDef = {
+  requiredFields: ['orderState', 'document', 'empOrderType', 'docText'],
+  parentConfig: {
+    hideActions: ['docActiondocument'],
+    postOnlySimpleAttributes: true,
+    autoScroll: true,
+    layout: { type: 'border' }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 6,
+          actionId: 'startReconciliation'
+        },
+        {
+          orderId: 7,
+          actionId: 'stopReconciliation'
+        },
+        {
+          orderId: 8,
+          actionId: 'toCompletion'
+        },
+        {
+          orderId: 9,
+          actionId: 'renewTask'
+        }
+      ]
+    }
+  ],
+  items: [
+
+    {
+      layout: { type: 'vbox', align: 'stretch' },
+      region: 'north',
+      split: true,
+      autoScroll: true,
+      items: [
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'organizationID', hidden: true
+            },
+            {
+              attributeName: 'mi_createDate',
+              fieldLabel: 'Дата створення',
+              labelWidth: 160,
+              format: 'd.m.Y',
+              flex: 1,
+              readOnly: true
+            },
+            {
+              attributeName: 'mi_createUser.name',
+              fieldLabel: 'Користувач',
+              labelWidth: 160,
+              flex: 1,
+              readOnly: true
+            },
+            {
+              attributeName: 'orderState',
+              fieldLabel: 'Стан документу',
+              labelWidth: 160,
+              flex: 1,
+              readOnly: true
+            }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'verSheet',
+              fieldLabel: 'Версія',
+              labelWidth: 160,
+              flex: 1,
+              readOnly: true
+            },
+            {
+              attributeName: 'sheetType',
+              fieldLabel: 'Тип',
+              labelWidth: 160,
+              flex: 1,
+              readOnly: true
+            },
+            {
+              attributeName: 'description',
+              fieldLabel: 'Опис',
+              labelWidth: 160,
+              flex: 2,
+              readOnly: true
+            }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'periodSalaryID',
+              fieldLabel: 'Обліковий період',
+              labelWidth: 160,
+              flex: 1,
+              readOnly: true
+            },
+            {
+              attributeName: 'periodCalcID',
+              fieldLabel: 'Розрахунковий період',
+              labelWidth: 160,
+              flex: 1,
+              readOnly: true
+            }
+          ]
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            {
+              attributeName: 'departmentID',
+              fieldLabel: 'Підрозділ',
+              labelWidth: 160,
+              flex: 1,
+              readOnly: true
+            },
+            {
+              attributeName: 'includeSubDep',
+              fieldLabel: 'з підлеглими',
+              labelWidth: 160,
+              flex: 1,
+              readOnly: true
+            },
+            {
+              attributeName: 'employeeNumberID',
+              fieldLabel: 'Таб.номер співробітника',
+              labelWidth: 160,
+              flex: 1,
+              readOnly: true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      width: '100%',
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      },
+      items: [
+        {
+          xtype: 'tabpanel',
+          flex: 5,
+          plain: true,
+          tabPosition: 'top',
+          listeners: {},
+          items: [
+            {
+              title: UB.i18n('Документ'),
+              ubID: 'staffTable',
+              layout: {
+                type: 'vbox',
+                align: 'stretch'
+              },
+              items: [
+                {
+                  region: 'center',
+                  flex: 4,
+                  xtype: 'container',
+                  layout: 'fit',
+                  items: [
+                    Ext.create('UB.ux.PDFComponent', {
+                      flex: 1,
+                      height: '100%',
+                      name: 'registrySheetPDF'
+                    })
+                  ]
+                }
+              ]
+            },
+            {
+              title: UB.i18n('Маршрут'),
+              autoScroll: true,
+              layout: 'fit',
+              flex: 1,
+              tbar: {
+                items: [{
+                  xtype: 'button',
+                  name: 'btnPrint',
+                  itemId: 'btnPrint',
+                  iconCls: 'fas fa-print',
+                  cls: 'blue-action',
+                  text: UB.i18n('Друкувати'),
+                  handler: btn => {
+                    let me = btn.up('form')
+                    const reportCode = 'hr_printReconciliation'
+                    $App.doCommand({
+                      cmdType: 'showReport',
+                      tabId: reportCode + Date.now(),
+                      caption: `${UB.i18n('Друкована форма')}`,
+                      target: $App.getViewport().centralPanel,
+                      cmdData: {
+                        reportCode: reportCode,
+                        reportType: 'html',
+                        reportParams: {
+                          instanceID: me.instanceID
+                        },
+                        reportOptions: {
+                          allowExportToExcel: true,
+                          isModal: false
+                        }
+                      }
+                    })
+                  }
+                }]
+              },
+              items: [
+                {
+                  xtype: 'recpanel',
+                  name: 'recpanel'
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

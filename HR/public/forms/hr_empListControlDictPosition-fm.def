@@ -1,0 +1,252 @@
+/* global Ext $App AC HR UB appAC */
+exports.formDef = 'HR.hr_empListControlDictPosition'
+
+Ext.define('HR.hr_empListControlDictPosition', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  alias: 'widget.hr_empListControlDictPosition',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'hbox' },
+            collapsed: false,
+            items: [
+              {
+                layout: { type: 'vbox' },
+                xtype: 'panel',
+                items: [
+                  {
+                    xtype: 'panel',
+                    layout: { type: 'hbox' },
+                    items: [
+                      {
+                        xtype: 'ubdatefield',
+                        labelWidth: 160,
+                        name: 'dateTo',
+                        fieldLabel: UB.i18n('Станом на'),
+                        allowBlank: false
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'combo',
+                    labelWidth: 160,
+                    editable: false,
+                    name: 'Verify',
+                    fieldLabel: UB.i18n('Перевірити'),
+                    width: 700,
+                    allowBlank: false,
+                    store: Ext.create('Ext.data.Store', { fields: ['text', 'value'],
+                      data: [
+                        { text: 'Державний класифікатор професій', value: 'hr_dictProfession' },
+                        { text: 'Категорія персоналу', value: 'hr_dictStaffCat' },
+                        { text: 'Тип посади держслужбовця', value: 'hr_dictWagePay' },
+                        { text: 'Група оплати праці держслужбовців', value: 'hr_dictStatePay' },
+                        { text: 'Підкатегорія персоналу', value: 'hr_dictStaffSubCat' },
+                        { text: 'Спеціальність', value: 'hr_specialty' },
+                        { text: 'Клас персоналу', value: 'hr_dictEmpCategoryClass' },
+                        { text: 'Тарифний розряд', value: 'hr_dictTarifCoeffOnly' },
+                        { text: 'Графік роботи', value: 'hr_workSchedule' },
+                        { text: 'Тижнева норма', value: 'trf_worknorm' },
+                        { text: 'Місце виникнення витрат', value: 'ac_dictCostType' },
+                        { text: 'Група (рівень) за схемою посадових окладів', value: 'hr_dictSalarySchemeLevel' },
+                        { text: 'Вчене звання', value: 'hr_dictAcademStatus' },
+                        { text: 'Науковий ступінь', value: 'hr_dictDegree' },
+                        { text: 'Види оплати', value: 'hr_payEl' },
+                        { text: 'Категорії та тарифні розряди. Кваліфікаційна категорія', value: 'hr_dictEmpCategory' },
+                        { text: 'Категорії та тарифні розряди. Тарифний розряд', value: 'hr_dictTarifCoeff' }
+                      ]
+                    })
+                  }
+                ]
+              },
+              {
+                layout: { type: 'hbox' },
+                margin: '60 0 0 0',
+                items: [
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Шукати'),
+                    iconCls: 'fas fa-search',
+                    width: 30,
+                    cls: 'green-action',
+                    margin: '5 5 0 15',
+                    handler: async function (btn) {
+                      if (!me.attr.Verify.getValue() || !me.attr.dateTo.getValue()) {
+                        $App.dialogError(UB.i18n('Не задані параметри пошуку!'), UB.i18n('Помилка'))
+                      } else {
+                        const myEntity = me.attr.Verify.getStore().findRecord('text', me.attr.Verify.getValue()).get('value')
+                        const dateTo = me.attr.dateTo.getValue()
+                        const mParams = {
+                          myEntity,
+                          dateTo
+                        }
+
+                        const result = await $App.connection.run({
+                          entity: 'hr_report',
+                          method: 'getListDictPositionSearch',
+                          resultData: '',
+                          params: mParams
+                        })
+
+                        const resoultQuerry = JSON.parse(result.params.resultData)
+
+                        me.attr.accrual.setLocalStoreData(resoultQuerry)
+                      }
+                    }
+                  },
+                  {
+                    xtype: 'button',
+                    tooltip: UB.i18n('Очистити'),
+                    iconCls: 'fas fa-eraser',
+                    width: 30,
+                    cls: 'fill-action',
+                    margin: '5 0 0 0',
+                    handler: function (btn) {
+                      let me = btn.up('form')
+                      me.clearSearch()
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'acGrid',
+        name: 'accrual',
+        region: 'center',
+        autoScroll: true,
+        hideActions: ['addNew', 'del', 'addNewByCurrent', 'edit'],
+        loadStoreImmediately: false,
+        forceDataLoad: true,
+        exportExcel: true,
+        flex: 1,
+        storeType: 'local',
+        disablePaging: true,
+        showToolBar: true,
+        onItemDoubleClick: function (row, record) {
+          $App.doCommand({
+            cmdType: 'showForm',
+            formCode: 'hr_dictPosition',
+            entity: 'hr_dictPosition',
+            tabId: 'hr_dictPosition' + '-' + record.get('ID'),
+            target: $App.getViewport().centralPanel,
+            instanceID: record.get('ID')
+          })
+        },
+        customPopupMenuItems: [
+          {
+            text: UB.i18n('Відкрити картку посади'),
+            ubID: 'itemShowRl',
+            handler: function (context) {
+              const grid = context.up('').grid
+              const record = context.up('').record || AC.gridUtils.getCurrentRecord(grid)
+              $App.doCommand({
+                cmdType: 'showForm',
+                formCode: 'hr_dictPosition',
+                entity: 'hr_dictPosition',
+                tabId: 'hr_dictPosition' + '-' + record.get('ID'),
+                target: $App.getViewport().centralPanel,
+                instanceID: record.get('ID')
+              })
+            }
+          }
+        ],
+        pageSize: 10000,
+        hidePagingBar: true,
+        fields: [
+          {
+            name: 'ID',
+            columnConfig: {
+              text: UB.i18n('Ідентифікатор запису довідника посад'),
+              flex: 1
+            }
+          },
+          {
+            name: 'code',
+            columnConfig: {
+              text: UB.i18n('Код посади'),
+              flex: 1
+            }
+          },
+          {
+            name: 'name',
+            columnConfig: {
+              text: UB.i18n('Назва посади'),
+              flex: 1
+            }
+          },
+          {
+            name: 'fullName',
+            columnConfig: {
+              text: 'Повна назва посади',
+              flex: 1
+            }
+          },
+          {
+            name: 'DescriptionProblem',
+            columnConfig: {
+              text: 'Опис проблеми',
+              flex: 1
+            }
+          }
+        ]
+      }
+    ]
+
+    me.clearData = function () {
+      const epmGrid = me.down('[name=employeeNumberListGrid]')
+      if (epmGrid && epmGrid.store && epmGrid.store.data) {
+        epmGrid.store.data.items = []
+        epmGrid.view.refresh()
+      }
+    }
+
+    me.setDefaultParams = () => {
+      const me = this
+      me.attr.dateTo.setValue(appAC.globalApplicationDate())
+      me.attr.Verify.setValue()
+    }
+
+    me.clearSearch = () => {
+      me.setDefaultParams(false)
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        accrual: me.down('[name=accrual]'),
+        dateTo: me.down('[name=dateTo]'),
+        Verify: me.down('[name=Verify]')
+      }
+      me.setDefaultParams(true)
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

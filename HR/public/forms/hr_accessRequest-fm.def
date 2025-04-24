@@ -1,0 +1,350 @@
+/* global appAC UB */
+exports.formDef = {
+  size: {
+    width: 500,
+    height: 300
+  },
+  requiredFields: ['cancelReason', 'processingDate', 'processUserID'],
+  dockedItems: [{
+    xtype: 'toolbar',
+    dock: 'top',
+    items: [{
+      orderId: 4,
+      actionId: 'actionSendId'
+    }, {
+      orderId: 4,
+      actionId: 'actionAcceptId'
+    }, {
+      orderId: 4,
+      actionId: 'actionRejectId'
+    }]
+  }],
+  parentConfig: {
+    layout: {
+      type: 'vbox',
+      align: 'stretch',
+      labelWidth: 125
+    }
+  },
+  items: [{
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    },
+    items: [{
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+
+      items: [{
+        attributeName: 'docNum',
+        flex: 1,
+        readOnly: true,
+        allowBlank: true
+      },
+      {
+        attributeName: 'docDate',
+        labelWidth: 180
+      },
+      {
+        attributeName: 'requestState',
+        readOnly: true,
+        allowBlank: true,
+        labelWidth: 100
+      }
+      ]
+    },
+    {
+      attributeName: 'employeeNumberID',
+      xtype: 'empNumComboBox',
+      showEntityName: 'hr_employee',
+      showFormCode: 'hr_employee',
+      instanceAttr: 'employeeID',
+      fieldList: ['ID', 'description', 'orgID', 'employeeID'],
+      valueField: 'ID',
+      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+      orderList: { orderBy: { expression: 'tabNumSort' } }
+    },
+    {
+      layout: {
+        type: 'hbox',
+        align: 'middle'
+      },
+      items: [{
+        attributeName: 'userID',
+        readOnly: true,
+        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+        flex: 1
+      },
+      {
+        xtype: 'button',
+        cls: 'list-icon',
+        ubID: 'btnSelectByTree',
+        tooltip: UB.i18n('Перегляд користувача'),
+        width: 35,
+        height: 35,
+        margin: '0 2 0 -14',
+        handler: btn => {
+          btn.up('form').showUser()
+        }
+      },
+      {
+        attributeName: 'isBlocked'
+      }
+      ]
+    },
+    {
+      attributeName: 'blockedReason',
+      hidden: true,
+      xtype: 'textfield',
+      showIf: (ctrl, me) => me.record.get('isBlocked'),
+      requiredIf: (ctrl, me) => me.record.get('isBlocked')
+    },
+    {
+      attributeName: 'organizationID',
+      readOnly: true,
+      fieldList: ['mi_data_id', 'description'],
+      valueField: 'mi_data_id',
+      displayField: 'description',
+      // __mip_recordhistory_all: true,
+      whereList: {
+        state: {
+          expression: '[state]',
+          condition: '=',
+          values: {
+            state: 'ACTIVE'
+          }
+        }
+      },
+      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+    },
+    {
+      attributeName: 'createUserID',
+      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+      hidden: true
+    },
+    {
+      attributeName: 'respEmployeeNumID',
+      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+      labelWidth: 125,
+      fieldLabel: UB.i18n('Уповноважений')
+    },
+    {
+      attributeName: 'processingDate'
+    },
+    {
+      attributeName: 'processEmployeeNumID',
+      hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+    },
+    {
+      attributeName: 'cancelReason',
+      hidden: true,
+      xtype: 'textfield',
+      showIf: (ctrl, me) => me.record.get('requestState') === 'CANCELED'
+    }
+    ]
+  },
+  {
+    flex: 1,
+    xtype: 'tabpanel',
+    items: [
+      {
+        flex: 1,
+        xtype: 'ubdetailgrid',
+        stateful: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_accessRequest_accessRequestGroup'),
+        title: UB.i18n('Групи'),
+        rowEditing: true,
+        entity: 'hr_accessRequestGroup',
+        cmpInitConfig: {
+          getRowClass: function (record, rowIndex, rowParams, store) {
+            return record.get('isDelete') ? 'row_to_delete' : ''
+          },
+          stripeRows: false,
+          onAddNew: function () {
+            this.up('basepanel').onAddNewGrid(this)
+          }
+        },
+        entityConfig: {
+          entity: 'hr_accessRequestGroup',
+          method: 'select',
+          fieldList: [
+
+            {
+              name: 'groupID.name',
+              description: UB.i18n('Група'),
+              config: {
+                text: UB.i18n('Група'),
+                width: 800
+              },
+              editor: {
+                fieldList: ['ID', 'name'],
+                gridFieldList: ['name'],
+                hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                whereList: {
+                  notAdmin: {
+                    expression: '[code]',
+                    condition: 'notIn',
+                    value: ['group_admSecuritys', 'group_mainadmin']
+                  }
+                }
+              }
+            },
+            {
+              name: 'isFromExisted',
+              description: UB.i18n('Існуючий'),
+              config: {
+                text: UB.i18n('Існуючий')
+              },
+              editor: {
+                readOnly: true
+              }
+            },
+            {
+              name: 'isDelete',
+              description: UB.i18n('Вилучити'),
+              config: {
+                text: UB.i18n('Вилучити')
+              },
+              editor: {}
+            }
+
+          ]
+        },
+        onBeforeEdit: function (rowEditor, context) {
+          return rowEditor.editor.up('form').onBeforeEditGrid(rowEditor, context)
+        },
+        masterFields: ['ID'],
+        detailFields: ['accessRequestID']
+      },
+      {
+        flex: 1,
+        xtype: 'ubdetailgrid',
+        stateful: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_accessRequest_accessRequestRole'),
+        title: UB.i18n('Ролі'),
+        entity: 'hr_accessRequestRole',
+        rowEditing: true,
+        cmpInitConfig: {
+          getRowClass: function (record, rowIndex, rowParams, store) {
+            return record.get('isDelete') ? 'row_to_delete' : ''
+          },
+          stripeRows: false,
+          onAddNew: function () {
+            this.up('basepanel').onAddNewGrid(this)
+          }
+        },
+        entityConfig: {
+          entity: 'hr_accessRequestRole',
+          method: 'select',
+          fieldList: [{
+            name: 'roleID.name',
+            description: UB.i18n('Роль'),
+            config: {
+              text: UB.i18n('Роль'),
+              width: 800
+            },
+            editor: {
+              fieldList: ['ID', 'name'],
+              gridFieldList: ['name'],
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              whereList: {
+                notAdmin: {
+                  expression: '[name]',
+                  condition: 'notEqual',
+                  value: 'admin'
+                }
+              }
+            }
+          },
+          {
+            name: 'isFromExisted',
+            description: UB.i18n('Існуючий'),
+            config: {
+              text: UB.i18n('Існуючий')
+            },
+            editor: {
+              readOnly: true
+            }
+          },
+          {
+            name: 'isDelete',
+            description: UB.i18n('Вилучити'),
+            config: {
+              text: UB.i18n('Вилучити')
+            },
+            editor: {}
+          }
+          ]
+        },
+        onBeforeEdit: function (rowEditor, context) {
+          return rowEditor.editor.up('form').onBeforeEditGrid(rowEditor, context)
+        },
+        masterFields: ['ID'],
+        detailFields: ['accessRequestID']
+      },
+      {
+        flex: 1,
+        title: UB.i18n('Організації'),
+        xtype: 'ubdetailgrid',
+        stateful: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_accessRequest_accessRequestOrg'),
+        entity: 'hr_accessRequestOrg',
+        rowEditing: true,
+        cmpInitConfig: {
+          getRowClass: function (record, rowIndex, rowParams, store) {
+            return record.get('isDelete') ? 'row_to_delete' : ''
+          },
+          stripeRows: false,
+          onAddNew: function () {
+            this.up('basepanel').onAddNewGrid(this)
+          }
+        },
+        entityConfig: {
+          entity: 'hr_accessRequestOrg',
+          method: 'select',
+          fieldList: [{
+            name: 'organizationID.name',
+            description: UB.i18n('Організація'),
+            config: {
+              text: UB.i18n('Організація'),
+              width: 800
+            },
+            editor: {
+              fieldList: ['ID', 'name'],
+              gridFieldList: ['name'],
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              __mip_ondate: appAC.globalApplicationDate()
+            }
+          },
+          {
+            name: 'isFromExisted',
+            description: UB.i18n('Існуючий'),
+            config: {
+              text: UB.i18n('Існуючий')
+            },
+            editor: {
+              readOnly: true
+            }
+          },
+          {
+            name: 'isDelete',
+            description: UB.i18n('Вилучити'),
+            config: {
+              text: UB.i18n('Вилучити')
+            },
+            editor: {}
+          }
+          ]
+        },
+        onBeforeEdit: function (rowEditor, context) {
+          return rowEditor.editor.up('form').onBeforeEditGrid(rowEditor, context)
+        },
+        masterFields: ['ID'],
+        detailFields: ['accessRequestID']
+      }
+    ]
+  }
+  ]
+}

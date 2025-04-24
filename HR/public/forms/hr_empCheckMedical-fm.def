@@ -1,0 +1,45 @@
+/* global Ext $App appAC UB AC HR Blob saveAs $App */
+
+exports.formDef = {
+  requiredFields: ['employeeID'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    { attributeName: 'employeeID', hidden: true },
+    { attributeName: 'dictCheckMedicalID' },
+    { attributeName: 'dateCheck',
+      listeners: {
+        change: async function (ctrl) {
+          let me = ctrl.up('form')
+          let mydictCheckMedicalID = me.attr.dictCheckMedicalID.getValue()
+          let mydateCheck = me.attr.dateCheck.getValue()
+
+          if (mydictCheckMedicalID) {
+            const resultRequest = await UB.Repository('hr_dictCheckMedical')
+              .attrs('periodicityYears')
+              .where('ID', '=', mydictCheckMedicalID)
+              .selectSingle()
+
+            if (resultRequest.periodicityYears) {
+              me.attr.dateNext.setValue(new Date(mydateCheck.setFullYear(mydateCheck.getFullYear() + resultRequest.periodicityYears)))
+            } else {
+              me.attr.dateNext.setValue(new Date(mydateCheck.setFullYear(mydateCheck.getFullYear() + 3)))
+            }
+          }
+        }
+      } },
+    { attributeName: 'dateTo' },
+    { attributeName: 'dateNext' },
+    { attributeName: 'dictResultMedicalID' },
+    { attributeName: 'note' }
+  ]
+}

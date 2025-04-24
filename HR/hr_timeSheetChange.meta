@@ -1,0 +1,241 @@
+{
+  "caption": "Скорочення робочого дня/тижня",
+  "description": "Скорочення робочого дня/тижня",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "orderNumber",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер наказу",
+      "description": "Номер наказу",
+      "documentation": "Номер наказу"
+    },
+    {
+      "name": "orderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу",
+      "description": "Дата наказу",
+      "documentation": "Дата наказу"
+    },
+    {
+      "name": "orderState",
+      "dataType": "Enum",
+      "enumGroup": "HR_ORDER_STATE",
+      "caption": "Стан наказу",
+      "description": "Стан наказу",
+      "documentation": "Стан наказу",
+      "defaultValue": "PROJECT",
+      "defaultView": false,
+      "allowNull": false
+    },
+    {
+      "name": "organizationID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_organization",
+      "associationAttr": "mi_data_id",
+      "caption": "Організація",
+      "description": "Організація",
+      "documentation": "Організація",
+      "allowNull": false
+    },
+    {
+      "name": "empOrderType",
+      "dataType": "Enum",
+      "enumGroup": "HR_EMPORDRETYPE",
+      "caption": "Тип наказу",
+      "documentation": "Тип наказу",
+      "description": "Тип наказу",
+      "defaultValue": "TIMESHEETCHANGE",
+      "allowNull": false
+    },
+    {
+      "name": "method",
+      "dataType": "Enum",
+      "enumGroup": "HR_ALGSHEETCHANGE",
+      "caption": "Правило скорочення",
+      "documentation": "Правило скорочення",
+      "description": "Правило скорочення",
+      "defaultValue": "2",
+      "allowNull": false
+    },
+    {
+      "name": "hoursMinus",
+      "dataType": "Float",
+      "caption": "Розмір скорочення",
+      "description": "Розмір скорочення",
+      "documentation": "Розмір скорочення",
+      "defaultValue": "0"
+    },
+    {
+      "name": "typeSheetChange",
+      "dataType": "Enum",
+      "enumGroup": "HR_TYPESHEETCHANGE",
+      "caption": "Вид скорочення",
+      "documentation": "Вид скорочення",
+      "description": "Вид скорочення",
+      "defaultValue": "1",
+      "allowNull": false
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 255,
+      "caption": "Опис",
+      "description": "Опис наказу",
+      "documentation": "Опис наказу",
+      "allowNull": false,
+      "customSettings": {
+        "compositeFields": ["orderNumber", "orderDate"],
+        "compositeSeparator": [" № ", " від "]
+      }
+    },
+    {
+      "name": "periodID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Період внесення",
+      "description": "Період внесення",
+      "documentation": "Період внесення",
+      "allowNull": false
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Діє з",
+      "description": "Діє з",
+      "documentation": "Діє з",
+      "allowNull": false
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "allowNull": false
+    },
+    {
+      "name": "dateToEmpty",
+      "dataType": "Date",
+      "caption": "Діє по",
+      "description": "Діє по",
+      "documentation": "Діє по",
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "(CASE year({self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "(CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE {self}.dateTo END)"
+        }
+      ]
+    },
+    {
+      "name": "comment",
+      "dataType": "String",
+      "size": 1000,
+      "caption": "Коментар",
+      "description": "Коментар",
+      "documentation": "Коментар"
+    },
+    {
+      "name": "orderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Наказ підстава",
+      "description": "Наказ підстава",
+      "documentation": "Наказ підстава"
+    },
+    {
+      "name": "changeOrderID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_order",
+      "caption": "Змінено наказом",
+      "description": "Змінено наказом",
+      "documentation": "Змінено наказом"
+    },
+    {
+      "name": "paraID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_empOrderDet",
+      "caption": "Деталь групового наказу",
+      "description": "Деталь групового наказу",
+      "documentation": "Деталь групового наказ"
+    },
+    {
+      "name": "employeeList",
+      "dataType": "String",
+      "size": 4000,
+      "caption": "Список осіб",
+      "description": "Список осіб",
+      "documentation": "Список осіб"
+    },
+    {
+      "name": "hasPosted",
+      "dataType": "Int",
+      "caption": "Ознака наявності дочірніх документів в статусі POSTED",
+      "description": "Ознака наявності дочірніх документів в статусі POSTED",
+      "documentation": "Ознака наявності дочірніх документів в статусі POSTED",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT count(*) FROM hr_timeSheetChangeEmp det WHERE det.timeSheetChangeID={self}.ID AND det.orderState='POSTED' AND det.mi_deleteDate>='9999-12-31')"
+        }
+      ]
+    },
+    {
+      "name": "hasProject",
+      "dataType": "Int",
+      "caption": "Ознака наявності дочірніх документів в статусі PROJECT",
+      "description": "Ознака наявності дочірніх документів в статусі PROJECT",
+      "documentation": "Ознака наявності дочірніх документів в статусі PROJECT",
+      "mapping": [
+        {
+          "name": "AnsiSQL",
+          "expressionType": "Expression",
+          "expression": "(SELECT count(*) FROM hr_timeSheetChangeEmp det WHERE det.timeSheetChangeID={self}.ID AND det.orderState='PROJECT' AND det.mi_deleteDate>='9999-12-31')"
+        }
+      ]
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_TIMESHEETCHANGE_DATA": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "mi_deleteDate": {
+            "sort": "ASC"
+          },
+          "dateFrom": {
+            "sort": "ASC"
+          },
+          "dateTo": {
+            "sort": "ASC"
+          },
+          "organizationID": {
+            "sort": "ASC"
+          },
+          "orderState": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": true,
+      "safeDelete": true
+    },
+    "rls": {
+      "func": "RLS.byOrganization"
+    }
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "caption": "Працівники (Імпорт)",
+  "description": "Працівники (Імпорт)",
+  "descriptionAttribute": "description",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "impID",
+      "dataType": "BigInt",
+      "caption": "Зовнішня ID",
+      "description": "Зовнішня ID",
+      "documentation": "Зовнішня ID",
+      "allowNull": false
+    },
+    {
+      "name": "orgID",
+      "dataType": "BigInt",
+      "caption": "Організаційна одиниця",
+      "description": "Організаційна одиниця",
+      "documentation": "Організаційна одиниця",
+      "allowNull": false
+    },
+    {
+      "name": "externalID",
+      "dataType": "BigInt",
+      "caption": "Зовнішнє посилання",
+      "description": "Зовнішнє посилання",
+      "documentation": "Зовнішнє посилання"
+    },
+    {
+      "name": "extrnlSystmCode",
+      "dataType": "String",
+      "size": 64,
+      "caption": "Код зовнішньої системи",
+      "description": "Код зовнішньої системи",
+      "documentation": "Код зовнішньої системи"
+    },
+    {
+      "name": "impOrgID",
+      "dataType": "BigInt",
+      "caption": "Зовнішня організаційна одиниця",
+      "description": "Зовнішня організаційна одиниця",
+      "documentation": "Зовнішня організаційна одиниця"
+    },
+    {
+      "name": "taxCode",
+      "dataType": "String",
+      "size": 20,
+      "caption": "РНОКПП",
+      "description": "РНОКПП",
+      "documentation": "РНОКПП"
+    },
+    {
+      "name": "employeeID",
+      "dataType": "BigInt",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник"
+    },
+    {
+      "name": "tabNum",
+      "dataType": "String",
+      "size": 15,
+      "caption": "Табельний номер",
+      "description": "Табельний номер",
+      "documentation": "Табельний номер"
+    },
+    {
+      "name": "dateFrom",
+      "dataType": "Date",
+      "caption": "Дата початку дії",
+      "description": "Дата початку дії",
+      "documentation": "Дата початку дії"
+    },
+    {
+      "name": "dateTo",
+      "dataType": "Date",
+      "caption": "Дата закінчення дії",
+      "description": "Дата закінчення дії",
+      "documentation": "Дата закінчення дії"
+    },
+    {
+      "name": "appointmentDate",
+      "dataType": "Date",
+      "caption": "Дата призначення на поточну посаду",
+      "description": "Дата призначення на поточну посаду",
+      "documentation": "Дата призначення на поточну посаду"
+    },
+    {
+      "name": "appointmentOrderDate",
+      "dataType": "Date",
+      "caption": "Дата наказу призначення на поточну посаду",
+      "description": "Дата наказу  призначення на поточну посаду",
+      "documentation": "Дата наказу  призначення на поточну посаду"
+    },
+    {
+      "name": "appointmentOrderNumber",
+      "dataType": "String",
+      "size": 100,
+      "caption": "№ наказу призначення на поточну посаду",
+      "description": "№ наказу призначення на поточну посаду",
+      "documentation": "№ наказу призначення на поточну посаду"
+    },
+    {
+      "name": "description",
+      "dataType": "String",
+      "size": 530,
+      "caption": "Опис",
+      "description": "Опис",
+      "documentation": "Опис"
+    },
+    {
+      "name": "payOutID",
+      "dataType": "BigInt",
+      "caption": "Шаблон виплати",
+      "description": "Шаблон виплати",
+      "documentation": "Шаблон виплати"
+    },
+    {
+      "name": "personalAccount",
+      "dataType": "String",
+      "size": 30,
+      "caption": "Номер особового рахунку",
+      "description": "Номер особового рахунку",
+      "documentation": "Номер особового рахунку"
+    },
+    {
+      "name": "bankSubAccount",
+      "dataType": "String",
+      "size": 256,
+      "caption": "Субрахунок",
+      "description": "Субрахунок",
+      "documentation": "Субрахунок"
+    },
+    {
+      "name": "descriptionWithDates",
+      "dataType": "String",
+      "size": 1024,
+      "caption": "Опис с датами початку та завершення",
+      "description": "Опис с датами початку та завершення",
+      "documentation": "Опис с датами початку та завершення",
+      "allowNull": true,
+      "mapping": [
+        {
+          "name": "MSSQL2012",
+          "expressionType": "Expression",
+          "expression": "CONCAT((select top 1 shortFIO from hr_employee emp where emp.taxCode = {self}.taxCode), ' ', FORMAT({self}.dateFrom,'dd.MM.yyyy'), '-', (CASE year({self}.dateTo) WHEN 9999 THEN null ELSE FORMAT({self}.dateTo,'dd.MM.yyyy') END),')')"
+        },
+        {
+          "name": "PostgreSQL",
+          "expressionType": "Expression",
+          "expression": "CONCAT((select shortFIO from hr_employee emp where emp.taxCode = {self}.taxCode limit 1), ' ', TO_CHAR({self}.dateFrom,'DD.MM.YYYY'), '-', (CASE Extract(YEAR from {self}.dateTo) WHEN 9999 THEN null ELSE TO_CHAR({self}.dateTo,'DD.MM.YYYY') END),')')"
+        }
+      ]
+    }
+  ],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": false,
+      "safeDelete": false
+    },
+    "audit": {
+      "enabled": false
+    }
+  }
+}

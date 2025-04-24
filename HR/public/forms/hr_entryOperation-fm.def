@@ -1,0 +1,135 @@
+/* global UB */
+
+exports.formDef = {
+  requiredFields: [],
+  parentConfig: { layout: { type: 'border' } },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      split: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          defaults: { labelWidth: 160 },
+          items: [
+            {
+              attributeName: 'code'
+            },
+            {
+              attributeName: 'name'
+            }
+          ]
+        },
+        {
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: []
+        }
+      ]
+    },
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          xtype: 'acGrid',
+          name: 'entryAcc',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_entryOperation_entryAcc'),
+          title: UB.i18n('Типові проводки'),
+          flex: 1,
+          region: 'center',
+          autoScroll: true,
+          storeType: 'local',
+          disablePaging: true,
+          entity: 'hr_entryAcc',
+          formCode: 'hr_entryAcc',
+          showToolBar: true,
+          multilineRows: true,
+          expandedRowConfig: {
+            onExpandBody: function (rowNode, record, expandRow, eOpts) {
+              let detail = `<td class="x-grid-cell-rowbody" colspan="10"><div class="x-grid-rowbody ">
+            <div width: 100%"><TABLE style="width:100%">
+            <TR><TD style="width:24%"><em><b>Рахунок Дт</b></em></TD>
+            <TD style="width:25%"><em><b>${record.get('accountDtID.code') || ''}</b></em></TD>
+            <TD style="width:2%"></TD>
+            <TD style="width:24%"><em><b>Рахунок Кт</b></em></TD>
+            <TD style="width:25%"><em><b>${record.get('accountKtID.code') || ''}</b></em></TD></TR>`
+              for (let i = 0; i < 10; i++) {
+                if (record.get('dimensionDt' + i) || record.get('dimensionKt' + i)) {
+                  detail += `<TR><TD style="width:24%"><em>${(record.get('dimensionDt' + i + '.description') || '&nbsp')}
+                </em></TD>
+                <TD style="width:25%"><em>${(record.get('dimensionDt' + i + 'Value.caption') || ' ')}</em></TD>
+                <TD style="width:2%"></TD>
+                <TD style="width:24%"><em>${(record.get('dimensionKt' + i + '.description') || '&nbsp')}</em></TD>
+                <TD style="width:25%"><em>${(record.get('dimensionKt' + i + 'Value.caption') || '&nbsp')}
+                </em></TD></TR>`
+                }
+              }
+
+              detail += '</TABLE></div></td>'
+              expandRow.innerHTML = detail
+            }
+          },
+          fields: [
+            { name: 'ID' }, { name: 'mi_modifyDate' }, { name: 'operPeriod' }, { name: 'operSum' }, { name: 'isReversal' },
+            { name: 'excludeOrg' }, { name: 'excludeDepartment' }, { name: 'excludeFundSource' }, { name: 'excludeWorkPlace' }, { name: 'entryAccDt' },
+            {
+              name: 'accountDtID.code',
+              columnConfig: { text: UB.i18n('Рахунок Дт'), flex: 1 }
+            },
+            {
+              name: 'accountKtID.code',
+              columnConfig: { text: UB.i18n('Рахунок Кт'), flex: 1 }
+            },
+            {
+              name: 'dictFundSourceID.name',
+              columnConfig: { text: UB.i18n('Джерело фінансування'), flex: 1 }
+            },
+            { name: 'dictFundSourceID' }, { name: 'accountDtID' },
+            { name: 'dimensionDt0' }, { name: 'dimensionDt0Value' },
+            { name: 'dimensionDt1' }, { name: 'dimensionDt1Value' }, { name: 'dimensionDt2' }, { name: 'dimensionDt2Value' },
+            { name: 'dimensionDt3' }, { name: 'dimensionDt3Value' }, { name: 'dimensionDt4' }, { name: 'dimensionDt4Value' },
+            { name: 'dimensionDt5' }, { name: 'dimensionDt5Value' }, { name: 'dimensionDt6' }, { name: 'dimensionDt6Value' },
+            { name: 'dimensionDt7' }, { name: 'dimensionDt7Value' }, { name: 'dimensionDt8' }, { name: 'dimensionDt8Value' },
+            { name: 'dimensionDt9' }, { name: 'dimensionDt9Value' }, { name: 'accountKtID' },
+            { name: 'dimensionDt0.description' }, { name: 'dimensionDt0Value.caption' },
+            { name: 'dimensionDt1.description' }, { name: 'dimensionDt1Value.caption' },
+            { name: 'dimensionDt2.description' }, { name: 'dimensionDt2Value.caption' },
+            { name: 'dimensionDt3.description' }, { name: 'dimensionDt3Value.caption' },
+            { name: 'dimensionDt4.description' }, { name: 'dimensionDt4Value.caption' },
+            { name: 'dimensionDt5.description' }, { name: 'dimensionDt5Value.caption' },
+            { name: 'dimensionDt6.description' }, { name: 'dimensionDt6Value.caption' },
+            { name: 'dimensionDt7.description' }, { name: 'dimensionDt7Value.caption' },
+            { name: 'dimensionDt8.description' }, { name: 'dimensionDt8Value.caption' },
+            { name: 'dimensionDt9.description' }, { name: 'dimensionDt9Value.caption' },
+            { name: 'dimensionKt0' }, { name: 'dimensionKt0Value' }, { name: 'dimensionKt1' }, { name: 'dimensionKt1Value' },
+            { name: 'dimensionKt2' }, { name: 'dimensionKt2Value' }, { name: 'dimensionKt3' }, { name: 'dimensionKt3Value' },
+            { name: 'dimensionKt4' }, { name: 'dimensionKt4Value' }, { name: 'dimensionKt5' }, { name: 'dimensionKt5Value' },
+            { name: 'dimensionKt6' }, { name: 'dimensionKt6Value' }, { name: 'dimensionKt7' }, { name: 'dimensionKt7Value' },
+            { name: 'dimensionKt8' }, { name: 'dimensionKt8Value' }, { name: 'dimensionKt9' }, { name: 'dimensionKt9Value' },
+            { name: 'dimensionKt0.description' }, { name: 'dimensionKt0Value.caption' },
+            { name: 'dimensionKt1.description' }, { name: 'dimensionKt1Value.caption' },
+            { name: 'dimensionKt2.description' }, { name: 'dimensionKt2Value.caption' },
+            { name: 'dimensionKt3.description' }, { name: 'dimensionKt3Value.caption' },
+            { name: 'dimensionKt4.description' }, { name: 'dimensionKt4Value.caption' },
+            { name: 'dimensionKt5.description' }, { name: 'dimensionKt5Value.caption' },
+            { name: 'dimensionKt6.description' }, { name: 'dimensionKt6Value.caption' },
+            { name: 'dimensionKt7.description' }, { name: 'dimensionKt7Value.caption' },
+            { name: 'dimensionKt8.description' }, { name: 'dimensionKt8Value.caption' },
+            { name: 'dimensionKt9.description' }, { name: 'dimensionKt9Value.caption' }
+
+          ],
+          pagerConfig: { pageSize: 1000 },
+          enableExpandableRows: true
+        }
+      ]
+    }
+  ]
+}

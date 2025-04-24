@@ -1,0 +1,1001 @@
+/* global AC HR UB appAC */
+exports.formDef = {
+  requiredFields: ['orderState', 'entryDate', 'description', 'entryOrderID.orderNumber', 'entryOrderID.orderDate',
+    'entryOrderID.entryDate', 'entryOrderID.respEmployeePositionID.employeeID.fullFIO', 'orgName', 'reportSettings',
+    'document', 'empOrderType', 'respEmployeeNumID.description', 'docText', 'docType.name', 'orgID.description',
+    'accrualChangeKind'
+  ],
+  parentConfig: {
+    hideActions: ['docActiondocument'],
+    postOnlySimpleAttributes: true,
+    layout: {
+      type: 'vbox',
+      align: 'stretch'
+    }
+  },
+  size: {
+    width: 1100,
+    height: 600
+  },
+  dockedItems: [
+    {
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [
+        {
+          orderId: 6,
+          actionId: 'createOrder'
+        },
+        {
+          orderId: 7,
+          actionId: 'printReports',
+          iconCls: 'fas fa-print',
+          cls: 'blue-action'
+        },
+        {
+          orderId: 8,
+          actionId: 'startReconciliation'
+        },
+        {
+          orderId: 9,
+          actionId: 'stopReconciliation'
+        },
+        {
+          orderId: 10,
+          actionId: 'toCompletion'
+        },
+        {
+          orderId: 11,
+          actionId: 'renewTask'
+        }
+      ]
+    }],
+  items: [
+    {
+      xtype: 'tabpanel',
+      flex: 1,
+      listeners: {
+        tabchange: function (tabPanel, activeTab) {
+          const me = tabPanel.up('form')
+          if (activeTab.ubID === 'report') {
+            if (!me.isPdfCreated) {
+              if (!me.record.get('docText') && !['ON_RECONCILATION', 'RECONCILED', 'POSTED'].includes(me.record.get('orderState'))) {
+                HR.reportTab.editHtml(me)
+              } else {
+                HR.reportTab.setReportMode(me, 'view')
+              }
+              me.isPdfCreated = true
+            } else {
+              HR.reportTab.setReportMode(me, ['ON_RECONCILATION', 'RECONCILED', 'POSTED'].includes(me.record.get('orderState')) ? 'view' : 'edit')
+            }
+          } else if (me.isNewInstance) {
+            me.saveForm().then(result => {
+              if (result === -1) {
+                me.down('tabpanel').setActiveTab(0)
+              }
+            })
+          }
+        }
+      },
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 170 },
+          autoScroll: true,
+          items: [
+            /* eslint-disable no-template-curly-in-string */
+            AC.viewUtils.getCollapsiblePanel(
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;№</span> ${get("orderNumber")} <span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Організація")}</span> ${get("orgID.description")}<br>' +
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Назва")}</span> ${get("name")} ' +
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Опис")}</span> ${get("textOrder")} <span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Коментар")} </span> ${get("comment")}<br>' +
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${UB.i18n("Наказ про введення в дію")} </span> ${get("entryOrderID.description") || ""} ' +
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;${get("entryOrderID") ? UB.i18n("Дата введення в дію") : ""}</span> ${get("entryOrderID.entryDate") ? moment(get("entryOrderID.entryDate")).format("DD.MM.YYYY") : "" }',
+              {
+                layout: { type: 'hbox' },
+                collapsedOnInsert: true,
+                items: [
+                  {
+                    layout: { type: 'vbox', align: 'stretch' },
+                    defaults: { labelWidth: 165 },
+                    flex: 1,
+                    items: [
+                      {
+                        layout: { type: 'hbox' },
+                        items: [
+                          {
+                            attributeName: 'orderNumber',
+                            allowBlank: true,
+                            flex: 1,
+                            labelWidth: 165
+                          },
+                          {
+                            attributeName: 'orderDate',
+                            fieldLabel: UB.i18n('Дата вступу в дію'),
+                            labelWidth: 140,
+                            width: 260
+                          }
+                        ]
+                      },
+                      {
+                        attributeName: 'name'
+                      },
+                      {
+                        attributeName: 'orgID',
+                        readOnly: true,
+                        fieldList: ['mi_data_id', 'description'],
+                        displayField: 'description',
+                        __mip_recordhistory_all: true,
+                        whereList: {
+                          state: {
+                            expression: '[state]',
+                            condition: 'equal',
+                            values: {
+                              state: 'ACTIVE'
+                            }
+                          }
+                        }
+                      },
+                      {
+                        attributeName: 'textOrder'
+                      },
+                      {
+                        attributeName: 'comment'
+                      }
+                    ]
+                  },
+                  {
+                    xtype: 'ubfieldset',
+                    title: UB.i18n('Інформація про введення в дію'),
+                    width: 440,
+                    defaults: { labelWidth: 130 },
+                    layout: { type: 'vbox', align: 'stretch' },
+                    items: [
+                      {
+                        xtype: 'textfield',
+                        name: 'hrOrderNumber',
+                        fieldLabel: UB.i18n('Номер наказу'),
+                        readOnly: true
+                      },
+                      {
+                        xtype: 'textfield',
+                        name: 'hrOrderDate',
+                        fieldLabel: UB.i18n('Дата початку'),
+                        readOnly: true
+                      },
+                      {
+                        xtype: 'textfield',
+                        name: 'hrRespEmployee',
+                        fieldLabel: UB.i18n('Підписав'),
+                        readOnly: true
+                      },
+                      {
+                        xtype: 'textfield',
+                        name: 'hrEntryDate',
+                        fieldLabel: UB.i18n('Дата введення в дію'),
+                        readOnly: true
+                      },
+                      {
+                        attributeName: 'respEmployeeNumID',
+                        xtype: 'empNumComboBox',
+                        showEntityName: 'hr_employee',
+                        showFormCode: 'hr_employee',
+                        instanceAttr: 'employeeID',
+                        fieldList: ['ID', 'description', 'employeeID'],
+                        hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                        gridFieldList: ['description'],
+                        allowBlank: true
+                      }
+                    ]
+                  }
+                ]
+              }
+            ),
+            {
+              attributeName: 'withChild',
+              hidden: true
+            },
+            AC.viewUtils.getCollapsiblePanel(
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;' + UB.i18n('Підписант 1') + '</span> ${get("respPosDescription")} ${get("respEmployeePositionID.description")}<br>' +
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;' + UB.i18n('Підписант 2') + '</span> ${get("respPos2Description")} ${get("respEmployeePosition2ID.description")}<br>' +
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;' + UB.i18n('Погодив') + '</span> ${get("respPos5Description")} ${get("respEmployeePosition5ID.description")}<br>' +
+              '<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;' + UB.i18n('Затвердив 1') + '&nbsp;</span> ${get("respPos3Description")} ${get("respEmployeePosition3ID.description")}<br>' +
+              '${me.hideSigner4 ? `` : `<span style="color:#2196F3;">&nbsp;&nbsp;&nbsp;&nbsp;' + UB.i18n('Затвердив 2') + '&nbsp;</span> ${get("respPos4Description")} ${get("respEmployeePosition4ID.description")}<br>`}',
+              {
+                layout: { type: 'hbox' },
+                items: [
+                  {
+                    layout: {
+                      type: 'vbox',
+                      align: 'stretch'
+                    },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'fieldset',
+                        name: 'signer1',
+                        layout: { type: 'vbox', align: 'stretch' },
+                        margin: '5 0 5 10',
+                        padding: '0 0 5 0',
+                        flex: 1,
+                        style: 'border-color: #2f7c94',
+                        items: [
+                          {
+                            attributeName: 'respPositionID',
+                            disableContextMenu: true,
+                            fieldList: ['mi_data_id', 'description', 'state'],
+                            labelWidth: 100,
+                            valueField: 'mi_data_id',
+                            displayField: 'description',
+                            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                            gridFieldList: ['description'],
+                            whereList: {
+                              state: {
+                                expression: '[state]',
+                                condition: '=',
+                                value: 'ACTIVE'
+                              },
+                              isOrgBoss: {
+                                expression: '',
+                                condition: 'subquery',
+                                subQueryType: 'exists',
+                                value: {
+                                  entity: 'hr_orgRespPosition',
+                                  fieldList: ['ID'],
+                                  method: 'select',
+                                  whereList: {
+                                    cond: {
+                                      expression: '[positionID]=[{master}.mi_data_id]',
+                                      condition: 'custom'
+                                    },
+                                    mi_deleteDate: {
+                                      condition: 'equal',
+                                      expression: '[mi_deleteDate]',
+                                      value: '#maxdate'
+                                    },
+                                    dateFrom: {
+                                      condition: '<=',
+                                      expression: '[dateFrom]',
+                                      value: appAC.globalApplicationDate()
+                                    },
+                                    dateTo: {
+                                      condition: '>=',
+                                      expression: '[dateTo]',
+                                      value: appAC.globalApplicationDate()
+                                    },
+                                    organizationID: {
+                                      condition: '=',
+                                      expression: '[organizationID]',
+                                      value: appAC.globalOrganization()
+                                    },
+                                    signer4EmpOrder: {
+                                      expression: '[respPosition]',
+                                      condition: 'in',
+                                      value: ['signer4Stafflist']
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            listeners: {
+                              render: ctrl => {
+                                setTimeout(function () { ctrl.clearIsPhantom() }, 1000)
+                              }
+                            }
+                          },
+                          {
+                            attributeName: 'respEmployeePositionID',
+                            disableContextMenu: true,
+                            labelWidth: 100,
+                            flex: 1,
+                            valueField: 'ID',
+                            displayField: 'description',
+                            fieldList: ['description', 'positionID', 'employeeID', 'employeeNumberID'],
+                            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                            gridFieldList: ['description']
+                          }
+                        ]
+                      },
+                      {
+                        xtype: 'fieldset',
+                        name: 'signer2',
+                        layout: { type: 'vbox', align: 'stretch' },
+                        margin: '5 0 5 10',
+                        padding: '0 0 5 0',
+                        style: 'border-color: #2f7c94',
+                        items: [
+                          {
+                            attributeName: 'respPosition2ID',
+                            disableContextMenu: true,
+                            fieldList: ['mi_data_id', 'description', 'state'],
+                            labelWidth: 100,
+                            valueField: 'mi_data_id',
+                            displayField: 'description',
+                            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                            gridFieldList: ['description'],
+                            whereList: {
+                              state: {
+                                expression: '[state]',
+                                condition: '=',
+                                value: 'ACTIVE'
+                              },
+                              isOrgBoss: {
+                                expression: '',
+                                condition: 'subquery',
+                                subQueryType: 'exists',
+                                value: {
+                                  entity: 'hr_orgRespPosition',
+                                  fieldList: ['ID'],
+                                  method: 'select',
+                                  whereList: {
+                                    cond: {
+                                      expression: '[positionID]=[{master}.mi_data_id]',
+                                      condition: 'custom'
+                                    },
+                                    mi_deleteDate: {
+                                      condition: 'equal',
+                                      expression: '[mi_deleteDate]',
+                                      value: '#maxdate'
+                                    },
+                                    dateFrom: {
+                                      condition: '<=',
+                                      expression: '[dateFrom]',
+                                      value: appAC.globalApplicationDate()
+                                    },
+                                    dateTo: {
+                                      condition: '>=',
+                                      expression: '[dateTo]',
+                                      value: appAC.globalApplicationDate()
+                                    },
+                                    organizationID: {
+                                      condition: '=',
+                                      expression: '[organizationID]',
+                                      value: appAC.globalOrganization()
+                                    },
+                                    signer4EmpOrder: {
+                                      expression: '[respPosition]',
+                                      condition: 'in',
+                                      value: ['signer4StafflistSecond']
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            listeners: {
+                              render: ctrl => {
+                                setTimeout(function () { ctrl.clearIsPhantom() }, 1000)
+                              }
+                            }
+                          },
+                          {
+                            attributeName: 'respEmployeePosition2ID',
+                            disableContextMenu: true,
+                            labelWidth: 100,
+                            valueField: 'ID',
+                            displayField: 'description',
+                            fieldList: ['description', 'positionID', 'employeeID', 'employeeNumberID'],
+                            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                            gridFieldList: ['description']
+                          }
+                        ]
+                      },
+                      {
+                        xtype: 'fieldset',
+                        name: 'signer5',
+                        layout: { type: 'vbox', align: 'stretch' },
+                        margin: '5 0 5 10',
+                        padding: '0 0 5 0',
+                        style: 'border-color: #2f7c94',
+                        items: [
+                          {
+                            attributeName: 'respPosition5ID',
+                            disableContextMenu: true,
+                            fieldList: ['mi_data_id', 'description', 'state'],
+                            labelWidth: 100,
+                            valueField: 'mi_data_id',
+                            displayField: 'description',
+                            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                            gridFieldList: ['description'],
+                            whereList: {
+                              state: {
+                                expression: '[state]',
+                                condition: '=',
+                                value: 'ACTIVE'
+                              },
+                              isOrgBoss: {
+                                expression: '',
+                                condition: 'subquery',
+                                subQueryType: 'exists',
+                                value: {
+                                  entity: 'hr_orgRespPosition',
+                                  fieldList: ['ID'],
+                                  method: 'select',
+                                  whereList: {
+                                    cond: {
+                                      expression: '[positionID]=[{master}.mi_data_id]',
+                                      condition: 'custom'
+                                    },
+                                    mi_deleteDate: {
+                                      condition: 'equal',
+                                      expression: '[mi_deleteDate]',
+                                      value: '#maxdate'
+                                    },
+                                    dateFrom: {
+                                      condition: '<=',
+                                      expression: '[dateFrom]',
+                                      value: appAC.globalApplicationDate()
+                                    },
+                                    dateTo: {
+                                      condition: '>=',
+                                      expression: '[dateTo]',
+                                      value: appAC.globalApplicationDate()
+                                    },
+                                    organizationID: {
+                                      condition: '=',
+                                      expression: '[organizationID]',
+                                      value: appAC.globalOrganization()
+                                    },
+                                    signer4EmpOrder: {
+                                      expression: '[respPosition]',
+                                      condition: 'in',
+                                      value: ['approverOfStaffList']
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            listeners: {
+                              render: ctrl => {
+                                setTimeout(function () { ctrl.clearIsPhantom() }, 1000)
+                              }
+                            }
+                          },
+                          {
+                            attributeName: 'respEmployeePosition5ID',
+                            disableContextMenu: true,
+                            labelWidth: 100,
+                            valueField: 'ID',
+                            displayField: 'description',
+                            fieldList: ['description', 'positionID', 'employeeID', 'employeeNumberID'],
+                            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                            gridFieldList: ['description']
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    layout: {
+                      type: 'vbox',
+                      align: 'stretch'
+                    },
+                    flex: 1,
+                    items: [
+                      {
+                        xtype: 'fieldset',
+                        name: 'signer3',
+                        layout: { type: 'vbox', align: 'stretch' },
+                        margin: '5 0 5 10',
+                        padding: '0 0 5 0',
+                        style: 'border-color: #2f7c94',
+                        items: [
+                          {
+                            attributeName: 'respPosition3ID',
+                            disableContextMenu: true,
+                            fieldList: ['mi_data_id', 'description', 'state'],
+                            labelWidth: 100,
+                            valueField: 'mi_data_id',
+                            displayField: 'description',
+                            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                            gridFieldList: ['description'],
+                            whereList: {
+                              state: {
+                                expression: '[state]',
+                                condition: '=',
+                                value: 'ACTIVE'
+                              },
+                              isOrgBoss: {
+                                expression: '',
+                                condition: 'subquery',
+                                subQueryType: 'exists',
+                                value: {
+                                  entity: 'hr_orgRespPosition',
+                                  fieldList: ['ID'],
+                                  method: 'select',
+                                  whereList: {
+                                    cond: {
+                                      expression: '[positionID]=[{master}.mi_data_id]',
+                                      condition: 'custom'
+                                    },
+                                    mi_deleteDate: {
+                                      condition: 'equal',
+                                      expression: '[mi_deleteDate]',
+                                      value: '#maxdate'
+                                    },
+                                    dateFrom: {
+                                      condition: '<=',
+                                      expression: '[dateFrom]',
+                                      value: appAC.globalApplicationDate()
+                                    },
+                                    dateTo: {
+                                      condition: '>=',
+                                      expression: '[dateTo]',
+                                      value: appAC.globalApplicationDate()
+                                    },
+                                    organizationID: {
+                                      condition: '=',
+                                      expression: '[organizationID]',
+                                      value: appAC.globalOrganization()
+                                    },
+                                    signer4EmpOrder: {
+                                      expression: '[respPosition]',
+                                      condition: 'in',
+                                      value: ['approver4Stafflist']
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            listeners: {
+                              render: ctrl => {
+                                setTimeout(function () { ctrl.clearIsPhantom() }, 1000)
+                              }
+                            }
+                          },
+                          {
+                            attributeName: 'respEmployeePosition3ID',
+                            disableContextMenu: true,
+                            labelWidth: 100,
+                            valueField: 'ID',
+                            displayField: 'description',
+                            fieldList: ['description', 'positionID', 'employeeID', 'employeeNumberID'],
+                            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                            gridFieldList: ['description']
+                          }
+                        ]
+                      },
+                      {
+                        xtype: 'fieldset',
+                        name: 'signer4',
+                        layout: { type: 'vbox', align: 'stretch' },
+                        margin: '5 0 5 10',
+                        padding: '0 0 5 0',
+                        style: 'border-color: #2f7c94',
+                        items: [
+                          {
+                            attributeName: 'respPosition4ID',
+                            disableContextMenu: true,
+                            fieldList: ['mi_data_id', 'description', 'state'],
+                            labelWidth: 100,
+                            valueField: 'mi_data_id',
+                            displayField: 'description',
+                            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                            gridFieldList: ['description'],
+                            whereList: {
+                              state: {
+                                expression: '[state]',
+                                condition: '=',
+                                value: 'ACTIVE'
+                              },
+                              isOrgBoss: {
+                                expression: '',
+                                condition: 'subquery',
+                                subQueryType: 'exists',
+                                value: {
+                                  entity: 'hr_orgRespPosition',
+                                  fieldList: ['ID'],
+                                  method: 'select',
+                                  whereList: {
+                                    cond: {
+                                      expression: '[positionID]=[{master}.mi_data_id]',
+                                      condition: 'custom'
+                                    },
+                                    mi_deleteDate: {
+                                      condition: 'equal',
+                                      expression: '[mi_deleteDate]',
+                                      value: '#maxdate'
+                                    },
+                                    dateFrom: {
+                                      condition: '<=',
+                                      expression: '[dateFrom]',
+                                      value: appAC.globalApplicationDate()
+                                    },
+                                    dateTo: {
+                                      condition: '>=',
+                                      expression: '[dateTo]',
+                                      value: appAC.globalApplicationDate()
+                                    },
+                                    organizationID: {
+                                      condition: '=',
+                                      expression: '[organizationID]',
+                                      value: appAC.globalOrganization()
+                                    },
+                                    signer4EmpOrder: {
+                                      expression: '[respPosition]',
+                                      condition: 'in',
+                                      value: ['approver4StafflistSecond']
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            listeners: {
+                              render: ctrl => {
+                                setTimeout(function () { ctrl.clearIsPhantom() }, 1000)
+                              }
+                            }
+                          },
+                          {
+                            attributeName: 'respEmployeePosition4ID',
+                            disableContextMenu: true,
+                            labelWidth: 100,
+                            valueField: 'ID',
+                            displayField: 'description',
+                            fieldList: ['description', 'positionID', 'employeeID', 'employeeNumberID'],
+                            hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+                            gridFieldList: ['description']
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ),
+            {
+              attributeName: 'docType',
+              xtype: 'ubbasebox',
+              fieldLabel: UB.i18n('Вид документа'),
+              valueField: 'code',
+              displayField: 'name',
+              fieldList: ['code', 'name', 'eGroup', 'sortOrder'],
+              whereList: {
+                enumGroupFilter: {
+                  expression: '[eGroup]',
+                  condition: 'equal',
+                  value: 'HR_STUFFDOC_TYPE'
+                },
+                enumCode: {
+                  expression: '[code]',
+                  condition: 'in',
+                  value: ['ACCRUAL', 'ACCRUAL_CHANGES']
+                }
+              }
+            },
+            {
+              attributeName: 'staffTabOrgStructID',
+              formParams: true,
+              fieldLabel: UB.i18n('Структура'),
+              valueField: 'ID',
+              displayField: 'description',
+              ubRequest: {
+                entity: 'hr_staffTableOrgStructure',
+                method: UB.core.UBCommand.methodName.SELECT,
+                fieldList: ['ID', 'name', 'description']
+              }
+            },
+            {
+              attributeName: 'staffTableID',
+              formParams: true,
+              fieldLabel: UB.i18n('Штатний розпис (зміни)'),
+              valueField: 'ID',
+              displayField: 'description',
+              ubRequest: {
+                entity: 'hr_staffTable',
+                fieldList: ['ID', 'name', 'description', 'orgID', 'POSTED']
+              }
+            },
+            {
+              attributeName: 'changeListNumber',
+              vtype: 'numberValidator',
+              maskRe: AC.validators.maskRe('number'),
+              maxValue: 2147483647,
+              minValue: 1
+            },
+            {
+              attributeName: 'dictReasonAccrualID',
+              allowBlank: true // UBHR-20357 п.1
+            },
+            {
+              layout: { type: 'hbox' },
+              items: [
+                {
+                  attributeName: 'departmentID',
+                  fieldList: ['ID', 'mi_data_id', 'description', 'state', 'orgID'],
+                  gridFieldList: ['description', 'state', 'orgID'],
+                  hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink'],
+                  hideEntityItemInContext: true,
+                  disableModifyEntity: true,
+                  valueField: 'mi_data_id',
+                  displayField: 'description',
+                  labelWidth: 170,
+                  flex: 1,
+                  whereList: {
+                    orgID: {
+                      expression: '[orgID]',
+                      condition: 'equal',
+                      value: appAC.globalOrganization()
+                    },
+                    state: {
+                      expression: '[state]',
+                      condition: '=',
+                      values: {
+                        state: 'ACTIVE'
+                      }
+                    }
+                  },
+                  listeners: {
+                    change: function (ctrl, value) {
+                      const me = ctrl.up('form')
+                      me.down('[name=includeChildDepts]').setValue(!!value)
+                    }
+                  }
+                },
+                {
+                  xtype: 'checkboxfield',
+                  name: 'includeChildDepts',
+                  boxLabel: UB.i18n('з підлеглими'),
+                  labelWidth: 100,
+                  width: 120,
+                  checked: false,
+                  readOnly: true
+                }
+              ]
+            },
+            {
+              attributeName: 'groupJobsPrint'
+            },
+            {
+              attributeName: 'printSignerInfo'
+            },
+            {
+              name: 'ecoPrint',
+              xtype: 'checkbox',
+              fieldLabel: UB.i18n('Екодрук')
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Штатний розпис'),
+          autoScroll: true,
+          layout: { type: 'vbox', align: 'stretch' },
+          flex: 1,
+          items: [
+            {
+              xtype: 'acGrid',
+              name: 'staffTableAccrual',
+              // stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_staffTableAccrual_staffTableAccrual'),
+              region: 'center',
+              flex: 1,
+              autoScroll: true,
+              cellEditing: true,
+              notWriteChanges: true,
+              storeType: 'local',
+              showToolBar: true,
+              enableMultifilter: true,
+              disablePaging: true,
+              loadMaskMessage: UB.i18n('Завантаження даних...'),
+              summary: { paySum: 'sum', docSum: 'sum', deltaSum: 'sum', baseSum: 'sum', taxSum: 'sum' },
+              summaryDataOnClient: true,
+              hideActions: ['addNew', 'addNewByCurrent', 'del'],
+              onBeforeEdit: (control, context) => {
+                const me = context.grid.up('form')
+                if (['ON_RECONCILATION', 'RECONCILED', 'POSTED'].includes(me.record.get('orderState'))) {
+                  return false
+                }
+                me.setIsDirty(true)
+              },
+              edit: function (control, context) {
+                context.store.snapshot.each(record => {
+                  if (record.get('staffTableAccrualID') === context.record.get('ID')) {
+                    record.set('accrualSum', context.record.get('accrualSum'))
+                  }
+                })
+                /* const plugin = context.grid.getPlugin('rowexpander')
+                plugin.collapseRow(context.rowIdx)
+                plugin.expandRow(context.rowIdx) */
+              },
+              getRowClass: () => {},
+              fields: [
+                { name: 'ID' },
+                { name: 'staffTableID' },
+                { name: 'mi_modifyDate' },
+                { name: 'staffTableAccrualID' },
+                { name: 'positionID' },
+                { name: 'dictFundSourceID' },
+                { name: 'employeePositionID' },
+                { name: 'employeePositionID.employeeID.fullFIO' },
+                { name: 'positionID.fullName' },
+                {
+                  name: 'positionType',
+                  columnConfig: {
+                    dataType: 'Enum',
+                    enumGroup: 'HR_POSITION_TYPE',
+                    text: UB.i18n('Тип посади'),
+                    sortByRendered: true,
+                    sortBy: 'String',
+                    filterBy: 'string',
+                    width: 200
+                  }
+                },
+                {
+                  name: 'dictPositionID.name',
+                  columnConfig: {
+                    text: UB.i18n('Назва посади'),
+                    sortBy: 'String',
+                    filterBy: 'string',
+                    flex: 1
+                  }
+                },
+                { name: 'dictPositionID' },
+                {
+                  name: 'dictTarifCoeffID.description',
+                  columnConfig: {
+                    text: UB.i18n('Тарифний розряд'),
+                    sortBy: 'String',
+                    filterBy: 'string',
+                    width: 200
+                  }
+                },
+                { name: 'dictTarifCoeffID' },
+                {
+                  name: 'dictStatePayID.description',
+                  columnConfig: {
+                    text: UB.i18n('Група оплати праці'),
+                    filterBy: 'string',
+                    width: 200
+                  }
+                },
+                { name: 'dictStatePayID' },
+                {
+                  name: 'quantity',
+                  columnConfig: {
+                    text: UB.i18n('Кількість посад'),
+                    width: 100,
+                    floatFormat: 2,
+                    align: 'right',
+                    sortBy: 'Number',
+                    filterBy: 'float'
+                  }
+                },
+                {
+                  name: 'previousAccrualSum',
+                  columnConfig: {
+                    text: UB.i18n('Оклад'),
+                    width: 150,
+                    floatFormat: 2,
+                    align: 'right',
+                    sortBy: 'Number',
+                    filterBy: 'float'
+                  }
+                },
+                {
+                  name: 'accrualSum',
+                  columnConfig: {
+                    text: UB.i18n('Новий оклад'),
+                    width: 150,
+                    floatFormat: 2,
+                    align: 'right',
+                    sortBy: 'Number',
+                    filterBy: 'float',
+                    editor: {
+                      dataType: 'Currency',
+                      decimalPrecision: 2,
+                      minValue: 0
+                    }
+                  }
+                }
+              ],
+              enableExpandableRows: true,
+              expandedRowConfig: {
+                rowBodyTpl: ['<div id="NestedGridRow-{ID}" ></div>'],
+                onExpandBody: function (rowNode, record, body, rowIndex) {
+                  const me = this.up('form')
+                  me.onExpandGridRow(me, rowNode, record, body, rowIndex)
+                }
+              },
+              customToolBarActions: [
+                {
+                  xtype: 'button',
+                  scale: 'medium',
+                  iconCls: 'fas fa-file-excel',
+                  tooltip: UB.i18n('Сформувати XLSX'),
+                  cls: 'green-action',
+                  handler: (btn) => {
+                    const me = btn.up('form')
+                    me.exportXLSX(me)
+                  }
+                },
+                {
+                  xtype: 'button',
+                  scale: 'medium',
+                  iconCls: 'fas fa-sort-amount-down',
+                  tooltip: UB.i18n('Встановити оклади за тарифом'),
+                  hidden: true,
+                  cls: 'add-new-action',
+                  handler: (btn) => {
+                    const me = btn.up('form')
+                    me.setAccrualSumByTarif(me)
+                  }
+                }
+                /*,
+                {
+                  xtype: 'textfield',
+                  name: 'searchText',
+                  flex: 1,
+                  emptyText: UB.i18n('Пошук'),
+                  margin: '2 15 0 30',
+                  listeners: {
+                    change: (ctrl, value) => {
+                      const me = ctrl.up('form')
+
+                      // if (value && value !== '') {
+                      me.attr.staffTableAccrual.getStore().filter(me.approvedFilter)
+                      // } else {
+                      //   me.attr.staffTableAccrual.getStore().removeFilter(me.approvedFilter)
+                      // }
+
+                      if (me.attr.staffTableAccrual.getStore().filters.items.length > 1) {
+                        me.attr.staffTableAccrual.getStore().removeFilter(me.attr.staffTableAccrual.getStore().filters.items[1])
+                      }
+                      if (value && value !== '') {
+                        me.attr.staffTableAccrual.getStore().addFilter(row =>
+                          (row.get('dictPositionID.name') || '').toUpperCase().includes(me.attr.searchText.getValue().toUpperCase()) ||
+                          (row.get('positionType') || '').toUpperCase().includes(me.attr.searchText.getValue().toUpperCase())
+                        )
+                      }
+                    }
+                  }
+                } */
+              ]
+            }
+          ]
+        },
+        HR.reportTab.getTabConfig({ getRepName: 'getReportName', repTabIndex: 2, addExcel: true }),
+        {
+          title: UB.i18n('Маршрут'),
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          items: [
+            {
+              xtype: 'recpanel',
+              name: 'recpanel'
+            }
+          ]
+        },
+        {
+          title: UB.i18n('Історія змін'),
+          autoScroll: true,
+          layout: 'fit',
+          flex: 1,
+          items: [
+            {
+              name: 'stateHistory',
+              xtype: 'ubdetailgrid',
+              disableSearchBar: true,
+              readOnly: true,
+              flex: 1,
+              entityConfig: {
+                entity: 'hr_orderStateHistory',
+                method: 'select',
+                fieldList: [
+                  { name: 'actionType' },
+                  { name: 'comments' },
+                  { name: 'orderState' },
+                  { name: 'userID.name', description: UB.i18n('Користувач') },
+                  { name: 'actionDateTime' }
+                ]
+              },
+              masterFields: ['ID'],
+              detailFields: ['orderID'],
+              cmpInitConfig: {
+                onItemDblClick: () => {}
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

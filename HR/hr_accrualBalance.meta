@@ -1,0 +1,138 @@
+{
+  "caption": "Сальдо по періодам",
+  "description": "Сальдо по періодам",
+  "descriptionAttribute": "employeeNumberID",
+  "cacheType": "None",
+  "attributes": [
+    {
+      "name": "employeeNumberID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_employeeNumberSR",
+      "caption": "Працівник",
+      "description": "Працівник",
+      "documentation": "Працівник",
+      "allowNull": false
+    },
+    {
+      "name": "periodCalcID",
+      "dataType": "Entity",
+      "associatedEntity": "hr_dictPeriod",
+      "caption": "Розрахунковий період",
+      "description": "Розрахунковий період",
+      "documentation": "Розрахунковий період",
+      "allowNull": false
+    },
+    {
+      "name": "dictFundSourceID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_fundSource",
+      "caption": "Джерело фінансування",
+      "description": "Джерело фінансування",
+      "documentation": "Джерело фінансування"
+    },
+    {
+      "name": "dictProgClassID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictProgClass",
+      "caption": "КПК",
+      "description": "Код програмної класифікації"
+    },
+    {
+      "name": "dictProjectID",
+      "dataType": "Entity",
+      "associatedEntity": "ac_dictProject",
+      "caption": "Проєкт",
+      "description": "Проєкт"
+    },
+    {
+      "name": "sumFrom",
+      "dataType": "Float",
+      "caption": "Сальдо на початок",
+      "description": "Сальдо на початок",
+      "documentation": "Сальдо на початок",
+      "allowNull": false
+    },
+    {
+      "name": "sumPlus",
+      "dataType": "Float",
+      "caption": "Сума нарахована",
+      "description": "Сума нарахована",
+      "documentation": "Сума нарахована",
+      "allowNull": false
+    },
+    {
+      "name": "sumMinus",
+      "dataType": "Float",
+      "caption": "Сума утримана/виплачена",
+      "description": "Сума утримана/виплачена",
+      "documentation": "Сума утримана/виплачена",
+      "allowNull": false
+    },
+    {
+      "name": "sumPay",
+      "dataType": "Float",
+      "caption": "Сума виплачена",
+      "description": "Сума виплачена",
+      "documentation": "Сума виплачена",
+      "allowNull": false,
+      "defaultValue": "0"
+    },
+    {
+      "name": "sumTo",
+      "dataType": "Float",
+      "caption": "Сальдо на кінець",
+      "description": "Сальдо на кінець",
+      "documentation": "Сальдо на кінець",
+      "allowNull": false
+    },
+    {
+      "name": "isImport",
+      "dataType": "Boolean",
+      "caption": "Імпортовані дані",
+      "description": "Імпортовані дані",
+      "documentation": "Імпортовані дані",
+      "defaultValue": "0"
+    },
+    {
+      "name": "isCorrection",
+      "dataType": "Boolean",
+      "caption": "коригування",
+      "description": "коригування",
+      "defaultValue": "0"
+    }
+  ],
+  "dbExtensions": {
+    "IDX_HR_ACCRUABALANCE_EMPNUMBER": {
+      "type": "INDEX",
+      "definition": {
+        "keys": {
+          "employeeNumberID": {
+            "sort": "ASC"
+          },
+          "periodCalcID": {
+            "sort": "ASC"
+          }
+        },
+        "isUnique": false
+      }
+    }
+  },
+  "mapping":[{
+    "name": "AnsiSQL",
+    "selectName": "hr_accrualBalance",
+    "execName": "hr_accrualBalance",
+    "pkGenerator": "S_HR_ACCRUALBALANCE"
+  }],
+  "mixins": {
+    "mStorage": {
+      "simpleAudit": false,
+      "safeDelete": false
+    },
+    "audit": {
+      "enabled": false
+    },
+    "rls": {
+      "func": "hr_employeeNumber.employeeNumberAccess"
+    }
+  }
+}

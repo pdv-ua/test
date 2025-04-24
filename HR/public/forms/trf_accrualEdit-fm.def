@@ -1,0 +1,814 @@
+/* global Ext, UB, AC appAC $App */
+
+exports.formDef = 'HR.trfAccrualEdit'
+
+Ext.define('HR.trfAccrualEdit', {
+  extend: 'Ext.form.Panel',
+
+  requires: [
+    'AC.validators',
+    'UB.core.UBCommand',
+    'UB.core.UBUtil',
+    'UB.ux.form.field.UBComboBox'
+  ],
+
+  width: 500,
+  height: 500,
+  layout: { type: 'vbox', align: 'stretch' },
+
+  actionId: {
+    save: 'save'
+  },
+  eventId: {
+    save: 'save'
+  },
+  hotKeys: {
+    save: {
+      key: Ext.EventObject.ENTER,
+      shift: false,
+      ctrl: true,
+      text: ' (Ctrl+Enter)'
+    }
+  },
+  initComponent: function () {
+    let me = this
+    me.dockedItems = [{
+      xtype: 'toolbar',
+      dock: 'top',
+      items: [],
+      ubID: 'mainToolbar',
+      enableOverflow: true
+    }]
+    me.items = [
+      {
+        xtype: 'ubcombobox',
+        name: 'payElID',
+        fieldLabel: UB.i18n('Вид оплати'),
+        allowBlank: false,
+        enableKeyEvents: true,
+        selectOnFocus: true,
+        ubRequest: {
+          entity: 'hr_payEl',
+          fieldList: ['ID', 'description', 'methodID.code'],
+          orderList: { orderBy: { expression: 'name' } }
+        },
+        listeners: {
+          beforeQuerySend: function () {
+            const rawValue = me.attr.payElID.getRawValue()
+            if (rawValue && rawValue.length > 0 && Number(rawValue[0])) {
+              this.store.ubRequest.orderList = { orderBy: { expression: 'codeSort', order: 'ASC' } }
+            } else {
+              this.store.ubRequest.orderList = { orderBy: { expression: 'name', order: 'ASC' } }
+            }
+          }
+        }
+      },
+      {
+        layout: { type: 'hbox' },
+        style: 'margin-top: 10px; margin-bottom: 10px'
+      },
+      {
+        xtype: 'ubcombobox',
+        name: 'dictPupilID',
+        fieldLabel: UB.i18n('Категорія учнів'),
+        enableKeyEvents: true,
+        selectOnFocus: true,
+        ubRequest: {
+          entity: 'trf_dictPupil',
+          fieldList: ['ID', 'name'],
+          orderList: { orderBy: { expression: 'code' } }
+        },
+        hidden: true,
+        flagsFix: 1 << 6
+      },
+      {
+        xtype: 'textfield',
+        name: 'leadingClass',
+        fieldLabel: UB.i18n('Керівний клас'),
+        enableKeyEvents: true,
+        selectOnFocus: true,
+        hidden: true,
+        maxLength: 15
+      },
+      {
+        xtype: 'numberfield',
+        name: 'experienceYears',
+        fieldLabel: UB.i18n('Стаж (років)'),
+        enforceMaxLength: true,
+        allowExponential: false,
+        allowDecimals: false,
+        hideTrigger: true,
+        hidden: true,
+        enableKeyEvents: true,
+        selectOnFocus: true
+      },
+      {
+        xtype: 'numberfield',
+        name: 'experienceMonths',
+        fieldLabel: UB.i18n('Стаж (місяців)'),
+        enforceMaxLength: true,
+        allowExponential: false,
+        allowDecimals: false,
+        hideTrigger: true,
+        hidden: true,
+        enableKeyEvents: true,
+        selectOnFocus: true
+      },
+      {
+        xtype: 'numberfield',
+        name: 'flagsFix',
+        fieldLabel: '',
+        enforceMaxLength: true,
+        allowExponential: false,
+        allowDecimals: false,
+        hideTrigger: true,
+        hidden: true,
+        enableKeyEvents: true,
+        selectOnFocus: true
+      },
+      {
+        xtype: 'numberfield',
+        name: 'priority',
+        fieldLabel: '',
+        enforceMaxLength: true,
+        allowExponential: false,
+        allowDecimals: false,
+        hideTrigger: true,
+        hidden: true,
+        enableKeyEvents: true,
+        selectOnFocus: true
+      },
+      {
+        xtype: 'ubcombobox',
+        name: 'dictTarifCoeffID',
+        fieldLabel: UB.i18n('Розряд'),
+        readOnly: true,
+        hidden: true,
+        ubRequest: {
+          entity: 'hr_dictTarifCoeff',
+          fieldList: ['ID', 'name'],
+          orderList: { orderBy: { expression: 'name' } }
+        }
+      },
+      {
+        layout: { type: 'hbox' },
+        style: 'margin-top: 10px; margin-bottom: 10px'
+      },
+      {
+        xtype: 'numberfield',
+        name: 'accrualRate',
+        fieldLabel: UB.i18n('Відсоток'),
+        maxLength: 17,
+        hidden: true,
+        enforceMaxLength: true,
+        hideTrigger: true,
+        keyNavEnabled: false,
+        mouseWheelEnabled: false,
+        selectOnFocus: true,
+        enableKeyEvents: true,
+        vtype: 'floatValidator',
+        maskRe: AC.validators.maskRe('currency'),
+        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+        decimalPrecision: 4,
+        maxValue: 8999000000000000,
+        minValue: -8999000000000000,
+        flagsFix: 1 << 1
+      },
+      {
+        xtype: 'numberfield',
+        name: 'baseSum',
+        fieldLabel: UB.i18n('Тариф'),
+        maxLength: 17,
+        hidden: true,
+        enforceMaxLength: true,
+        hideTrigger: true,
+        keyNavEnabled: false,
+        mouseWheelEnabled: false,
+        selectOnFocus: true,
+        enableKeyEvents: true,
+        vtype: 'floatValidator',
+        maskRe: AC.validators.maskRe('currency'),
+        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+        decimalPrecision: 4,
+        maxValue: 8999000000000000,
+        minValue: -8999000000000000,
+        flagsFix: 1 << 0
+      },
+      {
+        xtype: 'numberfield',
+        name: 'planHours',
+        fieldLabel: UB.i18n('Тижнева норма'),
+        maxLength: 17,
+        hidden: true,
+        enforceMaxLength: true,
+        hideTrigger: true,
+        keyNavEnabled: false,
+        mouseWheelEnabled: false,
+        enableKeyEvents: true,
+        vtype: 'floatValidator',
+        maskRe: AC.validators.maskRe('currency'),
+        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+        decimalPrecision: 2,
+        maxValue: 8999000000000000,
+        minValue: -8999000000000000,
+        readOnly: true
+      },
+      {
+        xtype: 'numberfield',
+        name: 'hours',
+        fieldLabel: UB.i18n('Навантаження, годин'),
+        maxLength: 17,
+        hidden: true,
+        enforceMaxLength: true,
+        hideTrigger: true,
+        keyNavEnabled: false,
+        mouseWheelEnabled: false,
+        selectOnFocus: true,
+        enableKeyEvents: true,
+        vtype: 'floatValidator',
+        maskRe: AC.validators.maskRe('currency'),
+        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+        decimalPrecision: 2,
+        maxValue: 8999000000000000,
+        minValue: -8999000000000000,
+        flagsFix: 1 << 3
+      },
+      {
+        layout: { type: 'hbox' },
+        style: 'margin-top: 10px; margin-bottom: 10px'
+      },
+      {
+        xtype: 'numberfield',
+        name: 'rate',
+        fieldLabel: UB.i18n('Відсоток оплати'),
+        maxLength: 17,
+        hidden: true,
+        enforceMaxLength: true,
+        hideTrigger: true,
+        keyNavEnabled: false,
+        selectOnFocus: true,
+        mouseWheelEnabled: false,
+        enableKeyEvents: true,
+        vtype: 'floatValidator',
+        maskRe: AC.validators.maskRe('currency'),
+        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+        decimalPrecision: 2,
+        maxValue: 8999000000000000,
+        minValue: -8999000000000000,
+        flagsFix: 1 << 2
+      },
+      {
+        xtype: 'numberfield',
+        name: 'accrualSum',
+        fieldLabel: UB.i18n('Сума'),
+        maxLength: 17,
+        enforceMaxLength: true,
+        hideTrigger: true,
+        keyNavEnabled: false,
+        mouseWheelEnabled: false,
+        selectOnFocus: true,
+        enableKeyEvents: true,
+        vtype: 'floatValidator',
+        maskRe: AC.validators.maskRe('currency'),
+        valueToRaw: UB.core.UBUtil.formatAsCurrency,
+        decimalPrecision: 2,
+        maxValue: 8999000000000000,
+        minValue: -8999000000000000,
+        flagsFix: 1 << 4
+      }
+    ]
+    me.on('afterrender',
+      function () {
+        if (!me.gridSender.selectedParentRecord) {
+          me.up().close()
+          $App.dialogInfo(UB.i18n('Спочатку створіть посадове місце'))
+        }
+        me.up('window').setTitle(UB.i18n('Нарахування'))
+        me.createToolbarButtons(me)
+        me.attr = {
+          payElID: me.down('[name=payElID]'),
+          dictPupilID: me.down('[name=dictPupilID]'),
+          leadingClass: me.down('[name=leadingClass]'),
+          experienceYears: me.down('[name=experienceYears]'),
+          experienceMonths: me.down('[name=experienceMonths]'),
+          flagsFix: me.down('[name=flagsFix]'),
+          priority: me.down('[name=priority]'),
+          dictTarifCoeffID: me.down('[name=dictTarifCoeffID]'),
+          baseSum: me.down('[name=baseSum]'),
+          accrualRate: me.down('[name=accrualRate]'),
+          planHours: me.down('[name=planHours]'),
+          hours: me.down('[name=hours]'),
+          rate: me.down('[name=rate]'),
+          accrualSum: me.down('[name=accrualSum]')
+        }
+        Ext.defer(() => me.attr.payElID.focus(true, 1), 1)
+        me.parentForm = me.gridSender.up('form')
+        me.orgID = me.parentForm.record.get('documentID.orgID') || appAC.globalOrganization()
+        me.currentPositionRow = me.gridSender.selectedParentRecord
+        if (me.currentPositionRow) {
+          me.attr.dictTarifCoeffID.setValueById(me.currentPositionRow.get('dictTarifCoeffID'))
+          // if (me.currentPositionRow.get('workScheduleID')) {
+          //   UB.Repository('hr_workSchedule')
+          //     .attrs(['weekHours']).selectById(me.currentPositionRow.get('workScheduleID')).then((data) => {
+          //       if (data && data.weekHours) {
+          //         me.attr.planHours.setValue(data.weekHours)
+          //       }
+          //     })
+          // }
+          if (me.currentPositionRow.get('workNormID')) {
+            UB.Repository('trf_workNorm')
+              .attrs(['weekHours']).selectById(me.currentPositionRow.get('workNormID')).then((data) => {
+                if (data && data.weekHours) {
+                  me.attr.planHours.setValue(data.weekHours)
+                }
+              })
+          }
+        }
+        me.isPosted = me.parentForm.record.get('state') === 'POSTED'
+        if (me.isPosted) {
+          Object.keys(me.attr).forEach(attrName => {
+            me.attr[attrName].setReadOnly(true)
+          })
+          me.down('[name=saveAndClose]').setDisabled(true)
+          me.down('[name=calculate]').setDisabled(true)
+        }
+        me.employeeNumberID = me.parentForm.attr.employeeNumberID.getValue()
+        me.changePayEl(me)
+        me.changePupil(me)
+        if (me.formData) {
+          me.setAttrValues(me, me.formData)
+        }
+        me.down('[name=cleanUp]').setDisabled(me.isPosted || !me.attr.flagsFix.getValue())
+        me.attr.flagsFix.on('change', (ctrl, value) => { me.down('[name=cleanUp]').setDisabled(!value) })
+        me.setPayElFilter(me)
+        if (me.attr.flagsFix.getValue() === null) {
+          me.attr.flagsFix.setValue(0)
+        }
+        const changeAttrs = ['rate', 'baseSum', 'accrualRate', 'hours', 'accrualSum', 'leadingClass']
+        changeAttrs.forEach(attrName => {
+          me.attr[attrName].on('keypress', (ctrl, e) => {
+            if (e.getKey() === e.ENTER) {
+              changeParams(ctrl)
+            }
+          })
+          me.attr[attrName].on('blur', changeParams)
+        })
+
+        function changeParams (ctrl) {
+          const value = ctrl.getValue()
+          if (!ctrl.readOnly && ctrl.calcValue !== value) {
+            switch (ctrl.name) {
+              case 'rate':
+              case 'baseSum':
+              case 'accrualRate':
+              case 'hours':
+              case 'accrualSum' :
+                // if (value) {
+                //   me.attr.flagsFix.setValue(me.attr.flagsFix.getValue() | ctrl.flagsFix)
+                // } else {
+                //   me.attr.flagsFix.setValue(me.attr.flagsFix.getValue() & ~ctrl.flagsFix)
+                // }
+                me.attr.flagsFix.setValue(me.attr.flagsFix.getValue() | ctrl.flagsFix)
+                me.calculate(me)
+                break
+              case 'leadingClass':
+                if (value.length > 15) {
+                  ctrl.setValue(value.substring(0, 15))
+                }
+                me.calculate(me)
+                break
+            }
+          }
+        }
+      }, me)
+    me.callParent(arguments)
+  },
+  calculate: function (me) {
+    const valueAttrName = ['rate', 'experienceYears', 'experienceMonths', 'flagsFix', 'priority', 'baseSum',
+      'accrualRate', 'hours', 'accrualSum', 'payElID', 'dictPupilID', 'leadingClass']
+    const internalId = me.gridRecord ? me.gridRecord.internalId : 1
+    const params = {
+      orgID: me.orgID,
+      workPlace: {
+        employeeNumberID: me.parentForm.attr.employeeNumberID.getValue(),
+        departmentID: me.parentForm.attr.departmentID.getValue(),
+        dictPositionID: me.parentForm.attr.dictPositionID.getValue(),
+        dateFrom: me.parentForm.attr.dateFrom.getValue(),
+        dateTo: me.parentForm.attr.dateToEmpty.getValue() || AC.dateService.maxDateUTC()
+      },
+      params: { setDescription: true }
+    }
+    const positionRecords = me.parentForm.attr.position.getStore().snapshot || me.parentForm.attr.position.getStore().data
+    const positions = []
+    positionRecords.items.forEach(pos => {
+      const posData = pos.getData()
+      posData.internalId = pos.internalId
+      posData.justInsertedAccrualIDs = []
+      if (me.currentPositionRow.internalId === pos.internalId) {
+        const accrualRecords = me.gridSender.getStore().snapshot || me.gridSender.getStore().data
+        const accrual = []
+        accrualRecords.items.forEach(acc => {
+          const data = acc.getData()
+          if (internalId && acc.internalId === internalId) {
+            valueAttrName.forEach(attrName => {
+              data[attrName] = me.attr[attrName].getValue()
+            })
+          }
+          data.internalId = acc.internalId
+          accrual.push(data)
+        })
+        if (internalId === 1) {
+          const data = { internalId: 1 }
+          valueAttrName.forEach(attrName => {
+            data[attrName] = me.attr[attrName].getValue()
+          })
+          accrual.push(data)
+          posData.justInsertedAccrualIDs.push(internalId)
+        }
+        posData.accrual = accrual
+      }
+      positions.push(posData)
+    })
+    params.position = positions
+    me.setLoading(true)
+    $App.connection.run({
+      entity: 'trf_workPlace',
+      method: 'calcPositions',
+      params: JSON.stringify(params)
+    }).then((mParams) => {
+      const position = JSON.parse(mParams.position)
+      position.forEach(pos => {
+        if (me.currentPositionRow.internalId === pos.internalId) {
+          me.recalcAccrual = pos.accrual
+          me.recalcAccrual.forEach(accr => {
+            if (accr.internalId === internalId) {
+              me.setAttrValues(me, accr, false)
+            }
+            delete accr.internalId
+          })
+        }
+      })
+      me.setLoading(false)
+    }, (err) => {
+      me.setLoading(false)
+      throw err
+    })
+  },
+  setAttrValues: function (me, data, skipChanged = true) {
+    if (['4', '5', '146', '147', '154', '155', '156'].includes(data['payElID.methodID.code'])) {
+      me.attr.accrualRate.decimalPrecision = 4
+    }
+    if (['148'].includes(data['payElID.methodID.code'])) {
+      me.attr.accrualRate.decimalPrecision = 2
+    }
+    Object.keys(data).forEach(attrName => {
+      if (data[attrName] !== undefined) {
+        switch (attrName) {
+          case 'rate':
+          case 'experienceYears':
+          case 'experienceMonths':
+          case 'flagsFix':
+          case 'priority':
+          case 'baseSum':
+          case 'accrualRate':
+          case 'hours':
+          case 'accrualSum':
+          case 'leadingClass':
+            me.attr[attrName].calcValue = data[attrName]
+            me.attr[attrName].setValue(data[attrName])
+            break
+          case 'dictPupilID':
+            if (data[attrName]) { me.attr[attrName].skipChanged = skipChanged }
+            me.attr[attrName].setValueById(data[attrName])
+            break
+          case 'payElID':
+            me.attr[attrName].skipChanged = skipChanged
+            me.attr[attrName].setValueById(data[attrName])
+            break
+        }
+      }
+    })
+  },
+  createToolbarButtons: function (me) {
+    let tb = me.down('toolbar')
+    tb.insert(tb.items.length - 2, {
+      xtype: 'button',
+      scale: 'medium',
+      name: 'saveAndClose',
+      iconCls: 'fas fa-share-square',
+      tooltip: UB.i18n('saveAndClose') + me.hotKeys[me.actionId.save].text,
+      cls: 'save-action',
+      handler: function () {
+        me.onButtonSave(me)
+      }
+    })
+    tb.insert(tb.items.length - 2, {
+      xtype: 'button',
+      scale: 'medium',
+      name: 'calculate',
+      iconCls: 'fas fa-calculator',
+      text: UB.i18n('Розрахувати'),
+      cls: 'green-action',
+      handler: function () {
+        me.calculate(me)
+      }
+    })
+    tb.insert(tb.items.length - 3, {
+      xtype: 'button',
+      scale: 'medium',
+      name: 'cleanUp',
+      iconCls: 'el-icon-refresh-left',
+      text: UB.i18n('Відмінити виправленя'),
+      cls: 'red-action',
+      handler: function () {
+        me.onCleanUp(me)
+      }
+    })
+  },
+  onButtonSave: function (me) {
+    if (me.isValid()) {
+      if (me.recalcAccrual) {
+        me.onSave(me.parentForm, me.currentPositionRow, me.recalcAccrual)
+      }
+      me.up().close()
+    } else {
+      me.getForm().getFields().each(function (item) {
+        if (!item.isValid()) {
+          UB.toast({
+            entityTitle: UB.i18n('Проводка'),
+            fieldLabel: item.fieldLabel,
+            callback: function () {
+              if (me) {
+                let wnd = me.getFormWin()
+                if (wnd) wnd.toFront()
+                Ext.callback(item.focus, item, [], 100)
+              }
+            }
+          })
+          item.focus()
+        }
+      }, me)
+    }
+  },
+  onCleanUp: function (me) {
+    me.attr.flagsFix.setValue(0)
+    me.calculate(me)
+  },
+  setPayElFilter: function (me) {
+    const store = me.attr.payElID.getStore()
+    const ubRequest = store.ubRequest
+    const allRecord = me.gridSender.getStore().snapshot || me.gridSender.getStore().data
+    const method = ['0', '143', '144', '145', '146', '147', '152', '156']
+    const mainAccrual = allRecord.find(o => ['1', '146', '147', '156'].includes(o.get('payElID.methodID.code'))) // Cистема оплаты
+    const mainAccrualMethodCode = mainAccrual ? mainAccrual.get('payElID.methodID.code') : null
+    for (let i = method.length - 1; i >= 0; i--) {
+      // Если выбрали систему оплаты, отсечь выбор других методов расчёта системы оплаты.
+      // В одной должности м.б. несколько записей СО одного метода расчёта с разными категориями учащихся, но разных методов СО быть не должно.
+      if (mainAccrualMethodCode && ['1', '146', '147', '156'].includes(method[i]) && method[i] !== mainAccrualMethodCode) {
+        method.splice(i, 1)
+      }
+    }
+    ubRequest.whereList = {
+      byMethodCode: {
+        expression: '[methodID.code]',
+        condition: 'in',
+        value: method
+      },
+      byMethodGroupCode: {
+        expression: '',
+        condition: 'subquery',
+        subQueryType: 'Exists',
+        value: {
+          entity: 'trf_dictAccrual',
+          fieldList: [],
+          method: 'select',
+          whereList: {
+            payEl: {
+              expression: '[payElID]=[{master}.ID]',
+              condition: 'custom'
+            },
+            method: {
+              condition: 'in',
+              expression: '[payElID.methodID.methodGroupID.code]',
+              value: ['1', '2']
+            },
+            deleteDateDt: {
+              condition: 'equal',
+              expression: '[mi_deleteDate]',
+              value: '#maxdate'
+            }
+          }
+        }
+      }
+    }
+    me.attr.payElID.store.ubRequest.logicalPredicates = ['(([byMethodCode] OR [byMethodGroupCode]))']
+  },
+  changePayEl: function (me) {
+    me.attr.payElID.on('change', (ctrl, value) => {
+      const attrNames = ['dictPupilID', 'rate',
+        'experienceYears', 'experienceMonths', 'baseSum', 'accrualRate', 'planHours', 'hours', 'accrualSum',
+        'dictTarifCoeffID', 'leadingClass']
+      attrNames.forEach(attrName => {
+        me.attr[attrName].hide()
+      })
+      switch (ctrl.getFieldValue('methodID.code')) {
+        case '1': // Оплата за окладом
+          ['accrualRate', 'baseSum', 'accrualSum'].forEach(attrName => {
+            me.attr[attrName].show()
+          })
+          me.attr.accrualRate.setFieldLabel(UB.i18n('Кількість ставок'))
+          me.attr.baseSum.setFieldLabel(UB.i18n('Оклад'))
+          me.attr.accrualRate.decimalPrecision = 4
+          break
+        case '154':
+          ['baseSum', 'rate', 'accrualSum', 'leadingClass', 'dictPupilID'].forEach(attrName => {
+            me.attr[attrName].show()
+          })
+          me.attr.accrualRate.setFieldLabel(UB.i18n('Коефіцієнт'))
+          me.attr.baseSum.setFieldLabel(UB.i18n('Сума для розрахунку'))
+          me.attr.rate.setFieldLabel(UB.i18n('Відсоток надбавки'))
+          if (!me.isPosted) { me.attr.accrualRate.setReadOnly(false) }
+          me.getDictAccrualDt(me, value).then((data) => {
+            const dictAccrualDt = JSON.parse(data.dictAccrualDt)
+            if (dictAccrualDt) {
+              const positionID = me.currentPositionRow.get('dictPositionID')
+              const qualID = me.currentPositionRow.get('dictQualificationID')
+              const subjID = me.currentPositionRow.get('dictSubjectID')
+              const pupilID = me.attr.dictPupilID
+              const onDate = me.parentForm.attr.dateFrom.getValue()
+              const rule = me.findDictAccrualDt(dictAccrualDt, null, null, positionID, qualID, subjID, pupilID, onDate)
+              if (rule && ['4', '5', '6', '7'].includes(rule.calcRuleID)) {
+                me.attr.accrualRate.show()
+              }
+            }
+          })
+          break
+        case '4': // Постійна надбавка
+        case '155':
+          ['baseSum', 'rate', 'accrualSum'].forEach(attrName => {
+            me.attr[attrName].show()
+          })
+          me.attr.accrualRate.setFieldLabel(UB.i18n('Коефіцієнт'))
+          me.attr.baseSum.setFieldLabel(UB.i18n('Сума для розрахунку'))
+          me.attr.rate.setFieldLabel(UB.i18n('Відсоток надбавки'))
+          if (!me.isPosted) { me.attr.accrualRate.setReadOnly(false) }
+          me.getDictAccrualDt(me, value).then((data) => {
+            const dictAccrualDt = JSON.parse(data.dictAccrualDt)
+            if (dictAccrualDt) {
+              const positionID = me.currentPositionRow.get('dictPositionID')
+              const qualID = me.currentPositionRow.get('dictQualificationID')
+              const subjID = me.currentPositionRow.get('dictSubjectID')
+              const pupilID = me.attr.dictPupilID
+              const onDate = me.parentForm.attr.dateFrom.getValue()
+              const rule = me.findDictAccrualDt(dictAccrualDt, null, null, positionID, qualID, subjID, pupilID, onDate)
+              if (rule && ['4', '5', '6', '7'].includes(rule.calcRuleID)) {
+                me.attr.accrualRate.show()
+              }
+            }
+          })
+          break
+        case '5': // Надбавка за ранг
+          ['accrualRate', 'baseSum', 'accrualSum'].forEach(attrName => {
+            me.attr[attrName].show()
+          })
+          me.attr.accrualRate.setFieldLabel(UB.i18n('Кількість ставок'))
+          if (!me.isPosted) { me.attr.accrualRate.setReadOnly(false) }
+          me.attr.baseSum.setFieldLabel(UB.i18n('Сума для розрахунку'))
+          me.attr.accrualRate.decimalPrecision = 4
+          break
+        case '6': // Надбавка за вислугу років
+          ['baseSum', 'rate', 'accrualSum'].forEach(attrName => {
+            me.attr[attrName].show()
+          })
+          me.attr.baseSum.setFieldLabel(UB.i18n('Сума для розрахунку'))
+          me.attr.rate.setFieldLabel(UB.i18n('Відсоток'))
+          break
+        case '143': // Тарифна ставка
+          ['baseSum', 'rate', 'accrualSum'].forEach(attrName => {
+            me.attr[attrName].show()
+          })
+          me.attr.baseSum.setFieldLabel(UB.i18n('Тариф'))
+          me.attr.rate.setFieldLabel(UB.i18n('Відсоток тарифу'))
+          break
+        case '144': // Підвищення тарифної ставки
+          ['dictTarifCoeffID', 'baseSum', 'rate', 'accrualSum'].forEach(attrName => {
+            me.attr[attrName].show()
+          })
+          me.attr.dictTarifCoeffID.setFieldLabel(UB.i18n('Розряд'))
+          me.attr.baseSum.setFieldLabel(UB.i18n('Тариф'))
+          me.attr.rate.setFieldLabel(UB.i18n('Відсоток'))
+          break
+        case '145': // Тарифна ставка з підвищенням
+          me.attr.accrualSum.show()
+          break
+        case '146': // Педагогічне навантаження
+          ['dictTarifCoeffID', 'accrualRate', 'baseSum', 'planHours', 'hours', 'accrualSum'].forEach(attrName => {
+            me.attr[attrName].show()
+          })
+          me.getPositionProps(me.currentPositionRow.get('dictPositionID'))
+            .then((data) => {
+              me.attr.dictPupilID[data && data.pupil !== '3' ? 'show' : 'hide']()
+              me.attr.dictPupilID.setAllowBlank(!(data && data.pupil === '1'))
+            })
+          me.attr.dictTarifCoeffID.setFieldLabel(UB.i18n('Розряд'))
+          me.attr.accrualRate.setFieldLabel(UB.i18n('Кількість ставок'))
+          if (!me.isPosted) { me.attr.accrualRate.setReadOnly(true) }
+          me.attr.baseSum.setFieldLabel(UB.i18n('Сума для розрахунку'))
+          me.attr.accrualRate.decimalPrecision = 4
+          break
+        case '156':
+        case '147': // Адміністративна зарплата
+          ['accrualRate', 'baseSum', 'rate', 'accrualSum'].forEach(attrName => {
+            me.attr[attrName].show()
+          })
+          me.attr.accrualRate.setFieldLabel(UB.i18n('Кількість ставок'))
+          me.attr.baseSum.setFieldLabel(UB.i18n('Сума для розрахунку'))
+          me.attr.accrualRate.decimalPrecision = 4
+          break
+        case '148': // Педагогічна надбавка (перевірка зошитів)
+          ['dictTarifCoeffID', 'accrualRate', 'baseSum', 'rate', 'planHours', 'hours', 'accrualSum'].forEach(attrName => {
+            me.attr[attrName].show()
+          })
+          me.getPositionProps(me.currentPositionRow.get('dictPositionID')).then((data) => {
+            me.attr.dictPupilID[data && data.pupil !== '3' ? 'show' : 'hide']()
+            me.attr.dictPupilID.setAllowBlank(!(data && data.pupil === '1'))
+          })
+          me.attr.dictTarifCoeffID.setFieldLabel(UB.i18n('Розряд'))
+          me.attr.accrualRate.setFieldLabel(UB.i18n('Відсоток'))
+          if (!me.isPosted) { me.attr.accrualRate.setReadOnly(false) }
+          me.attr.baseSum.setFieldLabel(UB.i18n('Сума для розрахунку'))
+          me.attr.rate.setFieldLabel(UB.i18n('Відсоток надбавки'))
+          break
+        case '152': // Підвищення тарифної ставки за звання
+          ['baseSum', 'rate', 'accrualSum'].forEach(attrName => {
+            me.attr[attrName].show()
+          })
+          if (!me.isPosted) { me.attr.accrualRate.setReadOnly(false) }
+          me.attr.baseSum.setFieldLabel(UB.i18n('Тариф'))
+          me.attr.rate.setFieldLabel(UB.i18n('Відсоток'))
+          break
+        default:
+          ['baseSum', 'accrualRate', 'rate', 'accrualSum'].forEach(attrName => {
+            me.attr[attrName].show()
+          })
+          if (!me.isPosted) { me.attr.accrualRate.setReadOnly(false) }
+          me.attr.baseSum.setFieldLabel(UB.i18n('Сума для розрахунку'))
+          me.attr.rate.setFieldLabel(UB.i18n('Коефіцієнт навантаження'))
+          break
+      }
+      if (ctrl.skipChanged) {
+        ctrl.skipChanged = false
+      } else {
+        attrNames.forEach(attrName => {
+          if (!['dictTarifCoeffID', 'planHours'].includes(attrName)) {
+            me.attr[attrName].setValue()
+          }
+        })
+        me.attr.flagsFix.setValue(0)
+        if (value) {
+          me.calculate(me)
+        }
+      }
+    })
+  },
+  changePupil: function (me) {
+    me.attr.dictPupilID.on('change', (ctrl, value) => {
+      if (ctrl.skipChanged) {
+        ctrl.skipChanged = false
+      } else {
+        if (ctrl.flagsFix) {
+          me.attr.flagsFix.setValue((me.attr.flagsFix.getValue() || 0) | ctrl.flagsFix)
+        }
+        me.calculate(me)
+      }
+    })
+  },
+  getDictAccrualDt: function (me, payElID) {
+    const params = {
+      orgID: me.parentForm.record.get('documentID.orgID') || appAC.globalOrganization(),
+      payElID
+    }
+    return $App.connection.run({
+      entity: 'trf_workPlace',
+      method: 'getDictAccrualDt',
+      params: JSON.stringify(params)
+    })
+  },
+  findDictAccrualDt: function (dictAccrualDt, payElID, orgID, positionID, qualID, subjID, pupilID, onDate) {
+    const rule = dictAccrualDt.find(row =>
+      (!onDate || (onDate <= row.dateTo && onDate >= row.dateFrom)) &&
+      (!payElID || row.payElID === payElID) &&
+      (!orgID || row.orgList.length === 0 || (row.excludeOrg && row.orgList.findIndex(o => o === orgID) < 0) || (!row.excludeOrg && row.orgList.findIndex(o => o === orgID) >= 0)) &&
+      (!positionID || row.positionList.length === 0 || (row.excludePosition && row.positionList.findIndex(o => o === positionID) < 0) || (!row.excludePosition && row.positionList.findIndex(o => o === positionID) >= 0)) &&
+      (!qualID || row.qualificationList.length === 0 || (row.excludeQualification && row.qualificationList.findIndex(o => o === qualID) < 0) || (!row.excludeQualification && row.qualificationList.findIndex(o => o === qualID) >= 0)) &&
+      (!subjID || row.subjectList.length === 0 || (row.excludeSubject && row.subjectList.findIndex(o => o === subjID) < 0) || (!row.excludeSubject && row.subjectList.findIndex(o => o === subjID) >= 0)) &&
+      (!pupilID || row.pupilList.length === 0 || (row.excludePupil && row.pupilList.findIndex(o => o === pupilID) < 0) || (!row.excludePupil && row.pupilList.findIndex(o => o === pupilID) >= 0)))
+    return rule
+  },
+  getPositionProps: function (dictPositionID) {
+    return UB.Repository('trf_dictPositionProps')
+      .attrs(['pupil'])
+      .where('dictPositionID', '=', dictPositionID)
+      .selectSingle()
+  }
+})

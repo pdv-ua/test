@@ -1,0 +1,351 @@
+/* global Ext UB $App appAC */
+
+exports.formDef = 'HR.employeeGroupsSelect'
+
+Ext.define('HR.employeeGroupsSelect', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+    const queryDelay = 500
+    let allGrid
+    let selGrid
+    const storeMain = Ext.create('Ext.data.Store', {
+      columnName: 'name',
+      fields: [
+        { name: 'ID' },
+        { name: 'code' },
+        { name: 'name' }
+      ],
+      data: []
+    })
+    function setFilter () {
+      storeMain.filter({
+        id: 'searchTask',
+        property: 'name',
+        condition: UB.core.UBCommand.condition.sqlecLike,
+        value: searchCtrl.getValue(),
+        anyMatch: true,
+        caseSensitive: false
+      })
+    }
+    function clearFilter () {
+      storeMain.filters.removeAtKey('searchTask')
+      storeMain.clearFilter()
+    }
+    const doQueryTask = new Ext.util.DelayedTask(function () {
+      const value = searchCtrl.getValue()
+      if (value === '') {
+        clearFilter()
+      } else {
+        setFilter()
+      }
+    }, me)
+    const searchCtrl = Ext.widget('textfield', {
+      labelWidth: 60,
+      fieldLabel: UB.i18n('filter')
+    })
+    searchCtrl.on('change', function () {
+      doQueryTask.delay(queryDelay)
+    })
+    const storeSel = Ext.create('Ext.data.ArrayStore', {
+      fields: [
+        { name: 'ID' },
+        { name: 'code' },
+        { name: 'name' }
+      ],
+      data: []
+    })
+    allGrid = Ext.create('Ext.grid.Panel', {
+      xtype: 'grid',
+      store: storeMain,
+      features: [],
+      viewConfig: {
+        markDirty: false
+      },
+      listeners: {
+        scope: me
+      },
+      autoScroll: true,
+      flex: 1,
+      split: true,
+      region: 'west',
+      title: UB.i18n('Всі групи'),
+      collapsible: true,
+      columnLines: true,
+      plugins: [Ext.create('Ext.grid.plugin.CellEditing', {
+        clicksToEdit: 1
+      })],
+      tbar: Ext.create('Ext.toolbar.Toolbar', {
+        height: 40,
+        items: [
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Відмітити всі'),
+            iconCls: 'u-icon-check',
+            cls: 'green-action',
+            listeners: {
+              click: function () {
+                const store = allGrid.getStore()
+                const storeSel = selGrid.getStore()
+                Ext.suspendLayouts()
+                allGrid.suspendEvents()
+                store.suspendEvents()
+                selGrid.suspendEvents()
+                storeSel.suspendEvents()
+
+                if (searchCtrl.getValue() !== '') {
+                  clearFilter()
+                }
+                allGrid.updatingRecords = true
+                selGrid.updatingRecords = true
+
+                allGrid.getStore().each(rec => {
+                  rec.beginEdit()
+                  if (!rec.get('isChecked')) {
+                    rec.set('isChecked', true)
+                    storeSel.add(rec)
+                  }
+                  rec.endEdit(true)
+                })
+                allGrid.updatingRecords = false
+                selGrid.updatingRecords = false
+
+                allGrid.resumeEvents()
+                store.resumeEvents()
+                selGrid.resumeEvents()
+                storeSel.resumeEvents()
+                Ext.resumeLayouts(true)
+                allGrid.getView().refreshView()
+                selGrid.getView().refreshView()
+              }
+            }
+          },
+          {
+            xtype: 'button',
+            tooltip: UB.i18n('Виключити всі'),
+            iconCls: 'u-icon-close',
+            cls: 'red-action',
+            listeners: {
+              click: function () {
+                const store = allGrid.getStore()
+                const storeSel = selGrid.getStore()
+                Ext.suspendLayouts()
+                allGrid.suspendEvents()
+                store.suspendEvents()
+                selGrid.suspendEvents()
+                storeSel.suspendEvents()
+                if (searchCtrl.getValue() !== '') {
+                  clearFilter()
+                }
+                allGrid.updatingRecords = true
+                selGrid.updatingRecords = true
+
+                allGrid.getStore().each(rec => {
+                  rec.beginEdit()
+                  rec.set('isChecked', false)
+                  const selRec = storeSel.findRecord('code', rec.get('code'))
+                  if (selRec) {
+                    storeSel.remove(selRec)
+                  }
+                  rec.endEdit(true)
+                })
+                allGrid.updatingRecords = false
+                selGrid.updatingRecords = false
+
+                allGrid.resumeEvents()
+                store.resumeEvents()
+                selGrid.resumeEvents()
+                storeSel.resumeEvents()
+                Ext.resumeLayouts(true)
+                allGrid.getView().refreshView()
+                selGrid.getView().refreshView()
+              }
+            }
+          },
+          searchCtrl
+        ]
+
+      }),
+      columns: [
+        { xtype: 'checkcolumn', dataIndex: 'isChecked' },
+        {
+          header: UB.i18n('Групи'),
+          dataIndex: 'name',
+          flex: 1
+        }
+      ]
+    })
+    selGrid = Ext.widget('grid', {
+      xtype: 'grid',
+      stripeRows: true,
+      store: storeSel,
+      autoScroll: true,
+      region: 'center',
+      flex: 1,
+      title: UB.i18n('Вибрані групи'),
+      columns: [{
+        header: UB.i18n('Вибрані групи'),
+        dataIndex: 'name',
+        flex: 1
+      }],
+      tbar: Ext.create('Ext.toolbar.Toolbar', { height: 40 }),
+
+      listeners: {
+        itemdblclick: function (row, record) {
+          if (searchCtrl.getValue() !== '') {
+            clearFilter()
+          }
+          storeSel.remove(record)
+          const rec = storeMain.findRecord('code', record.get('code'))
+          rec.set('isChecked', false)
+          if (searchCtrl.getValue() !== '') {
+            setFilter()
+          }
+        }
+      }
+    })
+    me.items = [
+      {
+        layout: { type: 'vbox' },
+        region: 'north',
+        items: [
+          {
+            name: 'catName',
+            xtype: 'textfield',
+            fieldLabel: 'Назва категорії',
+            labelWidth: 180,
+            width: '100%'
+          },
+          {
+            name: 'catCode',
+            xtype: 'numberfield',
+            hidden: true
+          }
+        ]
+      },
+      {
+        layout: { type: 'border' },
+        region: 'center',
+        items: [
+          allGrid,
+          selGrid
+        ]
+      }
+    ]
+    me.tbar = [
+      {
+        xtype: 'button',
+        scale: 'medium',
+        iconCls: 'u-icon-save-and-close',
+        tooltip: UB.i18n('saveAndClose'),
+        cls: 'save-action',
+        handler: function () {
+          if (!me.down('[name=catName]').getValue()) {
+            $App.dialogError(UB.i18n('Не заповнена назва категорії!'))
+            return
+          }
+          const codes = []
+          storeSel.data.each(record => {
+            codes.push(record.get('code'))
+          })
+          if (!codes.length) {
+            $App.dialogError(UB.i18n('Не вибрано жодної групи!'))
+            return
+          }
+          $App.connection.run({
+            entity: 'ac_userSettings',
+            method: 'saveSelectionOrg',
+            actionCode: me.isNewCategory ? 'addNewCat' : 'editExistedCat',
+            userID: $App.connection.userData().userID,
+            codes: JSON.stringify(codes),
+            settingName: 'myEmployeeGroups',
+            catName: me.down('[name=catName]').getValue(),
+            catCode: me.down('[name=catCode]').getValue(),
+            orgID: appAC.globalOrganization()
+          }).then(() => {
+            if (me.sender && me.sender.showDesktop) me.sender.showDesktop()
+            const wnd = me.up('window')
+            if (me.onSelectData) {
+              me.onSelectData()
+            }
+            wnd.close()
+          })
+        }
+      }
+    ]
+    me.bbar = [
+      '->'
+    ]
+    me.allGrid = allGrid
+    me.selGrid = selGrid
+    me.on('afterrender', function () {
+      loadData(me, storeMain)
+    })
+    me.callParent(arguments)
+  }
+})
+
+function loadData (me, store) {
+  store.un('update', me.onStoreUpdate)
+  const userSettings = UB.Repository('ac_userSettings')
+    .attrs('params')
+    .where('userID', '=', $App.connection.userData().userID)
+    .selectScalar()
+
+  let rowList = UB.Repository('hr_employeeGroup')
+    .attrs(['ID', 'name'])
+    .where('organizationID', '=', appAC.globalOrganization())
+    .orderBy('name')
+    .selectAsObject()
+
+  Promise.all([rowList, userSettings]).then(([rowList, userSettings]) => {
+    let storeList = []
+    rowList.forEach(row => {
+      if (!storeList.find(el => el.code === row.ID)) {
+        storeList.push({ ID: row.ID, code: row.ID, name: row.name })
+      }
+    })
+
+    store.loadData(storeList)
+
+    if (me.isNewCategory) {
+      const myEmployeeGroups = userSettings && userSettings.myEmployeeGroups && userSettings.myEmployeeGroups.find(settings => settings.orgID === appAC.globalOrganization())
+      if (myEmployeeGroups && myEmployeeGroups.catList.lastCatCode) {
+        me.down('[name=catCode]').setValue(userSettings.myEmployeeGroups.lastCatCode + 1)
+      } else {
+        me.down('[name=catCode]').setValue(1)
+      }
+    } else {
+      const myEmployeeGroups = userSettings && userSettings.myEmployeeGroups && userSettings.myEmployeeGroups.find(settings => settings.orgID === appAC.globalOrganization())
+      let catData = myEmployeeGroups.catList.find(el => el.catCode === me.catCode)
+      me.down('[name=catName]').setValue(catData.catName)
+      me.down('[name=catCode]').setValue(catData.catCode)
+      const allRecord = store.snapshot || store.data
+      const storeSel = me.selGrid.getStore()
+      allRecord.items.forEach((row, idx) => {
+        if (catData.rowList.includes(row.get('code'))) {
+          row.set('isChecked', true)
+          storeSel.add(row)
+        }
+      })
+    }
+    store.on('update', onStoreUpdate, me)
+    me.setLoading(false)
+  })
+}
+
+function onStoreUpdate (store, record) {
+  const me = this
+  const storeSel = me.selGrid.getStore()
+  if (record.get('isChecked')) {
+    storeSel.add(record)
+  } else {
+    const rec = storeSel.findRecord('code', record.get('code'))
+    if (rec) {
+      storeSel.remove(rec)
+    }
+  }
+}

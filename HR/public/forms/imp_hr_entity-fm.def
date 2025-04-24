@@ -1,0 +1,44 @@
+/* global Ext */
+exports.formDef = (function () {
+  return {
+    requiredFields: ['caption', 'name', 'description'],
+    parentConfig: {
+      layout: {
+        type: 'vbox',
+        align: 'stretch'
+      }
+    },
+    size: {
+      width: 1100,
+      height: 600
+    },
+    items: [{
+      xtype: 'combo',
+      labelWidth: 130,
+      name: 'dict',
+      editable: true,
+      valueField: 'value',
+      fieldLabel: UB.i18n('Довідник'),
+      allowBlank: false,
+      typeAhead: false,
+      queryMode: 'local',
+      forceSelection: true,
+      triggerAction: 'all',
+      mode: 'local',
+      anyMatch: true,
+      doQuery: function (queryString, forceAll) {
+        this.expand()
+        this.store.clearFilter(!forceAll)
+        if (!forceAll) {
+          this.store.filter(this.displayField, new RegExp(Ext.String.escapeRegex(queryString), 'i'))
+        }
+      },
+      listeners: {
+        select: function (ctrl) {
+          ctrl.up('form').fillRecord(ctrl)
+        }
+      }
+    }
+    ]
+  }
+})()

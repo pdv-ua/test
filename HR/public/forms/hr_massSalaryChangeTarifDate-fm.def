@@ -1,0 +1,73 @@
+/* global Ext UB */
+
+exports.formDef = 'HR.massSalaryChangeTarifDate'
+
+Ext.define('HR.massSalaryChangeTarifDate', {
+  extend: 'Ext.form.Panel',
+  height: 200,
+  width: 500,
+  alias: 'widget.massSalaryChangeTarifDate',
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+
+    me.items = [
+      {
+        xtype: 'panel',
+        layout: { type: 'vbox' },
+        region: 'center',
+        items: [
+          {
+            name: 'dateFrom',
+            xtype: 'ubdatefield',
+            margin: '40 0 0 20',
+            labelWidth: 250,
+            fieldLabel: UB.i18n('Дата вступу в дію тарифної сітки'),
+            allowBlank: false
+          },
+          {
+            name: 'recalcTarifAccrual',
+            xtype: 'checkbox',
+            margin: '10 0 0 20',
+            labelWidth: 250,
+            fieldLabel: UB.i18n('Розраховувати оклад з підвищенням')
+          }
+        ]
+      },
+      {
+        xtype: 'panel',
+        layout: { type: 'hbox', pack: 'end' },
+        region: 'south',
+        style: 'border-top: 1px solid #BFBFBF',
+        items: [
+          {
+            xtype: 'button',
+            text: UB.i18n('Відмінити'),
+            width: 150,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              me.commandConfig.deferred.resolve(null)
+              me.up('window').close()
+            }
+          },
+          {
+            xtype: 'button',
+            text: UB.i18n('Продовжити'),
+            width: 150,
+            height: 30,
+            margin: '10 10 10 0',
+            handler: function () {
+              const dateFrom = me.down('[name=dateFrom]').getValue()
+              const recalcTarifAccrual = me.down('[name=recalcTarifAccrual]').getValue()
+              me.commandConfig.deferred.resolve({ dateFrom, recalcTarifAccrual })
+              me.up('window').close()
+            }
+          }
+        ]
+      }
+    ]
+
+    me.callParent(arguments)
+  }
+})

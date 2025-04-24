@@ -1,0 +1,342 @@
+/* global Ext AC $App UB */
+
+exports.formDef = 'HR.payElList'
+
+Ext.define('HR.payElList', {
+  extend: 'Ext.panel.Panel',
+  height: 600,
+  width: 800,
+  layout: 'border',
+  alias: 'widget.payElList',
+  viewConfig: {
+    toggleOnDblClick: false
+  },
+  autoScroll: true,
+  isModal: true,
+  initComponent: function () {
+    const me = this
+    me.items = [
+      Ext.widget('panel', {
+
+        xtype: 'panel',
+        header: false,
+        region: 'center',
+        flex: 1,
+        layout: 'fit',
+        items: [
+          {
+            xtype: 'ubdetailgrid',
+            autoScroll: true,
+            flex: 1,
+            hideActions: ['addNewByCurrent', 'newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+            stateful: true,
+            stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_payElList_grid'),
+            cmdType: 'showList',
+            entity: 'hr_payEl',
+            cmdData: {
+              params: [{
+                entity: 'hr_payEl',
+                method: 'select',
+                fieldList: [
+                  { name: 'ID', visibility: false },
+                  { name: 'codeSort', visibility: false },
+                  { name: 'code' },
+                  { name: 'name' },
+                  { name: 'methodID.methodGroupID.name', description: UB.i18n('Тип'), tooltip: UB.i18n('Група методів') },
+                  { name: 'methodID.name', description: UB.i18n('Метод розрахунку'), tooltip: UB.i18n('Метод розрахунку') },
+                  { name: 'dateFromEmpty' },
+                  { name: 'dateToEmpty' },
+                  { name: 'dictTimeCostID.name', description: UB.i18n('Елемент обліку робочого часу') },
+                  { name: 'dictTimeCostWorkID.name', description: UB.i18n('Елемент обліку робочого часу (робочий час)') },
+                  { name: 'dictTimeCostAvgID.name', description: UB.i18n('Елемент обліку робочого часу (за середнім)') },
+                  { name: 'description', visibility: false },
+                  { name: 'mi_deleteUser', visibility: false }
+                ],
+                orderList: {
+                  orderBy: { expression: 'codeSort', order: 'asc' }
+                }
+              }]
+            },
+            cmpInitConfig: {
+              afterInit: function () {
+                AC.gridUtils.setCustomSorter(this, 'code')
+              },
+              getRowClass: function (row) {
+                return row.get('mi_deleteUser') ? 'grd-color-grey' : ''
+              },
+              customActions: [
+                {
+                  xtype: 'button',
+                  name: 'copyBtn',
+                  text: UB.i18n('Додати як'),
+                  iconCls: 'u-icon-copy',
+                  cls: 'add-new-action',
+                  disabled: true,
+                  handler: function () {
+                    const record = me.attr.grid.getSelectionModel().selected.items[0]
+                    me.copyRecord(record)
+                  }
+                },
+                {
+                  xtype: 'button',
+                  name: 'viewDeletedBtn',
+                  text: UB.i18n('Показати видалені записи'),
+                  iconCls: 'fas fa-ban',
+                  cls: 'red-action',
+                  scale: 'medium',
+                  handler: function (btn) {
+                    me.viewDeleted = !me.viewDeleted
+                    btn.addCls(me.viewDeleted ? 'add-new-action' : 'red-action')
+                    btn.removeCls(!me.viewDeleted ? 'add-new-action' : 'red-action')
+                    btn.setTooltip(!me.viewDeleted ? UB.i18n('Показати видалені записи') : UB.i18n('Приховати видалені записи'))
+                    me.attr.grid.getStore().ubRequest.__allowSelectSafeDeleted = me.viewDeleted
+                    me.attr.grid.getStore().reload(true)
+                  }
+                },
+                /* {
+                  xtype: 'button',
+                  name: 'delBtn',
+                  text: UB.i18n('Видалити'),
+                  iconCls: 'fa fa-trash-o',
+                  cls: 'delete-action',
+                  disabled: true,
+                  handler: function () {
+                    me.deleteRecords()
+                  }
+                }, */
+                {
+                  xtype: 'button',
+                  name: 'restoreBtn',
+                  text: UB.i18n('Відновити'),
+                  iconCls: 'fas fa-thumbs-up',
+                  disabled: true,
+                  handler: function () {
+                    me.restoreRecords()
+                  }
+                }, {
+                  xtype: 'button',
+                  name: 'printBtn',
+                  text: UB.i18n('Друкувати'),
+                  iconCls: 'fas fa-print',
+                  cls: 'blue-action',
+                  disabled: false,
+                  handler: function () {
+                    const selModel = me.attr.grid.getSelectionModel()
+                    if (!selModel || !selModel.selected.length) {
+                      $App.dialogInfo(UB.i18n('Не обрано жодного запису для друку.'), UB.i18n('Увага'))
+                      return
+                    }
+                    const ids = selModel.selected.items ? selModel.selected.items.map(item => item.getData().ID) : []
+
+                    if (ids) {
+                      $App.doCommand({
+                        cmdType: 'showReport',
+                        caption: UB.i18n('Друкована форма. Вид оплати'),
+                        tabId: 'printDocument_hr_printPayEl' + Date.now(),
+                        target: $App.getViewport().centralPanel,
+                        cmdData: {
+                          reportCode: 'hr_printPayEl',
+                          reportParams: {
+                            payIDs: ids
+                          },
+                          reportOptions: {
+                            allowExportToExcel: true,
+                            isModal: false
+                          }
+                        }
+                      })
+                    } else {
+                      $App.dialogInfo(UB.i18n('Не обрано жодного запису для друку.'), UB.i18n('Увага'))
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      })
+    ]
+
+    me.changeSelect = (sm) => {
+      function checkSel () {
+        const enableBtn = {}
+        if (sm.selected.length) {
+          me.attr.grid.getSelectionModel().selected.each(record => {
+            if (!record.getData().mi_deleteUser) {
+              // enableBtn.delBtn = true
+            } else {
+              enableBtn.restoreBtn = true
+            }
+          })
+        }
+        if (sm.selected.length === 1) enableBtn.copyBtn = true
+        return enableBtn
+      }
+      // me.down('[name=delBtn]').setDisabled(!checkSel().delBtn)
+      me.down('[name=restoreBtn]').setDisabled(!checkSel().restoreBtn)
+      me.down('[name=copyBtn]').setDisabled(!checkSel().copyBtn)
+    }
+
+    me.restoreRecords = () => {
+      me.setLoading(true)
+      const restoreData = []
+      let msg = ''
+      me.attr.grid.getSelectionModel().selected.each(record => {
+        if (record.getData().mi_deleteUser) {
+          restoreData.push(record.getData())
+          msg += `"${record.getData().name} [${record.getData().code}]"</br>`
+        }
+      })
+
+      $App.dialogYesNo('Попередження', UB.i18n(`Записи: </br></br> {0} </br> будуть відновлені у системі. Ви впевнені?`, msg))
+        .then(res => {
+          if (!res) {
+            me.setLoading(false)
+          } else {
+            $App.connection.run({
+              entity: 'hr_payEl',
+              method: 'restoreRecord',
+              params: {
+                entityName: 'hr_payEl',
+                data: JSON.stringify(restoreData)
+              }
+            }).then(() => {
+              const selectionModel = me.attr.grid.getSelectionModel()
+              if (selectionModel) {
+                selectionModel.deselectAll(true)
+              }
+              me.setLoading(false)
+              me.attr.grid.onRefresh()
+              me.changeSelect(selectionModel)
+            }).catch(e => {
+              me.setLoading(false)
+              AC.viewUtils.showToast(UB.i18n('Помилка'), e.message)
+            })
+          }
+        })
+    }
+
+    me.deleteRecords = () => {
+      me.setLoading(true)
+      const eraseData = []
+      let msg = ''
+      me.attr.grid.getSelectionModel().selected.each(record => {
+        if (!record.getData().mi_deleteUser) {
+          eraseData.push(record.getData())
+          msg += `"${record.getData().name} [${record.getData().code}]"</br>`
+        }
+      })
+      $App.dialogYesNo('Попередження', UB.i18n(`Записи: </br></br> {0} </br> будуть видалені. Ви впевнені?`, msg))
+        .then(res => {
+          if (!res) {
+            me.setLoading(false)
+          } else {
+            eraseData.forEach(row => {
+              $App.connection.run({
+                entity: 'hr_payEl',
+                method: 'checkDependency',
+                params: {
+                  entityName: 'hr_payEl',
+                  ID: row.ID
+                }
+              }).then(response => {
+                const errMessage = JSON.parse(response.resultData)
+                // if (errMessage.length) {
+                $App.dialogYesNo('Попередження', UB.i18n(`{0}<br> Видаляти?`, errMessage.join('<br>')))
+                  .then(res => {
+                    if (res) {
+                      try {
+                        $App.connection.run({
+                          entity: 'hr_payEl',
+                          method: 'deleteRecord',
+                          params: {
+                            entityName: 'hr_payEl',
+                            safe: false,
+                            ID: row.ID
+                          }
+                        }).then(() => {
+                          const selectionModel = me.attr.grid.getSelectionModel()
+                          if (selectionModel) {
+                            selectionModel.deselectAll(true)
+                          }
+                          me.setLoading(false)
+                          me.attr.grid.onRefresh()
+                          me.changeSelect(selectionModel)
+                        })
+                      // eslint-disable-next-line no-empty
+                      } catch (e) {
+                      } finally {
+                        $App.connection.run({
+                          entity: 'hr_payEl',
+                          method: 'deleteRecord',
+                          params: {
+                            entityName: 'hr_payEl',
+                            safe: true,
+                            ID: row.ID
+                          }
+                        }).then(() => {
+                          const selectionModel = me.attr.grid.getSelectionModel()
+                          if (selectionModel) {
+                            selectionModel.deselectAll(true)
+                          }
+                          me.setLoading(false)
+                          me.attr.grid.onRefresh()
+                          me.changeSelect(selectionModel)
+                        })
+                      }
+                    } else {
+                      me.setLoading(false)
+                    }
+                  })
+              })
+            })
+          }
+        })
+    }
+
+    me.copyRecord = function (record) {
+      const payElID = record.get('ID')
+      me.setLoading(true)
+      $App.connection.run({
+        entity: 'hr_payEl',
+        method: 'copyRecord',
+        ID: payElID
+      }).then((mParams) => {
+        me.setLoading(false)
+        me.attr.grid.onRefresh()
+        $App.doCommand({
+          cmdType: 'showForm',
+          entity: 'hr_payEl',
+          formCode: 'hr_payEl',
+          instanceID: mParams.newID,
+          tabId: 'hr_payEl_copyRecord' + Date.now(),
+          target: $App.getViewport().centralPanel,
+          cmpInitConfig: {
+            method: 'copyRecord',
+            sourceGrid: me.attr.grid
+          }
+        })
+      })
+    }
+
+    me.on('afterrender', () => {
+      const me = this
+      me.attr = {
+        grid: me.down('[entityName=hr_payEl]')
+      }
+      me.viewDeleted = false
+      me.attr.grid.getSelectionModel().on('select', (sm) => {
+        me.changeSelect(sm)
+      })
+      me.attr.grid.getSelectionModel().on('deselect', (sm) => {
+        me.changeSelect(sm)
+      })
+      const store = me.attr.grid.getStore()
+      store.on('beforeload', function () {
+        me.attr.grid.getSelectionModel().deselectAll()
+      })
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

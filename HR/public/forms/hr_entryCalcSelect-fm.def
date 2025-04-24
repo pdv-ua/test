@@ -1,0 +1,610 @@
+/* global Ext UB $App appAC AC */
+
+exports.formDef = 'HR.entryCalcSelect'
+
+Ext.define('HR.entryCalcSelect', {
+  extend: 'Ext.form.Panel',
+  width: 1100,
+  height: 600,
+  layout: 'border',
+  initComponent: function () {
+    const me = this
+    const queryDelay = 500
+    me.settingsStore = Ext.create('Ext.data.ArrayStore', {
+      fields: [
+        { name: 'description' },
+        { name: 'settingsKey' },
+        { name: 'nameCode' },
+        { name: 'entity' },
+        { name: 'entryType' }
+      ],
+      data: []
+    })
+    me.entryStore = Ext.create('Ext.data.Store', {
+      fields: [
+        { name: 'ID' },
+        { name: 'description' },
+        { name: 'sourceID' },
+        { name: 'isChecked' }
+      ],
+      data: []
+    })
+    me.payElStore = Ext.create('Ext.data.Store', {
+      groupField: 'groupCode',
+      columnName: 'groupName',
+      fields: [
+        { name: 'ID' },
+        { name: 'description' },
+        { name: 'dataFrom' },
+        { name: 'dateTo' },
+        { name: 'groupName' },
+        { name: 'groupCode' },
+        { name: 'isChecked' },
+        { name: 'isGroupChecked' },
+        { name: 'sourceID' },
+        { name: 'orderN' }
+      ],
+      data: []
+    })
+    function setFilter () {
+      me.payElStore.filter({
+        id: 'searchTask',
+        property: 'description',
+        condition: UB.core.UBCommand.condition.sqlecLike,
+        value: searchCtrl.getValue(),
+        anyMatch: true,
+        caseSensitive: false
+      })
+    }
+    function clearFilter () {
+      me.payElStore.filters.removeAtKey('searchTask')
+      me.payElStore.clearFilter()
+    }
+    const doQueryTask = new Ext.util.DelayedTask(function () {
+      const value = searchCtrl.getValue()
+      if (value === '') {
+        clearFilter()
+      } else {
+        setFilter()
+      }
+    }, me)
+    const searchCtrl = Ext.widget('textfield', {
+      labelWidth: 60,
+      fieldLabel: UB.i18n('filter')
+    })
+    searchCtrl.on('change', function () {
+      doQueryTask.delay(queryDelay)
+    })
+    me.items = [
+      me.settingsGrid = Ext.widget('grid', {
+        xtype: 'grid',
+        stripeRows: true,
+        split: true,
+        collapsible: true,
+        columnLines: true,
+        store: me.settingsStore,
+        autoScroll: true,
+        region: 'west',
+        flex: 1,
+        title: UB.i18n('Список налаштувань'),
+        columns: [
+          {
+            header: UB.i18n('Налаштування'),
+            dataIndex: 'description',
+            flex: 1
+          }
+        ],
+        listeners: {
+          selectionchange: (selectionModel, selected) => {
+            if (selected.length) {
+              changeSettingsRecord(me, selected[0])
+            }
+          }
+        }
+      }),
+      me.entryGrid = Ext.create('Ext.grid.Panel', {
+        xtype: 'grid',
+        store: me.entryStore,
+        viewConfig: {
+          markDirty: false
+        },
+        hidden: true,
+        autoScroll: true,
+        flex: 1,
+        region: 'center',
+        title: UB.i18n('Входження у розрахунок'),
+        plugins: [Ext.create('Ext.grid.plugin.CellEditing', {
+          clicksToEdit: 1
+        })],
+        columns: [
+          { xtype: 'checkcolumn', dataIndex: 'isChecked' },
+          {
+            header: UB.i18n('Входження у розрахунок'),
+            dataIndex: 'description',
+            flex: 1
+          }
+        ]
+      }),
+      me.payElGrid = Ext.create('Ext.grid.Panel', {
+        xtype: 'grid',
+        store: me.payElStore,
+        hidden: true,
+        autoScroll: true,
+        flex: 1,
+        region: 'center',
+        plugins: [Ext.create('Ext.grid.plugin.CellEditing', {
+          clicksToEdit: 1
+        })],
+        features: [{
+          id: 'group',
+          ftype: 'grouping',
+          groupHeaderTpl: ['<input class="grpCheckbox" {[values.rows[0].data.isGroupChecked ? "checked" : ""]} type="checkbox"> {[this.styleFunc(values)]}{[values.rows[0].data.groupCode + " " + values.rows[0].data.groupName]}</span></font>', {
+            styleFunc: function (values) {
+              return values.rows.filter(row => (row.get('isChecked') !== '' && row.get('isChecked'))).length ? '<span  style="color: blue; ">' : '<span  style="color: black; ">'
+            }
+          }],
+          enableGroupingMenu: false,
+          hideGroupHeader: true,
+          startCollapsed: true
+        }],
+        viewConfig: {
+          markDirty: false
+        },
+        listeners: {
+          groupclick: function (grid, node, group, event) {
+            if (event && grid) {
+              const target = event.getTarget('.grpCheckbox')
+              const groupRecord = me.payElStore.groups.getByKey(group)
+              if (target && groupRecord) {
+                const { checked } = target
+                me.payElGrid.updatingRecords = true
+                groupRecord.records.forEach(function (rec) {
+                  if (checked) {
+                    if (!rec.get('isChecked')) {
+                      rec.set('isChecked', checked)
+                    }
+                  } else {
+                    if (rec.get('isChecked')) {
+                      rec.set('isChecked', checked)
+                    }
+                  }
+                  rec.set('isGroupChecked', checked)
+                })
+                me.payElGrid.updatingRecords = false
+                if (me.payElGrid.view.features[0].isExpanded(group)) {
+                  me.payElGrid.view.features[0].collapse(group)
+                } else {
+                  me.payElGrid.view.features[0].expand(group)
+                }
+              }
+            }
+          },
+          scope: me
+        },
+        tbar: Ext.create('Ext.toolbar.Toolbar', {
+          height: 40,
+          items: [
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Відмітити всі'),
+              iconCls: 'u-icon-check',
+              cls: 'green-action',
+              listeners: {
+                click: function () {
+                  if (searchCtrl.getValue() !== '') {
+                    clearFilter()
+                  }
+                  const allRecords = me.payElStore.snapshot || me.payElStore.data
+                  allRecords.each(function (rec) {
+                    if (!rec.get('isChecked')) {
+                      rec.set('isChecked', true)
+                    }
+                  })
+                  me.payElStore.groups.each(group => {
+                    setGroupCheked(me, group.records[0].get('groupCode'))
+                  })
+                }
+              }
+            },
+            {
+              xtype: 'button',
+              tooltip: UB.i18n('Виключити всі'),
+              iconCls: 'u-icon-close',
+              cls: 'red-action',
+              listeners: {
+                click: function () {
+                  if (searchCtrl.getValue() !== '') {
+                    clearFilter()
+                  }
+                  const allRecords = me.payElStore.snapshot || me.payElStore.data
+                  allRecords.each(function (rec) {
+                    if (rec.get('isChecked')) {
+                      rec.set('isChecked', false)
+                    }
+                  })
+                  me.payElStore.groups.each(group => {
+                    setGroupCheked(me, group.records[0].get('groupCode'))
+                  })
+                }
+              }
+            },
+            searchCtrl
+          ]
+
+        }),
+        columns: [
+          { xtype: 'checkcolumn', dataIndex: 'isChecked' },
+          {
+            header: UB.i18n('Вид оплати'),
+            dataIndex: 'description',
+            flex: 1
+          }
+        ]
+      })
+    ]
+    me.tbar = [
+      {
+        xtype: 'button',
+        tooltip: UB.i18n('Оновити'),
+        scale: 'medium',
+        iconCls: 'u-icon-refresh',
+        handler: function () {
+          loadData(me)
+        }
+      },
+      {
+        xtype: 'button',
+        scale: 'medium',
+        iconCls: 'u-icon-save-and-close',
+        tooltip: UB.i18n('saveAndClose'),
+        cls: 'save-action',
+        handler: function () {
+          saveAndClose(me)
+        }
+      }
+    ]
+    me.bbar = [
+      '->'
+    ]
+
+    me.on('afterrender', function () {
+      me.up('window').setTitle(`${UB.i18n('Входження в розрахунки')} ${me.payElDescription}`)
+      loadData(me)
+    })
+    me.onEntryStoreUpdate = function (store, record) {
+      if (me.selectedRecord) {
+        const result = me.resultData[`${me.selectedRecord.get('settingsKey')}_${me.selectedRecord.get('nameCode') || ''}`].find(o => o.ID === record.get('ID'))
+        if (result) {
+          result.isChecked = !!record.get('isChecked')
+        } else {
+          me.resultData[`${me.selectedRecord.get('settingsKey')}_${me.selectedRecord.get('nameCode') || ''}`].push({
+            ID: record.get('ID'),
+            sourceID: record.get('sourceID'),
+            isChecked: !!record.get('isChecked'),
+            baseChecked: !record.get('isChecked')
+          })
+        }
+        const baseRow = me.settingsData[`${me.selectedRecord.get('settingsKey')}_${me.selectedRecord.get('nameCode') || ''}`].find(o => o.ID === record.get('ID'))
+        if (baseRow) {
+          baseRow.isChecked = !!record.get('isChecked')
+        }
+        if (me.selectedRecord.get('settingsKey') === 'payElTaxIndivid_' && record.get('isChecked')) {
+          const allRecords = store.snapshot || store.data
+          allRecords.each(function (rec) {
+            if (rec.get('isChecked') && rec.get('ID') !== record.get('ID')) {
+              rec.set('isChecked', false)
+            }
+          })
+        }
+        if (record.get('groupCode')) {
+          setGroupCheked(me, record.get('groupCode'))
+        }
+      }
+    }
+    me.callParent(arguments)
+  }
+})
+
+function loadData (me) {
+  const baseSettingsParams = [
+    {
+      settingsKey: 'payElEntrySum',
+      description: `${UB.i18n('Види оплат')}.${UB.i18n('Нараховується на суму')}`,
+      entity: 'hr_payElEntry',
+      entryType: 'SUM'
+    },
+    {
+      settingsKey: 'payElEntryTime',
+      description: `${UB.i18n('Види оплат')}.${UB.i18n('Нараховується на час')}`,
+      entity: 'hr_payElEntry',
+      entryType: 'TIME'
+    },
+    {
+      settingsKey: 'payElEntryPlanSum',
+      description: `${UB.i18n('Види оплат')}.${UB.i18n('Плановий заробіток')}`,
+      entity: 'hr_payElEntry',
+      entryType: 'PLANSUM'
+    },
+    {
+      settingsKey: 'payElEntryMinSum',
+      description: `${UB.i18n('Види оплат')}.${UB.i18n('Не меньше суми')}`,
+      entity: 'hr_payElEntry',
+      entryType: 'MINSUM'
+    },
+    /* {
+      settingsKey: 'payElEntryMinSum',
+      description: `${UB.i18n('Види оплат')}.${UB.i18n('Обмеження')}`,
+      entity: 'hr_payElEntry',
+      entryType: 'MINSUM',
+      nameCode: '1'
+    }, */
+    {
+      settingsKey: 'payElAddRetention',
+      description: `${UB.i18n('Види оплат')}.${UB.i18n('Додаткові утримання при виплаті')}`,
+      entity: 'hr_payElEntry',
+      entryType: 'ADDRETENTION'
+    },
+    {
+      settingsKey: 'payFundBase',
+      description: UB.i18n('Нарахування на ЗП.Нараховується на суму'),
+      entity: 'hr_payFundBase',
+      entryType: ''
+    },
+    {
+      settingsKey: 'payElTaxIndivid',
+      description: UB.i18n('Види оплати по видам доходів'),
+      entity: 'hr_payElTaxIndivid',
+      entryType: ''
+    },
+    {
+      settingsKey: 'payElDepend',
+      description: UB.i18n(`Обов'язкові платежи`),
+      entity: 'hr_payElDepend',
+      entryType: ''
+    },
+    {
+      settingsKey: 'idParam',
+      description: UB.i18n(`Список налаштувань`),
+      entity: 'hr_idParam',
+      entryType: ''
+    }
+  ]
+  me.settingsParams = []
+  UB.Repository('hr_cfgPanelName')
+    .attrs(['ID', 'code', 'name', 'cfgPanelID.code'])
+    .orderBy('code')
+    .selectAsObject().then(allPanelNames => {
+      baseSettingsParams.forEach(row => {
+        me.settingsParams.push(row)
+        const panelNames = allPanelNames.filter(o => o['cfgPanelID.code'] === row.settingsKey)
+        panelNames.forEach(panelName => {
+          const newRow = Object.assign({}, row)
+          newRow.nameCode = panelName.code
+          newRow.description = `${UB.i18n('Види оплат')}.${UB.i18n(panelName.name)}`
+          me.settingsParams.push(newRow)
+        })
+      })
+      loadCfgData(me)
+    })
+}
+function loadCfgData (me) {
+  me.settingsData = {}
+  me.resultData = {}
+  me.settingsStore.loadData(me.settingsParams)
+  me.settingsParams.forEach(param => {
+    me.resultData[`${param.settingsKey}_${param.nameCode || ''}`] = []
+    switch (param.settingsKey) {
+      case 'payElEntrySum':
+      case 'payElEntryTime':
+      case 'payElEntryPlanSum':
+      case 'payElEntryMinSum': {
+        Promise.all([
+          UB.Repository('hr_payEl')
+            .attrs(['ID', 'description', 'dateFrom', 'dateTo', 'methodID.methodGroupID.name', 'methodID.methodGroupID.code'])
+            .exists(UB.Repository('hr_methodCfgPanel')
+              .correlation('methodID', 'methodID')
+              .where('cfgPanelID.code', '=', param.settingsKey)
+              .whereIf(param.nameCode, 'cfgPanelNameID.code', '=', param.nameCode)
+              .whereIf(!param.nameCode, 'cfgPanelNameID.code', 'isNull')
+              .where('mi_deleteDate', '>=', '#maxdate'))
+            .orderBy('methodID.methodGroupID.code').orderBy('codeSort').orderBy('name')
+            .selectAsObject({
+              'methodID.methodGroupID.name': 'groupName',
+              'methodID.methodGroupID.code': 'groupCode'
+            }),
+          UB.Repository(param.entity)
+            .attrs(['ID', 'payElID'])
+            .where('payElBaseID', '=', me.payElID)
+            .where('entryType', '=', param.entryType)
+            .selectAsObject()
+        ]).then(([sources, sourceData]) => {
+          sourceData.forEach(row => {
+            const source = sources.find(o => o.ID === row.payElID)
+            if (source) {
+              source.sourceID = row.ID
+              source.isChecked = true
+            }
+          })
+          me.settingsData[`${param.settingsKey}_${param.nameCode || ''}`] = sources
+          if (param.settingsKey === 'payElEntrySum') {
+            const selModel = me.settingsGrid.getSelectionModel()
+            let view = me.settingsGrid.getView()
+            view.focus()
+            selModel.select(me.settingsGrid.getStore().getAt(0))
+          }
+        })
+        break
+      }
+      case 'payFundBase': {
+        Promise.all([
+          UB.Repository('hr_payFund')
+            .attrs(['ID', 'description'])
+            .orderBy('description')
+            .selectAsObject(),
+          UB.Repository(param.entity)
+            .attrs(['ID', 'payFundID'])
+            .where('payElID', '=', me.payElID)
+            .selectAsObject()
+
+        ]).then(([sources, sourceData]) => {
+          sourceData.forEach(row => {
+            const source = sources.find(o => o.ID === row.payFundID)
+            if (source) {
+              source.sourceID = row.ID
+              source.isChecked = true
+            }
+          })
+          me.settingsData[`${param.settingsKey}_${param.nameCode || ''}`] = sources
+        })
+        break
+      }
+      case 'payElTaxIndivid': {
+        Promise.all([
+          UB.Repository('hr_dictTaxIndivid')
+            .attrs(['ID', 'name'])
+            .orderBy('name')
+            .selectAsObject({ 'name': 'description' }),
+          UB.Repository(param.entity)
+            .attrs(['ID', 'taxIndividID'])
+            .where('payElID', '=', me.payElID)
+            .selectAsObject()
+        ]).then(([sources, sourceData]) => {
+          sourceData.forEach(row => {
+            const source = sources.find(o => o.ID === row.taxIndividID)
+            if (source) {
+              source.sourceID = row.ID
+              source.isChecked = true
+            }
+          })
+          me.settingsData[`${param.settingsKey}_${param.nameCode || ''}`] = sources
+        })
+        break
+      }
+      case 'payElDepend': {
+        UB.Repository('hr_payObligatory')
+          .attrs(['ID', 'name'])
+          .where('organizationID', '=', appAC.globalOrganization())
+          .orderBy('name')
+          .selectAsObject({ 'name': 'description' })
+          .then(sources => {
+            UB.Repository(param.entity)
+              .attrs(['ID', 'ownerID'])
+              .where('payElID', '=', me.payElID)
+              .where('ownerID', 'in', sources.length ? sources.map(o => o.ID) : [0])
+              .selectAsObject().then(sourceData => {
+                sourceData.forEach(row => {
+                  const source = sources.find(o => o.ID === row.ownerID)
+                  if (source) {
+                    source.sourceID = row.ID
+                    source.isChecked = true
+                  }
+                })
+                me.settingsData[`${param.settingsKey}_${param.nameCode || ''}`] = sources
+              })
+          })
+        break
+      }
+      case 'idParam': {
+        const parentOrdID = AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization())
+        UB.Repository('hr_listParam')
+          .attrs(['ID', 'shortName'])
+          .where('tableName', '=', 'hr_payEl')
+          .orderBy('shortName')
+          .selectAsObject({ 'shortName': 'description' })
+          .then(sources => {
+            UB.Repository(param.entity)
+              .attrs(['ID', 'listParamID'])
+              .where('valuesID', '=', me.payElID)
+              .where('orgID', '=', Number(parentOrdID || appAC.globalOrganization()))
+              .where('listParamID', 'in', sources.length ? sources.map(o => o.ID) : [0])
+              .selectAsObject().then(sourceData => {
+                sourceData.forEach(row => {
+                  const source = sources.find(o => o.ID === row.listParamID)
+                  if (source) {
+                    source.sourceID = row.ID
+                    source.isChecked = true
+                  }
+                })
+                me.settingsData[`${param.settingsKey}_${param.nameCode || ''}`] = sources
+              })
+          })
+        break
+      }
+    }
+  })
+}
+
+function saveAndClose (me) {
+  const data = {}
+  Object.keys(me.resultData).forEach(settingsKey => {
+    for (let i = me.resultData[settingsKey].length - 1; i >= 0; i--) {
+      if (!(me.resultData[settingsKey][i].isChecked === me.resultData[settingsKey][i].baseChecked) &&
+      !(!me.resultData[settingsKey][i].isChecked && (!me.resultData[settingsKey][i].sourceID || me.resultData[settingsKey][i].sourceID === ''))) {
+        const key = settingsKey.substring(0, settingsKey.indexOf('_'))
+        if (!data[key]) {
+          data[key] = []
+        }
+        data[key].push(me.resultData[settingsKey][i])
+      }
+    }
+  })
+  me.setLoading(true)
+  const parentOrdID = AC.settings.get('hrUseReportSettingsParentOrg', appAC.globalOrganization())
+  $App.connection.run({
+    entity: 'hr_payEl',
+    method: 'updateEntryEl',
+    payElID: me.payElID,
+    orgID: Number(parentOrdID || appAC.globalOrganization()),
+    data: JSON.stringify(data)
+  }).then(() => {
+    const wnd = me.up('window')
+    me.setLoading(false)
+    wnd.close()
+  }, (err) => {
+    me.setLoading(false)
+    throw err
+  })
+}
+
+function changeSettingsRecord (me, record) {
+  me.selectedRecord = record
+  me.entryStore.un('update', me.onEntryStoreUpdate)
+  switch (record.get('settingsKey')) {
+    case 'payElEntrySum':
+    case 'payElEntryTime':
+    case 'payElEntryPlanSum':
+    case 'payElEntryMinSum': {
+      me.entryGrid.hide()
+      me.payElGrid.setTitle(record.get('description'))
+      me.payElStore.loadData(me.settingsData[`${record.get('settingsKey')}_${record.get('nameCode') || ''}`])
+      me.payElGrid.show()
+      me.payElStore.on('update', me.onEntryStoreUpdate, me)
+      break
+    }
+    default: {
+      me.payElGrid.hide()
+      me.entryGrid.setTitle(record.get('description'))
+      me.entryStore.loadData(me.settingsData[`${record.get('settingsKey')}_${record.get('nameCode') || ''}`])
+      me.entryGrid.show()
+      me.entryStore.on('update', me.onEntryStoreUpdate, me)
+    }
+  }
+}
+
+function setGroupCheked (me, groupName) {
+  let isGroupChecked = true
+  const groupRecord = me.payElStore.groups.getByKey(groupName)
+  groupRecord.records.forEach(rec => {
+    if (!rec.get('isChecked')) {
+      isGroupChecked = false
+    }
+  })
+  me.payElGrid.updatingRecords = true
+  groupRecord.records.forEach(function (rec) {
+    rec.beginEdit()
+    rec.set('isGroupChecked', isGroupChecked)
+    rec.endEdit(true)
+  })
+  me.payElGrid.updatingRecords = false
+  me.payElGrid.getView().refreshView()
+}

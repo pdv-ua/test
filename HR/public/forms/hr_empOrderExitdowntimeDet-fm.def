@@ -1,0 +1,253 @@
+/* global AC HR UB $App */
+exports.formDef = {
+  requiredFields: ['orderID', 'orderID.orderState', 'empOrderType', 'organizationID', 'isGroup', 'errorText'],
+  parentConfig: {
+    layout: { type: 'border' }
+  },
+  size: {
+    width: 1100,
+    height: 700
+  },
+  items: [
+    {
+      xtype: 'tabpanel',
+      region: 'center',
+      items: [
+        {
+          title: UB.i18n('Загальне'),
+          ubID: 'tabMain',
+          layout: { type: 'vbox', align: 'stretch' },
+          defaults: { labelWidth: 170 },
+          items: [
+            {
+              attributeName: 'grantOrderID',
+              hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion'],
+              fieldList: ['ID', 'description'],
+              valueField: 'ID',
+              displayField: 'description',
+              hideEntityItemInContext: true,
+              gridFieldList: ['description'],
+              fieldLabel: UB.i18n('Наказ, за яким відправлено у простій, тимчасово призупинено'),
+              whereList: {
+                empOrderType: {
+                  expression: '[empOrderType]',
+                  condition: 'in',
+                  value: ['DOWNTIME', 'TEMPSUSPEND']
+                },
+                orderState: {
+                  expression: '[orderState]',
+                  condition: 'in',
+                  value: ['POSTED', 'PROCESSED']
+                }
+              }
+            },
+            {
+              attributeName: 'dateFrom'
+            },
+            {
+              layout: {
+                type: 'hbox',
+                align: 'middle'
+              },
+              items: [
+                {
+                  attributeName: 'reason',
+                  labelWidth: 170,
+                  flex: 1,
+                  rows: 3
+                },
+                {
+                  xtype: 'button',
+                  cls: 'list-icon',
+                  name: 'reasonButton',
+                  tooltip: UB.i18n('Вибрати'),
+                  width: 35,
+                  height: 35,
+                  margin: '0 13 0 -45',
+                  handler: btn => btn.up('form').getField('reason').selectHandler(btn)
+                }
+              ]
+            },
+            {
+              layout: {
+                type: 'hbox',
+                align: 'middle'
+              },
+              name: 'orderWordPanel',
+              items: [
+                {
+                  attributeName: 'orderWord',
+                  labelWidth: 170,
+                  flex: 1,
+                  rows: 3
+                },
+                {
+                  xtype: 'button',
+                  cls: 'list-icon',
+                  name: 'orderWordButton',
+                  tooltip: UB.i18n('Вибрати'),
+                  width: 35,
+                  height: 35,
+                  margin: '0 13 0 -45',
+                  handler: btn => btn.up('form').getField('orderWord').selectHandler(btn)
+                }
+              ]
+            },
+            {
+              name: 'errorText',
+              xtype: 'label',
+              cls: 'x-form-item-label field-label-red',
+              margin: '10 10 5 15'
+            },
+            {
+              xtype: 'tabpanel',
+              region: 'center',
+              layout: 'fit',
+              flex: 1,
+              items: [
+                {
+                  title: UB.i18n('Працівники'),
+                  name: 'empOrderExitdowntimeListDet',
+                  xtype: 'ubdetailgrid',
+                  paraGrid: true,
+                  autoScroll: true,
+                  rowEditing: true,
+                  notWriteChanges: true,
+                  sortableColumns: false,
+                  hideActions: ['showPreview', 'itemLink', 'commandLink', 'addNewByCurrent', 'newVersion', 'audit',
+                    'history', 'showDetail'],
+                  flex: 1,
+                  entityConfig: {
+                    entity: 'hr_empOrderExitdowntimeListDet',
+                    method: 'select',
+                    fieldList: [
+                      {
+                        name: 'employeePositionID.description',
+                        description: UB.i18n('Працівник'),
+                        config: { width: 500 },
+                        editor: {
+                          fieldList: ['ID', 'description'],
+                          gridFieldList: ['description'],
+                          hideActions: ['addNew', 'addNewByCurrent', 'edit', 'del', 'newVersion']
+                        }
+                      },
+                      {
+                        name: 'dateStart',
+                        description: UB.i18n('Дата початку простою'),
+                        config: { width: 250 },
+                        editor: { readOnly: true }
+                      },
+                      {
+                        name: 'dateFrom',
+                        description: UB.i18n('Дата закінчення за наказом'),
+                        config: { width: 250 },
+                        editor: { readOnly: true }
+                      },
+                      { name: 'itemIdx', visibility: false },
+                      { name: 'empOrderType', visibility: false },
+                      { name: 'paraID', visibility: false },
+                      { name: 'orderID', visibility: false }
+                    ]
+                  },
+                  masterFields: ['ID', 'orderID'],
+                  detailFields: ['paraID', 'orderID'],
+                  onBeforeEdit: async function (rowEditor, context) {
+                    const editor = rowEditor.editor
+                    const me = editor.up('form')
+                    const reco = context.record
+                    const employeePositionCtrl = editor.query(`[name=employeePositionID.description]`)[0]
+                    let toSetDefaultValues = !!context.record.phantom
+
+                    if (toSetDefaultValues) {
+                      reco.set('dateFrom', me.attr.dateFrom.getValue())
+                      reco.set('empOrderType', me.record.get('empOrderType'))
+                      reco.set('orderID', me.record.get('orderID'))
+                      reco.set('paraID', me.instanceID)
+                    }
+                    me.filterEmployeePosition(employeePositionCtrl)
+                    employeePositionCtrl.on('change', ctrl => {
+                      const emp = me.employeeList.find(o => o.employeePositionID === ctrl.getFieldValue('ID'))
+                      if (emp) {
+                        editor.form.findField('dateStart').setValue(AC.dateService.shiftDate(emp.dateStart))
+                      }
+                    })
+                  },
+                  onValidateEdit: function (rowEditor, context) {
+                    const editor = rowEditor.editor
+                    const me = editor.up('form')
+                    const reco = context.record
+                    const empCtrl = editor.form.findField('employeePositionID.description')
+                    const employeePositionID = empCtrl.getFieldValue('ID')
+                    const emp = me.employeeList.find(o => o.employeePositionID === employeePositionID)
+                    if (emp) {
+                      if (emp.dateStart && AC.dateService.shiftDate(emp.dateStart) > reco.get('dateFrom')) {
+                        const msg = UB.i18n(`Дата виходу з простою не може бути раніше ніж {0}`, AC.dateService.formatDate(emp.dateStart))
+                        AC.viewUtils.showToast('Помилка', msg)
+                        empCtrl.markInvalid(msg)
+                        return false
+                      }
+                      if (emp.dateEnd && AC.dateService.shiftDate(emp.dateEnd) < reco.get('dateFrom')) {
+                        const msg = UB.i18n(`Дата виходу з простою повинна не може бути пізніше ніж {0}`, AC.dateService.formatDate(emp.dateEnd))
+                        AC.viewUtils.showToast('Помилка', msg)
+                        empCtrl.markInvalid(msg)
+                        return false
+                      }
+                    }
+                    const item = context.grid.getStore().data.items.find(o => o.get('ID') !== reco.get('ID') && o.get('employeePositionID') === employeePositionID)
+                    if (item) {
+                      AC.viewUtils.showToast('Помилка', UB.i18n(`Працівника {0} вже додано до наказу!`, item.get('employeePositionID.description')))
+                      empCtrl.markInvalid(UB.i18n('Вже додано до наказу!'))
+                      return false
+                    }
+                  },
+                  optimizeColumnWidth: function () {
+                    /* do nothing for manual column width tunning */
+                  },
+                  customActions: [
+                    {
+                      actionId: 'fillPersons',
+                      text: UB.i18n('Вибрати працівників'),
+                      iconCls: 'fas fa-angle-double-down',
+                      cls: 'fill-action',
+                      handler: function (btn) {
+                        const me = btn.up('form')
+                        $App.dialogYesNo('Попередження', UB.i18n('Список працівників буде очищено.Продовжити?')).then(result => {
+                          if (result) {
+                            me.loadEmployees()
+                          }
+                        })
+                      }
+                    },
+                    {
+                      actionId: 'clearPersons',
+                      text: UB.i18n('Очистити працівників'),
+                      iconCls: 'fas fa-eraser',
+                      cls: 'fill-action',
+                      handler: (btn) => {
+                        const me = btn.up('form')
+                        $App.dialogYesNo('Попередження', UB.i18n('Список працівників буде очищено.Продовжити?')).then(result => {
+                          if (result) {
+                            me.clearEmployees()
+                          }
+                        })
+                      }
+                    }
+                  ],
+                  cmpInitConfig: {
+                    customInit: function () {
+                      const grid = this
+                      grid.on('changeData', (grd) => {
+                        const me = grd.up('form')
+                        HR.orderManager.setIsDirty(me, true)
+                      })
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

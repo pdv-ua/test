@@ -1,0 +1,97 @@
+/* global UB appAC HR */
+exports.formDef = {
+  size: {
+    width: 1100,
+    height: 700
+  },
+  requiredFields: ['employeeID', 'typeSuccess', 'name', 'yearPublication', 'authors'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'vbox', align: 'stretch' },
+    defaults: { labelWidth: 170 }
+  },
+  items: [
+
+    { attributeName: 'employeeID', hidden: true },
+    {
+      layout: { type: 'hbox' },
+      defaults: { flex: 1, labelWidth: 170 },
+      items: [
+        { attributeName: 'typeSuccess' },
+        { attributeName: 'dictPublicationKindID' }
+      ]
+    },
+    { attributeName: 'name', vtype: 'charset3', allowBlank: false },
+    {
+      layout: { type: 'hbox' },
+      defaults: { flex: 1, labelWidth: 170 },
+      items: [
+        { attributeName: 'yearPublication', description: UB.i18n('Рік публікації'), width: 320, vtype: 'numberValidator', minLength: 4, maxLength: 4 },
+        { attributeName: 'published', vtype: 'charset3' }
+      ]
+    },
+    { attributeName: 'authors', vtype: 'charset3' },
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Документ'),
+      margin: '0 17 5 10',
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 150 },
+      items: [
+        { attributeName: 'dictDocKindID', description: UB.i18n('Вид документа'), recordField: 'dictDocKindID' },
+        {
+          attributeName: 'employeeDocID',
+          fieldList: ['ID', 'dictDocKindID', 'docSeries', 'docNumber', 'docIssued', 'docIssuedDate', 'employeeID', 'description'],
+          gridFieldList: ['description', 'docIssued'],
+          displayField: 'description'
+        },
+        {
+          layout: { type: 'hbox' },
+          items: [
+            { attributeName: 'docNumber', description: UB.i18n('Номер документа'), labelWidth: 150, width: 320, recordField: 'docNumber', vtype: 'charset3' },
+            { attributeName: 'docSeries', description: UB.i18n('Серія'), labelWidth: 60, width: 180, recordField: 'docSeries', vtype: 'charset3' },
+            { attributeName: 'dateIssue', description: UB.i18n('Дата'), labelWidth: 100, width: 220, recordField: 'dateIssue' }
+          ]
+        },
+        { attributeName: 'docIssuer', description: UB.i18n('Ким виданий'), recordField: 'docIssuer', margin: '5 15 5 15' }
+      ]
+    },
+    {
+      xtype: 'fieldset',
+      title: UB.i18n('Документ підстава'),
+      margin: '0 17 5 10',
+      layout: { type: 'vbox', align: 'stretch' },
+      defaults: { labelWidth: 150 },
+      items: [
+        /*{
+          attributeName: 'employeeDocID',
+          fieldList: ['ID', 'dictDocKindID', 'docSeries', 'docNumber', 'docIssued', 'docIssuedDate', 'employeeID', 'description'],
+          gridFieldList: ['description', 'docIssued'],
+          displayField: 'description'
+        },*/
+        { attributeName: 'dictDocBasisKindID', description: UB.i18n('Вид документа'), recordField: 'dictDocBasisKindID' },
+        {
+          layout: { type: 'hbox' },
+          margin: '5 0 5 0',
+          items: [
+            { attributeName: 'docBasisNumber', description: UB.i18n('Номер документа'), labelWidth: 150, width: 320, recordField: 'docBasisNumber' },
+            { attributeName: 'docBasisSeries', description: UB.i18n('Серія'), labelWidth: 60, width: 180, recordField: 'docBasisSeries' },
+            { attributeName: 'docBasisDate', description: UB.i18n('Дата'), labelWidth: 100, width: 220, recordField: 'docBasisDate' }
+          ]
+        }/*,
+        { attributeName: 'docIssuer', description: UB.i18n('Ким виданий'), recordField: 'docIssued', margin: '5 15 5 15' }*/
+      ]
+    },
+    { attributeName: 'publishingHouse' },
+    { attributeName: 'publicationName', vtype: 'charset3' },
+    {
+      layout: { type: 'hbox' },
+      defaults: { flex: 1, labelWidth: 170 },
+      items: [
+        { attributeName: 'pagesNumber', vtype: 'numberValidator' },
+        { attributeName: 'additional', vtype: 'charset3' }
+      ]
+    }
+    
+  ]
+}

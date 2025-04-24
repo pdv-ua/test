@@ -1,0 +1,138 @@
+/* global Ext AC appAC UB */
+exports.formDef = 'HR.dictVacationPlanDayList'
+
+Ext.define('HR.dictVacationPlanDayList', {
+  extend: 'Ext.panel.Panel',
+  alias: 'widget.dictvacationplandaylist',
+  layout: { type: 'border' },
+  width: 1100,
+  height: 600,
+  initComponent: function () {
+    let me = this
+    me.items = [
+      {
+        xtype: 'panel',
+        name: 'paramPanel',
+        region: 'north',
+        split: true,
+        layout: 'accordion',
+        layoutConfig: {
+          collapsible: true,
+          collapsed: false
+        },
+        items: [
+          {
+            xtype: 'panel',
+            hidden: true
+          },
+          {
+            title: UB.i18n('Параметри'),
+            layout: { type: 'hbox' },
+            collapsed: false,
+            items: [
+              {
+                xtype: 'checkboxfield',
+                name: 'checkOnDate',
+                fieldLabel: UB.i18n(`Показувати тільки ті, що діють на дату`),
+                labelWidth: 270,
+                checked: true,
+                listeners: {
+                  change: function (ctrl) {
+                    const me = ctrl.up('[name=paramPanel]').ownerCt
+                    me.enableControls(me)
+                    me.refreshData(me)
+                  }
+                }
+              },
+              {
+                xtype: 'ubdatefield',
+                name: 'onDate',
+                fieldLabel: '',
+                allowBlank: false,
+                listeners: {
+                  change: function (ctrl) {
+                    const me = ctrl.up('[name=paramPanel]').ownerCt
+                    me.refreshData(me)
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        xtype: 'ubdetailgrid',
+        name: 'vacationPlanDayList',
+        region: 'center',
+        autoScroll: true,
+        flex: 1,
+        hideActions: ['newVersion', 'history', 'showPreview', 'itemLink', 'commandLink', 'showDetail'],
+        stateful: true,
+        stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_dictVacationPlanDay_vacationPlanDayList'),
+        entityConfig: {
+          entity: 'hr_dictVacationPlanDay',
+          method: 'select',
+          fieldList: [
+            { name: 'dictVacationKindID.name', description: UB.i18n('Вид відпустки') },
+            { name: 'positionType', description: UB.i18n('Тип посади') },
+            { name: 'dayCount', config: { align: 'center', width: 150 } },
+            { name: 'dateFrom', format: 'd.m.Y', config: { align: 'center', width: 150 } },
+            { name: 'dateToEmpty', format: 'd.m.Y', config: { align: 'center', width: 150 } },
+            { name: 'dictStaffCatID.name', description: UB.i18n('Категорія персоналу'), config: { width: 150 } },
+            { name: 'dictStaffSubCatID.name', description: UB.i18n('Підкатегорія персоналу'), config: { width: 150 } },
+            { name: 'dictGovernmTypeID.name', description: UB.i18n('Тип організації'), config: { width: 150 } }
+          ],
+          whereList: {
+            dateFrom: {
+              expression: '[dateFrom]',
+              condition: 'lessEqual',
+              value: AC.dateService.lastDayOfYear(appAC.globalApplicationDate())
+            },
+            dateTo: {
+              expression: '[dateTo]',
+              condition: 'moreEqual',
+              value: AC.dateService.firstDayOfYear(appAC.globalApplicationDate())
+            }
+          }
+        }
+      }
+    ]
+
+    me.refreshData = (me) => {
+      let whereArray = []
+      let checkOnDate = me.attr.checkOnDate.getValue()
+      if (checkOnDate) {
+        let onDate = me.attr.onDate.getValue()
+        let onDateIsValid = AC.dateService.isValid(onDate)
+        if (onDate && !onDateIsValid) {
+          return
+        } else if (onDateIsValid) {
+          onDate = AC.dateService.shiftDate(onDate)
+          whereArray.push(['dateFrom', 'lessEqual', onDate])
+          whereArray.push(['dateTo', 'moreEqual', onDate])
+        }
+      }
+      AC.viewUtils.setWhereListProperty(me.attr.grid, whereArray, undefined, ['clearStore', 'clearWhereList'])
+    }
+
+    me.enableControls = (me) => {
+      let checkOnDateCtrl = me.attr.checkOnDate
+      let onDateCtrl = me.attr.onDate
+      let onDateEnable = checkOnDateCtrl.getValue()
+      onDateEnable ? onDateCtrl.setValue(appAC.globalApplicationDate()) : onDateCtrl.setValue()
+      onDateCtrl.setAllowBlank(!onDateEnable)
+      onDateCtrl.setDisabled(!onDateEnable)
+    }
+
+    me.on('afterrender', () => {
+      me.attr = {
+        grid: me.down('[name=vacationPlanDayList]'),
+        checkOnDate: me.down('[name=checkOnDate]'),
+        onDate: me.down('[name=onDate]')
+      }
+      me.attr.onDate.setValue(appAC.globalApplicationDate())
+    }, me)
+
+    me.callParent(arguments)
+  }
+})

@@ -1,0 +1,229 @@
+/* global UB appAC */
+exports.formDef = {
+  requiredFields: ['dictWorkGroupID.name', 'dictMeasureID.symbolUkr', 'dateFrom', 'dateTo'],
+  parentConfig: {
+    postOnlySimpleAttributes: true,
+    layout: { type: 'border' },
+    defaults: {
+      layout: 'fit',
+      labelWidth: 170
+    }
+  },
+  size: {
+    width: 1200,
+    height: 600
+  },
+  position: {
+    x: 100,
+    y: 100
+  },
+  items: [
+    {
+      region: 'north',
+      autoScroll: true,
+      layout: { type: 'hbox' },
+      items: [
+        {
+          layout: { type: 'hbox' },
+          defaults: { labelWidth: 98 },
+          flex: 1,
+          items: [
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 120 },
+              flex: 2,
+              items: [
+                {
+                  layout: { type: 'hbox' },
+                  defaults: { labelWidth: 120 },
+                  flex: 1,
+                  items: [
+                    {
+                      attributeName: 'code',
+                      allowBlank: false,
+                      selectOnFocus: true,
+                      width: 280
+                    },
+                    {
+                      attributeName: 'name',
+                      selectOnFocus: true,
+                      flex: 1
+                    }
+                  ]
+                },
+                {
+                  attributeName: 'dictWorkGroupID',
+                  fieldLabel: UB.i18n('Група'),
+                  fieldList: ['ID', 'name'],
+                  displayField: 'name',
+                  orderList: {
+                    orderBy: {
+                      expression: 'name'
+                    }
+                  },
+                  selectOnFocus: true
+                },
+                {
+                  attributeName: 'payment',
+                  name: 'payment',
+                  fieldLabel: UB.i18n('Форма оплати'),
+                  selectOnFocus: true
+                },
+                {
+                  layout: { type: 'hbox' },
+                  defaults: { labelWidth: 120 },
+                  flex: 1,
+                  items: [
+                    {
+                      attributeName: 'norm',
+                      selectOnFocus: true,
+                      width: 280
+                    },
+                    {
+                      attributeName: 'dictMeasureID',
+                      fieldLabel: UB.i18n('Одиниця виміру'),
+                      fieldList: ['ID', 'symbolUkr'],
+                      displayField: 'symbolUkr',
+                      orderList: {
+                        orderBy: {
+                          expression: 'symbolUkr'
+                        }
+                      },
+                      selectOnFocus: true,
+                      width: 280
+                    }
+                  ]
+                },
+                {
+                  layout: { type: 'hbox' },
+                  name: 'ratePanel',
+                  defaults: { labelWidth: 120 },
+                  flex: 1,
+                  hidden: true,
+                  items: [
+                    {
+                      attributeName: 'rate',
+                      fieldLabel: UB.i18n('Тариф'),
+                      selectOnFocus: true,
+                      width: 280
+                    },
+                    {
+                      attributeName: 'isCalcProportion',
+                      name: 'isCalcProportion',
+                      labelWidth: 240,
+                      selectOnFocus: true
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              layout: { type: 'vbox', align: 'stretch' },
+              defaults: { labelWidth: 80 },
+              flex: 1,
+              items: [
+                {
+                  attributeName: 'dateFromEmpty',
+                  fieldLabel: UB.i18n('Діє з'),
+                  labelWidth: 100,
+                  width: 280,
+                  selectOnFocus: true
+                },
+                {
+                  attributeName: 'dateToEmpty',
+                  fieldLabel: UB.i18n('Діє по'),
+                  labelWidth: 100,
+                  width: 280,
+                  selectOnFocus: true
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      xtype: 'panel',
+      region: 'center',
+      margin: '10 0 0 0',
+      items: [
+        {
+          xtype: 'acGrid',
+          hidden: true,
+          name: 'gridDictWorkOperationDt',
+          stateId: UB.core.UBLocalStorageManager.getKeyUI('hr_dictWorkOperationDt'),
+          // title: UB.i18n('Тарифікація'),
+          region: 'center',
+          flex: 1,
+          autoScroll: true,
+          cellEditing: true,
+          notWriteChanges: true,
+          storeType: 'local',
+          showToolBar: true,
+          disablePaging: true,
+          loadMaskMessage: UB.i18n('Завантаження даних...'),
+          // lineNumberColumn: 'lineNum',
+          onBeforeEdit: function (ctrl, context) {
+            const me = context.grid.up('form')
+            me.setIsDirty(true)
+          },
+          edit: function (control, context) {
+            if (context.record.phantom && context.record.dirtySave !== null) {
+              context.record.dirtySave = null
+            }
+            return true
+          },
+          fields: [
+            { name: 'ID' },
+            { name: 'mi_modifyDate' },
+            // {
+            //   name: 'lineNum',
+            //   width: 150,
+            //   columnConfig: {
+            //     text: UB.i18n('Номер'),
+            //     sortBy: 'Number',
+            //     editor: {
+            //       xtype: 'numberfield',
+            //       allowBlank: true
+            //     }
+            //   }
+            // },
+            {
+              name: 'quantity',
+              columnConfig: {
+                text: UB.i18n('Кількість'),
+                width: 120,
+                floatFormat: 4,
+                align: 'right',
+                sortBy: 'Number',
+                editor: {
+                  dataType: 'Float',
+                  decimalPosition: 4,
+                  minValue: 0,
+                  sortBy: 'Number',
+                  selectOnFocus: true
+                }
+              }
+            },
+            {
+              name: 'rate',
+              columnConfig: {
+                text: UB.i18n('Розцінка'),
+                width: 160,
+                floatFormat: 2,
+                align: 'right',
+                sortBy: 'Number',
+                editor: {
+                  dataType: 'Currency',
+                  minValue: 0,
+                  sortBy: 'Number',
+                  selectOnFocus: true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
