@@ -2383,7 +2383,7 @@ function autoCalculate ({ cont = {}, orgID, periodID, payCalcID, employeeNumbers
         cont.emp[cont.employeeNumberID].accrual.forEach(accr => {
           const payEl = cont.payEl[accr.payElID]
           if ((accr.flagsRec & 2) && !(accr.flagsRec & 1 << 20) && accr.periodCalcID === periodSalary.ID && payEl.isRecalculate &&
-            ((payEl.method.code === '47' && (payEl.calcSumType === 'FACT')) || payEl.method.code === '12') &&
+            ((payEl.method.code === '47') || payEl.method.code === '12') &&
             !(accr.flagsRec & 1 << 10) && !(accr.flagsRec & 1 << 12) && !(accr.flagsRec & 1 << 2) && !(accr.flagsRec & 1 << 9) && !(accr.flagsRec & 1 << 16)) {
             let paySum = accr.paySum
             let baseSum = accr.baseSum
@@ -2493,13 +2493,8 @@ function autoCalculate ({ cont = {}, orgID, periodID, payCalcID, employeeNumbers
                         dateFrom: perDateFrom,
                         dateTo: perDateTo
                          })
-                      if (accr.baseSum === 0) {
-                        params.baseSum = accrualService.round(accr.paySumAccrual / (payTime.fullTime ? (accr.days / payTime.days) : (accr.hours / payTime.hours)))
-                        sourceAccr.accrualDt = accr.accrualDt
-                      } else {
                         params.baseSum = fact.factSum
                         sourceAccr.accrualDt = fact.accrualDt
-                      }
                     }
                   }
                   break
@@ -2528,6 +2523,7 @@ function autoCalculate ({ cont = {}, orgID, periodID, payCalcID, employeeNumbers
                       const payTime = algorithmService.getTimeByTimeSheet({ cont, payElID: params.payElID, timeSheets: periodTimeSheets, dateFrom: periodDateFrom, dateTo: periodDateTo })
                       params.days += payTime.days
                       params.hours = accrualService.round(params.hours + payTime.hours, 4)
+
                       if (payEl.calcSumType === 'FACT') {
                         if (deptIDs) {
                           period.baseSum = 0
@@ -2552,8 +2548,11 @@ function autoCalculate ({ cont = {}, orgID, periodID, payCalcID, employeeNumbers
                           if (payEl.isTimeSheet && (period.dateFrom.getTime() !== perDateFrom.getTime() || period.dateFrom.getTime() !== perDateTo.getTime())) {
                             if ((payTime.fullTime ? payTime.planDays : payTime.planHours) !== 0) {
                               if (accr.baseSum === 0) {
+                                // Якщо відпрацьовані дні не вказані(в нарахуваннях 0) беремо дні з табеля
+                                const factDays = !accr.days || accr.days === 0 ? payTime.days : accr.days
+                                const factHours = !accr.hours || accr.hours === 0 ? payTime.hours : accr.hours
                                 // Розрахунок базової суми, якщо вона не заповнена в документах премії, щоб зрозуміти чи потрібно перераховувати
-                                period.baseSum = accrualService.round(accr.paySumAccrual / (payTime.fullTime ? (accr.days / payTime.days) : (accr.hours / payTime.hours)))
+                                period.baseSum = accrualService.round(accr.paySumAccrual / (payTime.fullTime ? (factDays / payTime.days) : (factHours / payTime.hours)))
                               } else {
                                 period.baseSum = accrualService.round(accr.baseSum / (payTime.fullTime ? (payTime.planDays / payTime.days) : (payTime.planHours / payTime.hours)))
                               }
@@ -2572,6 +2571,20 @@ function autoCalculate ({ cont = {}, orgID, periodID, payCalcID, employeeNumbers
                             accrualDt = accrualDt.concat(fact.accrualDt)
                           }
                         }
+                      } else {
+                        if (payEl.isTimeSheet && (period.dateFrom.getTime() !== perDateFrom.getTime() || period.dateFrom.getTime() !== perDateTo.getTime())) {
+                          if ((payTime.fullTime ? payTime.planDays : payTime.planHours) !== 0) {
+                            if (accr.baseSum === 0) {
+                              // Якщо відпрацьовані дні не вказані(в нарахуваннях 0) беремо дні з табеля
+                              const factDays = !accr.days || accr.days === 0 ? payTime.days : accr.days
+                              const factHours = !accr.hours || accr.hours === 0 ? payTime.hours : accr.hours
+                              // Розрахунок базової суми, якщо вона не заповнена в документах премії, щоб зрозуміти чи потрібно перераховувати
+                              period.baseSum = accrualService.round(accr.paySumAccrual / (payTime.fullTime ? (factDays / payTime.days) : (factHours / payTime.hours)))
+                            } else {
+                              period.baseSum = accrualService.round(accr.baseSum / (payTime.fullTime ? (payTime.planDays / payTime.days) : (payTime.planHours / payTime.hours)))
+                            }
+                          }
+                        }    
                       }
                     })
                     let calcSum = 0
@@ -2589,7 +2602,6 @@ function autoCalculate ({ cont = {}, orgID, periodID, payCalcID, employeeNumbers
                 }
               }
               params.mask = 0
-              
               const docAccrual = algorithmMonthPremium.run({
                 cont,
                 periodCalc,
@@ -2598,6 +2610,7 @@ function autoCalculate ({ cont = {}, orgID, periodID, payCalcID, employeeNumbers
                 sourceAccr,
                 source
               })
+
               if (docAccrual.paySum !== paySum) {
                 docAccrual.linkToParentID = accr.ID
                 docAccrual.insert = true
@@ -5832,11 +5845,11 @@ function calculateAccrual({ orgID, payElParams, periodCalcID, periodSalaryID, or
                 }
                 
                 period.baseSum = algorithmService.getPlanSum(onDate, cont, permAccrual, salaryAccrual || {}) * mtCount
-                if ((!['47', '65'].includes(payEl.method.code) || payEl.isTimeSheet) && (period.dateFrom.getTime() !== perDateFrom.getTime() || period.dateFrom.getTime() !== perDateTo.getTime())) {
-                  if ((payTime.fullTime ? payTime.planDays : payTime.planHours) !== 0) {
-                    period.baseSum = accrualService.round(period.baseSum / (payTime.fullTime ? (payTime.planDays / payTime.days) : (payTime.planHours / payTime.hours)))
-                  }
-                }
+                // if ((!['47', '65'].includes(payEl.method.code) || payEl.isTimeSheet) && (period.dateFrom.getTime() !== perDateFrom.getTime() || period.dateFrom.getTime() !== perDateTo.getTime())) {
+                //   if ((payTime.fullTime ? payTime.planDays : payTime.planHours) !== 0) {
+                //     period.baseSum = accrualService.round(period.baseSum / (payTime.fullTime ? (payTime.planDays / payTime.days) : (payTime.planHours / payTime.hours)))
+                //   }
+                // }
                 // if (payEl.method.code === '47' && payEl.isTimeSheet) {
                 //   period.baseSum = accrualService.round(period.baseSum / ((((!params.flagsRec || params.flagsRec & 1 << 5) ? payTime.planHours : payTime.planDays) !== 0)
                 //     ? (((!params.flagsRec || params.flagsRec & 1 << 5) ? payTime.planHours : payTime.planDays) /

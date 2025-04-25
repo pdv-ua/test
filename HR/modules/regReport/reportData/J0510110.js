@@ -21,6 +21,7 @@ function generateData(params = {}) {
   const tabsData = []
   const data = structureReport()
   prepareStructureReport(data)
+
   const { DECLARBODY, DECLARHEAD, PARAMS } = data.DECLAR
   setDataProps({ data: DECLARBODY, source: params })
   setDataProps({ data: DECLARHEAD, source: params })
@@ -44,6 +45,7 @@ function generateData(params = {}) {
   DECLARBODY.HZU = params.FORM_TYPE === 'HZU' ? '1' : '0'
   DECLARBODY.HZD = params.FORM_TYPE === 'HZD' ? '1' : '0'
   DECLARBODY.HZKV = parseInt(params.PERIOD_MONTH) / 3
+  DECLARBODY.PERIOD_MONTH = parseInt(params.PERIOD_MONTH)
   DECLARBODY.HZY = params.PERIOD_YEAR
   DECLARBODY.limitedAccess = true
   if (params.FORM_TYPE === 'HZD') {
@@ -75,7 +77,8 @@ function generateData(params = {}) {
     prepareDataSpecific({ data: periodData, params, periodCalc: period })
     tabsData.push({ data: periodData, errorMessages })
   })
-  return tabsData
+
+  return tabsData[0]
 }
 
 const allBodyAttrNames = ['HZD', 'HZU', 'HZN', 'HZ', 'HZY', 'HZKV', 'HNM', 'HNUM1',
@@ -92,7 +95,7 @@ function prepareStructureReport(data) {
   const cellNames = allBodyAttrNames
   data.DECLAR['$'] = {
     'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
-    'xsi:noNamespaceSchemaLocation': 'J0510109.xsd'
+    'xsi:noNamespaceSchemaLocation': 'J0510110.xsd'
   }
   const excludeCell = Object.keys(data.DECLAR.DECLARBODY).filter(cName => cellNames.indexOf(cName) < 0)
   excludeCell.forEach(cName => {
@@ -104,7 +107,7 @@ function prepareStructureReport(data) {
 }
 
 function prepareQueryParams({ data, params }) {
-  params.dateFrom = new Date(Date.UTC(data.DECLAR.DECLARHEAD.PERIOD_YEAR, data.DECLAR.DECLARHEAD.PERIOD_MONTH - 3, 1, 0, 0, 0, 0))
+  params.dateFrom = new Date(Date.UTC(data.DECLAR.DECLARHEAD.PERIOD_YEAR, data.DECLAR.DECLARHEAD.PERIOD_MONTH - 1, 1, 0, 0, 0, 0))
   params.dateTo = dateService.lastDayOfMonth(new Date(Date.UTC(data.DECLAR.DECLARHEAD.PERIOD_YEAR, data.DECLAR.DECLARHEAD.PERIOD_MONTH - 1, 1, 0, 0, 0, 0)))
 }
 
@@ -891,7 +894,7 @@ function prepareDataSpecific({ data, params, periodCalc }) {
         row.payCode = 3
       }
       const existRowWithWorkPlace1 = esvDatasAggs.filter((o, idxf) => idxf !== idx && o.employeeID === row.employeeID &&
-        row.periodSalary.getTime() === o.periodSalary.getTime() && row.workPlace !== '1' && o.workPlace === '1'
+      row.periodSalary.getTime() === o.periodSalary.getTime() && row.workPlace !== '1' && o.workPlace === '1' 
       )
       const isShowDaysWork = row.workPlace === '1' || !existRowWithWorkPlace1
       updateCellInArray(data, 'limitedRow', rownum, !!row.limitedAccess)

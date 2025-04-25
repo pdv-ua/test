@@ -922,7 +922,10 @@ me.getMemOrder5Data = function (ctx) {
     WHERE po.orgID${entityBaseService.getInExpression('orgIDs')}
         AND po.periodSalaryID${entityBaseService.getInExpression('periodIDs')} 
         ${dictFundSourceSQL || ''} 
-        ${dictProgClassSQL || ''}                 
+        ${dictProgClassSQL || ''}
+        AND (SELECT glacc.code 
+            FROM gl_account glacc 
+            WHERE pd.accountKtID = glacc.ID AND glacc.mi_deleteDate >= '9999-12-31' ${sqlDialect.limit}) <> 'РФР1'                  
     GROUP BY po.entryOperationID, pd.accountDtID, pd.accountKtID, pd.dictFundSourceID, pd.dictProgClassID
   `, {
     orgIDs,

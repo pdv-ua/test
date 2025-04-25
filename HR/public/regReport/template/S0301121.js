@@ -676,7 +676,7 @@ module.exports = `
             <td align="center" class="td_unln">{{#textInput}}DECLAR.DECLARBODY.RUK####{"style": "font-weight: bold;"}{{{}}}{{/textInput}}</td>
         </tr>
         <tr>
-            <td style="border-top: 1px solid black; padding-top: 0.2em;" align="left">Місце підпису керівника (власника) або особи,<br clear="none">відповідальної за достовірність наданої інформації</td>
+            <td style="border-top: 1px solid black; padding-top: 0.2em;" align="left">Місце підпису керівника (власника) та/або особи,<br clear="none">відповідальної за достовірність наданої інформації</td>
             <td>&nbsp;</td>
             <td style="border-top: 1px solid black; padding-top: 0.2em;" align="center">(Власне ім’я ПРІЗВИЩЕ)</td>
         </tr>

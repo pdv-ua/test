@@ -12841,6 +12841,98 @@ module.exports = [
       {
         desktopCode: 'arm_accCfg',
         parentCode: 'hr_regReportSalaryCfg',
+        code: 'hr_regReportSalaryPDFOESV2025',
+        isFolder: 0,
+        caption: `Об'єднаний звіт з ПДФО та ЄСВ 2025`,
+        caption_uk: 'Об\'єднаний звіт з ПДФО та ЄСВ 2025',
+        caption_ru: 'Объединенный отчет по НДФЛ и ЕСВ 2025',
+        caption_az: 'Fiziki şəxslərin gəlir vergisi və 2025-ə dair birdəfəlik sosial ödəmələr üzrə ümumiləşdirilmiş hesabat',
+        cmdCode: {
+          cmdType: 'showList',
+          cmdData: {
+            params: [{
+              entity: 'ac_regReport',
+              method: 'select',
+              fieldList: [
+                { name: 'repYear', description: `{{UB.i18n('Рік')}}` },
+                { name: 'dictRepTypeID.name', description: `{{UB.i18n('Період')}}` },
+                { name: 'codeName' },
+                { name: 'mi_modifyDate', description: `{{UB.i18n('Дата')}}` },
+                { name: 'dictRepID.name', description: `{{UB.i18n('Звіт')}}` },
+                { name: 'comment', description: `{{UB.i18n('Додатково')}}` },
+                { name: 'dictRepVersionID.description', description: `{{UB.i18n('Версія звіта')}}`, visibility: false }
+              ],
+              whereList: {
+                code: {
+                  expression: '[dictRepID.code]',
+                  condition: '=',
+                  value: 'J05'
+                },
+                subCode: {
+                  expression: '[dictRepID.subCode]',
+                  condition: '=',
+                  value: '001'
+                },
+                codeName: {
+                  expression: '[dictRepID.codeName]',
+                  condition: '=',
+                  value: 'ПДФО_ЄСВ_2025'
+                }
+              },
+              orderList: {
+                repYear: {
+                  expression: '[repYear]', order: 'desc'
+                },
+                period: {
+                  expression: '[dictRepTypeID.code]', order: 'asc'
+                },
+                mi_modifyDate: {
+                  expression: '[mi_modifyDate]', order: 'desc'
+                }
+              }
+            }]
+          },
+          cmpInitConfig: {
+            disableAutoLoadStore: true,
+            hideActions: ['showDetail', 'addNew', 'addNewByCurrent'],
+            customActions: [
+              {
+                text: `{{UB.i18n('Створити звіт')}}`,
+                iconCls: 'u-icon-add',
+                cls: 'add-new-action',
+                handler: function () {
+                  // $App.runShortcutCommand('hr_regReportSalaryRun', true)
+                  appHR.regReportSalaryForm({
+                    repGroup: 'taxation',
+                    repCode: 'J05',
+                    subCode: '001',
+                    codeName: 'ПДФО_ЄСВ_2025',
+                    disableRepCode: true,
+                    disableSubCode: true,
+                    disableOrg: true,
+                    autoSetPeriod: true
+                  })
+                }
+              }
+            ],
+            onDeterminateForm: function (grid) {
+              return {
+                cmpInitConfig: { model: 'HR' }
+              }
+            },
+            afterInit: function () {
+              AC.gridUtils.setGlobalOrganization(this, 'organizationID')
+            }
+          }
+        },
+        inWindow: 0,
+        isCollapsed: 0,
+        iconCls: 'fa fa-file-text-o',
+        displayOrder: 4002
+      },
+      {
+        desktopCode: 'arm_accCfg',
+        parentCode: 'hr_regReportSalaryCfg',
         code: 'hr_regReportSalary1DF',
         isFolder: 0,
         caption: 'Довідка "Форма 1-ДФ"',

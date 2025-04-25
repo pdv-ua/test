@@ -17,7 +17,7 @@ module.exports = {
   xmlExport
 }
 
-function generateData (params = {}) {
+function generateData(params = {}) {
   const tabsData = []
   const errorMessages = []
   const data = structureReport()
@@ -48,6 +48,7 @@ function generateData (params = {}) {
 
   DECLARBODY.HZY = params.PERIOD_YEAR
   DECLARBODY.HZKV = parseInt(params.PERIOD_MONTH) / 3
+  DECLARBODY.PERIOD_MONTH = parseInt(params.PERIOD_MONTH)
   DECLARHEAD.D_FILL = moment().format('DDMMYYYY')
   DECLARBODY.HFILL = moment(params.HFILL).format('DDMMYYYY')
   if (params.FORM_TYPE === 'HZD') {
@@ -82,7 +83,7 @@ function generateData (params = {}) {
     prepareDataSpecific({ data: periodData, params, periodCalc: period, cont })
     tabsData.push({ data: periodData, errorMessages })
   })
-  return tabsData
+  return tabsData[0]
 }
 
 const allBodyAttrNames = [
@@ -94,11 +95,11 @@ const allBodyAttrNames = [
   'HFILL', 'HKBOS', 'HBOS', 'HKBUH', 'HBUH'
 ]
 
-function prepareStructureReport (data) {
+function prepareStructureReport(data) {
   const cellNames = allBodyAttrNames
   data.DECLAR['$'] = {
     'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
-    'xsi:noNamespaceSchemaLocation': 'J0510609.xsd'
+    'xsi:noNamespaceSchemaLocation': 'J0510610.xsd'
   }
   const excludeCell = Object.keys(data.DECLAR.DECLARBODY).filter(cName => cellNames.indexOf(cName) < 0)
   excludeCell.forEach(cName => {
@@ -109,12 +110,12 @@ function prepareStructureReport (data) {
   })
 }
 
-function prepareQueryParams ({ data, params }) {
-  params.dateFrom = new Date(Date.UTC(data.DECLAR.DECLARHEAD.PERIOD_YEAR, data.DECLAR.DECLARHEAD.PERIOD_MONTH - 3, 1, 0, 0, 0, 0))
+function prepareQueryParams({ data, params }) {
+  params.dateFrom = new Date(Date.UTC(data.DECLAR.DECLARHEAD.PERIOD_YEAR, data.DECLAR.DECLARHEAD.PERIOD_MONTH - 1, 1, 0, 0, 0, 0))
   params.dateTo = dateService.lastDayOfMonth(new Date(Date.UTC(data.DECLAR.DECLARHEAD.PERIOD_YEAR, data.DECLAR.DECLARHEAD.PERIOD_MONTH - 1, 1, 0, 0, 0, 0)))
 }
 
-function prepareDataSpecific ({ data, params, periodCalc, cont }) {
+function prepareDataSpecific({ data, params, periodCalc, cont }) {
   const infoByOrg = UB.Repository('ac_organization')
     .attrs(['orgBusinessTypeID.code', 'ECBCode', 'hkatottg.code', 'OKPOCode'])
     .selectById(params.organizationID) || {}
@@ -133,10 +134,16 @@ function prepareDataSpecific ({ data, params, periodCalc, cont }) {
     : [params.organizationID]
 
   const resultData = []
+  const specCodes = UB.Repository('hr_dictExperienceDt')
+    .attrs(['dictPositionID.code'])
+    .where('conditionType', '=', '3')
+    .where('dictExperienceID.experienceSpecID.code', 'in', ['ЗПЗ055Е1', 'ЗДС037А1'])
   organizations.forEach(orgID => {
     const periods = periodService.getArrayPeriods(orgID, periodCalc.dateFrom)
     const period = periods.find(o => o.dateFrom.getTime() === periodCalc.dateFrom.getTime()) || periodCalc
-
+    if (!period) {
+      return
+    }
     let employeeNumbers = null
     if (params.contractorID) {
       employeeNumbers = []
@@ -178,7 +185,8 @@ function prepareDataSpecific ({ data, params, periodCalc, cont }) {
         employeeNumbers = [params.employeeNumberID]
       }
     }
-    const expDatas = UB.Repository('hr_employeeExperience')
+
+    let expDatas = UB.Repository('hr_employeeExperience')
       .where('[employeeID]', 'in',
         UB.Repository('hr_employeeNumberS')
           .where('[orgID]', '=', orgID)
@@ -218,6 +226,31 @@ function prepareDataSpecific ({ data, params, periodCalc, cont }) {
       .orderBy('workPlace')
       .orderByDesc('dateTo')
       .selectAsObject()
+
+    if (!empNumIDs || empNumIDs.length === 0) {
+      console.log("No employeeNumberIDs found, skipping the next query.");
+      return
+    }
+    const batchSize = 1000
+    const employeeNumberIDList = [...new Set(empNumIDs.map(item => item.employeeNumberID).filter(Boolean))]
+    const findEmployeeNumberIDsWithSpecCodes = []
+
+    for (let i = 0; i < employeeNumberIDList.length; i += batchSize) {
+      const batch = employeeNumberIDList.slice(i, i + batchSize)
+      const batchResults = UB.Repository('hr_employeePosition')
+        .attrs('employeeNumberID')
+        .where('employeeNumberID', 'in', batch)
+        .where('dictPositionID.code', 'in', specCodes)
+        .selectAsArrayOfValues()
+
+      findEmployeeNumberIDsWithSpecCodes.push(...batchResults)
+    }
+
+    if (findEmployeeNumberIDsWithSpecCodes.length === 0) {
+      console.log("No employeeNumberIDs found, skipping the next query.");
+      return
+    }
+    empNumIDs = empNumIDs.filter(el => findEmployeeNumberIDsWithSpecCodes.includes(el.employeeNumberID));
 
     expDatas.forEach(row => {
       const emp = empNumIDs.find(o => o.employeeID === row.employeeID && (!row.employeeNumberID || row.employeeNumberID === o.employeeNumberID))
@@ -287,12 +320,12 @@ function prepareDataSpecific ({ data, params, periodCalc, cont }) {
         if (timeSheetsNumbers[row.employeeNumberID]) {
           timeSheetsNumbers[row.employeeNumberID].forEach(time => {
             if (time['factTimeCostID.timeCostType'] === 'WORK' &&
-                seniorityFactObj.experiencePeriods && seniorityFactObj.experiencePeriods.find(o => o.dateFrom <= time.dateWork && o.dateTo >= time.dateWork)) {
+              seniorityFactObj.experiencePeriods && seniorityFactObj.experiencePeriods.find(o => o.dateFrom <= time.dateWork && o.dateTo >= time.dateWork)) {
               row.seniorityFact++
               row.seniorityFactHour = accrualService.round(row.seniorityFactHour + (time.factHour || 0), 3)
             }
             if (time['planTimeCostID.timeCostType'] === 'WORK' &&
-                seniorityNormObj.experiencePeriods && seniorityNormObj.experiencePeriods.find(o => o.dateFrom <= time.dateWork && o.dateTo >= time.dateWork)) {
+              seniorityNormObj.experiencePeriods && seniorityNormObj.experiencePeriods.find(o => o.dateFrom <= time.dateWork && o.dateTo >= time.dateWork)) {
               row.seniorityNorm++
               row.seniorityNormHour = accrualService.round(row.seniorityNormHour + (time.normHour || 0), 3)
             }
@@ -309,10 +342,15 @@ function prepareDataSpecific ({ data, params, periodCalc, cont }) {
       }
     })
   })
-  resultData.sort((a, b) =>
-    stringService.compareStringUa(a['employeeID.lastName'], b['employeeID.lastName']) === 1 ? 1
+  if (resultData.length === 0) {
+    console.log("No resultData found, skipping the next query.");
+    return
+  }
+  resultData.sort((a, b) => {
+    return stringService.compareStringUa(a['employeeID.lastName'], b['employeeID.lastName']) === 1 ? 1
       : a['employeeID.lastName'] === b['employeeID.lastName'] ? stringService.compareStringUa(a['employeeID.firstName'], b['employeeID.firstName']) === 1 ? 1
         : a['employeeID.firstName'] === b['employeeID.firstName'] ? stringService.compareStringUa(a['employeeID.middleName'], b['employeeID.middleName']) === 1 ? 1 : -1 : -1 : -1
+  }
   ).forEach((row, idx) => {
     const rownum = idx + 1
     updateCellInArray(data, 'T1RXXXXG5', rownum, (row['employeeID.citizenshipID.code'] === 'UKR') ? '1' : '0')
@@ -370,8 +408,8 @@ const cellFormats = [
   }
 ]
 
-function xmlExport ({ data, idx }) {
-  const { DECLARBODY, DECLARHEAD } = _.get(data, 'data.DECLAR', { })
+function xmlExport({ data, idx }) {
+  const { DECLARBODY, DECLARHEAD } = _.get(data, 'data.DECLAR', {})
   if (!(DECLARBODY && DECLARHEAD)) {
     throw new UB.UBAbort(`<<<${UB.i18n('Не корректні дані для вивантаження')}>>>`)
   }
@@ -379,8 +417,7 @@ function xmlExport ({ data, idx }) {
   const attrListHead = ['TIN', 'C_DOC', 'C_DOC_SUB', 'C_DOC_VER', 'C_DOC_TYPE', 'C_DOC_CNT', 'C_REG', 'C_RAJ', 'PERIOD_MONTH', 'PERIOD_TYPE', 'PERIOD_YEAR', 'C_STI_ORIG', 'C_DOC_STAN', 'LINKED_DOCS', 'D_FILL', 'SOFTWARE']
   // const formTypeElementName = DECLARBODY.HZD ? 'HZD' : DECLARBODY.HZS ? 'HZS' : 'HZB'
   // const formTypeElementName = DECLARBODY.HZS === 1 || DECLARBODY.HZS === 'true' ? 'HZS' : DECLARBODY.HZD === 1 || DECLARBODY.HZD === 'true' ? 'HZD' : 'HZB'
-  const attrList = allBodyAttrNames // .filter(aName => aName !== 'HZB' && aName !== 'HZS' && aName !== 'HZD')
-  // attrList.splice(5, 0, formTypeElementName)
+  const attrList = allBodyAttrNames.filter(aName => aName !== 'HZB' && aName !== 'HZS' && aName !== 'HZD')
   const attrListExt = buildAttrsExt(attrList, cellFormats)
   const xmlData = {
     DECLAR: {
@@ -393,7 +430,7 @@ function xmlExport ({ data, idx }) {
   return { xmlData, xmlFileName }
 }
 
-function addTempleteForCustomRow (params) {
+function addTempleteForCustomRow(params) {
   params.T1 = [
     `<tr><td rowspan="2" class="td_btn_row no-print"><button class="btn del-row no-print" data-rownum="ROWNUM" data-source="T1">X</button></td>
       <td rowspan="2"><span class="row_num">ROWNUM</span></td>
