@@ -17,7 +17,7 @@ module.exports = {
   xmlExport
 }
 
-function generateData(params = {}) {
+function generateData (params = {}) {
   const tabsData = []
   const data = structureReport()
   prepareStructureReport(data)
@@ -88,7 +88,7 @@ const allBodyAttrNames = ['HZD', 'HZU', 'HZN', 'HZ', 'HZY', 'HZKV', 'HNM', 'HNUM
   'HFILL', 'HKBOS', 'HBOS', 'HKBUH', 'HBUH'
 ]
 
-function prepareStructureReport(data) {
+function prepareStructureReport (data) {
   const cellNames = allBodyAttrNames
   data.DECLAR['$'] = {
     'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
@@ -103,12 +103,12 @@ function prepareStructureReport(data) {
   })
 }
 
-function prepareQueryParams({ data, params }) {
+function prepareQueryParams ({ data, params }) {
   params.dateFrom = new Date(Date.UTC(data.DECLAR.DECLARHEAD.PERIOD_YEAR, data.DECLAR.DECLARHEAD.PERIOD_MONTH - 3, 1, 0, 0, 0, 0))
   params.dateTo = dateService.lastDayOfMonth(new Date(Date.UTC(data.DECLAR.DECLARHEAD.PERIOD_YEAR, data.DECLAR.DECLARHEAD.PERIOD_MONTH - 1, 1, 0, 0, 0, 0)))
 }
 
-function prepareDataSpecific({ data, params, periodCalc }) {
+function prepareDataSpecific ({ data, params, periodCalc }) {
   const sqlDialect = entityBaseService.getSQLDialect()
   const { DECLARBODY } = data.DECLAR
 
@@ -126,7 +126,7 @@ function prepareDataSpecific({ data, params, periodCalc }) {
 
   DECLARBODY.HKBUH = buh['employeeID.taxCode']
   DECLARBODY.HBUH = buh['employeeID.shortFIO']
-  const reportParams = reportService.getReportParams(params.organizationID, ['ECBVAC', 'ECBT1RG13', 'ECBT1RG14', 'ECBT1RG16', 'ECBTDOPTC'])
+  const reportParams = reportService.getReportParams(params.organizationID, [ 'ECBVAC', 'ECBT1RG13', 'ECBT1RG14', 'ECBT1RG16', 'ECBTDOPTC' ])
   const organizations = params.includeSubOrg
     ? UB.Repository('hr_organization')
       .attrs(['mi_data_id'])
@@ -144,9 +144,7 @@ function prepareDataSpecific({ data, params, periodCalc }) {
   organizations.forEach(orgID => {
     const periods = periodService.getArrayPeriods(orgID, periodCalc.dateFrom)
     const period = periods.find(o => o.dateFrom.getTime() === periodCalc.dateFrom.getTime()) || periodCalc
-    if (!period) {
-      return
-    }
+    
     let employeeNumbers = null
     if (params.contractorID) {
       employeeNumbers = []
@@ -211,7 +209,7 @@ function prepareDataSpecific({ data, params, periodCalc }) {
         .where('payElID.methodID.code', '=', '140')
         .where('dateFrom', '<=', period.dateTo)
         .where('dateTo', '>=', period.dateFrom),
-        'empAccr')
+      'empAccr')
       .logic('([ps] OR [bs] OR [ams] OR [ssum] OR [empAccr])')
       .orderBy('employeeNumberID.employeeID.lastName')
       .orderBy('employeeNumberID.employeeID.firstName')
@@ -231,7 +229,8 @@ function prepareDataSpecific({ data, params, periodCalc }) {
         'employeeNumberID.dateTo': 'empDateTo',
         'employeeNumberID.employeeID': 'employeeID',
         'employeeNumberID.limitedAccess': 'limitedAccess'
-      });
+      })
+
     const store = UB.DataStore('tim_timeSheet')
     let employeeAccrual = []
     if (reportParams.ECBTDOPTCIDs.length) {
@@ -272,6 +271,8 @@ function prepareDataSpecific({ data, params, periodCalc }) {
       employeeAccrual = store.getAsJsObject()
       esvDatas.push(...employeeAccrual)
     }
+
+    //const esvDatas = esvDatas1.filter(f => f.employeeNumberID === 3000043626625 || f.employeeNumberID === 3000190462156)
 
     // load positions which intersects with period
     const empNumIDs = esvDatas.map(esvData => esvData.employeeNumberID)
@@ -387,6 +388,8 @@ function prepareDataSpecific({ data, params, periodCalc }) {
         return aggObj
       }, {})
     ))
+    // taxCode = 1506110186
+    // 1 block
 
     if (reportParams.ECBT1RG13IDs.length && empNumIDs.length) {
       store.runSQL(`
@@ -444,16 +447,16 @@ function prepareDataSpecific({ data, params, periodCalc }) {
     if (reportParams.ECBT1RG14IDs.length && empNumIDs.length) {
       store.runSQL(`SELECT A01.employeeNumberID "employeeNumberID", (COUNT(*)) AS "orderCount", 
      ${App.dbConnections.DEFAULT.config.dialect === 'MSSQL2012'
-          ? `CONVERT(DATETIME, CONVERT(VARCHAR(7), A01.dateWork, 120) + '-01')`
-          : `date_trunc('month', A01.dateWork)`} AS "dateWork"
+    ? `CONVERT(DATETIME, CONVERT(VARCHAR(7), A01.dateWork, 120) + '-01')`
+    : `date_trunc('month', A01.dateWork)`} AS "dateWork"
       FROM tim_timeSheet A01  
       WHERE A01.employeeNumberID${entityBaseService.getInExpression('empNumIDs')}
     AND A01.dateWork >= :dateFrom: AND A01.dateWork <= :dateTo:
     AND A01.isActive=1 AND A01.factTimeCostID${entityBaseService.getInExpression('ECBT1RG14IDs')} 
     AND A01.mi_deleteDate >= '9999-12-31'
     GROUP BY A01.employeeNumberID, ${App.dbConnections.DEFAULT.config.dialect === 'MSSQL2012'
-          ? `CONVERT(DATETIME, CONVERT(VARCHAR(7), A01.dateWork, 120) + '-01')`
-          : `date_trunc('month', A01.dateWork)::TIMESTAMP`}  
+    ? `CONVERT(DATETIME, CONVERT(VARCHAR(7), A01.dateWork, 120) + '-01')`
+    : `date_trunc('month', A01.dateWork)::TIMESTAMP`}  
 `, {
         empNumIDs,
         ECBT1RG14IDs: reportParams.ECBT1RG14IDs,
@@ -492,8 +495,8 @@ function prepareDataSpecific({ data, params, periodCalc }) {
     if (empIDs.length && empNumIDs.length) {
       store.runSQL(`SELECT A01.employeeNumberID "employeeNumberID", (COUNT(*)) "orderCount",
      ${App.dbConnections.DEFAULT.config.dialect === 'MSSQL2012'
-          ? `CONVERT(DATETIME, CONVERT(VARCHAR(7), A01.dateWork, 120) + '-01')`
-          : `date_trunc('month', A01.dateWork)`} "dateWork"
+    ? `CONVERT(DATETIME, CONVERT(VARCHAR(7), A01.dateWork, 120) + '-01')`
+    : `date_trunc('month', A01.dateWork)`} "dateWork"
     FROM tim_timeSheet A01 
     JOIN hr_dictTimeCost fc ON fc.ID = A01.factTimeCostID 
     WHERE A01.employeeNumberID${entityBaseService.getInExpression('empNumIDs')}
@@ -501,8 +504,8 @@ function prepareDataSpecific({ data, params, periodCalc }) {
     AND A01.dateWork >= :dateFrom: AND A01.dateWork < :dateTo: AND A01.mi_deleteDate >= '9999-12-31'
     AND fc.timeCostType <> 'NOT'
     GROUP BY A01.employeeNumberID, ${App.dbConnections.DEFAULT.config.dialect === 'MSSQL2012'
-          ? `CONVERT(DATETIME, CONVERT(VARCHAR(7), A01.dateWork, 120) + '-01')`
-          : `date_trunc('month', A01.dateWork)::TIMESTAMP`} 
+    ? `CONVERT(DATETIME, CONVERT(VARCHAR(7), A01.dateWork, 120) + '-01')`
+    : `date_trunc('month', A01.dateWork)::TIMESTAMP`} 
   `, {
         empNumIDs,
         dateFrom: period.dateFrom,
@@ -522,7 +525,7 @@ function prepareDataSpecific({ data, params, periodCalc }) {
       if (esvDatasAgg) {
         esvDatasAgg.daysWork = (esvDatasAgg.workPlace === '1' || esvDatasAgg.workPlace === '3') ? ts.orderCount
           : (esvDatasAgg.workPlace === '2' &&
-            !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
+          !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
             ? ts.orderCount : null)
         return
       }
@@ -530,7 +533,7 @@ function prepareDataSpecific({ data, params, periodCalc }) {
       if (esvDatasAgg) {
         esvDatasAgg.daysWork = (esvDatasAgg.workPlace === '1' || esvDatasAgg.workPlace === '3') ? ts.orderCount
           : (esvDatasAgg.workPlace === '2' &&
-            !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
+          !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
             ? ts.orderCount : null)
         return
       }
@@ -541,7 +544,7 @@ function prepareDataSpecific({ data, params, periodCalc }) {
       if (esvDatasAgg) {
         esvDatasAgg.daysWork = (esvDatasAgg.workPlace === '1' || esvDatasAgg.workPlace === '3') ? ts.orderCount
           : (esvDatasAgg.workPlace === '2' &&
-            !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
+          !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
             ? ts.orderCount : null)
         return
       }
@@ -550,7 +553,7 @@ function prepareDataSpecific({ data, params, periodCalc }) {
       if (esvDatasAgg) {
         esvDatasAgg.daysWork = (esvDatasAgg.workPlace === '1' || esvDatasAgg.workPlace === '3') ? ts.orderCount
           : (esvDatasAgg.workPlace === '2' &&
-            !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
+          !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
             ? ts.orderCount : null)
         return
       }
@@ -560,7 +563,7 @@ function prepareDataSpecific({ data, params, periodCalc }) {
       if (esvDatasAgg) {
         esvDatasAgg.daysWork = (esvDatasAgg.workPlace === '1' || esvDatasAgg.workPlace === '3') ? ts.orderCount
           : (esvDatasAgg.workPlace === '2' &&
-            !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
+          !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
             ? ts.orderCount : null)
       }
     })
@@ -672,19 +675,19 @@ function prepareDataSpecific({ data, params, periodCalc }) {
             if (enDateFrom <= psDateFrom) {
               esvDatasAgg.daysWork = (esvDatasAgg.workPlace === '1' || esvDatasAgg.workPlace === '3') ? dateService.daysInMonth(psDateFrom.getFullYear(), psDateFrom.getMonth() + 1)
                 : (esvDatasAgg.workPlace === '2' &&
-                  !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
+                !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
                   ? dateService.daysInMonth(psDateFrom.getFullYear(), psDateFrom.getMonth() + 1) : null)
             } else {
               let dLast = dateService.lastDayOfMonth(psDateFrom)
               esvDatasAgg.daysWork = (esvDatasAgg.workPlace === '1' || esvDatasAgg.workPlace === '3') ? dateService.dateDiff(enDateFrom, dLast)
                 : (esvDatasAgg.workPlace === '2' &&
-                  !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
+                !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
                   ? dateService.dateDiff(enDateFrom, dLast) : null)
             }
           } else {
             esvDatasAgg.daysWork = (esvDatasAgg.workPlace === '1' || esvDatasAgg.workPlace === '3') ? ts.daysCount
               : (esvDatasAgg.workPlace === '2' &&
-                !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
+              !esvDatasAggs.find(o => o.employeeID === esvDatasAgg.employeeID && o.workPlace === '1')
                 ? ts.daysCount : null)
           }
         }
@@ -695,14 +698,13 @@ function prepareDataSpecific({ data, params, periodCalc }) {
       .where('[dictExperienceID.experienceSpecID]', 'isNotNull')
       .where(`COALESCE([startCalcDate], '9999-12-31T00:00:00')`, '>=', period.dateFrom)
       .where('employeeID', 'in', employeeIDs)
-      .where('dictExperienceID.experienceSpecID.code', 'in', ['ЗПЗ055Е1', 'ЗДС037А1'])
-      .attrs(['ID', 'employeeID', 'employeeNumberID', 'dictExperienceID', 'dictExperienceID.includeSecondJobs'])
+      .attrs(['ID', 'employeeID', 'dictExperienceID', 'dictExperienceID.includeSecondJobs'])
       .selectAsObject()
     // 6 block
     let expSpecEmpNums = []
     empExps.forEach(item => {
       // определение спец.стаж > 0 или нет
-      let empNums = numEmpData.filter(el => el.employeeID === item.employeeID && el.employeeNumberID === item.employeeNumberID)
+      let empNums = numEmpData.filter(el => el.employeeID === item.employeeID)
       if (empNums && empNums.length > 0) {
         empNums = empNums.map(el => el.employeeNumberID)
         empNums = empNums.filter((el, index, arr) => arr.indexOf(el) === index)
@@ -720,9 +722,7 @@ function prepareDataSpecific({ data, params, periodCalc }) {
     })
 
     expSpecEmpNums.forEach(empNum => {
-      let esvDatasAgg = esvDatasAggs.filter(esvDatasAgg => (esvDatasAgg.employeeNumberID === empNum.employeeNumberID
-        && esvDatasAgg.employeeID === empNum.employeeID
-      ))
+      let esvDatasAgg = esvDatasAggs.filter(esvDatasAgg => (esvDatasAgg.employeeNumberID === empNum.employeeNumberID || esvDatasAgg.employeeID === empNum.employeeID))
       esvDatasAgg.forEach(ed => {
         ed.specExp = true
       })
@@ -746,7 +746,7 @@ function prepareDataSpecific({ data, params, periodCalc }) {
       const row = esvDatasAggs[i]
       if (row.sourceSum || row.baseSum || row.addMinSum || row.factSum || employeeAccrual.find(o => o.employeeNumberID === row.employeeNumberID)) {
         const existRows = esvDatasAggs.filter((o, idx) => idx !== i && o.employeeID === row.employeeID && row.typeTaxECBIDCode === o.typeTaxECBIDCode &&
-          row.payCode === o.payCode && row.periodSalary.getTime() === o.periodSalary.getTime() &&
+          row.payCode === o.payCode && row.periodSalaryID === o.periodSalaryID && row.workPlace !== '3' && o.workPlace !== '3' &&
           ((row.workPlace === '1') ? '1' : '0') === ((o.workPlace === '1') ? '1' : '0') && (row.specExp ? '1' : '0') === (o.specExp ? '1' : '0') &&
           (((row.mtCount < 1) || timeSheetChangesByEmp[row.employeeNumberID]) ? '1' : '0') === (((o.mtCount < 1) || timeSheetChangesByEmp[o.employeeNumberID]) ? '1' : '0') &&
           ((row.dateNew && (row.dateNew < dateService.shiftDate(params.dateTo)) && (row.dateNew >= dateService.addYears(period.dateFrom, -2))) ? '1' : '0') ===
@@ -835,19 +835,16 @@ function prepareDataSpecific({ data, params, periodCalc }) {
           } else {
             existRow = existRows[0]
           }
-          if (existRow
-            && existRow.workPlace !== '1'
-            && row.workPlace !== '1'
-            && existRow.employeeNumberID !== row.employeeNumberID) {
+          if (existRow) {
             existRow.sourceSum = accrualService.round(existRow.sourceSum + row.sourceSum)
             existRow.baseSum = accrualService.round(existRow.baseSum + row.baseSum)
             existRow.addMinSum = accrualService.round(existRow.addMinSum + row.addMinSum)
             existRow.factSum = accrualService.round(existRow.factSum + row.factSum)
-            //   if (existRow.employeeNumberID !== row.employeeNumberID && existRow.workPlace !== '2' && existRow.workPlace === row.workPlace) {
-            //   existRow.daysWork = accrualService.round((existRow.daysWork || 0) + (row.daysWork || 0))
-            //   }
+            if (existRow.employeeNumberID !== row.employeeNumberID && existRow.workPlace !== '2' && existRow.workPlace === row.workPlace) {
+              existRow.daysWork = accrualService.round((existRow.daysWork || 0) + (row.daysWork || 0))
+            }
+            esvDatasAggs.splice(i, 1)
           }
-          esvDatasAggs.splice(i, 1)
         }
       } else {
         esvDatasAggs.splice(i, 1)
@@ -855,25 +852,27 @@ function prepareDataSpecific({ data, params, periodCalc }) {
     }
   })
 
-  // add pdv
-  // ищем всех с payCode = 10 и проверяем есть ли запись по этому сотруднику c payCode = 0 если нет добавляем и меняем дни
-  const payCode10Emps = esvDatasAggs.filter(esv => esv.payCode === 10 && esv.daysWork)
-  if (payCode10Emps && payCode10Emps.length) {
-    payCode10Emps.forEach(esv => {
-      const empId = esvDatasAggs.find(el => el.employeeNumberID === esv.employeeNumberID && el.periodSalaryID === esv.periodSalaryID && (!el.payCode || el.peyCode === 0))
-      if (empId) return
-      const newEmp = Object.assign({}, esv)
-      newEmp.payCode = 0
-      newEmp.sourceSum = 0
-      newEmp.baseSum = 0
-      newEmp.addMinSum = 0
-      newEmp.factSum = 0
-      esvDatasAggs.push(newEmp)
-      esv.daysWork = null
-    })
-  }
-  //end pdv
 
+
+  // add pdv
+    // ищем всех с payCode = 10 и проверяем есть ли запись по этому сотруднику c payCode = 0 если нет добавляем и меняем дни
+    const payCode10Emps = esvDatasAggs.filter(esv => esv.payCode === 10 && esv.daysWork)
+    if (payCode10Emps && payCode10Emps.length) {
+      payCode10Emps.forEach (esv => {
+        const empId = esvDatasAggs.find(el => el.employeeNumberID === esv.employeeNumberID && el.periodSalaryID === esv.periodSalaryID && (!el.payCode || el.peyCode === 0))
+        if (empId) return
+        const newEmp = Object.assign({}, esv)
+        newEmp.payCode = 0
+        newEmp.sourceSum = 0
+        newEmp.baseSum = 0
+        newEmp.addMinSum = 0
+        newEmp.factSum = 0        
+        esvDatasAggs.push(newEmp)
+        esv.daysWork = null
+      })
+    }
+   //end pdv
+    
   esvDatasAggs.sort((a, b) =>
     a.limitedAccess < b.limitedAccess ? 1
       : a.limitedAccess === b.limitedAccess ? stringService.compareStringUa(a.lastName, b.lastName) === 1 ? 1
@@ -890,10 +889,6 @@ function prepareDataSpecific({ data, params, periodCalc }) {
       if (row.factSum < 0 && row.typeTaxECBIDCode === '1' && row.payCode === 13) {
         row.payCode = 3
       }
-      const existRowWithWorkPlace1 = esvDatasAggs.filter((o, idxf) => idxf !== idx && o.employeeID === row.employeeID &&
-        row.periodSalary.getTime() === o.periodSalary.getTime() && row.workPlace !== '1' && o.workPlace === '1'
-      )
-      const isShowDaysWork = row.workPlace === '1' || !existRowWithWorkPlace1
       updateCellInArray(data, 'limitedRow', rownum, !!row.limitedAccess)
       updateCellInArray(data, 'T1RXXXXG5', rownum, (row.citizenshipCode === 'UKR') ? '1' : '0')
       updateCellInArray(data, 'T1RXXXXG6', rownum, (row.sexType === 'M') ? 'Ч' : (row.sexType === 'W') ? 'Ж' : null)
@@ -907,7 +902,7 @@ function prepareDataSpecific({ data, params, periodCalc }) {
       updateCellInArray(data, 'T1RXXXXG113S', rownum, (row.middleName || '').replace('’', `'`))
       updateCellInArray(data, 'T1RXXXXG12', rownum, row.daysSick) // Тимчасова непрацездатність
       updateCellInArray(data, 'T1RXXXXG13', rownum, row.daysWOPay) // Непрацездатність Без збереження зп
-      updateCellInArray(data, 'T1RXXXXG14', rownum, isShowDaysWork ? row.daysWork : '-')
+      updateCellInArray(data, 'T1RXXXXG14', rownum, row.daysWork)
       updateCellInArray(data, 'T1RXXXXG15', rownum, row.daysPregn) // Пологи
 
       updateCellInArray(data, 'T1RXXXXG16', rownum, row.sourceSum)
@@ -966,8 +961,8 @@ const cellFormats = [
   }
 ]
 
-function xmlExport({ data, idx }) {
-  const { DECLARBODY, DECLARHEAD } = _.get(data, 'data.DECLAR', {})
+function xmlExport ({ data, idx }) {
+  const { DECLARBODY, DECLARHEAD } = _.get(data, 'data.DECLAR', { })
   if (!(DECLARBODY && DECLARHEAD)) {
     throw new UB.UBAbort(`<<<${UB.i18n('Не корректні дані для вивантаження')}>>>`)
   }
@@ -1012,7 +1007,7 @@ function xmlExport({ data, idx }) {
   return { xmlData, xmlFileName }
 }
 
-function addTempleteForCustomRow(params) {
+function addTempleteForCustomRow (params) {
   params.T1 = [
     `<tr><td rowspan="2" class="td_btn_row no-print"><button class="btn del-row no-print" data-rownum="ROWNUM" data-source="T1">X</button></td>
       <td rowspan="2"><span class="row_num">ROWNUM</span></td>

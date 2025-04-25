@@ -24,7 +24,7 @@ module.exports.run = ({ cont, periodCalc, periodSalary, params, sourceAccr }) =>
     }
     paySumAccrual = (flagsFix & 1 << 21) ? params.baseSum : (((params.rate !== null && params.rate >= 0) ? (params.baseSum * params.rate / 100) : params.baseSum) / timeKoef)
   } else {
-    paySumAccrual = flagsFix & 1 << 21 ? params.paySumAccrual
+    paySumAccrual = flagsFix & 1 << 21 ? params.baseSum
       : (
         (params.rate !== null && params.rate >= 0)
           ? ((cont.payEl[params.payElID].isTimeSheet && ((!params.flagsRec || params.flagsRec & 1 << 5) ? params.planHours : params.planDays) === 0) ? 0

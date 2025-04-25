@@ -4224,8 +4224,7 @@ me.getConsolidatedStatementDictProgClass = ctx => {
       }]
     }
   }
-  
-  function isAmountAccruedSum(accrual, varCol, report) {
+  function isAmountAccruedSum (accrual, varCol, report) {
     const res = []
     let resObj
     const isDoesNotCountECB = accrual.filter(o => (o.paySum !== o.sourceSum) && o.paySum && !o.sourceSum).sort((a, b) => a.tabNum - b.tabNum)

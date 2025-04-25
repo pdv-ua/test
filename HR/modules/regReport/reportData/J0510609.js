@@ -208,7 +208,7 @@ function prepareDataSpecific ({ data, params, periodCalc, cont }) {
         'dictExperienceID.orderNumber': 'orderNumber',
         'dictExperienceID.orderDate': 'orderDate'
       })
-    let empNumIDs = UB.Repository('hr_employeePositionS')
+    const empNumIDs = UB.Repository('hr_employeePositionS')
       .attrs(['employeeNumberID', 'workPlace', 'employeeID', 'employeeNumberID.dateFrom', 'employeeNumberID.dateTo'])
       .where('[employeeID]', 'in', expDatas.map(expData => expData.employeeID))
       .where('[dateFrom]', '<', period.dateTo)
